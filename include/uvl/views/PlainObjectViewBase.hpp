@@ -1,5 +1,6 @@
 #if !defined(UVL_VIEWS_PLAINOBJECTVIEWBASE_HPP)
 #define UVL_VIEWS_PLAINOBJECTVIEWBASE_HPP
+#include <spdlog/spdlog.h>
 
 #include "DynamicViewBase.hpp"
 #include "StaticViewBase.hpp"
@@ -14,6 +15,7 @@ class PlainObjectViewBase
 
       std::conditional_t<IsStatic, StaticViewBase<Derived_>,
                          DynamicViewBase<Derived_>> {
+   public:
     static_assert(
         IsStatic ==
         uvl::detail::ExtentsTraits<
@@ -47,7 +49,12 @@ class PlainObjectViewBase
    protected:
     template <typename... Indices>
     auto get_index(Indices&&... indices) const -> index_type {
-        return mapping()(std::forward<Indices>(indices)...);
+        spdlog::warn("{} {}", indices...);
+        spdlog::warn("{}", mapping().extents().extent(0));
+        spdlog::warn("{}", mapping().extents().extent(1));
+        index_type r = mapping()(std::forward<Indices>(indices)...);
+        spdlog::warn("{}", r);
+        return r;
     }
 
    public:
@@ -96,11 +103,15 @@ class PlainObjectViewBase
 
     template <typename... Args>
     const value_type& operator()(Args&&... idxs) const {
-        return derived().coeff(get_index(std::forward<Args>(idxs)...));
+        index_type idx = get_index(std::forward<Args>(idxs)...);
+        spdlog::info("Accessing index {}", idx);
+        return derived().const_coeff_ref(idx);
     }
     template <typename... Args>
     value_type& operator()(Args&&... idxs) {
-        return derived().coeff_ref(get_index(std::forward<Args>(idxs)...));
+        index_type idx = get_index(std::forward<Args>(idxs)...);
+        spdlog::info("Accessing index {}", idx);
+        return derived().coeff_ref(idx);
     }
 };
 }  // namespace uvl::views

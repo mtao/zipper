@@ -2,7 +2,6 @@
 #if !defined(UVL_VIEWS_BINARY_ADDITIONVIEW_HPP)
 #define UVL_VIEWS_BINARY_ADDITIONVIEW_HPP
 
-#include "../MappedViewBase.hpp"
 #include "detail/CoeffWiseTraits.hpp"
 
 namespace uvl::views {

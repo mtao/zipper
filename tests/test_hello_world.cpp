@@ -22,11 +22,15 @@ TEST_CASE("test_storage", "[storage][dense]") {
         v = j++;
     }
     fmt::print("{}\n", fmt::join(bs, ","));
+    for (int j = 0; j < 2; ++j) {
+        spdlog::warn("a{} b{}", a.extent(j), b.extent(j));
+    }
 
     for (uvl::index_type j = 0; j < a.extent(0); ++j) {
         for (uvl::index_type k = 0; k < a.extent(1); ++k) {
             std::array<uvl::index_type, 2> i{{j, k}};
-            spdlog::warn("{} {} {}", j, k, bmd[i]);
+            double v = bmd[i];
+            spdlog::warn("{} {} {}", j, k, v);
             amd[i] = 2 * bmd[i];
         }
     }
@@ -37,8 +41,7 @@ TEST_CASE("test_storage", "[storage][dense]") {
 
     for (uvl::index_type j = 0; j < spv.extent(0); ++j) {
         for (uvl::index_type k = 0; k < spv.extent(1); ++k) {
-            std::array<uvl::index_type, 2> i{{j, k}};
-            spdlog::warn("{} {} {}", j, k, spv(i));
+            spdlog::warn("{} {} {}", j, k, spv(j, k));
         }
     }
 }

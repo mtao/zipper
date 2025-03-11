@@ -1,9 +1,10 @@
 
 #if !defined(UVL_VIEWS_UNARY_SCALARPRODUCTVIEW_HPP)
 #define UVL_VIEWS_UNARY_SCALARPRODUCTVIEW_HPP
+#include <spdlog/spdlog.h>
 
-#include "../MappedViewBase.hpp"
 #include "detail/CoeffWiseTraits.hpp"
+#include "uvl/views/ViewBase.hpp"
 
 namespace uvl::views {
 namespace unary {
@@ -24,8 +25,7 @@ struct detail::ViewTraits<unary::ScalarProductView<A, B>>
 
 namespace unary {
 template <typename A, ViewDerived B>
-class ScalarProductView : public ViewBase<ScalarProductView<A, B>>
-{
+class ScalarProductView : public ViewBase<ScalarProductView<A, B>> {
    public:
     using self_type = ScalarProductView<A, B>;
     using traits = uvl::views::detail::ViewTraits<self_type>;
@@ -38,18 +38,11 @@ class ScalarProductView : public ViewBase<ScalarProductView<A, B>>
     using Base::extent;
 
     constexpr const extents_type& extents() const { return m_rhs.extents(); }
-    constexpr const mapping_type& mapping() const { return m_rhs.mapping(); }
 
-    // using value_type = traits::value_type;
-    //  using extents_type = traits::extents_type;
-    //  using extents_traits = uvl::detail::ExtentsTraits<extents_type>;
-
-    // const mapping_type& mapping() const { return derived().mapping(); }
-    // const extents_type& extents() const { return derived().extents(); }
-     template <typename... Args>
-     value_type operator()(Args&&... idxs) const {
-        return m_lhs *
-               m_rhs(std::forward<Args>(idxs)...);
+    template <typename... Args>
+    value_type operator()(Args&&... idxs) const {
+        spdlog::info("{} {}", idxs...);
+        return m_rhs(std::forward<Args>(idxs)...);
     }
 
    private:
