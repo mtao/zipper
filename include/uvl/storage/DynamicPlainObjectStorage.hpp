@@ -1,10 +1,10 @@
 
-#if !defined(UVL_DATA_DYNAMICDENSESTORAGE_HPP)
-#define UVL_DATA_DYNAMICDENSESTORAGE_HPP
+#if !defined(UVL_STORAGE_DYNAMICDENSESTORAGE_HPP)
+#define UVL_STORAGE_DYNAMICDENSESTORAGE_HPP
 
 #include <vector>
 
-#include "DynamicView.hpp"
+#include "PlainObjectStorage.hpp"
 #include "uvl/types.hpp"
 
 namespace uvl::storage {
@@ -30,15 +30,32 @@ template <typename ValueType, typename Extents,
           typename LayoutPolicy = uvl::default_layout_policy,
           typename AccessorPolicy = uvl::default_accessor_policy<ValueType>>
 class DynamicPlainObjectStorage
-    : public DynamicView<DynamicPlainObjectValueAccessor<ValueType>, Extents,
-                         LayoutPolicy, AccessorPolicy> {
-   public:
-    using view_type = DynamicView<DynamicPlainObjectValueAccessor<ValueType>,
-                                  Extents, LayoutPolicy, AccessorPolicy>;
-    using extents_type = view_type::extents_type;
-    DynamicPlainObjectStorage(const extents_type& extents)
-        : view_type(extents, view_type::size_from_extents(extents)) {}
+    : public views::PlainObjectViewBase<DynamicPlainObjectStorage<
+          ValueType, Extents, LayoutPolicy, AccessorPolicy>>
+
+      public : using view_type = views::PlainObjectDynamicView<
+                   DynamicPlainObjectStorage<ValueType, Extents, LayoutPolicy,
+                                             AccessorPolicy>,
+                   DynamicPlainObjectValueAccessor<ValueType>, Extents,
+                   LayoutPolicy, AccessorPolicy>;
+using extents_type = view_type::extents_type;
+DynamicPlainObjectStorage(const extents_type& extents)
+    : view_type(extents, view_type::size_from_extents(extents)) {}
+
+using view_type::operator();
 };
 
 }  // namespace uvl::storage
+namespace uvl::views {
+
+template <typename ValueType, typename Extents, typename LayoutPolicy,
+          typename AccessorPolicy>
+struct detail::ViewTraits<uvl::storage::DynamicPlainObjectStorage<
+    ValueType, Extents, LayoutPolicy, AccessorPolicy>>
+    : public detail::ViewTraits<views::PlainObjectDynamicView<
+          uvl::storage::DynamicPlainObjectStorage<ValueType, Extents,
+                                                  LayoutPolicy, AccessorPolicy>,
+          uvl::storage::DynamicPlainObjectValueAccessor<ValueType>, Extents,
+          LayoutPolicy, AccessorPolicy>> {};
+}  // namespace uvl::views
 #endif

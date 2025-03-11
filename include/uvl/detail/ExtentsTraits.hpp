@@ -33,6 +33,18 @@ struct ExtentsTraits {
     template <typename T>
     using span_type = std::conditional_t<is_static, std::span<T, static_size>,
                                          std::span<T, std::dynamic_extent>>;
+
+    static constexpr index_type size(const extents_type& e) {
+        if constexpr (is_static) {
+            return static_size;
+        } else {
+            index_type s = 1;
+            for (rank_type j = 0; j < e.rank(); ++j) {
+                s *= e.extent(j);
+            }
+            return s;
+        }
+    }
 };
 }  // namespace uvl::detail
 #endif
