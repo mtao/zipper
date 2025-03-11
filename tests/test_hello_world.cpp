@@ -1,13 +1,15 @@
 #include <spdlog/spdlog.h>
 
 #include <catch2/catch_all.hpp>
-#include <uvl/storage/DenseStorage.hpp>
+#include <uvl/storage/StaticPlainObjectStorage.hpp>
+#include <uvl/storage/DynamicPlainObjectStorage.hpp>
 
 TEST_CASE("test_storage", "[storage][dense]") {
-    uvl::storage::DenseStorage<double, uvl::extents<4, 4>> a;
+    uvl::storage::StaticPlainObjectStorage<double, uvl::extents<4, 4>> a;
+    
     auto amd = a.as_mdspan();
     auto as = a.as_span();
-    uvl::storage::DenseStorage<
+    uvl::storage::DynamicPlainObjectStorage<
         double, uvl::extents<4, std::experimental::dynamic_extent>>
         b(uvl::extents<4, std::experimental::dynamic_extent>{4});
     auto bmd = b.as_mdspan();

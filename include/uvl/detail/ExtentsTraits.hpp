@@ -3,7 +3,7 @@
 
 #include "uvl/types.hpp"
 
-namespace uvl::storage::detail {
+namespace uvl::detail {
 // template <uvl::index_type... Extents>
 // struct StorageExtentsTraits {
 //     using extents_type = uvl::template extents_type<Extents...>;
@@ -21,7 +21,7 @@ struct extent_values<extents<Idxs...>> {
 };
 
 template <typename Extents>
-struct StorageExtentsTraits {
+struct ExtentsTraits {
     using extents_type = Extents;
     constexpr static bool is_dynamic = extents_type::rank_dynamic();
     constexpr static bool is_static = !is_dynamic;
@@ -34,5 +34,5 @@ struct StorageExtentsTraits {
     using span_type = std::conditional_t<is_static, std::span<T, static_size>,
                                          std::span<T, std::dynamic_extent>>;
 };
-}  // namespace uvl::storage::detail
+}  // namespace uvl::detail
 #endif
