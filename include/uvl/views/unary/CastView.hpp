@@ -42,7 +42,8 @@ class CastView : public ViewBase<CastView<A, B>> {
 
     template <typename... Args>
     value_type coeff(Args&&... idxs) const {
-        return A(m_rhs(std::forward<Args>(idxs)...));
+        const auto& value = m_rhs(std::forward<Args>(idxs)...);
+        return static_cast<A>(value);
     }
 
    private:

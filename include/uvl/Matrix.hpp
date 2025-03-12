@@ -4,9 +4,6 @@
 #include "MatrixBase.hpp"
 #include "storage/PlainObjectStorage.hpp"
 #include "uvl/types.hpp"
-#include "views/binary/AdditionView.hpp"
-#include "views/unary/CastView.hpp"
-#include "views/unary/ScalarProductView.hpp"
 namespace uvl {
 
 template <typename ValueType, index_type Rows, index_type Cols>
@@ -17,7 +14,9 @@ class Matrix
     using Base =
         MatrixBase<storage::PlainObjectStorage<ValueType, extents<Rows, Cols>>>;
     using Base::view;
-    using Base::view_type;
+    using view_type = Base::view_type;
+    using value_type = Base::value_type;
+    using extents_type = Base::extents_type;
 
     template <concepts::MatrixBaseDerived Other>
     Matrix(const Other& other) : Base(other) {}
@@ -32,6 +31,21 @@ class Matrix
     Matrix& operator=(const Other& other) {
         view().assign(other.view());
     }
+
+    
+    template <typename... Args>
+    const value_type& operator()(Args&&... idxs) const
+
+    {
+        return view()(std::forward<Args>(idxs)...);
+    }
+    template <typename... Args>
+    value_type& operator()(Args&&... idxs)
+
+    {
+        return view()(std::forward<Args>(idxs)...);
+    }
+
 };
 
 }  // namespace uvl

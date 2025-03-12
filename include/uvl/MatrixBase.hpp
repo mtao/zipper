@@ -60,7 +60,20 @@ class MatrixBase {
                                                                     rhs.view());
     }
 
+    template <typename T>
+    auto cast() const {
+        return MatrixBase<views::unary::CastView<T, view_type>>(view());
+    }
+
+    template <typename... Args>
+    value_type operator()(Args&&... idxs) const
+
+    {
+        return view()(std::forward<Args>(idxs)...);
+    }
+
     const View& view() const { return m_view; }
+    View& view() { return m_view; }
     const extents_type& extents() const { return view().extents(); }
 
    private:
