@@ -28,18 +28,25 @@ class PlainObjectStorage
     const accessor_type& accessor() const { return m_accessor; }
     accessor_type& accessor() { return m_accessor; }
 
+    /*
     template <typename... Args>
     PlainObjectStorage(Args&&... args)
         requires(IsStatic)
         : m_accessor(std::forward<Args>(args)...) {}
+    */
+    PlainObjectStorage()
+        requires(IsStatic)
+        : ParentType() {}
 
     PlainObjectStorage(const extents_type& extents)
         requires(!IsStatic)
         : ParentType(extents), m_accessor(extents_traits::size(extents)) {}
+    PlainObjectStorage(const extents_type& extents)
+        requires(IsStatic)
+        : ParentType(extents) {}
 
     template <typename... Args>
     PlainObjectStorage(const extents_type& extents, Args&&... args)
-        requires(!IsStatic)
         : ParentType(extents), m_accessor(std::forward<Args>(args)...) {}
 
     template <typename E2>
@@ -74,6 +81,7 @@ struct detail::ViewTraits<uvl::storage::PlainObjectStorage<
     using layout_policy = LayoutPolicy;
     using accessor_policy = AccessorPolicy;
     using mapping_type = typename layout_policy::template mapping<extents_type>;
+    constexpr static bool is_writable = true;
 };
 }  // namespace uvl::views
 #endif

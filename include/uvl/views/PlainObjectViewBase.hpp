@@ -110,11 +110,6 @@ class PlainObjectViewBase : public MappedViewBase<Derived_> {
             this->resize(view.extents());
         }
         for (const auto& i : uvl::detail::all_extents_indices(extents())) {
-            std::array<index_type, extents_traits::rank> ij{
-                {std::get<0>(i), std::get<1>(i)}};
-            //             auto ij =
-            // ranges::to<std::array<index_type, extents_traits::rank>>(i);
-
             (*this)(i) = view(i);
         }
     }

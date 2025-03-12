@@ -3,10 +3,10 @@
 #if !defined(UVL_VIEWS_DYNAMICMAPPEDVIEWBASE_HPP)
 #define UVL_VIEWS_DYNAMICMAPPEDVIEWBASE_HPP
 
-
 #include "DynamicViewBase.hpp"
 #include "detail/ViewTraits.hpp"
 #include "uvl/detail/ExtentsTraits.hpp"
+#include "uvl/detail/convert_extents.hpp"
 
 namespace uvl::views {
 
@@ -45,14 +45,7 @@ class DynamicMappedViewBase : public DynamicViewBase<Derived_> {
     void resize_extents(const E2& e)
         requires detail::assignable_extents<extents_type, E2>::value
     {
-        std::array<index_type, extents_traits::rank_dynamic> arr;
-        rank_type arr_idx = 0;
-        for (rank_type j = 0; j < extents_traits::rank; ++j) {
-            if (extents_traits::is_dynamic_extent(j)) {
-                arr[arr_idx++] = e.extent(j);
-            }
-        }
-        m_mapping = {arr};
+        m_mapping = uvl::detail::convert_extents<extents_type>(e);
     }
 
    private:

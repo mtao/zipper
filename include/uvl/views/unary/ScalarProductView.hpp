@@ -3,8 +3,8 @@
 #define UVL_VIEWS_UNARY_SCALARPRODUCTVIEW_HPP
 
 #include "detail/CoeffWiseTraits.hpp"
-#include "uvl/views/ViewBase.hpp"
 #include "uvl/concepts/ViewDerived.hpp"
+#include "uvl/views/ViewBase.hpp"
 
 namespace uvl::views {
 namespace unary {
@@ -21,6 +21,7 @@ struct detail::ViewTraits<unary::ScalarProductView<A, B>>
     using extents_type = typename Base::extents_type;
     using value_type = typename Base::value_type;
     using mapping_type = typename Base::mapping_type;
+    constexpr static bool is_writable = false;
 };
 
 namespace unary {
@@ -40,7 +41,7 @@ class ScalarProductView : public ViewBase<ScalarProductView<A, B>> {
     constexpr const extents_type& extents() const { return m_rhs.extents(); }
 
     template <typename... Args>
-    value_type operator()(Args&&... idxs) const {
+    value_type coeff(Args&&... idxs) const {
         const auto& rhs = m_rhs(std::forward<Args>(idxs)...);
         const auto ret = m_lhs * rhs;
         return ret;

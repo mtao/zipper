@@ -4,6 +4,10 @@
 
 #include "ViewDerived.hpp"
 #include "uvl/types.hpp"
+namespace uvl::views::detail {
+template <typename T>
+class ViewTraits;
+}
 namespace uvl::concepts {
 
 template <typename T, uvl::rank_type rank>

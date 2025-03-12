@@ -25,7 +25,7 @@ class StaticViewBase
     using extents_type = traits::extents_type;
     using extents_traits = uvl::detail::ExtentsTraits<extents_type>;
 
-    const extents_type& extents() const { return derived().extents(); }
+    const extents_type& extents() const { return s_extents; }
 
 
     constexpr index_type extent(rank_type i) const {
@@ -34,6 +34,8 @@ class StaticViewBase
 
     constexpr static size_t size() { return extents_traits::static_size; }
 
+   private:
+    constexpr static extents_type s_extents = {};
 };
 
 }  // namespace uvl::storage
