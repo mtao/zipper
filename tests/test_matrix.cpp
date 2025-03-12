@@ -5,10 +5,16 @@
 
 #include <catch2/catch_all.hpp>
 #include <uvl/Matrix.hpp>
+//#include <uvl/Vector.hpp>
 
 TEST_CASE("test_all_extents", "[storage][dense]") {
     uvl::Matrix<double, 3, 3> L;
     uvl::Matrix<double, 3, std::dynamic_extent> M(3);
+    //uvl::Vector<double, 3> x;
+
+   // x(0) = 2;
+   // x(1) = 5;
+   // x(3) = 9;
 
     L(0,0) = 1;
     L(1,0) = 0;

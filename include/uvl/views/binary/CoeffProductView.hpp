@@ -5,7 +5,8 @@
 
 #include "detail/CoeffWiseTraits.hpp"
 #include "uvl/concepts/ViewDerived.hpp"
-#include "uvl/views/MappedViewBase.hpp"
+#include "uvl/views/DimensionedViewBase.hpp"
+#include "uvl/detail/convert_extents.hpp"
 
 namespace uvl::views {
 namespace binary {
@@ -27,21 +28,27 @@ struct detail::ViewTraits<binary::CoeffProductView<A, B>>
 
 namespace binary {
 template <concepts::ViewDerived A, concepts::ViewDerived B>
-class CoeffProductView : public MappedViewBase<CoeffProductView<A, B>> {
+class CoeffProductView : public DimensionedViewBase<CoeffProductView<A, B>> {
    public:
     using self_type = CoeffProductView<A, B>;
     CoeffProductView(const A& a, const B& b) : m_lhs(a), m_rhs(b) {}
     using traits = uvl::views::detail::ViewTraits<self_type>;
-    using Base = MappedViewBase<self_type>;
+    using Base = DimensionedViewBase<self_type>;
     using Base::extent;
     using Base::extents;
+      using extents_type = traits::extents_type;
+      using extents_traits = uvl::detail::ExtentsTraits<extents_type>;
 
+    CoeffProductView(const A& a, const B& b) requires(extents_traits::is_static)
+        : m_lhs(a), m_rhs(b)
+    {}
+    CoeffProductView(const A& a, const B& b) requires(!extents_traits::is_static)
+        : m_lhs(a), m_rhs(b), m_extents(uvl::detail::convert_extents(a.extents()))
+    {}
     // using value_type = traits::value_type;
-    //  using extents_type = traits::extents_type;
-    //  using extents_traits = uvl::detail::ExtentsTraits<extents_type>;
 
     // const mapping_type& mapping() const { return derived().mapping(); }
-    // const extents_type& extents() const { return derived().extents(); }
+     const extents_type& extents() const { return m_extents; }
     template <typename... Args>
     auto coeff(Args&&... idxs) const {
         return m_lhs(idxs...) * m_rhs(idxs...);
@@ -50,6 +57,7 @@ class CoeffProductView : public MappedViewBase<CoeffProductView<A, B>> {
    private:
     const A& m_lhs;
     const B& m_rhs;
+    extents_type m_extents;
 };  // namespace binarytemplate<typenameA,typenameB>class CoeffProductView
 
 template <concepts::ViewDerived A, concepts::ViewDerived B>

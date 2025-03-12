@@ -26,5 +26,12 @@ template <typename A, index_type... Indices>
 A convert_extents(const extents<Indices...>& a) {
     return ConvertExtents<extents<Indices...>, A>::run(a);
 }
+
+//template <index_type... Indices, index_type... SIndices>
+//auto merge_extents(const extents<Indices...>& a,
+//const extents<SIndices...>& b
+//        ) {
+//    return ConvertExtents<extents<Indices...>, A>::run(a);
+//}
 }  // namespace uvl::detail
 #endif

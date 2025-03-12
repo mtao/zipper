@@ -28,11 +28,19 @@ template <concepts::ViewDerived A, concepts::ViewDerived B>
 class AdditionView : public DimensionedViewBase<AdditionView<A, B>> {
    public:
     using self_type = AdditionView<A, B>;
-    AdditionView(const A& a, const B& b) : m_lhs(a), m_rhs(b) {}
     using traits = uvl::views::detail::ViewTraits<self_type>;
+    using extents_type = typename traits::extents_type;
+    using extents_traits = uvl::detail::ExtentsTraits<extents_type>;
+
+    AdditionView(const A& a, const B& b) requires(extents_traits::is_static)
+        : m_lhs(a), m_rhs(b)
+    {}
+    AdditionView(const A& a, const B& b) requires(!extents_traits::is_static)
+        : m_lhs(a), m_rhs(b), m_extents(a.extent(0))
+    {}
     using Base = DimensionedViewBase<self_type>;
     using Base::extent;
-    using Base::extents;
+    const extents_type& extents() const { return m_extents; }
 
     using ViewBase<self_type>::operator();
     template <typename... Args>
@@ -45,6 +53,7 @@ class AdditionView : public DimensionedViewBase<AdditionView<A, B>> {
    private:
     const A& m_lhs;
     const B& m_rhs;
+    extents_type m_extents;
 };  // namespace binarytemplate<typenameA,typenameB>class AdditionView
 
 template <concepts::ViewDerived A, concepts::ViewDerived B>

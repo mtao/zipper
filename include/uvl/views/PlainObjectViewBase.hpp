@@ -43,27 +43,6 @@ class PlainObjectViewBase : public MappedViewBase<Derived_> {
     using mdspan_type =
         uvl::mdspan<value_type, extents_type, layout_policy, accessor_policy>;
 
-   protected:
-    using array_type = std::array<index_type, extents_type::rank()>;
-
-    template <std::size_t... Idxs>
-    index_type _get_index(concepts::TupleLike auto const& t,
-                          std::integer_sequence<index_type, Idxs...>) const {
-        return get_index(std::get<Idxs>(t)...);
-    }
-
-    auto get_index(concepts::TupleLike auto const& indices) const
-        -> index_type {
-        return _get_index(
-            indices,
-            std::make_integer_sequence<std::size_t, extents_type::rank()>{});
-    }
-    template <typename... Indices>
-    auto get_index(Indices&&... indices) const -> index_type {
-        index_type r = mapping()(std::forward<Indices>(indices)...);
-        return r;
-    }
-
    public:
     value_accessor_type& accessor() { return derived().accessor(); }
     const value_accessor_type& accessor() const { return derived().accessor(); }
@@ -122,17 +101,6 @@ class PlainObjectViewBase : public MappedViewBase<Derived_> {
     }
     */
     constexpr size_t size() const { return extents_traits::size(extents()); }
-
-    template <typename... Args>
-    const value_type& operator()(Args&&... idxs) const {
-        index_type idx = get_index(std::forward<Args>(idxs)...);
-        return derived().const_coeff_ref(idx);
-    }
-    template <typename... Args>
-    value_type& operator()(Args&&... idxs) {
-        index_type idx = get_index(std::forward<Args>(idxs)...);
-        return derived().coeff_ref(idx);
-    }
 };
 }  // namespace uvl::views
 #endif

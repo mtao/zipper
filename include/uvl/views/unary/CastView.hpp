@@ -2,7 +2,6 @@
 #if !defined(UVL_VIEWS_UNARY_CASTVIEW_HPP)
 #define UVL_VIEWS_UNARY_CASTVIEW_HPP
 
-#include "detail/CoeffWiseTraits.hpp"
 #include "uvl/concepts/ViewDerived.hpp"
 #include "uvl/views/ViewBase.hpp"
 

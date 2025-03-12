@@ -5,6 +5,6 @@
 namespace uvl::concepts {
 
 template <typename T>
-concept MatrixViewDerived = TensorViewDerived<T,1>;
+concept VectorViewDerived = TensorViewDerived<T,1>;
 }  // namespace uvl::concepts
 #endif
