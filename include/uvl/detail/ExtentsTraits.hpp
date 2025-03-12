@@ -17,17 +17,21 @@ struct extent_values;
 template <index_type... Idxs>
 struct extent_values<extents<Idxs...>> {
     constexpr static index_type static_size =
-        ((Idxs == std::dynamic_extent ? Idxs : 1) * ... * 1);
+        ((Idxs == std::dynamic_extent ? 1 : Idxs) * ... * 1);
 };
 
 template <typename Extents>
 struct ExtentsTraits {
     using extents_type = Extents;
-    constexpr static bool is_dynamic = extents_type::rank_dynamic();
+    constexpr static rank_type rank_dynamic = extents_type::rank_dynamic();
+    constexpr static rank_type rank_static = extents_type::rank_static();
+    constexpr static bool is_dynamic = rank_dynamic != 0;
     constexpr static bool is_static = !is_dynamic;
     constexpr static rank_type rank = extents_type::rank();
 
     constexpr static index_type static_size =
+        extent_values<extents_type>::static_size;
+    constexpr static index_type _size =
         extent_values<extents_type>::static_size;
 
     template <typename T>
@@ -44,6 +48,10 @@ struct ExtentsTraits {
             }
             return s;
         }
+    }
+
+    constexpr static bool is_dynamic_extent(rank_type i) {
+        return extents_type::static_extent(i) == std::dynamic_extent;
     }
 };
 }  // namespace uvl::detail

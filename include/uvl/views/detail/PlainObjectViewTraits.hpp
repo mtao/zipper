@@ -6,15 +6,14 @@
 
 namespace uvl::views {
 
-template <typename T, bool isStatic>
+template <typename T>
 class PlainObjectViewBase;
 }
 namespace uvl::views::detail {
-template <typename T, bool isStatic>
+template <typename T>
 concept PlainObjectViewDerived = std::derived_from<
     T, PlainObjectViewBase<
-           T, uvl::detail::ExtentsTraits<
-                  typename detail::ViewTraits<T>::extents_type>::is_static>>;
+           T>>;
 template <typename T>
 struct PlainObjectViewTraits;
 //{

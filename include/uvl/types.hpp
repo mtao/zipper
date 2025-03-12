@@ -8,6 +8,8 @@ using index_type = std::size_t;
 using rank_type = std::size_t;
 template <index_type... Extents>
 using extents = std::experimental::extents<index_type, Extents...>;
+template <rank_type N>
+using dextents = std::experimental::dextents<index_type, N>;
 
 using default_layout_policy = std::experimental::layout_right;
 template <typename T>

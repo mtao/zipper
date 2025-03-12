@@ -1,7 +1,7 @@
-#if !defined(UVL_VIEWS_STATICVIEWBASE_HPP)
-#define UVL_VIEWS_STATICVIEWBASE_HPP
+#if !defined(UVL_VIEWS_STATICMAPPEDVIEWBASE_HPP)
+#define UVL_VIEWS_STATICMAPPEDVIEWBASE_HPP
 
-#include "ViewBase.hpp"
+#include "StaticViewBase.hpp"
 #include "detail/ViewTraits.hpp"
 #include "uvl/detail/ExtentsTraits.hpp"
 
@@ -10,22 +10,20 @@ namespace uvl::views {
 
 
 template <typename Derived_>
-class StaticViewBase
-    : public ViewBase<Derived_> {
+class StaticMappedViewBase
+    : public StaticViewBase<Derived_> {
    public:
     using Derived =Derived_;
-    Derived& derived() { return static_cast<Derived&>(*this); }
-    const Derived& derived() const {
-        return static_cast<const Derived&>(*this);
-    }
     using Base = ViewBase<Derived>;
     using traits = detail::ViewTraits<Derived>;
 
     using value_type = traits::value_type;
     using extents_type = traits::extents_type;
     using extents_traits = uvl::detail::ExtentsTraits<extents_type>;
+    using mapping_type = traits::mapping_type;
 
-    const extents_type& extents() const { return derived().extents(); }
+    const extents_type& extents() const { return s_mapping.extents(); }
+    const mapping_type& mapping() const { return s_mapping; }
 
 
     constexpr index_type extent(rank_type i) const {
@@ -34,6 +32,8 @@ class StaticViewBase
 
     constexpr static size_t size() { return extents_traits::static_size; }
 
+   private:
+    constexpr static mapping_type s_mapping = {};
 };
 
 }  // namespace uvl::storage

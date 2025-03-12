@@ -42,6 +42,16 @@ class PlainObjectStorage
         requires(!IsStatic)
         : ParentType(extents), m_accessor(std::forward<Args>(args)...) {}
 
+    template <typename E2>
+    void resize(const E2& e)
+        requires(
+            uvl::views::detail::assignable_extents<extents_type, E2>::value &&
+            !IsStatic)
+    {
+        this->resize_extents(e);
+        m_accessor.container().resize(extents_traits::size(e));
+    }
+
    private:
     accessor_type m_accessor;
 };

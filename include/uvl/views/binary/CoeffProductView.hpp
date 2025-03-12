@@ -1,6 +1,7 @@
 
-#if !defined(UVL_VIEWS_BINARY_ADDITIONVIEW_HPP)
-#define UVL_VIEWS_BINARY_ADDITIONVIEW_HPP
+
+#if !defined(UVL_VIEWS_BINARY_COEFFPRODUCTVIEW_HPP)
+#define UVL_VIEWS_BINARY_COEFFPRODUCTVIEW_HPP
 
 #include "detail/CoeffWiseTraits.hpp"
 #include "uvl/views/MappedViewBase.hpp"
@@ -9,11 +10,11 @@
 namespace uvl::views {
 namespace binary {
 template <concepts::ViewDerived A, concepts::ViewDerived B>
-class AdditionView;
+class CoeffProductView;
 
 }
 template <typename A, typename B>
-struct detail::ViewTraits<binary::AdditionView<A, B>>
+struct detail::ViewTraits<binary::CoeffProductView<A, B>>
 //: public binary::detail::CoeffWiseTraits<A, B> {
 //: public detail::ViewTraits<A> {
 {
@@ -25,11 +26,11 @@ struct detail::ViewTraits<binary::AdditionView<A, B>>
 
 namespace binary {
 template <concepts::ViewDerived A, concepts::ViewDerived B>
-class AdditionView   : public MappedViewBase<AdditionView<A, B>>
+class CoeffProductView   : public MappedViewBase<CoeffProductView<A, B>>
 {
    public:
-    using self_type = AdditionView<A, B>;
-    AdditionView(const A& a, const B& b) : m_lhs(a), m_rhs(b) {}
+    using self_type = CoeffProductView<A, B>;
+    CoeffProductView(const A& a, const B& b) : m_lhs(a), m_rhs(b) {}
     using traits = uvl::views::detail::ViewTraits<self_type>;
      using Base = MappedViewBase<self_type>;
      using Base::extent;
@@ -43,17 +44,17 @@ class AdditionView   : public MappedViewBase<AdditionView<A, B>>
     // const extents_type& extents() const { return derived().extents(); }
      template <typename... Args>
      auto operator()(Args&&... idxs) const {
-        return m_lhs(idxs...) +
+        return m_lhs(idxs...) *
                m_rhs(idxs...);
     }
 
    private:
     const A& m_lhs;
     const B& m_rhs;
-};  // namespace binarytemplate<typenameA,typenameB>class AdditionView
+};  // namespace binarytemplate<typenameA,typenameB>class CoeffProductView
 
 template <concepts::ViewDerived A, concepts::ViewDerived B>
-AdditionView(const A& a, const B& b) -> AdditionView<A, B>;
+CoeffProductView(const A& a, const B& b) -> CoeffProductView<A, B>;
 }  // namespace binary
 }  // namespace uvl::views
 #endif

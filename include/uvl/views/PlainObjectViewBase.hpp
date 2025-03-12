@@ -1,25 +1,20 @@
+#include <ranges>
 #if !defined(UVL_VIEWS_PLAINOBJECTVIEWBASE_HPP)
 #define UVL_VIEWS_PLAINOBJECTVIEWBASE_HPP
-#include <spdlog/spdlog.h>
 
-#include "DynamicViewBase.hpp"
-#include "StaticViewBase.hpp"
+#include "MappedViewBase.hpp"
 #include "ViewBase.hpp"
 #include "detail/PlainObjectViewTraits.hpp"
+#include "detail/assignable_extents.hpp"
+#include "uvl/concepts/TupleLike.hpp"
+#include "uvl/concepts/ViewDerived.hpp"
+#include "uvl/detail/all_extents_indices.hpp"
 namespace uvl::views {
-template <typename Derived_,
-          bool IsStatic = uvl::detail::ExtentsTraits<
-              typename detail::ViewTraits<Derived_>::extents_type>::is_static>
-class PlainObjectViewBase
-    : public
-
-      std::conditional_t<IsStatic, StaticViewBase<Derived_>,
-                         DynamicViewBase<Derived_>> {
+template <typename Derived_>
+class PlainObjectViewBase : public MappedViewBase<Derived_> {
    public:
-    static_assert(
-        IsStatic ==
-        uvl::detail::ExtentsTraits<
-            typename detail::ViewTraits<Derived_>::extents_type>::is_static);
+    constexpr static bool IsStatic = uvl::detail::ExtentsTraits<
+        typename detail::ViewTraits<Derived_>::extents_type>::is_static;
     using Derived = Derived_;
     Derived& derived() { return static_cast<Derived&>(*this); }
     const Derived& derived() const {
@@ -32,9 +27,11 @@ class PlainObjectViewBase
     using extents_traits = uvl::detail::ExtentsTraits<extents_type>;
     using value_type = traits::value_type;
 
-    using ParentType = std::conditional_t<IsStatic, StaticViewBase<Derived_>,
-                                          DynamicViewBase<Derived_>>;
+    using ParentType = MappedViewBase<Derived>;
+    using ParentType::extent;
     using ParentType::extents;
+
+    using ParentType::ParentType;
 
     using ParentType::mapping;
 
@@ -47,13 +44,23 @@ class PlainObjectViewBase
         uvl::mdspan<value_type, extents_type, layout_policy, accessor_policy>;
 
    protected:
+    using array_type = std::array<index_type, extents_type::rank()>;
+
+    template <std::size_t... Idxs>
+    index_type _get_index(concepts::TupleLike auto const& t,
+                          std::integer_sequence<index_type, Idxs...>) const {
+        return get_index(std::get<Idxs>(t)...);
+    }
+
+    auto get_index(concepts::TupleLike auto const& indices) const
+        -> index_type {
+        return _get_index(
+            indices,
+            std::make_integer_sequence<std::size_t, extents_type::rank()>{});
+    }
     template <typename... Indices>
     auto get_index(Indices&&... indices) const -> index_type {
-        spdlog::warn("{} {}", indices...);
-        spdlog::warn("{}", mapping().extents().extent(0));
-        spdlog::warn("{}", mapping().extents().extent(1));
         index_type r = mapping()(std::forward<Indices>(indices)...);
-        spdlog::warn("{}", r);
         return r;
     }
 
@@ -88,8 +95,28 @@ class PlainObjectViewBase
         return span_type(accessor().container());
     }
 
-    constexpr index_type extent(rank_type i) const {
-        return extents().static_extent(i);
+    template <typename E2>
+    void resize(const E2& extents) {
+        return derived().resize(extents);
+    }
+
+    template <concepts::ViewDerived V>
+    void assign(const V& view)
+        requires(detail::assignable_extents<
+                 typename detail::ViewTraits<V>::extents_type,
+                 extents_type>::value)
+    {
+        if constexpr (extents_traits::is_dynamic) {
+            this->resize(view.extents());
+        }
+        for (const auto& i : uvl::detail::all_extents_indices(extents())) {
+            std::array<index_type, extents_traits::rank> ij{
+                {std::get<0>(i), std::get<1>(i)}};
+            //             auto ij =
+            // ranges::to<std::array<index_type, extents_traits::rank>>(i);
+
+            (*this)(i) = view(i);
+        }
     }
 
     /*
@@ -104,13 +131,11 @@ class PlainObjectViewBase
     template <typename... Args>
     const value_type& operator()(Args&&... idxs) const {
         index_type idx = get_index(std::forward<Args>(idxs)...);
-        spdlog::info("Accessing index {}", idx);
         return derived().const_coeff_ref(idx);
     }
     template <typename... Args>
     value_type& operator()(Args&&... idxs) {
         index_type idx = get_index(std::forward<Args>(idxs)...);
-        spdlog::info("Accessing index {}", idx);
         return derived().coeff_ref(idx);
     }
 };
