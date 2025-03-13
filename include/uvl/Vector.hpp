@@ -1,38 +1,36 @@
 #if !defined(UVL_VECTOR_HPP)
 #define UVL_VECTOR_HPP
 
-#include "MatrixBase.hpp"
+#include "VectorBase.hpp"
 #include "storage/PlainObjectStorage.hpp"
 #include "uvl/types.hpp"
 namespace uvl {
 
 template <typename ValueType, index_type Rows>
 class Vector
-    : public MatrixBase<
-          storage::PlainObjectStorage<ValueType, extents<Rows,1>>> {
+    : public VectorBase<storage::PlainObjectStorage<ValueType, extents<Rows>>> {
    public:
     using Base =
-        MatrixBase<storage::PlainObjectStorage<ValueType, extents<Rows,1>>>;
+        VectorBase<storage::PlainObjectStorage<ValueType, extents<Rows>>>;
     using Base::view;
     using view_type = Base::view_type;
     using value_type = Base::value_type;
     using extents_type = Base::extents_type;
 
-    template <concepts::MatrixBaseDerived Other>
+    template <concepts::VectorBaseDerived Other>
     Vector(const Other& other) : Base(other) {}
     template <typename... Args>
     Vector(Args&&... args)
         requires((std::is_convertible_v<Args, index_type> && ...))
-        : Base(extents<Rows,1>(std::forward<Args>(args)...)) {}
+        : Base(extents<Rows>(std::forward<Args>(args)...)) {}
     template <index_type... indices>
     Vector(const extents<indices...>& e) : Base(e) {}
 
-    template <concepts::MatrixBaseDerived Other>
+    template <concepts::VectorBaseDerived Other>
     Vector& operator=(const Other& other) {
         view().assign(other.view());
     }
 
-    
     template <typename... Args>
     const value_type& operator()(Args&&... idxs) const
 
@@ -45,7 +43,6 @@ class Vector
     {
         return view()(std::forward<Args>(idxs)...);
     }
-
 };
 
 }  // namespace uvl

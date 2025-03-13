@@ -23,7 +23,6 @@ class DynamicViewBase : public ViewBase<Derived_> {
 
     using value_type = traits::value_type;
     using extents_type = traits::extents_type;
-    using value_accessor_type = traits::value_accessor_type;
     using extents_traits = uvl::detail::ExtentsTraits<extents_type>;
 
     const extents_type& extents() const { return derived().extents(); }

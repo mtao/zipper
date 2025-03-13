@@ -38,6 +38,11 @@ class PlainObjectStorage
         requires(IsStatic)
         : ParentType() {}
 
+    PlainObjectStorage(const PlainObjectStorage&) = default;
+    PlainObjectStorage(PlainObjectStorage&&) = default;
+    PlainObjectStorage& operator=(const PlainObjectStorage&) = default;
+    PlainObjectStorage& operator=(PlainObjectStorage&&) = default;
+
     PlainObjectStorage(const extents_type& extents)
         requires(!IsStatic)
         : ParentType(extents), m_accessor(extents_traits::size(extents)) {}

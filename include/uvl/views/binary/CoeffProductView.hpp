@@ -38,6 +38,10 @@ class CoeffProductView : public DimensionedViewBase<CoeffProductView<A, B>> {
       using extents_type = traits::extents_type;
       using extents_traits = uvl::detail::ExtentsTraits<extents_type>;
 
+    CoeffProductView(const CoeffProductView&) = default;
+    CoeffProductView(CoeffProductView&&) = default;
+    CoeffProductView& operator=(const CoeffProductView&) = default;
+    CoeffProductView& operator=(CoeffProductView&&) = default;
     CoeffProductView(const A& a, const B& b) requires(extents_traits::is_static)
         : m_lhs(a), m_rhs(b)
     {}

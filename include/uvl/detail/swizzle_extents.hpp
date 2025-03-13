@@ -28,7 +28,7 @@ struct ExtentsSwizzler {
         using type = swizzled_extents_type<Indices...>;
     };
     template <typename T>
-    using extents_type_swizzler_t = extents_type_swizzler<T>;
+    using extents_type_swizzler_t = extents_type_swizzler<T>::type;
 
     // dim I,J,K with 0,2,1 is sent to I,K,J
     // say K is dynamic
@@ -85,7 +85,9 @@ struct ExtentsSwizzler {
         using input_type = std::decay_t<decltype(t)>;
         constexpr std::size_t my_size = std::tuple_size_v<input_type>;
         static_assert(((SwizzleIndices < my_size) && ...));
-        return {{index_type(std::get<SwizzleIndices>(t))...}};
+        std::array<index_type, size> r{
+            {index_type(std::get<SwizzleIndices>(t))...}};
+        return r;
     }
 
     template <typename... Indices>

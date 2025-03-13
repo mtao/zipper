@@ -39,6 +39,10 @@ class SwizzleView
     using value_type = traits::value_type;
     using swizzler_type = traits::swizzler_type;
 
+    SwizzleView(const SwizzleView&) = default;
+    SwizzleView(SwizzleView&&) = default;
+    SwizzleView& operator=(const SwizzleView&) = default;
+    SwizzleView& operator=(SwizzleView&&) = default;
     SwizzleView(const ViewType& b)
         : m_view(b), m_extents(swizzler_type::swizzle_extents(b.extents())) {}
     using Base = DimensionedViewBase<self_type>;

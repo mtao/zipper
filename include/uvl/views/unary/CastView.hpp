@@ -10,7 +10,13 @@ namespace unary {
 template <typename A, concepts::ViewDerived B>
 class CastView;
 
+template <typename A, concepts::ViewDerived B>
+auto cast(const B& b) {
+    return CastView<A, B>(b);
 }
+
+}  // namespace unary
+
 template <typename A, concepts::ViewDerived B>
 struct detail::ViewTraits<unary::CastView<A, B>>
 //: public unary::detail::CoeffWiseTraits<A, B> {
@@ -19,7 +25,6 @@ struct detail::ViewTraits<unary::CastView<A, B>>
     using Base = detail::ViewTraits<B>;
     using extents_type = typename Base::extents_type;
     using value_type = A;
-    using mapping_type = typename Base::mapping_type;
     constexpr static bool is_writable = false;
 };
 
@@ -30,9 +35,12 @@ class CastView : public ViewBase<CastView<A, B>> {
     using self_type = CastView<A, B>;
     using traits = uvl::views::detail::ViewTraits<self_type>;
     using extents_type = traits::extents_type;
-    using mapping_type = traits::mapping_type;
     using value_type = traits::value_type;
 
+    CastView(const CastView&) = default;
+    CastView(CastView&&) = default;
+    CastView& operator=(const CastView&) = default;
+    CastView& operator=(CastView&&) = default;
     CastView(const B& b) : m_rhs(b) {}
     using Base = ViewBase<self_type>;
     using Base::extent;

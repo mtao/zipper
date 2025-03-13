@@ -40,16 +40,19 @@ class StaticMappedViewBase : public StaticViewBase<Derived_> {
         return get_index(std::get<Idxs>(t)...);
     }
 
-    auto get_index(concepts::TupleLike auto const& indices) const
-        -> index_type {
-        return _get_index(
-            indices,
-            std::make_integer_sequence<std::size_t, extents_type::rank()>{});
-    }
     template <typename... Indices>
     auto get_index(Indices&&... indices) const -> index_type {
-        index_type r = mapping()(std::forward<Indices>(indices)...);
-        return r;
+        if constexpr (sizeof...(Indices) == 1 &&
+                      (concepts::TupleLike<std::decay_t<Indices>> && ...)) {
+            return _get_index(
+                indices..., std::make_integer_sequence<std::size_t,
+                                                       extents_type::rank()>{});
+        } else if constexpr ((std::is_integral_v<std::decay_t<Indices>> &&
+                              ...)) {
+            static_assert((!concepts::TupleLike<Indices> && ...));
+            index_type r = mapping()(std::forward<Indices>(indices)...);
+            return r;
+        }
     }
 
    public:

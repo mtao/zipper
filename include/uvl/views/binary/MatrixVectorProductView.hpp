@@ -21,7 +21,7 @@ struct detail::ViewTraits<binary::MatrixVectorProductView<A, B>>
     using BTraits = detail::ViewTraits<A>;
     // static_assert(std::is_same_v<ATraits::value_type,BTraits::value_type>);
     using extents_type =
-        extents<typename ATraits::extents_type::static_extent(0)>;
+        extents<ATraits::extents_type::static_extent(0)>;
     using value_type = typename ATraits::value_type;
     constexpr static bool is_writable = false;
 };
@@ -41,14 +41,14 @@ class MatrixVectorProductView
     using extents_traits = uvl::detail::ExtentsTraits<extents_type>;
 
     MatrixVectorProductView(const A& a, const B& b)
-        requires(traits::ATraits::extents_type::static_rank(0) ==
+        requires(traits::ATraits::extents_type::static_extent(0) ==
                  std::dynamic_extent)
         : m_lhs(a), m_rhs(b) {
         assert(a.extent(1) == b.extent(0));
     }
 
     MatrixVectorProductView(const A& a, const B& b)
-        requires(traits::ATraits::extents_type::static_rank(0) !=
+        requires(traits::ATraits::extents_type::static_extent(0) !=
                  std::dynamic_extent)
         : m_lhs(a), m_rhs(b), m_extents(a.extent(0)) {
         assert(a.extent(1) == b.extent(0));
