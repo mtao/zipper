@@ -69,8 +69,6 @@ TEST_CASE("test_all_extents", "[storage][dense]") {
     std::cout << "X  * x" << std::endl;
     print(X * x);
 
-
-
     uvl::MatrixBase swizzled = uvl::views::unary::SwizzleView<
         uvl::Matrix<double, 3, std::dynamic_extent>::view_type, 1, 0>(M.view());
 
@@ -92,32 +90,32 @@ TEST_CASE("test_all_extents", "[storage][dense]") {
         }
     }
 
-    // std::random_device rd;
+    std::random_device rd;
 
-    // uvl::MatrixBase R = uvl::views::nullary::uniform_random_view<double>(
-    //     uvl::extents<4, 4>{}, -1, 1);
+    uvl::MatrixBase R = uvl::views::nullary::uniform_random_view<double>(
+        uvl::extents<4, 4>{}, -1, 1);
 
-    // M2 = R;
-    // print(M2);
+    M2 = R;
+    print(M2);
 
-    // spdlog::info("and again");
-    // M2 = R;
-    // print(M2);
+    spdlog::info("and again");
+    M2 = R;
+    print(M2);
 
-    // spdlog::info("Integral stuff should come out");
-    // uvl::MatrixBase RI(uvl::views::nullary::uniform_random_view<int>(
-    //     uvl::extents<4, 4>{}, 0, 40));
-    // M2 = RI.cast<double>();
-    // print(M2);
+    spdlog::info("Integral stuff should come out");
+    uvl::MatrixBase RI(uvl::views::nullary::uniform_random_view<int>(
+        uvl::extents<4, 4>{}, 0, 40));
+    M2 = RI.cast<double>();
+    print(M2);
 
-    // spdlog::info("and again");
-    // M2 = RI.cast<double>();
-    // print(M2);
+    spdlog::info("and again");
+    M2 = RI.cast<double>();
+    print(M2);
 
-    // spdlog::info("Normally distributed: ");
-    // uvl::MatrixBase RN(uvl::views::nullary::normal_random_view<double>(
-    //     uvl::extents<4, 4>{}, 0, 20));
-    // uvl::Matrix MN = RN;
-    // print(MN);
-    //  CHECK(M2 == M2d);
+    spdlog::info("Normally distributed: ");
+    uvl::MatrixBase RN(uvl::views::nullary::normal_random_view<double>(
+        uvl::extents<4, 4>{}, 0, 20));
+    uvl::Matrix MN = RN;
+    print(MN);
+    // CHECK(M2 == M2d);
 }
