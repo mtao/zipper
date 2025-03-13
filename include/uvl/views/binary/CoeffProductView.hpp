@@ -6,7 +6,6 @@
 #include "detail/CoeffWiseTraits.hpp"
 #include "uvl/concepts/ViewDerived.hpp"
 #include "uvl/views/DimensionedViewBase.hpp"
-#include "uvl/detail/convert_extents.hpp"
 
 namespace uvl::views {
 namespace binary {
@@ -43,7 +42,7 @@ class CoeffProductView : public DimensionedViewBase<CoeffProductView<A, B>> {
         : m_lhs(a), m_rhs(b)
     {}
     CoeffProductView(const A& a, const B& b) requires(!extents_traits::is_static)
-        : m_lhs(a), m_rhs(b), m_extents(uvl::detail::convert_extents(a.extents()))
+        : m_lhs(a), m_rhs(b), m_extents(a.extents())
     {}
     // using value_type = traits::value_type;
 

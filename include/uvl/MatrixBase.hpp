@@ -1,7 +1,6 @@
 #if !defined(UVL_MATRIXBASE_HPP)
 #define UVL_MATRIXBASE_HPP
 
-#include "detail/convert_extents.hpp"
 #include "uvl/types.hpp"
 //
 #include "concepts/MatrixBaseDerived.hpp"
@@ -30,7 +29,7 @@ class MatrixBase {
 
     template <concepts::MatrixBaseDerived Other>
     MatrixBase(const Other& other)
-        : m_view(detail::convert_extents<extents_type>(other.extents())) {
+        : m_view(other.extents()) {
         m_view.assign(other.view());
     }
     template <concepts::MatrixBaseDerived Other>

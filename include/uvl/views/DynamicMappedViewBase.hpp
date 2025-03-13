@@ -6,7 +6,6 @@
 #include "DynamicViewBase.hpp"
 #include "detail/ViewTraits.hpp"
 #include "uvl/detail/ExtentsTraits.hpp"
-#include "uvl/detail/convert_extents.hpp"
 
 namespace uvl::views {
 
@@ -49,7 +48,7 @@ class DynamicMappedViewBase : public DynamicViewBase<Derived_> {
     void resize_extents(const E2& e)
         requires detail::assignable_extents<extents_type, E2>::value
     {
-        m_mapping = uvl::detail::convert_extents<extents_type>(e);
+        m_mapping = {e};
     }
 
    protected:

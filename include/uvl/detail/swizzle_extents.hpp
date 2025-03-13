@@ -1,5 +1,3 @@
-
-
 #if !defined(UVL_DETAIL_SWIZZLE_EXTENTS_HPP)
 #define UVL_DETAIL_SWIZZLE_EXTENTS_HPP
 
@@ -14,7 +12,10 @@ struct ExtentsSwizzler<extents<Indices...>, extents<SwizzleIndices...>> {
     using destination_extents_type = extents<Indices...>;
     using swizzle_extents_type = extents<SwizzleIndices...>;
     using extents_type = extents<destination_extents_type::static_extent(SwizzleIndices)...>;
-    static extents<Indices...> get_extent(const extents<SIndices...>& s) {
+    static extents_type get_extent(const destination_extents_type& s) {
+        //return 
+        //    extents_type(s.extent(SwizzleIndices)...);
+    }
         std::array<index_type, extents<Indices...>::rank_dynamic()> arr;
         rank_type arr_idx = 0;
         for (rank_type j = 0; j < extents<SIndices...>::rank(); ++j) {
@@ -27,7 +28,7 @@ struct ExtentsSwizzler<extents<Indices...>, extents<SwizzleIndices...>> {
     }
 };
 template <index_type... SwizzledIndices, index_type... Indices>
-auto index_swizzler(const extents<Indices...>& a) {
+auto swizzle_extents(const extents<Indices...>& a) {
     return ExtentsSwizzler<extents<Indices...>, extents<SwizzledIndices...>>(a);
 }
 
