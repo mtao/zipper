@@ -11,6 +11,10 @@ using extents = std::experimental::extents<index_type, Extents...>;
 template <rank_type N>
 using dextents = std::experimental::dextents<index_type, N>;
 
+template <typename... Args>
+auto create_dextents(Args&&... args) { return dextents<sizeof...(Args)>(args...) ;}
+
+
 using default_layout_policy = std::experimental::layout_right;
 template <typename T>
 using default_accessor_policy = std::experimental::default_accessor<T>;

@@ -6,7 +6,7 @@
 #include "uvl/types.hpp"
 namespace uvl::views::detail {
 template <typename T>
-class ViewTraits;
+struct ViewTraits;
 }
 namespace uvl::concepts {
 
