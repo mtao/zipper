@@ -14,6 +14,8 @@ struct DefaultUnaryViewTraits {
     using extents_type = typename BaseTraits::extents_type;
     using value_type = BaseTraits::value_type;
     constexpr static bool is_writable = false;
+
+    // to pass a base type to the UnaryViewBase
     template <typename Derived>
     using base_type = Base<Derived>;
 
@@ -37,12 +39,6 @@ class UnaryViewBase: public views::detail::ViewTraits<Derived>::template base_ty
     using Base::extent;
 
     constexpr const extents_type& extents() const { return m_view.extents(); }
-
-    template <typename... Args>
-    value_type coeff(Args&&... idxs) const {
-        const auto& value = m_view(std::forward<Args>(idxs)...);
-        return std::abs(value);
-    }
 
     ChildType& view() { return m_view; }
     const ChildType& view() const { return m_view; }
