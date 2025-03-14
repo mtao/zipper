@@ -19,7 +19,6 @@ struct detail::ViewTraits<unary::ScalarProductView<A, B>>
     using Base = detail::ViewTraits<B>;
     using extents_type = typename Base::extents_type;
     using value_type = typename Base::value_type;
-    using mapping_type = typename Base::mapping_type;
     constexpr static bool is_writable = false;
 };
 
@@ -30,7 +29,6 @@ class ScalarProductView : public ViewBase<ScalarProductView<A, B>> {
     using self_type = ScalarProductView<A, B>;
     using traits = uvl::views::detail::ViewTraits<self_type>;
     using extents_type = traits::extents_type;
-    using mapping_type = traits::mapping_type;
     using value_type = traits::value_type;
 
     ScalarProductView(const A& a, const B& b) : m_lhs(a), m_rhs(b) {}

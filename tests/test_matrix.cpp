@@ -4,8 +4,8 @@
 
 #include <catch2/catch_all.hpp>
 #include <iostream>
-#include <uvl/Matrix.hpp>
 #include <uvl/ArrayBase.hpp>
+#include <uvl/Matrix.hpp>
 #include <uvl/Vector.hpp>
 #include <uvl/views/nullary/ConstantView.hpp>
 #include <uvl/views/nullary/IdentityView.hpp>
@@ -44,7 +44,7 @@ TEST_CASE("test_all_extents", "[storage][dense]") {
     double l1 = x.norm<1>();
     std::cout << "X norm: " << l1 << " " << l2 << std::endl;
     CHECK(l1 == 2 + 5 + 9);
-    CHECK(l2 == std::sqrt(2*2 + 5*5 + 9*9));
+    CHECK(l2 == std::sqrt(2 * 2 + 5 * 5 + 9 * 9));
 
     M(0, 0) = 0;
     M(1, 0) = 1;
@@ -126,8 +126,31 @@ TEST_CASE("test_all_extents", "[storage][dense]") {
     print(MN);
     // CHECK(M2 == M2d);
 
-    //{
-    //uvl::Matrix x = uvl::views::nullary::uniform_random_view<double>(
-    //    uvl::extents<4, 4>{}, -1, 1);
-    //}
+    for (int j = 0; j < 10; ++j) {
+        spdlog::info("power trial {}", j);
+
+        uvl::index_type N = uvl::index_type((1 + j) * 10);
+        uvl::Matrix At = uvl::views::nullary::uniform_random_view<double>(
+            uvl::create_dextents(N, N), -1, 1);
+        uvl::Matrix A = At.transpose() * At;
+        uvl::Vector x = uvl::views::nullary::uniform_random_view<double>(
+            uvl::create_dextents(N), -1, 1);
+        uvl::Vector y = x;
+
+        for (int k = 0; k < j * 20; ++k) {
+            // todo: assignment with copied data in case of aliasing
+            y = A * x;
+            x = (1.0 / y.norm()) * y;
+        }
+        spdlog::info("x {}", x.extent(0));
+        print(x);
+        spdlog::info("Ax {} {}", A.extent(0), A.extent(1));
+        print(A * x);
+        double e = (A * x).norm();
+        spdlog::info("Eigenvalue {}", e);
+        print(e * x);
+        std::cout << std::endl;
+        std::cout << std::endl;
+        std::cout << std::endl;
+    }
 }

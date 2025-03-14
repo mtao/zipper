@@ -7,29 +7,29 @@
 namespace uvl {
 
 template <typename ValueType, index_type Rows>
-class Vector
-    : public VectorBase<storage::PlainObjectStorage<ValueType, extents<Rows>>> {
+class Vector : public VectorBase<
+                   storage::PlainObjectStorage<ValueType, uvl::extents<Rows>>> {
    public:
     using Base =
-        VectorBase<storage::PlainObjectStorage<ValueType, extents<Rows>>>;
+        VectorBase<storage::PlainObjectStorage<ValueType, uvl::extents<Rows>>>;
     using Base::view;
     using view_type = Base::view_type;
     using value_type = Base::value_type;
     using extents_type = Base::extents_type;
+    using Base::extent;
+    using Base::extents;
 
+    template <concepts::VectorViewDerived Other>
+    Vector(const Other& other) : Base(other) {}
     template <concepts::VectorBaseDerived Other>
     Vector(const Other& other) : Base(other) {}
     template <typename... Args>
     Vector(Args&&... args)
         requires((std::is_convertible_v<Args, index_type> && ...))
-        : Base(extents<Rows>(std::forward<Args>(args)...)) {}
+        : Base(uvl::extents<Rows>(std::forward<Args>(args)...)) {}
     template <index_type... indices>
-    Vector(const extents<indices...>& e) : Base(e) {}
-
-    template <concepts::VectorBaseDerived Other>
-    Vector& operator=(const Other& other) {
-        view().assign(other.view());
-    }
+    Vector(const uvl::extents<indices...>& e) : Base(e) {}
+    using Base::operator=;
 
     template <typename... Args>
     const value_type& operator()(Args&&... idxs) const
@@ -45,6 +45,12 @@ class Vector
     }
 };
 
+template <concepts::VectorViewDerived MB>
+Vector(const MB& o)
+    -> Vector<typename MB::value_type, MB::extents_type::static_extent(0)>;
+template <concepts::VectorBaseDerived MB>
+Vector(const MB& o)
+    -> Vector<typename MB::value_type, MB::extents_type::static_extent(0)>;
 }  // namespace uvl
 
 namespace uvl::views {

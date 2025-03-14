@@ -4,6 +4,7 @@
 
 #include <cmath>
 
+#include "uvl/detail/convert_extents.hpp"
 #include "uvl/types.hpp"
 //
 #include "concepts/VectorBaseDerived.hpp"
@@ -37,10 +38,24 @@ class VectorBase {
     VectorBase& operator=(VectorBase&& v) = default;
     VectorBase& operator=(const VectorBase& v) = default;
 
+    template <concepts::VectorViewDerived Other>
+    VectorBase(const Other& other)
+        requires(view_type::is_writable)
+        : m_view(detail::convert_extents<extents_type>(other.extents())) {
+        m_view.assign(other);
+    }
+    template <concepts::VectorViewDerived Other>
+    VectorBase& operator=(const Other& other)
+        requires(view_type::is_writable)
+    {
+        m_view.assign(other);
+        return *this;
+    }
+
     template <concepts::VectorBaseDerived Other>
     VectorBase(const Other& other)
         requires(view_type::is_writable)
-        : m_view(other.extents()) {
+        : m_view(detail::convert_extents<extents_type>(other.extents())) {
         m_view.assign(other.view());
     }
     template <concepts::VectorBaseDerived Other>
@@ -48,6 +63,7 @@ class VectorBase {
         requires(view_type::is_writable)
     {
         m_view.assign(other.view());
+        return *this;
     }
 
     template <concepts::VectorBaseDerived Other>
@@ -77,8 +93,7 @@ class VectorBase {
             return views::reductions::CoefficientSum{as_array().abs().view()}();
         } else if constexpr (T == 2) {
             auto arr = as_array();
-            return views::reductions::CoefficientSum{
-                (as_array() * as_array()).view()}();
+            return views::reductions::CoefficientSum{(arr * arr).view()}();
         } else {
             return views::reductions::CoefficientSum{
                 as_array().pow(T).abs().view()}();
@@ -89,12 +104,14 @@ class VectorBase {
             as_array().pow(T).abs().view()}();
     }
 
-    template <index_type T>
+    template <index_type T = 2>
     value_type norm() const {
-        return std::pow<value_type>(norm_powered<T>(), value_type(1.0) / T);
+        value_type p = value_type(1.0) / T;
+        return std::pow<value_type>(norm_powered<T>(), p);
     }
     value_type norm(value_type T) const {
-        return std::pow<value_type>(norm_powered(T), value_type(1.0) / T);
+        value_type p = value_type(1.0) / T;
+        return std::pow<value_type>(norm_powered(T), p);
     }
 
     template <typename T>

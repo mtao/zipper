@@ -9,6 +9,7 @@
 #include "uvl/concepts/TupleLike.hpp"
 #include "uvl/concepts/ViewDerived.hpp"
 #include "uvl/detail/all_extents_indices.hpp"
+#include "uvl/detail/convert_extents.hpp"
 namespace uvl::views {
 template <typename Derived_>
 class PlainObjectViewBase : public MappedViewBase<Derived_> {
@@ -87,6 +88,14 @@ class PlainObjectViewBase : public MappedViewBase<Derived_> {
                  typename detail::ViewTraits<V>::extents_type,
                  extents_type>::value)
     {
+        /*
+        Derived future(
+            uvl::detail::convert_extents<extents_type>(view.extents()));
+        for (const auto& i : uvl::detail::all_extents_indices(extents())) {
+            (*this)(i) = view(i);
+        }
+        *this = future;
+        */
         if constexpr (extents_traits::is_dynamic) {
             this->resize(view.extents());
         }

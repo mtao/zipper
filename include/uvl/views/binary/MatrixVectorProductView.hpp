@@ -43,14 +43,14 @@ class MatrixVectorProductView
     MatrixVectorProductView(const A& a, const B& b)
         requires(traits::ATraits::extents_type::static_extent(0) ==
                  std::dynamic_extent)
-        : m_lhs(a), m_rhs(b) {
+        : m_lhs(a), m_rhs(b), m_extents(a.extent(0)) {
         assert(a.extent(1) == b.extent(0));
     }
 
     MatrixVectorProductView(const A& a, const B& b)
         requires(traits::ATraits::extents_type::static_extent(0) !=
                  std::dynamic_extent)
-        : m_lhs(a), m_rhs(b), m_extents(a.extent(0)) {
+        : m_lhs(a), m_rhs(b) {
         assert(a.extent(1) == b.extent(0));
     }
     const extents_type& extents() const { return m_extents; }

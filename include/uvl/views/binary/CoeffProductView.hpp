@@ -21,7 +21,6 @@ struct detail::ViewTraits<binary::CoeffProductView<A, B>>
     using Base = detail::ViewTraits<A>;
     using extents_type = typename Base::extents_type;
     using value_type = typename Base::value_type;
-    using mapping_type = typename Base::mapping_type;
     constexpr static bool is_writable = false;
 };
 
@@ -35,23 +34,22 @@ class CoeffProductView : public DimensionedViewBase<CoeffProductView<A, B>> {
     using Base = DimensionedViewBase<self_type>;
     using Base::extent;
     using Base::extents;
-      using extents_type = traits::extents_type;
-      using extents_traits = uvl::detail::ExtentsTraits<extents_type>;
+    using extents_type = traits::extents_type;
+    using extents_traits = uvl::detail::ExtentsTraits<extents_type>;
 
     CoeffProductView(const CoeffProductView&) = default;
     CoeffProductView(CoeffProductView&&) = default;
     CoeffProductView& operator=(const CoeffProductView&) = default;
     CoeffProductView& operator=(CoeffProductView&&) = default;
-    CoeffProductView(const A& a, const B& b) requires(extents_traits::is_static)
-        : m_lhs(a), m_rhs(b)
-    {}
-    CoeffProductView(const A& a, const B& b) requires(!extents_traits::is_static)
-        : m_lhs(a), m_rhs(b), m_extents(a.extents())
-    {}
+    CoeffProductView(const A& a, const B& b)
+        requires(extents_traits::is_static)
+        : m_lhs(a), m_rhs(b) {}
+    CoeffProductView(const A& a, const B& b)
+        requires(!extents_traits::is_static)
+        : m_lhs(a), m_rhs(b), m_extents(a.extents()) {}
     // using value_type = traits::value_type;
 
-    // const mapping_type& mapping() const { return derived().mapping(); }
-     const extents_type& extents() const { return m_extents; }
+    const extents_type& extents() const { return m_extents; }
     template <typename... Args>
     auto coeff(Args&&... idxs) const {
         return m_lhs(idxs...) * m_rhs(idxs...);
