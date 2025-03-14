@@ -129,18 +129,16 @@ TEST_CASE("test_all_extents", "[storage][dense]") {
     for (int j = 0; j < 10; ++j) {
         spdlog::info("power trial {}", j);
 
-        uvl::index_type N = uvl::index_type((1 + j) * 10);
+        auto N = uvl::index_type((1 + j) * 10);
         uvl::Matrix At = uvl::views::nullary::uniform_random_view<double>(
             uvl::create_dextents(N, N), -1, 1);
         uvl::Matrix A = At.transpose() * At;
         uvl::Vector x = uvl::views::nullary::uniform_random_view<double>(
             uvl::create_dextents(N), -1, 1);
-        uvl::Vector y = x;
 
         for (int k = 0; k < j * 20; ++k) {
             // todo: assignment with copied data in case of aliasing
-            y = A * x;
-            x = (1.0 / y.norm()) * y;
+            x = (A * x).eval().normalized();
         }
         spdlog::info("x {}", x.extent(0));
         print(x);

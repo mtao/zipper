@@ -3,6 +3,7 @@
 
 #include <utility>
 
+#include "NullaryViewBase.hpp"
 #include "uvl/concepts/TupleLike.hpp"
 #include "uvl/views/DimensionedViewBase.hpp"
 
@@ -14,9 +15,8 @@ class IdentityView;
 }
 template <typename T, index_type... Indices>
 struct detail::ViewTraits<nullary::IdentityView<T, Indices...>>
-: public detail::DefaultViewTraits<T,extents<Indices...>>
-{
-    constexpr static bool is_coefficient_consistent = true;
+    : public nullary::detail::DefaultNullaryViewTraits<T, Indices...> {
+    constexpr static bool is_value_based = false;
 };
 
 namespace nullary {

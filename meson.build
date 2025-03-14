@@ -24,3 +24,4 @@ uvl_dep = declare_dependency(link_with: uvl_lib, dependencies: required_deps, in
 
 
 subdir('tests')
+subdir('examples')

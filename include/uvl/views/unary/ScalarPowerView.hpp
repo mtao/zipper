@@ -2,19 +2,19 @@
 #define UVL_VIEWS_UNARY_SCALARPOWERVIEW_HPP
 
 #include <cmath>
+
 #include "UnaryViewBase.hpp"
 
 namespace uvl::views {
 namespace unary {
-template < concepts::ViewDerived B, typename A>
+template <concepts::ViewDerived B, typename A>
 class ScalarPowerView;
 
 }
 template <concepts::ViewDerived Child, typename A>
-struct detail::ViewTraits<unary::ScalarPowerView<Child, A>>: public uvl::views::unary::detail::DefaultUnaryViewTraits<Child> {
-
+struct detail::ViewTraits<unary::ScalarPowerView<Child, A>>
+    : public uvl::views::unary::detail::DefaultUnaryViewTraits<Child> {
     using value_type = A;
-
 };
 
 namespace unary {
@@ -40,18 +40,15 @@ class ScalarPowerView : public UnaryViewBase<ScalarPowerView<B, A>, B> {
     const A& exp() const { return m_exp; }
     A& exp() { return m_exp; }
 
-
-
-    template <typename... Args>
-    value_type coeff(Args&&... idxs) const {
-        const auto& view = this->view()(std::forward<Args>(idxs)...);
-        const auto ret = std::pow(view, m_exp);
+    using child_value_type = traits::base_value_type;
+    value_type get_value(const child_value_type& value) const {
+        const auto ret = std::pow(value, m_exp);
         return ret;
     }
 
    private:
     A m_exp;
-};  
+};
 
 template <typename A, concepts::ViewDerived B>
 ScalarPowerView(const A& a, const B& b) -> ScalarPowerView<A, B>;

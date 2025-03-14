@@ -19,33 +19,32 @@ struct detail::ViewTraits<unary::ScalarProductView<A, B>>
 
 namespace unary {
 template <typename A, concepts::ViewDerived B>
-class ScalarProductView : public ViewBase<ScalarProductView<A, B>> {
+class ScalarProductView : public UnaryViewBase<ScalarProductView<A, B>, B> {
    public:
     using self_type = ScalarProductView<A, B>;
     using traits = uvl::views::detail::ViewTraits<self_type>;
     using extents_type = traits::extents_type;
     using value_type = traits::value_type;
 
+    using Base = UnaryViewBase<self_type, B>;
+    using Base::extent;
+    using Base::view;
+
     ScalarProductView(const ScalarProductView&) = default;
     ScalarProductView(ScalarProductView&&) = default;
     ScalarProductView& operator=(const ScalarProductView&) = default;
     ScalarProductView& operator=(ScalarProductView&&) = default;
-    ScalarProductView(const A& a, const B& b) : m_lhs(a), m_rhs(b) {}
-    using Base = ViewBase<self_type>;
-    using Base::extent;
-
-    constexpr const extents_type& extents() const { return m_rhs.extents(); }
+    ScalarProductView(const A& a, const B& b) : Base(b), m_lhs(a) {}
 
     template <typename... Args>
     value_type coeff(Args&&... idxs) const {
-        const auto& rhs = m_rhs(std::forward<Args>(idxs)...);
+        const auto& rhs = view()(std::forward<Args>(idxs)...);
         const auto ret = m_lhs * rhs;
         return ret;
     }
 
    private:
     const A m_lhs;
-    const B& m_rhs;
 };  // namespace unarytemplate<typenameA,typenameB>class AdditionView
 
 template <typename A, concepts::ViewDerived B>

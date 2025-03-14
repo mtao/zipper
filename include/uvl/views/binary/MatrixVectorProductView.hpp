@@ -18,6 +18,8 @@ struct detail::ViewTraits<binary::MatrixVectorProductView<A, B>>
     using ATraits = detail::ViewTraits<A>;
     using BTraits = detail::ViewTraits<B>;
     using extents_type = extents<ATraits::extents_type::static_extent(0)>;
+    constexpr static bool is_coefficient_consistent = false;
+    constexpr static bool is_value_based = false;
 };
 
 namespace binary {

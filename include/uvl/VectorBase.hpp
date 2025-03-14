@@ -10,12 +10,20 @@
 #include "concepts/VectorBaseDerived.hpp"
 #include "concepts/VectorViewDerived.hpp"
 //
+// Scalar stuff
 #include "views/binary/AdditionView.hpp"
-#include "views/reductions/CoefficientSum.hpp"
 #include "views/unary/CastView.hpp"
+#include "views/unary/NegateView.hpp"
 #include "views/unary/ScalarProductView.hpp"
+#include "views/unary/ScalarQuotientView.hpp"
+#include "views/unary/SwizzleView.hpp"
+//
+#include "ArrayBase.hpp"
+#include "views/reductions/CoefficientSum.hpp"
 
 namespace uvl {
+template <typename ValueType, index_type Rows>
+class Vector;
 
 template <concepts::VectorViewDerived View>
 class VectorBase {
@@ -38,39 +46,69 @@ class VectorBase {
     VectorBase& operator=(VectorBase&& v) = default;
     VectorBase& operator=(const VectorBase& v) = default;
 
-    template <concepts::VectorViewDerived Other>
-    VectorBase(const Other& other)
-        requires(view_type::is_writable)
-        : m_view(detail::convert_extents<extents_type>(other.extents())) {
-        m_view.assign(other);
-    }
-    template <concepts::VectorViewDerived Other>
-    VectorBase& operator=(const Other& other)
-        requires(view_type::is_writable)
-    {
-        m_view.assign(other);
-        return *this;
+    auto eval() const {
+        return Vector(*this);
     }
 
-    template <concepts::VectorBaseDerived Other>
+    template <concepts::VectorViewDerived Other>
     VectorBase(const Other& other)
         requires(view_type::is_writable)
         : m_view(detail::convert_extents<extents_type>(other.extents())) {
-        m_view.assign(other.view());
+        m_view.assign(other);
     }
+    template <concepts::VectorViewDerived Other>
+    VectorBase& operator=(const Other& other)
+        requires(view_type::is_writable)
+    {
+        m_view.assign(other);
+        return *this;
+    }
+    template <concepts::VectorBaseDerived Other>
+    VectorBase(const Other& other)
+        requires(view_type::is_writable)
+        : VectorBase(other.view()) {}
     template <concepts::VectorBaseDerived Other>
     VectorBase& operator=(const Other& other)
         requires(view_type::is_writable)
     {
-        m_view.assign(other.view());
-        return *this;
+        return operator=(other.view());
     }
+    VectorBase& operator*=(const value_type& other)
+        requires(view_type::is_writable)
+    {
+        return *this = other * *this;
+    }
+    VectorBase& operator/=(const value_type& other)
+        requires(view_type::is_writable)
+    {
+        return *this = *this / other;
+    }
+    template <concepts::VectorBaseDerived Other>
+    VectorBase& operator+=(const Other& other)
+        requires(view_type::is_writable)
+    {
+        return *this = *this + other;
+    }
+    template <concepts::VectorBaseDerived Other>
+    VectorBase& operator-=(const Other& other)
+        requires(view_type::is_writable)
+    {
+        return *this = *this - other;
+    }
+
 
     template <concepts::VectorBaseDerived Other>
     friend auto operator+(const VectorBase<view_type>& lhs, Other const& rhs) {
         return VectorBase<
             views::binary::AdditionView<view_type, typename Other::view_type>>(
             lhs.view(), rhs.view());
+    }
+    friend auto operator-(const VectorBase<view_type>& lhs) {
+        return VectorBase<views::unary::NegateView<view_type>>(lhs.view());
+    }
+    template <concepts::VectorBaseDerived Other>
+    friend auto operator-(const VectorBase<view_type>& lhs, Other const& rhs) {
+        return lhs + (-rhs);
     }
 
     friend auto operator*(const VectorBase<view_type>& lhs,
@@ -84,6 +122,22 @@ class VectorBase {
         return VectorBase<
             views::unary::ScalarProductView<value_type, view_type>>(lhs,
                                                                     rhs.view());
+    }
+    friend auto operator/(const VectorBase<view_type>& lhs,
+                          value_type const& rhs) {
+        return VectorBase<
+            views::unary::ScalarQuotientView<view_type, value_type>>(lhs.view(),
+                                                                     rhs);
+    }
+
+    // template <rank_type... ranks>
+    // auto swizzle() const {
+    //     return VectorBase<views::unary::SwizzleView<value_type, ranks...>>(
+    //         view());
+    // }
+    template <typename T>
+    auto cast() const {
+        return VectorBase<views::unary::CastView<T, view_type>>(view());
     }
 
     auto as_array() const { return ArrayBase<View>(view()); }
@@ -114,9 +168,21 @@ class VectorBase {
         return std::pow<value_type>(norm_powered(T), p);
     }
 
-    template <typename T>
-    auto cast() const {
-        return VectorBase<views::unary::CastView<T, view_type>>(view());
+    template <index_type T = 2>
+    auto normalized() const {
+        return *this / norm<T>();
+
+    }
+    value_type normalized(value_type T) const {
+        return *this / norm(T);
+    }
+    template <index_type T = 2>
+    void normalize() {
+        *this /= norm<T>();
+
+    }
+    void normalize(value_type T) {
+        *this /= norm(T);
     }
 
     template <typename... Args>

@@ -24,15 +24,14 @@ class AbsoluteView : public UnaryViewBase<AbsoluteView<B>, B> {
 
     using Base = UnaryViewBase<self_type, B>;
     using Base::Base;
-    using Base::extent;
-    using Base::view;
+    using child_value_type = traits::base_value_type;
 
-
-    template <typename... Args>
-    value_type coeff(Args&&... idxs) const {
-        const auto& value = view()(std::forward<Args>(idxs)...);
+    value_type get_value(const child_value_type&value) const
+    {
         return std::abs(value);
+
     }
+
 };  
 
 template <concepts::ViewDerived View>

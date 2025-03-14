@@ -3,7 +3,7 @@
 
 #include <random>
 
-#include "uvl/views/DimensionedViewBase.hpp"
+#include "NullaryViewBase.hpp"
 
 namespace uvl::views {
 namespace nullary {
@@ -41,21 +41,23 @@ auto normal_random_view(const extents<Indices...>& extents, const T& mean = 0,
 template <typename Distribution, typename Generator, index_type... Indices>
 struct detail::ViewTraits<
     nullary::RandomView<Distribution, Generator, Indices...>>
-: public detail::DefaultViewTraits<typename Distribution::result_type,extents<Indices...>>
-{
-    constexpr static bool is_coefficient_consistent = true;
-};
+    : public nullary::detail::DefaultNullaryViewTraits<
+          typename Distribution::result_type, Indices...> {};
 
 namespace nullary {
 template <typename Distribution, typename Generator, index_type... Indices>
-class RandomView : public DimensionedViewBase<
-                       RandomView<Distribution, Generator, Indices...>> {
+class RandomView
+    : public NullaryViewBase<RandomView<Distribution, Generator, Indices...>,
+                             typename Distribution::result_type, Indices...> {
    public:
     using self_type = RandomView<Distribution, Generator, Indices...>;
     using traits = uvl::views::detail::ViewTraits<self_type>;
     using extents_type = traits::extents_type;
     using extents_traits = uvl::detail::ExtentsTraits<extents_type>;
     using value_type = traits::value_type;
+    using Base =
+        NullaryViewBase<RandomView<Distribution, Generator, Indices...>,
+                        typename Distribution::result_type, Indices...>;
 
     RandomView(const RandomView&) = default;
     RandomView(RandomView&&) = default;
@@ -64,30 +66,21 @@ class RandomView : public DimensionedViewBase<
     template <typename... Args>
     RandomView(const Distribution& d = {},
                const Generator& g = {std::random_device{}()}, Args&&... args)
-        : m_distribution(d),
-          m_generator(g),
-          m_extents(std::forward<Args>(args)...) {}
+        : Base(std::forward<Args>(args)...),
+          m_distribution(d),
+          m_generator(g) {}
     template <typename... Args>
     RandomView(const Distribution& d, const unsigned int seed, Args&&... args)
-        : m_distribution(d),
-          m_generator(seed),
-          m_extents(std::forward<Args>(args)...) {}
-    using Base = DimensionedViewBase<self_type>;
-    using Base::extent;
+        : Base(std::forward<Args>(args)...),
+          m_distribution(d),
+          m_generator(seed) {}
 
-    constexpr const extents_type& extents() const { return m_extents; }
-
-    template <typename... Args>
-    value_type coeff(Args&&...) const {
-        return m_distribution(m_generator);
-    }
+    value_type get_value() const { return m_distribution(m_generator); }
 
    private:
     mutable Distribution m_distribution;
     mutable Generator m_generator;
-    extents_type m_extents;
-};  // namespace nullarytemplate<typenameA,typenameB>class AdditionView
-
+};
 template <typename Distribution, typename Generator, index_type... Indices>
 RandomView(const Distribution&, const Generator&, const extents<Indices...>&)
     -> RandomView<Distribution, Generator, Indices...>;

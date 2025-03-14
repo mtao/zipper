@@ -16,8 +16,11 @@ struct DefaultUnaryViewTraits
     // to pass a base type to the UnaryViewBase
     template <typename Derived>
     using base_type = Base<Derived>;
-    constexpr static bool is_coefficient_consistent = true;
+    using base_traits = views::detail::ViewTraits<Child>;
+    using base_value_type = base_traits::value_type;
+    constexpr static bool is_coefficient_consistent = base_traits::is_coefficient_consistent;
     constexpr static bool holds_extents = false;
+    constexpr static bool is_value_based = true;
 };
 }  // namespace detail
 
@@ -30,6 +33,12 @@ class UnaryViewBase
     using extents_type = traits::extents_type;
     using value_type = traits::value_type;
 
+    Derived& derived() { return static_cast<Derived&>(*this); }
+    const Derived& derived() const {
+        return static_cast<const Derived&>(*this);
+    }
+    using child_value_type = traits::base_value_type;
+
     UnaryViewBase(const UnaryViewBase&) = default;
     UnaryViewBase(UnaryViewBase&&) = default;
     UnaryViewBase& operator=(const UnaryViewBase&) = default;
@@ -38,11 +47,24 @@ class UnaryViewBase
     using Base =
         views::detail::ViewTraits<Derived>::template base_type<Derived>;
     using Base::extent;
+    constexpr static bool is_value_based = traits::is_value_based;
 
     constexpr const extents_type& extents() const { return m_view.extents(); }
 
+    value_type get_value(const child_value_type&value) const
+        requires(is_value_based)
+    {
+        return derived().get_value(value);
+    }
+
     ChildType& view() { return m_view; }
     const ChildType& view() const { return m_view; }
+    template <typename... Args>
+    value_type coeff(Args&&... args) const
+        requires(is_value_based)
+    {
+        return get_value(m_view(std::forward<Args>(args)...));
+    }
 
    private:
     const ChildType& m_view;

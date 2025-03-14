@@ -13,6 +13,8 @@ struct DefaultBinaryViewTraits: public views::detail::DefaultViewTraits<>
     {
     using ATraits = views::detail::ViewTraits<ChildA>;
     using BTraits = views::detail::ViewTraits<ChildB>;
+    using lhs_value_type = ATraits::value_type;
+    using rhs_value_type = BTraits::value_type;
     // using extents_type = typename BaseTraits::extents_type;
     static_assert(std::is_convertible_v<typename ATraits::value_type,
                                         typename BTraits::value_type> ||
@@ -22,6 +24,8 @@ struct DefaultBinaryViewTraits: public views::detail::DefaultViewTraits<>
     // defaulting to first parameter
     using value_type = typename ATraits::value_type;
     constexpr static bool holds_extents = true;
+    constexpr static bool is_coefficient_consistent = ATraits::is_coefficient_consistent && BTraits::is_coefficient_consistent; 
+    constexpr static bool is_value_based = true;
 
     // to pass a base type to the BinaryViewBase
     template <typename Derived>
@@ -41,6 +45,13 @@ class BinaryViewBase
     using value_type = traits::value_type;
     constexpr static bool holds_extents = traits::holds_extents;
     constexpr static bool is_static = extents_traits::is_static;
+    constexpr static bool is_value_based = traits::is_value_based;
+    Derived& derived() { return static_cast<Derived&>(*this); }
+    const Derived& derived() const {
+        return static_cast<const Derived&>(*this);
+    }
+    using lhs_value_type = traits::lhs_value_type;
+    using rhs_value_type = traits::rhs_value_type;
 
     BinaryViewBase(const BinaryViewBase&) = default;
     BinaryViewBase(BinaryViewBase&&) = default;
@@ -68,6 +79,18 @@ class BinaryViewBase
         requires(holds_extents)
     {
         return m_extents;
+    }
+
+    value_type get_value(const lhs_value_type& l, const rhs_value_type& r) const {
+        return derived().get_value(l,r);
+    }
+
+
+    template <typename... Args>
+    value_type coeff(Args&&... args) const
+        requires(is_value_based)
+    {
+        return get_value(m_lhs(std::forward<Args>(args)...),m_rhs(std::forward<Args>(args)...));
     }
 
    private:

@@ -62,20 +62,20 @@ class DynamicMappedViewBase : public DynamicViewBase<Derived_> {
    public:
     template <typename... Indices>
     auto coeff(Indices&&... indices) const -> value_type {
-        index_type idx = mapping()(std::forward<Indices>(indices)...);
+        index_type idx = get_index(std::forward<Indices>(indices)...);
         return derived().coeff_linear(idx);
     }
    template <typename... Indices>
    auto coeff_ref(Indices&&... indices)
        -> value_type& requires(traits::is_writable) {
-           index_type idx = mapping()(std::forward<Indices>(indices)...);
+           index_type idx = get_index(std::forward<Indices>(indices)...);
            return derived().coeff_ref_linear(idx);
        }
 
    template <typename... Indices>
    auto const_coeff_ref(Indices&&... indices) const
        -> const value_type& requires(traits::is_writable) {
-           index_type idx = mapping()(std::forward<Indices>(indices)...);
+           index_type idx = get_index(std::forward<Indices>(indices)...);
            return derived().const_coeff_ref_linear(idx);
        }
 

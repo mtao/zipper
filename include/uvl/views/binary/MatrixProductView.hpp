@@ -45,6 +45,8 @@ struct detail::ViewTraits<binary::MatrixProductView<A, B>>
         coeffwise_extents_values<typename ATraits::extents_type,
                                  typename BTraits::extents_type>;
     using extents_type = typename ConvertExtentsUtil::product_extents_type;
+    constexpr static bool is_coefficient_consistent = false;
+    constexpr static bool is_value_based = false;
 };
 
 namespace binary {

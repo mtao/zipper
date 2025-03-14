@@ -25,6 +25,7 @@ struct detail::ViewTraits<unary::SwizzleView<ViewType, Indices...>>
     using value_type = Base::value_type;
     constexpr static bool is_writable = Base::is_writable;
     constexpr static bool is_coefficient_consistent = false;
+    constexpr static bool is_value_based = false;
 };
 
 namespace unary {

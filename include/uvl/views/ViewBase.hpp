@@ -22,6 +22,7 @@ class ViewBase {
     using traits = detail::ViewTraits<Derived>;
     using extents_type = traits::extents_type;
     using value_type = traits::value_type;
+    constexpr static bool is_coefficient_consistent = traits::is_coefficient_consistent;
     constexpr static bool is_writable = traits::is_writable;
     constexpr static rank_type rank = extents_type::rank();
     using array_type = std::array<index_type, rank>;
