@@ -41,12 +41,9 @@ auto normal_random_view(const extents<Indices...>& extents, const T& mean = 0,
 template <typename Distribution, typename Generator, index_type... Indices>
 struct detail::ViewTraits<
     nullary::RandomView<Distribution, Generator, Indices...>>
-//: public nullary::detail::CoeffWiseTraits<A, B> {
-//: public detail::ViewTraits<A> {
+: public detail::DefaultViewTraits<typename Distribution::result_type,extents<Indices...>>
 {
-    using extents_type = extents<Indices...>;
-    using value_type = Distribution::result_type;
-    constexpr static bool is_writable = false;
+    constexpr static bool is_coefficient_consistent = true;
 };
 
 namespace nullary {

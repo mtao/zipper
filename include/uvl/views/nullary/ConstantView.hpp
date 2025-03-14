@@ -12,12 +12,9 @@ class ConstantView;
 }
 template <typename T, index_type... Indices>
 struct detail::ViewTraits<nullary::ConstantView<T, Indices...>>
-//: public nullary::detail::CoeffWiseTraits<A, B> {
-//: public detail::ViewTraits<A> {
+: public detail::DefaultViewTraits<T,extents<Indices...>>
 {
-    using extents_type = extents<Indices...>;
-    using value_type = T;
-    constexpr static bool is_writable = false;
+    constexpr static bool is_coefficient_consistent = true;
 };
 
 namespace nullary {

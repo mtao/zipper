@@ -3,10 +3,10 @@
 #if !defined(UVL_VIEWS_UNARY_SWIZZLEVIEW_HPP)
 #define UVL_VIEWS_UNARY_SWIZZLEVIEW_HPP
 
+#include "UnaryViewBase.hpp"
 #include "uvl/concepts/ViewDerived.hpp"
 #include "uvl/detail/swizzle_extents.hpp"
 #include "uvl/views/DimensionedViewBase.hpp"
-#include "UnaryViewBase.hpp"
 
 namespace uvl::views {
 namespace unary {
@@ -15,14 +15,16 @@ class SwizzleView;
 
 }
 template <concepts::ViewDerived ViewType, index_type... Indices>
-struct detail::ViewTraits<unary::SwizzleView<ViewType, Indices...>>: public uvl::views::unary::detail::DefaultUnaryViewTraits<ViewType, DimensionedViewBase> {
-
+struct detail::ViewTraits<unary::SwizzleView<ViewType, Indices...>>
+    : public uvl::views::unary::detail::DefaultUnaryViewTraits<
+          ViewType, DimensionedViewBase> {
     using swizzler_type = uvl::detail::ExtentsSwizzler<Indices...>;
     using Base = detail::ViewTraits<ViewType>;
     using extents_type = swizzler_type::template extents_type_swizzler_t<
         typename Base::extents_type>;
     using value_type = Base::value_type;
     constexpr static bool is_writable = Base::is_writable;
+    constexpr static bool is_coefficient_consistent = false;
 };
 
 namespace unary {

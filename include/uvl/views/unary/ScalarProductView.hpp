@@ -2,6 +2,7 @@
 #if !defined(UVL_VIEWS_UNARY_SCALARPRODUCTVIEW_HPP)
 #define UVL_VIEWS_UNARY_SCALARPRODUCTVIEW_HPP
 
+#include "UnaryViewBase.hpp"
 #include "detail/CoeffWiseTraits.hpp"
 #include "uvl/concepts/ViewDerived.hpp"
 #include "uvl/views/ViewBase.hpp"
@@ -14,15 +15,7 @@ class ScalarProductView;
 }
 template <typename A, concepts::ViewDerived B>
 struct detail::ViewTraits<unary::ScalarProductView<A, B>>
-//: public unary::detail::CoeffWiseTraits<A, B> {
-//: public detail::ViewTraits<A> {
-{
-    using Base = detail::ViewTraits<B>;
-    using extents_type = typename Base::extents_type;
-    using value_type = typename Base::value_type;
-    using mapping_type = typename Base::mapping_type;
-    constexpr static bool is_writable = false;
-};
+    : public unary::detail::DefaultUnaryViewTraits<B> {};
 
 namespace unary {
 template <typename A, concepts::ViewDerived B>
@@ -31,9 +24,7 @@ class ScalarProductView : public ViewBase<ScalarProductView<A, B>> {
     using self_type = ScalarProductView<A, B>;
     using traits = uvl::views::detail::ViewTraits<self_type>;
     using extents_type = traits::extents_type;
-    using mapping_type = traits::mapping_type;
     using value_type = traits::value_type;
-
 
     ScalarProductView(const ScalarProductView&) = default;
     ScalarProductView(ScalarProductView&&) = default;

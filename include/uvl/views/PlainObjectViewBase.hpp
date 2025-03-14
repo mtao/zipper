@@ -10,6 +10,11 @@
 #include "uvl/concepts/ViewDerived.hpp"
 #include "uvl/detail/all_extents_indices.hpp"
 #include "uvl/detail/convert_extents.hpp"
+namespace uvl::storage {
+template <typename ValueType, typename Extents, typename LayoutPolicy,
+          typename AccessorPolicy>
+class PlainObjectStorage;
+}
 namespace uvl::views {
 template <typename Derived_>
 class PlainObjectViewBase : public MappedViewBase<Derived_> {
@@ -82,25 +87,37 @@ class PlainObjectViewBase : public MappedViewBase<Derived_> {
         return derived().resize(extents);
     }
 
+   private:
+    template <concepts::ViewDerived V>
+    void assign_direct(const V& view) {
+        assert(extents() == view.extents());
+        for (const auto& i : uvl::detail::all_extents_indices(extents())) {
+            (*this)(i) = view(i);
+        }
+    }
+
+   public:
     template <concepts::ViewDerived V>
     void assign(const V& view)
         requires(detail::assignable_extents<
                  typename detail::ViewTraits<V>::extents_type,
                  extents_type>::value)
     {
-        /*
-        Derived future(
-            uvl::detail::convert_extents<extents_type>(view.extents()));
-        for (const auto& i : uvl::detail::all_extents_indices(extents())) {
-            (*this)(i) = view(i);
-        }
-        *this = future;
-        */
-        if constexpr (extents_traits::is_dynamic) {
-            this->resize(view.extents());
-        }
-        for (const auto& i : uvl::detail::all_extents_indices(extents())) {
-            (*this)(i) = view(i);
+        using VTraits = detail::ViewTraits<V>;
+        if constexpr (VTraits::is_coefficient_consistent) {
+            if constexpr (extents_traits::is_dynamic) {
+                this->resize(view.extents());
+            }
+            assign_direct(view);
+        } else {
+            storage::PlainObjectStorage<value_type, extents_type, layout_policy,
+                                        accessor_policy>
+                pos(uvl::detail::convert_extents<extents_type>(view.extents()));
+            pos.assign_direct(view);
+            if constexpr (extents_traits::is_dynamic) {
+                this->resize(view.extents());
+            }
+            assign_direct(pos);
         }
     }
 

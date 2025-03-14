@@ -75,19 +75,20 @@ namespace uvl::views {
 template <typename ValueType, typename Extents, typename LayoutPolicy,
           typename AccessorPolicy>
 struct detail::ViewTraits<uvl::storage::PlainObjectStorage<
-    ValueType, Extents, LayoutPolicy, AccessorPolicy>>
+    ValueType, Extents, LayoutPolicy, AccessorPolicy>>: public detail::DefaultViewTraits<ValueType, Extents>
 /*: public detail::ViewTraits <
   views::PlainObjectViewBase<uvl::storage::PlainObjectStorage<
       ValueType, Extents, LayoutPolicy, AccessorPolicy>> */
 {
-    using value_accessor_type =
-        storage::PlainObjectAccessor<ValueType, Extents>;
     using value_type = ValueType;
     using extents_type = Extents;
+    using value_accessor_type =
+        storage::PlainObjectAccessor<ValueType, Extents>;
     using layout_policy = LayoutPolicy;
     using accessor_policy = AccessorPolicy;
     using mapping_type = typename layout_policy::template mapping<extents_type>;
     constexpr static bool is_writable = true;
+    constexpr static bool is_coefficient_consistent = true;
 };
 }  // namespace uvl::views
 #endif

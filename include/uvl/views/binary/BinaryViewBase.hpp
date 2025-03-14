@@ -9,7 +9,8 @@ namespace uvl::views::binary {
 namespace detail {
 template <concepts::ViewDerived ChildA, concepts::ViewDerived ChildB,
           template <typename> typename Base = DimensionedViewBase>
-struct DefaultBinaryViewTraits {
+struct DefaultBinaryViewTraits: public views::detail::DefaultViewTraits<>
+    {
     using ATraits = views::detail::ViewTraits<ChildA>;
     using BTraits = views::detail::ViewTraits<ChildB>;
     // using extents_type = typename BaseTraits::extents_type;
@@ -20,7 +21,6 @@ struct DefaultBinaryViewTraits {
 
     // defaulting to first parameter
     using value_type = typename ATraits::value_type;
-    constexpr static bool is_writable = false;
     constexpr static bool holds_extents = true;
 
     // to pass a base type to the BinaryViewBase
