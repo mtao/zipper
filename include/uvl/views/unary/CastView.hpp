@@ -2,8 +2,7 @@
 #if !defined(UVL_VIEWS_UNARY_CASTVIEW_HPP)
 #define UVL_VIEWS_UNARY_CASTVIEW_HPP
 
-#include "uvl/concepts/ViewDerived.hpp"
-#include "uvl/views/ViewBase.hpp"
+#include "UnaryViewBase.hpp"
 
 namespace uvl::views {
 namespace unary {
@@ -17,44 +16,33 @@ auto cast(const B& b) {
 
 }  // namespace unary
 
-template <typename A, concepts::ViewDerived B>
-struct detail::ViewTraits<unary::CastView<A, B>>
-//: public unary::detail::CoeffWiseTraits<A, B> {
-//: public detail::ViewTraits<A> {
-{
-    using Base = detail::ViewTraits<B>;
-    using extents_type = typename Base::extents_type;
+template <typename A, concepts::ViewDerived Child>
+struct detail::ViewTraits<unary::CastView<A,Child>>: public uvl::views::unary::detail::DefaultUnaryViewTraits<Child> {
+
     using value_type = A;
-    constexpr static bool is_writable = false;
+
 };
 
 namespace unary {
 template <typename A, concepts::ViewDerived B>
-class CastView : public ViewBase<CastView<A, B>> {
+class CastView : public UnaryViewBase<CastView<A, B>, B> {
    public:
     using self_type = CastView<A, B>;
     using traits = uvl::views::detail::ViewTraits<self_type>;
     using extents_type = traits::extents_type;
     using value_type = traits::value_type;
 
-    CastView(const CastView&) = default;
-    CastView(CastView&&) = default;
-    CastView& operator=(const CastView&) = default;
-    CastView& operator=(CastView&&) = default;
-    CastView(const B& b) : m_rhs(b) {}
-    using Base = ViewBase<self_type>;
+    using Base = UnaryViewBase<self_type, B>;
+    using Base::Base;
     using Base::extent;
+    using Base::view;
 
-    constexpr const extents_type& extents() const { return m_rhs.extents(); }
 
     template <typename... Args>
     value_type coeff(Args&&... idxs) const {
-        const auto& value = m_rhs(std::forward<Args>(idxs)...);
+        const auto& value = view()(std::forward<Args>(idxs)...);
         return static_cast<A>(value);
     }
-
-   private:
-    const B& m_rhs;
 };  // namespace unarytemplate<typenameA,typenameB>class AdditionView
 
 }  // namespace unary

@@ -2,59 +2,60 @@
 #define UVL_VIEWS_UNARY_SCALARPOWERVIEW_HPP
 
 #include <cmath>
-
-#include "detail/CoeffWiseTraits.hpp"
-#include "uvl/concepts/ViewDerived.hpp"
-#include "uvl/views/ViewBase.hpp"
+#include "UnaryViewBase.hpp"
 
 namespace uvl::views {
 namespace unary {
-template <concepts::ViewDerived B, typename A>
+template < concepts::ViewDerived B, typename A>
 class ScalarPowerView;
 
 }
-template <concepts::ViewDerived B, typename A>
-struct detail::ViewTraits<unary::ScalarPowerView<B, A>>
-//: public unary::detail::CoeffWiseTraits<A, B> {
-//: public detail::ViewTraits<A> {
-{
-    using Base = detail::ViewTraits<B>;
-    using extents_type = typename Base::extents_type;
-    using value_type = typename Base::value_type;
-    using mapping_type = typename Base::mapping_type;
-    constexpr static bool is_writable = false;
+template <concepts::ViewDerived Child, typename A>
+struct detail::ViewTraits<unary::ScalarPowerView<Child, A>>: public uvl::views::unary::detail::DefaultUnaryViewTraits<Child> {
+
+    using value_type = A;
+
 };
 
 namespace unary {
 template <concepts::ViewDerived B, typename A>
-class ScalarPowerView : public ViewBase<ScalarPowerView<B, A>> {
+class ScalarPowerView : public UnaryViewBase<ScalarPowerView<B, A>, B> {
    public:
-    using self_type = ScalarPowerView<B, A>;
+    using self_type = ScalarPowerView<A, B>;
     using traits = uvl::views::detail::ViewTraits<self_type>;
     using extents_type = traits::extents_type;
-    using mapping_type = traits::mapping_type;
     using value_type = traits::value_type;
 
-    ScalarPowerView(const B& b, const A& a) : m_view(b), m_pow(a) {}
-    using Base = ViewBase<self_type>;
+    using Base = UnaryViewBase<self_type, B>;
     using Base::extent;
+    using Base::view;
 
-    constexpr const extents_type& extents() const { return m_view.extents(); }
+    ScalarPowerView(const ScalarPowerView&) = default;
+    ScalarPowerView(ScalarPowerView&&) = default;
+    ScalarPowerView& operator=(const ScalarPowerView&) = default;
+    ScalarPowerView& operator=(ScalarPowerView&&) = default;
+
+    ScalarPowerView(const B& b, const A& a) : Base(b), m_exp(a) {}
+
+    const A& exp() const { return m_exp; }
+    A& exp() { return m_exp; }
+
+
 
     template <typename... Args>
     value_type coeff(Args&&... idxs) const {
-        const auto& view = m_view(std::forward<Args>(idxs)...);
-        const auto ret = std::pow(view, m_pow);
+        const auto& view = this->view()(std::forward<Args>(idxs)...);
+        const auto ret = std::pow(view, m_exp);
         return ret;
     }
 
    private:
-    const B& m_view;
-    const A m_pow;
-};  // namespace unarytemplate<typenameA,typenameB>class AdditionView
+    A m_exp;
+};  
 
-template <concepts::ViewDerived B, typename A>
-ScalarPowerView(const B& b, const A& a) -> ScalarPowerView<B, A>;
+template <typename A, concepts::ViewDerived B>
+ScalarPowerView(const A& a, const B& b) -> ScalarPowerView<A, B>;
 }  // namespace unary
 }  // namespace uvl::views
+
 #endif

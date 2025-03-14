@@ -34,6 +34,11 @@ class ScalarProductView : public ViewBase<ScalarProductView<A, B>> {
     using mapping_type = traits::mapping_type;
     using value_type = traits::value_type;
 
+
+    ScalarProductView(const ScalarProductView&) = default;
+    ScalarProductView(ScalarProductView&&) = default;
+    ScalarProductView& operator=(const ScalarProductView&) = default;
+    ScalarProductView& operator=(ScalarProductView&&) = default;
     ScalarProductView(const A& a, const B& b) : m_lhs(a), m_rhs(b) {}
     using Base = ViewBase<self_type>;
     using Base::extent;
