@@ -1,0 +1,81 @@
+#if !defined(UVL_VIEWS_BINARY_BINARYVIEW_HPP)
+#define UVL_VIEWS_BINARY_BINARYVIEW_HPP
+
+#include "uvl/concepts/ViewDerived.hpp"
+#include "uvl/views/DimensionedViewBase.hpp"
+
+namespace uvl::views::binary {
+
+namespace detail {
+template <concepts::ViewDerived ChildA, concepts::ViewDerived ChildB,
+          template <typename> typename Base = DimensionedViewBase>
+struct DefaultBinaryViewTraits {
+    using ATraits = views::detail::ViewTraits<ChildA>;
+    using BTraits = views::detail::ViewTraits<ChildB>;
+    // using extents_type = typename BaseTraits::extents_type;
+    static_assert(std::is_convertible_v<typename ATraits::value_type,
+                                        typename BTraits::value_type> ||
+                  std::is_convertible_v<typename BTraits::value_type,
+                                        typename ATraits::value_type>);
+
+    // defaulting to first parameter
+    using value_type = typename ATraits::value_type;
+    constexpr static bool is_writable = false;
+    constexpr static bool holds_extents = true;
+
+    // to pass a base type to the BinaryViewBase
+    template <typename Derived>
+    using base_type = Base<Derived>;
+};
+}  // namespace detail
+
+template <typename Derived, concepts::ViewDerived ChildTypeA,
+          concepts::ViewDerived ChildTypeB>
+class BinaryViewBase
+    : public views::detail::ViewTraits<Derived>::template base_type<Derived> {
+   public:
+    using self_type = BinaryViewBase<Derived, ChildTypeA, ChildTypeB>;
+    using traits = uvl::views::detail::ViewTraits<Derived>;
+    using extents_type = traits::extents_type;
+    using extents_traits = uvl::detail::ExtentsTraits<extents_type>;
+    using value_type = traits::value_type;
+    constexpr static bool holds_extents = traits::holds_extents;
+    constexpr static bool is_static = extents_traits::is_static;
+
+    BinaryViewBase(const BinaryViewBase&) = default;
+    BinaryViewBase(BinaryViewBase&&) = default;
+    BinaryViewBase& operator=(const BinaryViewBase&) = default;
+    BinaryViewBase& operator=(BinaryViewBase&&) = default;
+    BinaryViewBase(const ChildTypeA& a, const ChildTypeB& b)
+        requires(!holds_extents || is_static)
+        : m_lhs(a), m_rhs(b) {}
+
+    BinaryViewBase(const ChildTypeA& a, const ChildTypeB& b,
+                   const extents_type& e)
+        requires(holds_extents && !is_static)
+        : m_lhs(a), m_rhs(b), m_extents(e) {}
+    using Base =
+        views::detail::ViewTraits<Derived>::template base_type<Derived>;
+    using Base::extent;
+
+    ChildTypeA& lhs() { return m_lhs; }
+    const ChildTypeA& lhs() const { return m_lhs; }
+
+    ChildTypeB& rhs() { return m_rhs; }
+    const ChildTypeB& rhs() const { return m_rhs; }
+
+    const extents_type& extents() const
+        requires(holds_extents)
+    {
+        return m_extents;
+    }
+
+   private:
+    const ChildTypeA& m_lhs;
+    const ChildTypeB& m_rhs;
+
+    std::conditional_t<holds_extents, extents_type, uvl::empty> m_extents;
+};
+
+}  // namespace uvl::views::binary
+#endif
