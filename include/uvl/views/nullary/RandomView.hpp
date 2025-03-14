@@ -60,14 +60,13 @@ class RandomView : public DimensionedViewBase<
     using extents_traits = uvl::detail::ExtentsTraits<extents_type>;
     using value_type = traits::value_type;
 
-
     RandomView(const RandomView&) = default;
     RandomView(RandomView&&) = default;
     RandomView& operator=(const RandomView&) = default;
     RandomView& operator=(RandomView&&) = default;
     template <typename... Args>
-    RandomView(const Distribution& d = {}, const Generator& g = {},
-               Args&&... args)
+    RandomView(const Distribution& d = {},
+               const Generator& g = {std::random_device{}()}, Args&&... args)
         : m_distribution(d),
           m_generator(g),
           m_extents(std::forward<Args>(args)...) {}
