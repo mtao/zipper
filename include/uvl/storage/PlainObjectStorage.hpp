@@ -27,6 +27,7 @@ class PlainObjectStorage
     using accessor_type = PlainObjectAccessor<value_type, extents_type>;
     const accessor_type& accessor() const { return m_accessor; }
     accessor_type& accessor() { return m_accessor; }
+    using ParentType::assign;
 
     /*
     template <typename... Args>

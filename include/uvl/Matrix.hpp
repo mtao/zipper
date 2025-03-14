@@ -21,6 +21,8 @@ class Matrix
     using Base::extent;
     using Base::extents;
 
+    template <concepts::MatrixViewDerived Other>
+    Matrix(const Other& other) : Base(other) {}
     template <concepts::MatrixBaseDerived Other>
     Matrix(const Other& other) : Base(other) {}
     template <typename... Args>
@@ -29,12 +31,7 @@ class Matrix
         : Base(uvl::extents<Rows, Cols>(std::forward<Args>(args)...)) {}
     template <index_type... indices>
     Matrix(const uvl::extents<indices...>& e) : Base(e) {}
-
-    template <concepts::MatrixBaseDerived Other>
-    Matrix& operator=(const Other& other) {
-        view().assign(other.view());
-        return *this;
-    }
+    using Base::operator=;
 
     template <typename... Args>
     const value_type& operator()(Args&&... idxs) const

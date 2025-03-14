@@ -32,12 +32,12 @@ class AdditionView : public DimensionedViewBase<AdditionView<A, B>> {
     using extents_type = typename traits::extents_type;
     using extents_traits = uvl::detail::ExtentsTraits<extents_type>;
 
-    AdditionView(const A& a, const B& b) requires(extents_traits::is_static)
-        : m_lhs(a), m_rhs(b)
-    {}
-    AdditionView(const A& a, const B& b) requires(!extents_traits::is_static)
-        : m_lhs(a), m_rhs(b), m_extents(a.extent(0))
-    {}
+    AdditionView(const A& a, const B& b)
+        requires(extents_traits::is_static)
+        : m_lhs(a), m_rhs(b) {}
+    AdditionView(const A& a, const B& b)
+        requires(!extents_traits::is_static)
+        : m_lhs(a), m_rhs(b), m_extents(a.extent(0)) {}
     using Base = DimensionedViewBase<self_type>;
     using Base::extent;
     const extents_type& extents() const { return m_extents; }
@@ -47,6 +47,9 @@ class AdditionView : public DimensionedViewBase<AdditionView<A, B>> {
     auto coeff(Args&&... idxs) const
         requires((std::is_convertible_v<Args, index_type> && ...))
     {
+        static_assert(sizeof...(idxs) == extents_type::rank());
+        static_assert(A::extents_type::rank() == extents_type::rank());
+        static_assert(B::extents_type::rank() == extents_type::rank());
         return m_lhs(idxs...) + m_rhs(idxs...);
     }
 

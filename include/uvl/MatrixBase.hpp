@@ -1,8 +1,8 @@
 #if !defined(UVL_MATRIXBASE_HPP)
 #define UVL_MATRIXBASE_HPP
 
-#include "uvl/types.hpp"
 #include "uvl/detail/convert_extents.hpp"
+#include "uvl/types.hpp"
 //
 #include "concepts/MappedViewDerived.hpp"
 #include "concepts/MatrixBaseDerived.hpp"
@@ -12,11 +12,14 @@
 #include "views/binary/AdditionView.hpp"
 #include "views/binary/MatrixProductView.hpp"
 #include "views/binary/MatrixVectorProductView.hpp"
+#include "views/reductions/CoefficientSum.hpp"
 #include "views/unary/CastView.hpp"
 #include "views/unary/ScalarProductView.hpp"
 #include "views/unary/SwizzleView.hpp"
 
 namespace uvl {
+template <concepts::ViewDerived View>
+class ArrayBase;
 
 template <concepts::MatrixViewDerived View>
 class MatrixBase {
@@ -39,18 +42,32 @@ class MatrixBase {
     MatrixBase& operator=(MatrixBase&& v) = default;
     MatrixBase& operator=(const MatrixBase& v) = default;
 
-    template <concepts::MatrixBaseDerived Other>
+    template <concepts::MatrixViewDerived Other>
     MatrixBase(const Other& other)
         requires(view_type::is_writable)
         : m_view(detail::convert_extents<extents_type>(other.extents())) {
-        m_view.assign(other.view());
+        m_view.assign(other);
     }
+    template <concepts::MatrixViewDerived Other>
+    MatrixBase& operator=(const Other& other)
+        requires(view_type::is_writable)
+    {
+        m_view.assign(other);
+        return *this;
+    }
+
+    template <concepts::MatrixBaseDerived Other>
+    MatrixBase(const Other& other)
+        requires(view_type::is_writable)
+        : MatrixBase(other.view()) {}
     template <concepts::MatrixBaseDerived Other>
     MatrixBase& operator=(const Other& other)
         requires(view_type::is_writable)
     {
-        m_view.assign(other.view());
+        return operator=(other.view());
     }
+
+    auto as_array() const { return ArrayBase<View>(view()); }
 
     template <concepts::MatrixBaseDerived Other>
     friend auto operator+(const MatrixBase<view_type>& lhs, Other const& rhs) {
@@ -89,7 +106,12 @@ class MatrixBase {
     }
 
     auto transpose() const {
-        return MatrixBase<views::unary::SwizzleView<view_type,1,0>>(view());
+        return MatrixBase<views::unary::SwizzleView<view_type, 1, 0>>(
+            views::unary::SwizzleView<view_type, 1, 0>(view()));
+
+        // TODO: why can't this compile?
+        // return MatrixBase<views::unary::SwizzleView<view_type, 1, 0>>
+        //    (view());
     }
 
     /*

@@ -34,49 +34,33 @@ class StaticMappedViewBase : public StaticViewBase<Derived_> {
     constexpr static size_t size() { return extents_traits::static_size; }
 
    protected:
-    template <std::size_t... Idxs>
-    index_type _get_index(concepts::TupleLike auto const& t,
-                          std::integer_sequence<index_type, Idxs...>) const {
-        return get_index(std::get<Idxs>(t)...);
-    }
-
     template <typename... Indices>
     auto get_index(Indices&&... indices) const -> index_type {
-        if constexpr (sizeof...(Indices) == 1 &&
-                      (concepts::TupleLike<std::decay_t<Indices>> && ...)) {
-            return _get_index(
-                indices..., std::make_integer_sequence<std::size_t,
-                                                       extents_type::rank()>{});
-        } else if constexpr ((std::is_integral_v<std::decay_t<Indices>> &&
-                              ...)) {
-            static_assert((!concepts::TupleLike<Indices> && ...));
-            index_type r = mapping()(std::forward<Indices>(indices)...);
-            return r;
-        }
+        static_assert((std::is_integral_v<std::decay_t<Indices>> && ...));
+        static_assert((!concepts::TupleLike<Indices> && ...));
+        index_type r = mapping()(std::forward<Indices>(indices)...);
+        return r;
     }
 
    public:
-    template <typename... Args>
-    auto operator()(Args&&... idxs) const ->
-
-        std::conditional_t<traits::is_writable, const value_type&, value_type> {
-        index_type idx = get_index(std::forward<Args>(idxs)...);
-        if constexpr (traits::is_writable) {
-            return derived().const_coeff_ref(idx);
-        } else {
-            return derived().coeff(idx);
-        }
+    template <typename... Indices>
+    auto coeff(Indices&&... indices) const -> value_type {
+        index_type idx = mapping()(std::forward<Indices>(indices)...);
+        return derived().coeff_linear(idx);
     }
-    template <typename... Args>
-    value_type& operator()(Args&&... idxs)
-        requires(traits::is_writable)
-    {
-        index_type idx = get_index(std::forward<Args>(idxs)...);
-        return derived().coeff_ref(idx);
-    }
+   template <typename... Indices>
+   auto coeff_ref(Indices&&... indices)
+       -> value_type& requires(traits::is_writable) {
+           index_type idx = mapping()(std::forward<Indices>(indices)...);
+           return derived().coeff_ref_linear(idx);
+       }
 
-   private:
-    constexpr static mapping_type s_mapping = {};
+   template <typename... Indices>
+   auto const_coeff_ref(Indices&&... indices) const
+       -> const value_type& requires(traits::is_writable) {
+           index_type idx = mapping()(std::forward<Indices>(indices)...);
+           return derived().const_coeff_ref_linear(idx);
+       } private : constexpr static mapping_type s_mapping = {};
 };
 
 }  // namespace uvl::views

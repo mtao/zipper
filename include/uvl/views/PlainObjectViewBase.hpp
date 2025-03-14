@@ -48,9 +48,11 @@ class PlainObjectViewBase : public MappedViewBase<Derived_> {
     const value_accessor_type& accessor() const { return derived().accessor(); }
     value_type* data() { return accessor().data(); }
     const value_type* data() const { return accessor().data(); }
-    value_type coeff(index_type i) const { return accessor().coeff(i); }
-    value_type& coeff_ref(index_type i) { return accessor().coeff_ref(i); }
-    const value_type& const_coeff_ref(index_type i) const {
+    value_type coeff_linear(index_type i) const { return accessor().coeff(i); }
+    value_type& coeff_ref_linear(index_type i) {
+        return accessor().coeff_ref(i);
+    }
+    const value_type& const_coeff_ref_linear(index_type i) const {
         return accessor().const_coeff_ref(i);
     }
 

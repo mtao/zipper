@@ -5,6 +5,7 @@
 #include <catch2/catch_all.hpp>
 #include <iostream>
 #include <uvl/Matrix.hpp>
+#include <uvl/ArrayBase.hpp>
 #include <uvl/Vector.hpp>
 #include <uvl/views/nullary/ConstantView.hpp>
 #include <uvl/views/nullary/IdentityView.hpp>
@@ -38,6 +39,12 @@ TEST_CASE("test_all_extents", "[storage][dense]") {
     x(0) = 2;
     x(1) = 5;
     x(2) = 9;
+
+    double l2 = x.norm<2>();
+    double l1 = x.norm<1>();
+    std::cout << "X norm: " << l1 << " " << l2 << std::endl;
+    CHECK(l1 == 2 + 5 + 9);
+    CHECK(l2 == std::sqrt(2*2 + 5*5 + 9*9));
 
     M(0, 0) = 0;
     M(1, 0) = 1;
@@ -118,4 +125,9 @@ TEST_CASE("test_all_extents", "[storage][dense]") {
     uvl::Matrix MN = RN;
     print(MN);
     // CHECK(M2 == M2d);
+
+    //{
+    //uvl::Matrix x = uvl::views::nullary::uniform_random_view<double>(
+    //    uvl::extents<4, 4>{}, -1, 1);
+    //}
 }

@@ -2,12 +2,15 @@
 #if !defined(UVL_VECTORBASE_HPP)
 #define UVL_VECTORBASE_HPP
 
+#include <cmath>
+
 #include "uvl/types.hpp"
 //
 #include "concepts/VectorBaseDerived.hpp"
 #include "concepts/VectorViewDerived.hpp"
 //
 #include "views/binary/AdditionView.hpp"
+#include "views/reductions/CoefficientSum.hpp"
 #include "views/unary/CastView.hpp"
 #include "views/unary/ScalarProductView.hpp"
 
@@ -65,6 +68,33 @@ class VectorBase {
         return VectorBase<
             views::unary::ScalarProductView<value_type, view_type>>(lhs,
                                                                     rhs.view());
+    }
+
+    auto as_array() const { return ArrayBase<View>(view()); }
+    template <index_type T>
+    value_type norm_powered() const {
+        if constexpr (T == 1) {
+            return views::reductions::CoefficientSum{as_array().abs().view()}();
+        } else if constexpr (T == 2) {
+            auto arr = as_array();
+            return views::reductions::CoefficientSum{
+                (as_array() * as_array()).view()}();
+        } else {
+            return views::reductions::CoefficientSum{
+                as_array().pow(T).abs().view()}();
+        }
+    }
+    value_type norm_powered(value_type T) const {
+        return views::reductions::CoefficientSum{
+            as_array().pow(T).abs().view()}();
+    }
+
+    template <index_type T>
+    value_type norm() const {
+        return std::pow<value_type>(norm_powered<T>(), value_type(1.0) / T);
+    }
+    value_type norm(value_type T) const {
+        return std::pow<value_type>(norm_powered(T), value_type(1.0) / T);
     }
 
     template <typename T>

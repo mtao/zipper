@@ -50,22 +50,45 @@ class SwizzleView
 
     constexpr const extents_type& extents() const { return m_extents; }
 
+    template <concepts::TupleLike T, rank_type... ranks>
+    auto _coeff(const T& idxs, std::integer_sequence<rank_type, ranks...>) const
+        -> value_type {
+        return m_view.coeff(std::get<ranks>(idxs)...);
+    }
+    template <concepts::TupleLike T, rank_type... ranks>
+    auto _coeff_ref(const T& idxs, std::integer_sequence<rank_type, ranks...>)
+        -> value_type& requires(traits::is_writable) {
+            return m_view.coeff_ref(std::get<ranks>(idxs)...);
+        }
+
+    template <concepts::TupleLike T, rank_type... ranks>
+    auto _const_coeff_ref(const T& idxs,
+                          std::integer_sequence<rank_type, ranks...>) const
+        -> const value_type& requires(traits::is_writable) {
+            return m_view.const_coeff_ref(std::get<ranks>(idxs)...);
+        }
+
     template <typename... Args>
     value_type coeff(Args&&... idxs) const {
-        return m_view(swizzler_type::swizzle(std::forward<Args>(idxs)...));
+        return _coeff(
+            swizzler_type::swizzle(std::forward<Args>(idxs)...),
+            std::make_integer_sequence<rank_type, extents_type::rank()>{});
     }
     template <typename... Args>
     value_type& coeff_ref(Args&&... idxs) const
         requires(traits::is_writable)
     {
-        return m_view(swizzler_type::swizzle(std::forward<Args>(idxs)...));
+        return _coeff_ref(
+            swizzler_type::swizzle(std::forward<Args>(idxs)...),
+            std::make_integer_sequence<rank_type, extents_type::rank()>{});
     }
     template <typename... Args>
-    value_type const_coeff_ref(Args&&... idxs) const
+    const value_type& const_coeff_ref(Args&&... idxs) const
         requires(traits::is_writable)
     {
-        return m_view.const_coeff_ref(
-            swizzler_type::swizzle(std::forward<Args>(idxs)...));
+        return _const_coeff_ref(
+            swizzler_type::swizzle(std::forward<Args>(idxs)...),
+            std::make_integer_sequence<rank_type, extents_type::rank()>{});
     }
 
    private:
