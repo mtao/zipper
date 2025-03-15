@@ -151,4 +151,12 @@ TEST_CASE("test_all_extents", "[storage][dense]") {
         std::cout << std::endl;
         std::cout << std::endl;
     }
+
+    spdlog::warn("Full slice");
+    print(MN.slice<uvl::full_extent_t,uvl::full_extent_t>());
+
+    spdlog::warn("single row");
+   // print(MN.slice<std::integral_constant<uvl::index_type,1>,uvl::full_extent_t>());
+
+    //MN.swizzle<1,0>() = MN;
 }

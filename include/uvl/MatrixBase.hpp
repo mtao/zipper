@@ -10,14 +10,15 @@
 #include "concepts/VectorBaseDerived.hpp"
 //
 #include "views/binary/AdditionView.hpp"
-#include "views/unary/IdempotentView.hpp"
 #include "views/binary/MatrixProductView.hpp"
 #include "views/binary/MatrixVectorProductView.hpp"
 #include "views/reductions/CoefficientSum.hpp"
 #include "views/unary/CastView.hpp"
+#include "views/unary/IdempotentView.hpp"
 #include "views/unary/NegateView.hpp"
 #include "views/unary/ScalarProductView.hpp"
 #include "views/unary/ScalarQuotientView.hpp"
+#include "views/unary/SliceView.hpp"
 #include "views/unary/SwizzleView.hpp"
 
 namespace uvl {
@@ -32,9 +33,7 @@ class MatrixBase {
     using view_type = View;
     using value_type = View::value_type;
     using extents_type = View::extents_type;
-    auto eval() const {
-        return Matrix(*this);
-    }
+    auto eval() const { return Matrix(*this); }
     template <typename... Args>
     MatrixBase(Args&&... v) : m_view(std::forward<Args>(v)...) {}
 
@@ -47,7 +46,6 @@ class MatrixBase {
     MatrixBase(const MatrixBase& v) = default;
     MatrixBase& operator=(MatrixBase&& v) = default;
     MatrixBase& operator=(const MatrixBase& v) = default;
-
 
     template <concepts::MatrixViewDerived Other>
     MatrixBase(const Other& other)
@@ -97,8 +95,9 @@ class MatrixBase {
         return *this = *this - other;
     }
 
-
-    auto as_array() const { return ArrayBase<views::unary::IdempotentView<View>>(view()); }
+    auto as_array() const {
+        return ArrayBase<views::unary::IdempotentView<View>>(view());
+    }
 
     template <concepts::MatrixBaseDerived Other>
     friend auto operator+(const MatrixBase<view_type>& lhs, Other const& rhs) {
@@ -156,6 +155,18 @@ class MatrixBase {
             views::unary::SwizzleView<view_type, ranks...>(view()));
     }
     auto transpose() const { return swizzle<1, 0>(); }
+    template <typename... Slices>
+    auto slice(Slices&&... slices) const {
+        return MatrixBase<views::unary::SliceView<view_type, true, Slices...>>(
+            views::unary::SliceView<view_type, true, Slices...>(
+                view(), std::forward<Slices>(slices)...));
+    }
+    template <typename... Slices>
+    auto slice() const {
+        return MatrixBase<views::unary::SliceView<view_type, true, Slices...>>(
+            views::unary::SliceView<view_type, true, Slices...>(view(),
+                                                                Slices{}...));
+    }
 
     /*
     template <index_type... Indices,

@@ -17,6 +17,13 @@ auto create_dextents(Args&&... args) {
     return dextents<sizeof...(Args)>(args...);
 }
 
+using full_extent_t = std::experimental::full_extent_t;
+
+template <typename OffsetType = index_type, typename ExtentType = index_type,
+          typename StrideType = std::integral_constant<index_type, 1>>
+using slice_t =
+    std::experimental::strided_slice<OffsetType, ExtentType, StrideType>;
+
 using default_layout_policy = std::experimental::layout_right;
 template <typename T>
 using default_accessor_policy = std::experimental::default_accessor<T>;
