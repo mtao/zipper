@@ -5,41 +5,52 @@
 
 namespace uvl::views {
 namespace unary {
-template <concepts::ViewDerived Child, typename Operation, typename Scalar, bool ScalarOnRight = false>
+template <concepts::ViewDerived Child, typename Operation, typename Scalar,
+          bool ScalarOnRight = false>
 class ScalarOperationView;
 
 }
-template <concepts::ViewDerived Child, typename Operation, typename Scalar, bool ScalarOnRight>
-struct detail::ViewTraits<unary::ScalarOperationView<Operation, Child, Scalar, ScalarOnRight>>
+template <concepts::ViewDerived Child, typename Operation, typename Scalar,
+          bool ScalarOnRight>
+struct detail::ViewTraits<
+    unary::ScalarOperationView<Child, Operation, Scalar, ScalarOnRight>>
     : public uvl::views::unary::detail::DefaultUnaryViewTraits<Child> {
-        using value_type = decltype(std::declval<Operation>()(std::declval<typename Child::value_type>(), std::declval<Scalar>()));
-
-    };
+    using ChildTraits = ViewTraits<Child>;
+    using value_type = decltype(std::declval<Operation>()(
+        std::declval<typename ChildTraits::value_type>(),
+        std::declval<Scalar>()));
+};
 
 namespace unary {
-template <concepts::ViewDerived Child, typename Operation, typename Scalar, bool ScalarOnRight>
-class ScalarOperationView : public UnaryViewBase<ScalarOperationView<Child, Operation, Scalar, ScalarOnRight>, Child> {
+template <concepts::ViewDerived Child, typename Operation, typename Scalar,
+          bool ScalarOnRight>
+class ScalarOperationView
+    : public UnaryViewBase<
+          ScalarOperationView<Child, Operation, Scalar, ScalarOnRight>, Child> {
    public:
-    using self_type = ScalarOperationView<Child,Operation,Scalar, ScalarOnRight>;
+    using self_type =
+        ScalarOperationView<Child, Operation, Scalar, ScalarOnRight>;
     using traits = uvl::views::detail::ViewTraits<self_type>;
     using extents_type = traits::extents_type;
     using value_type = traits::value_type;
 
     using Base = UnaryViewBase<self_type, Child>;
-    using Base::extent;
     using Base::view;
 
-    ScalarOperationView(const Child& a, const Scalar& b, const Operation& op) requires(ScalarOnRight): Base(a), m_op(op), m_scalar(b)  {}
-    ScalarOperationView(const Scalar& a, const Child& b, const Operation& op) requires(!ScalarOnRight): Base(b), m_op(op), m_scalar(a)  {}
+    ScalarOperationView(const Child& a, const Scalar& b, const Operation& op = {})
+        requires(ScalarOnRight)
+        : Base(a), m_op(op), m_scalar(b) {}
+    ScalarOperationView(const Scalar& a, const Child& b, const Operation& op = {})
+        requires(!ScalarOnRight)
+        : Base(b), m_op(op), m_scalar(a) {}
 
+    // using child_value_type = traits::base_value_type;
 
-    using child_value_type = traits::base_value_type;
-
-    value_type get_value(const child_value_type& value) const {
-        if constexpr(ScalarOnRight) {
-            return op(value , m_scalar);
+    value_type get_value(const auto& value) const {
+        if constexpr (ScalarOnRight) {
+            return m_op(value, m_scalar);
         } else {
-            return op(m_scalar, value);
+            return m_op(m_scalar, value);
         }
     }
 
@@ -49,9 +60,11 @@ class ScalarOperationView : public UnaryViewBase<ScalarOperationView<Child, Oper
 };
 
 template <concepts::ViewDerived Child, typename Operation, typename Scalar>
-ScalarOperationView(const Child& a, const Scalar& b, const Operation& op) -> ScalarOperationView<Child,Scalar,Operation,true>;
+ScalarOperationView(const Child& a, const Scalar& b, const Operation& op)
+    -> ScalarOperationView<Child, Scalar, Operation, true>;
 template <concepts::ViewDerived Child, typename Operation, typename Scalar>
-ScalarOperationView(const Scalar& a, const Child& b, const Operation& op) -> ScalarOperationView<Child,Scalar,Operation,false>;
+ScalarOperationView(const Scalar& a, const Child& b, const Operation& op)
+    -> ScalarOperationView<Child, Scalar, Operation, false>;
 }  // namespace unary
 }  // namespace uvl::views
 #endif

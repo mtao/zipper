@@ -58,6 +58,8 @@ TEST_CASE("test_all_extents", "[storage][dense]") {
 
     auto MC = M.cast<double>();
     auto X = I * MC;
+    X.eval() + M.eval();
+    X + M;
 
     uvl::Matrix<double, 3, 3> C(X + M);
     std::cout << "I" << std::endl;
@@ -153,10 +155,12 @@ TEST_CASE("test_all_extents", "[storage][dense]") {
     }
 
     spdlog::warn("Full slice");
-    print(MN.slice<uvl::full_extent_t,uvl::full_extent_t>());
+    print(MN.slice<uvl::full_extent_t, uvl::full_extent_t>());
 
     spdlog::warn("single row");
-   // print(MN.slice<std::integral_constant<uvl::index_type,1>,uvl::full_extent_t>());
+    //
+    // print(MN.slice<std::integral_constant<uvl::index_type, 1>,
+    //               uvl::full_extent_t>());
 
-    //MN.swizzle<1,0>() = MN;
+    // MN.swizzle<1,0>() = MN;
 }

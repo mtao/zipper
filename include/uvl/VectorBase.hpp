@@ -11,13 +11,12 @@
 #include "concepts/VectorViewDerived.hpp"
 //
 // Scalar stuff
-#include "views/binary/AdditionView.hpp"
+#include "uvl/detail/declare_operations.hpp"
+#include "uvl/views/binary/ArithmeticViews.hpp"
 #include "views/unary/CastView.hpp"
-#include "views/unary/NegateView.hpp"
-#include "views/unary/IdempotentView.hpp"
-#include "views/unary/ScalarProductView.hpp"
-#include "views/unary/ScalarQuotientView.hpp"
-#include "views/unary/SwizzleView.hpp"
+#include "views/unary/IdentityView.hpp"
+#include "views/unary/ScalarArithmeticViews.hpp"
+#include "views/unary/detail/operation_implementations.hpp"
 //
 #include "ArrayBase.hpp"
 #include "views/reductions/CoefficientSum.hpp"
@@ -47,9 +46,7 @@ class VectorBase {
     VectorBase& operator=(VectorBase&& v) = default;
     VectorBase& operator=(const VectorBase& v) = default;
 
-    auto eval() const {
-        return Vector(*this);
-    }
+    auto eval() const { return Vector(*this); }
 
     template <concepts::VectorViewDerived Other>
     VectorBase(const Other& other)
@@ -97,40 +94,6 @@ class VectorBase {
         return *this = *this - other;
     }
 
-
-    template <concepts::VectorBaseDerived Other>
-    friend auto operator+(const VectorBase<view_type>& lhs, Other const& rhs) {
-        return VectorBase<
-            views::binary::AdditionView<view_type, typename Other::view_type>>(
-            lhs.view(), rhs.view());
-    }
-    friend auto operator-(const VectorBase<view_type>& lhs) {
-        return VectorBase<views::unary::NegateView<view_type>>(lhs.view());
-    }
-    template <concepts::VectorBaseDerived Other>
-    friend auto operator-(const VectorBase<view_type>& lhs, Other const& rhs) {
-        return lhs + (-rhs);
-    }
-
-    friend auto operator*(const VectorBase<view_type>& lhs,
-                          value_type const& rhs) {
-        return VectorBase<
-            views::unary::ScalarProductView<value_type, view_type>>(rhs,
-                                                                    lhs.view());
-    }
-    friend auto operator*(value_type const& lhs,
-                          const VectorBase<view_type>& rhs) {
-        return VectorBase<
-            views::unary::ScalarProductView<value_type, view_type>>(lhs,
-                                                                    rhs.view());
-    }
-    friend auto operator/(const VectorBase<view_type>& lhs,
-                          value_type const& rhs) {
-        return VectorBase<
-            views::unary::ScalarQuotientView<view_type, value_type>>(lhs.view(),
-                                                                     rhs);
-    }
-
     // template <rank_type... ranks>
     // auto swizzle() const {
     //     return VectorBase<views::unary::SwizzleView<value_type, ranks...>>(
@@ -141,7 +104,9 @@ class VectorBase {
         return VectorBase<views::unary::CastView<T, view_type>>(view());
     }
 
-    auto as_array() const { return ArrayBase<views::unary::IdempotentView<View>>(view()); }
+    auto as_array() const {
+        return ArrayBase<views::unary::IdentityView<View>>(view());
+    }
     template <index_type T>
     value_type norm_powered() const {
         if constexpr (T == 1) {
@@ -162,13 +127,13 @@ class VectorBase {
     template <index_type T = 2>
     value_type norm() const {
         const value_type v = norm_powered<T>();
-        if constexpr(T == 1) {
+        if constexpr (T == 1) {
             return v;
-        } else if constexpr(T == 2) {
+        } else if constexpr (T == 2) {
             return std::sqrt(v);
         } else {
-        const value_type p = value_type(1.0) / T;
-        return std::pow<value_type>(v, p);
+            const value_type p = value_type(1.0) / T;
+            return std::pow<value_type>(v, p);
         }
     }
     value_type norm(value_type T) const {
@@ -179,19 +144,13 @@ class VectorBase {
     template <index_type T = 2>
     auto normalized() const {
         return *this / norm<T>();
-
     }
-    value_type normalized(value_type T) const {
-        return *this / norm(T);
-    }
+    value_type normalized(value_type T) const { return *this / norm(T); }
     template <index_type T = 2>
     void normalize() {
         *this /= norm<T>();
-
     }
-    void normalize(value_type T) {
-        *this /= norm(T);
-    }
+    void normalize(value_type T) { *this /= norm(T); }
 
     template <typename... Args>
     value_type operator()(Args&&... idxs) const
@@ -214,5 +173,36 @@ VectorBase(View&& view) -> VectorBase<View>;
 template <concepts::VectorViewDerived View>
 VectorBase(const View& view) -> VectorBase<View>;
 
+UNARY_DECLARATION(VectorBase, LogicalNot, operator!)
+UNARY_DECLARATION(VectorBase, BitNot, operator~)
+UNARY_DECLARATION(VectorBase, Negate, operator-)
+
+SCALAR_BINARY_DECLARATION(VectorBase, Divides, operator/)
+
+BINARY_DECLARATION(VectorBase, Plus, operator+)
+BINARY_DECLARATION(VectorBase, Minus, operator-)
+BINARY_DECLARATION(VectorBase, EqualsTo, operator==)
+BINARY_DECLARATION(VectorBase, NotEqualsTo, operator!=)
+BINARY_DECLARATION(VectorBase, Greater, operator>)
+BINARY_DECLARATION(VectorBase, Less, operator<)
+BINARY_DECLARATION(VectorBase, GreaterEqual, operator>=)
+BINARY_DECLARATION(VectorBase, LessEqual, operator<=)
+BINARY_DECLARATION(VectorBase, LogicalAnd, operator&&)
+BINARY_DECLARATION(VectorBase, LogicalOr, operator||)
+BINARY_DECLARATION(VectorBase, BitAnd, operator&)
+BINARY_DECLARATION(VectorBase, BitOr, operator|)
+BINARY_DECLARATION(VectorBase, BitXor, operator^)
+template <concepts::VectorBaseDerived View>
+auto operator*(View const& lhs, typename View::value_type const& rhs) {
+    return VectorBase<views::unary::ScalarMultipliesView<
+        typename View::value_type, typename View::view_type, true>>(lhs.view(),
+                                                                    rhs);
+}
+template <concepts::VectorBaseDerived View>
+auto operator*(typename View::value_type const& lhs, View const& rhs) {
+    return VectorBase<views::unary::ScalarMultipliesView<
+        typename View::value_type, typename View::view_type, false>>(
+        lhs, rhs.view());
+}
 }  // namespace uvl
 #endif

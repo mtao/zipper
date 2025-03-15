@@ -9,17 +9,17 @@
 #include "concepts/MatrixViewDerived.hpp"
 #include "concepts/VectorBaseDerived.hpp"
 //
-#include "views/binary/AdditionView.hpp"
+#include "uvl/detail/declare_operations.hpp"
+#include "uvl/views/binary/ArithmeticViews.hpp"
 #include "views/binary/MatrixProductView.hpp"
 #include "views/binary/MatrixVectorProductView.hpp"
 #include "views/reductions/CoefficientSum.hpp"
 #include "views/unary/CastView.hpp"
-#include "views/unary/IdempotentView.hpp"
-#include "views/unary/NegateView.hpp"
-#include "views/unary/ScalarProductView.hpp"
-#include "views/unary/ScalarQuotientView.hpp"
+#include "views/unary/IdentityView.hpp"
+#include "views/unary/ScalarArithmeticViews.hpp"
 #include "views/unary/SliceView.hpp"
 #include "views/unary/SwizzleView.hpp"
+#include "views/unary/detail/operation_implementations.hpp"
 
 namespace uvl {
 template <concepts::ViewDerived View>
@@ -96,52 +96,7 @@ class MatrixBase {
     }
 
     auto as_array() const {
-        return ArrayBase<views::unary::IdempotentView<View>>(view());
-    }
-
-    template <concepts::MatrixBaseDerived Other>
-    friend auto operator+(const MatrixBase<view_type>& lhs, Other const& rhs) {
-        return MatrixBase<
-            views::binary::AdditionView<view_type, typename Other::view_type>>(
-            lhs.view(), rhs.view());
-    }
-
-    friend auto operator-(const MatrixBase<view_type>& lhs) {
-        return MatrixBase<views::unary::NegateView<view_type>>(lhs.view());
-    }
-    template <concepts::MatrixBaseDerived Other>
-    friend auto operator-(const MatrixBase<view_type>& lhs, Other const& rhs) {
-        return lhs + (-rhs);
-    }
-    template <concepts::MatrixBaseDerived Other>
-    friend auto operator*(const MatrixBase<view_type>& lhs, Other const& rhs) {
-        return MatrixBase<views::binary::MatrixProductView<
-            view_type, typename Other::view_type>>(lhs.view(), rhs.view());
-    }
-
-    template <concepts::VectorBaseDerived Other>
-    friend auto operator*(const MatrixBase<view_type>& lhs, Other const& rhs) {
-        return VectorBase<views::binary::MatrixVectorProductView<
-            view_type, typename Other::view_type>>(lhs.view(), rhs.view());
-    }
-
-    friend auto operator*(const MatrixBase<view_type>& lhs,
-                          value_type const& rhs) {
-        return MatrixBase<
-            views::unary::ScalarProductView<value_type, view_type>>(rhs,
-                                                                    lhs.view());
-    }
-    friend auto operator*(value_type const& lhs,
-                          const MatrixBase<view_type>& rhs) {
-        return MatrixBase<
-            views::unary::ScalarProductView<value_type, view_type>>(lhs,
-                                                                    rhs.view());
-    }
-    friend auto operator/(const MatrixBase<view_type>& lhs,
-                          value_type const& rhs) {
-        return MatrixBase<
-            views::unary::ScalarQuotientView<view_type, value_type>>(lhs.view(),
-                                                                     rhs);
+        return ArrayBase<views::unary::IdentityView<View>>(view());
     }
 
     template <typename T>
@@ -163,9 +118,13 @@ class MatrixBase {
     }
     template <typename... Slices>
     auto slice() const {
-        return MatrixBase<views::unary::SliceView<view_type, true, Slices...>>(
-            views::unary::SliceView<view_type, true, Slices...>(view(),
-                                                                Slices{}...));
+        using view_type = views::unary::SliceView<view_type, true, Slices...>;
+        constexpr static rank_type rank = view_type::extents_type::rank();
+        if constexpr (rank == 1) {
+            return VectorBase<view_type>(view_type(view(), Slices{}...));
+        } else if constexpr (rank == 2) {
+            return MatrixBase<view_type>(view_type(view(), Slices{}...));
+        }
     }
 
     /*
@@ -202,6 +161,51 @@ template <concepts::MatrixViewDerived View>
 MatrixBase(View&& view) -> MatrixBase<View>;
 template <concepts::MatrixViewDerived View>
 MatrixBase(const View& view) -> MatrixBase<View>;
+
+UNARY_DECLARATION(MatrixBase, LogicalNot, operator!)
+UNARY_DECLARATION(MatrixBase, BitNot, operator~)
+UNARY_DECLARATION(MatrixBase, Negate, operator-)
+
+SCALAR_BINARY_DECLARATION(MatrixBase, Divides, operator/)
+
+BINARY_DECLARATION(MatrixBase, Plus, operator+)
+BINARY_DECLARATION(MatrixBase, Minus, operator-)
+BINARY_DECLARATION(MatrixBase, EqualsTo, operator==)
+BINARY_DECLARATION(MatrixBase, NotEqualsTo, operator!=)
+BINARY_DECLARATION(MatrixBase, Greater, operator>)
+BINARY_DECLARATION(MatrixBase, Less, operator<)
+BINARY_DECLARATION(MatrixBase, GreaterEqual, operator>=)
+BINARY_DECLARATION(MatrixBase, LessEqual, operator<=)
+BINARY_DECLARATION(MatrixBase, LogicalAnd, operator&&)
+BINARY_DECLARATION(MatrixBase, LogicalOr, operator||)
+BINARY_DECLARATION(MatrixBase, BitAnd, operator&)
+BINARY_DECLARATION(MatrixBase, BitOr, operator|)
+BINARY_DECLARATION(MatrixBase, BitXor, operator^)
+
+template <concepts::MatrixBaseDerived View1, concepts::MatrixBaseDerived View2>
+auto operator*(View1 const& lhs, View2 const& rhs) {
+    return MatrixBase<views::binary::MatrixProductView<
+        typename View1::view_type, typename View2::view_type>>(lhs.view(),
+                                                               rhs.view());
+}
+
+template <concepts::MatrixBaseDerived View>
+auto operator*(View const& lhs, typename View::value_type const& rhs) {
+    return MatrixBase<views::unary::ScalarMultipliesView<
+        typename View::value_type, View, true>>(lhs.view(), rhs);
+}
+template <concepts::MatrixBaseDerived View>
+auto operator*(typename View::value_type const& lhs, View const& rhs) {
+    return MatrixBase<views::unary::ScalarMultipliesView<
+        typename View::value_type, View, false>>(lhs, rhs.view());
+}
+
+template <concepts::MatrixBaseDerived View1, concepts::VectorBaseDerived View2>
+auto operator*(View1 const& lhs, View2 const& rhs) {
+    return VectorBase<views::binary::MatrixVectorProductView<
+        typename View1::view_type, typename View2::view_type>>(lhs.view(),
+                                                               rhs.view());
+}
 
 }  // namespace uvl
 

@@ -8,16 +8,15 @@
 #include "concepts/ArrayBaseDerived.hpp"
 #include "concepts/ViewDerived.hpp"
 //
-#include "views/binary/AdditionView.hpp"
 #include "views/unary/CastView.hpp"
-#include "views/unary/NegateView.hpp"
-#include "views/unary/ScalarProductView.hpp"
-#include "views/unary/ScalarQuotientView.hpp"
 #include "views/unary/SwizzleView.hpp"
 ////
-#include "views/binary/CoeffProductView.hpp"
-#include "views/unary/AbsoluteView.hpp"
+#include "views/unary/AbsView.hpp"
+#include "uvl/views/unary/ScalarArithmeticViews.hpp"
+#include "uvl/views/binary/ArithmeticViews.hpp"
+#include "uvl/detail/declare_operations.hpp"
 #include "views/unary/ScalarPowerView.hpp"
+#include "views/unary/detail/operation_implementations.hpp"
 
 namespace uvl {
 
@@ -95,39 +94,6 @@ class ArrayBase {
         return *this = *this - other;
     }
 
-    // SCALAR STUFF
-    template <concepts::ArrayBaseDerived Other>
-    friend auto operator+(const ArrayBase<view_type>& lhs, Other const& rhs) {
-        return ArrayBase<
-            views::binary::AdditionView<view_type, typename Other::view_type>>(
-            lhs.view(), rhs.view());
-    }
-    friend auto operator-(const ArrayBase<view_type>& lhs) {
-        return ArrayBase<views::unary::NegateView<view_type>>(lhs.view());
-    }
-    template <concepts::ArrayBaseDerived Other>
-    friend auto operator-(const ArrayBase<view_type>& lhs, Other const& rhs) {
-        return lhs + (-rhs);
-    }
-
-    friend auto operator*(const ArrayBase<view_type>& lhs,
-                          value_type const& rhs) {
-        return ArrayBase<
-            views::unary::ScalarProductView<value_type, view_type>>(rhs,
-                                                                    lhs.view());
-    }
-    friend auto operator*(value_type const& lhs,
-                          const ArrayBase<view_type>& rhs) {
-        return ArrayBase<
-            views::unary::ScalarProductView<value_type, view_type>>(lhs,
-                                                                    rhs.view());
-    }
-    friend auto operator/(const ArrayBase<view_type>& lhs,
-                          value_type const& rhs) {
-        return ArrayBase<
-            views::unary::ScalarQuotientView<view_type, value_type>>(lhs.view(),
-                                                                     rhs);
-    }
 
     template <rank_type... ranks>
     auto swizzle() const {
@@ -141,11 +107,6 @@ class ArrayBase {
 
     //--------------------------------------------------------------
     //
-    template <concepts::ArrayBaseDerived Other>
-    friend auto operator*(const ArrayBase<view_type>& lhs, Other const& rhs) {
-        return ArrayBase<views::binary::CoeffProductView<
-            view_type, typename Other::view_type>>(lhs.view(), rhs.view());
-    }
 
     auto pow(value_type const& exp) const {
         return ArrayBase<views::unary::ScalarPowerView<view_type, value_type>>(
@@ -153,7 +114,7 @@ class ArrayBase {
     }
 
     auto abs() const {
-        return ArrayBase<views::unary::AbsoluteView<view_type>>(view());
+        return ArrayBase<views::unary::AbsView<view_type>>(view());
     }
 
     template <index_type T>
@@ -173,13 +134,13 @@ class ArrayBase {
     template <index_type T = 2>
     value_type norm() const {
         const value_type v = norm_powered<T>();
-        if constexpr(T == 1) {
+        if constexpr (T == 1) {
             return v;
-        } else if constexpr(T == 2) {
+        } else if constexpr (T == 2) {
             return std::sqrt(v);
         } else {
-        const value_type p = value_type(1.0) / T;
-        return std::pow<value_type>(v, p);
+            const value_type p = value_type(1.0) / T;
+            return std::pow<value_type>(v, p);
         }
     }
     value_type norm(value_type T) const {
@@ -218,6 +179,44 @@ template <concepts::ViewDerived View>
 ArrayBase(View&& view) -> ArrayBase<View>;
 template <concepts::ViewDerived View>
 ArrayBase(const View& view) -> ArrayBase<View>;
+
+UNARY_DECLARATION(ArrayBase, LogicalNot, operator!)
+UNARY_DECLARATION(ArrayBase, BitNot, operator~)
+UNARY_DECLARATION(ArrayBase, Negate, operator-)
+
+SCALAR_BINARY_DECLARATION(ArrayBase, Plus, operator+)
+SCALAR_BINARY_DECLARATION(ArrayBase, Minus, operator-)
+SCALAR_BINARY_DECLARATION(ArrayBase, Multiplies, operator*)
+SCALAR_BINARY_DECLARATION(ArrayBase, Divides, operator/)
+SCALAR_BINARY_DECLARATION(ArrayBase, Modulus, operator%)
+SCALAR_BINARY_DECLARATION(ArrayBase, EqualsTo, operator==)
+SCALAR_BINARY_DECLARATION(ArrayBase, NotEqualsTo, operator!=)
+SCALAR_BINARY_DECLARATION(ArrayBase, Greater, operator>)
+SCALAR_BINARY_DECLARATION(ArrayBase, Less, operator<)
+SCALAR_BINARY_DECLARATION(ArrayBase, GreaterEqual, operator>=)
+SCALAR_BINARY_DECLARATION(ArrayBase, LessEqual, operator<=)
+SCALAR_BINARY_DECLARATION(ArrayBase, LogicalAnd, operator&&)
+SCALAR_BINARY_DECLARATION(ArrayBase, LogicalOr, operator||)
+SCALAR_BINARY_DECLARATION(ArrayBase, BitAnd, operator&)
+SCALAR_BINARY_DECLARATION(ArrayBase, BitOr, operator|)
+SCALAR_BINARY_DECLARATION(ArrayBase, BitXor, operator^)
+
+BINARY_DECLARATION(ArrayBase, Plus, operator+)
+BINARY_DECLARATION(ArrayBase, Minus, operator-)
+BINARY_DECLARATION(ArrayBase, Multiplies, operator*)
+BINARY_DECLARATION(ArrayBase, Divides, operator/)
+BINARY_DECLARATION(ArrayBase, Modulus, operator%)
+BINARY_DECLARATION(ArrayBase, EqualsTo, operator==)
+BINARY_DECLARATION(ArrayBase, NotEqualsTo, operator!=)
+BINARY_DECLARATION(ArrayBase, Greater, operator>)
+BINARY_DECLARATION(ArrayBase, Less, operator<)
+BINARY_DECLARATION(ArrayBase, GreaterEqual, operator>=)
+BINARY_DECLARATION(ArrayBase, LessEqual, operator<=)
+BINARY_DECLARATION(ArrayBase, LogicalAnd, operator&&)
+BINARY_DECLARATION(ArrayBase, LogicalOr, operator||)
+BINARY_DECLARATION(ArrayBase, BitAnd, operator&)
+BINARY_DECLARATION(ArrayBase, BitOr, operator|)
+BINARY_DECLARATION(ArrayBase, BitXor, operator^)
 
 }  // namespace uvl
 

@@ -18,20 +18,27 @@ struct DefaultUnaryViewTraits
     using base_type = Base<Derived>;
     using base_traits = views::detail::ViewTraits<Child>;
     using base_value_type = base_traits::value_type;
-    constexpr static bool is_coefficient_consistent = base_traits::is_coefficient_consistent;
+    constexpr static bool is_coefficient_consistent =
+        base_traits::is_coefficient_consistent;
     constexpr static bool holds_extents = false;
     constexpr static bool is_value_based = true;
 };
 }  // namespace detail
 
 template <typename Derived, concepts::ViewDerived ChildType>
-class UnaryViewBase
-    : public views::detail::ViewTraits<Derived>::template base_type<Derived> {
+class UnaryViewBase : public views::ViewBase<Derived> {
+    //: public views::detail::ViewTraits<Derived>::template base_type<Derived> {
    public:
     using self_type = UnaryViewBase<Derived, ChildType>;
     using traits = uvl::views::detail::ViewTraits<Derived>;
     using extents_type = traits::extents_type;
     using value_type = traits::value_type;
+
+    using Base = views::ViewBase<Derived>;
+    // using Base =
+    //     views::detail::ViewTraits<Derived>::template base_type<Derived>;
+    using Base::extent;
+    constexpr static bool is_value_based = traits::is_value_based;
 
     Derived& derived() { return static_cast<Derived&>(*this); }
     const Derived& derived() const {
@@ -44,14 +51,10 @@ class UnaryViewBase
     UnaryViewBase& operator=(const UnaryViewBase&) = default;
     UnaryViewBase& operator=(UnaryViewBase&&) = default;
     UnaryViewBase(const ChildType& b) : m_view(b) {}
-    using Base =
-        views::detail::ViewTraits<Derived>::template base_type<Derived>;
-    using Base::extent;
-    constexpr static bool is_value_based = traits::is_value_based;
 
     constexpr const extents_type& extents() const { return m_view.extents(); }
 
-    auto get_value(const child_value_type&value) const -> decltype(auto)
+    auto get_value(const child_value_type& value) const -> decltype(auto)
         requires(is_value_based)
     {
         return derived().get_value(value);

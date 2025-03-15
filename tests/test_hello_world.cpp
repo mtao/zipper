@@ -2,11 +2,10 @@
 
 #include <catch2/catch_all.hpp>
 #include <uvl/storage/PlainObjectStorage.hpp>
-#include <uvl/views/binary/AdditionView.hpp>
-#include <uvl/views/binary/CoeffProductView.hpp>
+#include <uvl/views/binary/ArithmeticViews.hpp>
+#include <uvl/views/unary/ScalarArithmeticViews.hpp>
 #include <uvl/views/binary/MatrixProductView.hpp>
 #include <uvl/views/unary/CastView.hpp>
-#include <uvl/views/unary/ScalarProductView.hpp>
 
 TEST_CASE("test_storage", "[storage][dense]") {
     uvl::storage::PlainObjectStorage<double, uvl::extents<4, 4>> a;
@@ -36,7 +35,7 @@ TEST_CASE("test_storage", "[storage][dense]") {
     }
     fmt::print("{}\n", fmt::join(as, ","));
 
-    uvl::views::unary::ScalarProductView spv(2.0, a);
+    uvl::views::unary::ScalarMultipliesView<double, decltype(a), false> spv(2.0, a);
     // uvl::views::binary::AdditionView av(a,b);
 
     for (uvl::index_type j = 0; j < spv.extent(0); ++j) {
@@ -46,14 +45,14 @@ TEST_CASE("test_storage", "[storage][dense]") {
         fmt::print("\n");
     }
 
-    uvl::views::binary::AdditionView av(a, b);
+    uvl::views::binary::PlusView av(a, b);
 
     for (uvl::index_type j = 0; j < av.extent(0); ++j) {
         for (uvl::index_type k = 0; k < av.extent(1); ++k) {
             spdlog::warn("{} {} {}", j, k, av(j, k));
         }
     }
-    uvl::views::binary::CoeffProductView pv(a, a);
+    uvl::views::binary::MultipliesView pv(a, a);
 
     for (uvl::index_type j = 0; j < pv.extent(0); ++j) {
         for (uvl::index_type k = 0; k < pv.extent(1); ++k) {

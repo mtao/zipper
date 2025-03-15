@@ -5,20 +5,22 @@
 
 namespace uvl::views {
 namespace unary {
-    // TODO: operation should inherit std::unary_function<T,U>
+// TODO: operation should inherit std::unary_function<T,U>
 template <concepts::ViewDerived B, typename Operation>
 class OperationView;
 
-}
+}  // namespace unary
 template <concepts::ViewDerived Child, typename Operation>
 struct detail::ViewTraits<unary::OperationView<Child, Operation>>
     : public uvl::views::unary::detail::DefaultUnaryViewTraits<Child> {
-        using value_type = decltype(std::declval<Operation>()(std::declval<typename Child::value_type>()));
-    };
+    using value_type = std::decay_t<decltype(std::declval<Operation>()(
+        std::declval<typename Child::value_type>()))>;
+};
 
 namespace unary {
 template <concepts::ViewDerived Child, typename Operation>
-class OperationView : public UnaryViewBase<OperationView<Child, Operation>,Child> {
+class OperationView
+    : public UnaryViewBase<OperationView<Child, Operation>, Child> {
    public:
     using self_type = OperationView<Child, Operation>;
     using traits = uvl::views::detail::ViewTraits<self_type>;
@@ -29,8 +31,8 @@ class OperationView : public UnaryViewBase<OperationView<Child, Operation>,Child
     using Base::extent;
     using Base::view;
 
-    OperationView(const Child& v, const Operation& op = {}) : Base(v), m_op(op) {}
-
+    OperationView(const Child& v, const Operation& op = {})
+        : Base(v), m_op(op) {}
 
     using child_value_type = traits::base_value_type;
 
