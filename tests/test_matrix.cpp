@@ -186,6 +186,9 @@ TEST_CASE("test_all_extents", "[storage][dense]") {
 
     MN.row<std::integral_constant<uvl::index_type, 2>>() = slice;
     MN.col<std::integral_constant<uvl::index_type, 2>>() = slice;
+    MN.col(2) = slice;
+    MN.col(3) = uvl::views::nullary::normal_random_view<double>(
+        uvl::extents<4>{}, -900, 1e-2);
 
     print(MN);
     // MN.swizzle<1,0>() = MN;

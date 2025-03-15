@@ -84,14 +84,16 @@ class SliceView
     SliceView& operator=(SliceView&&) = default;
     SliceView(const ViewType& b, Slices&&... slices)
         : Base(b),
-          m_extents(std::experimental::submdspan_extents(
-              b.extents(), std::forward<Slices>(slices)...)) {}
+          m_extents(
+              std::experimental::submdspan_extents(b.extents(), slices...)),
+          m_slices(std::forward<Slices>(slices)...) {}
 
     SliceView(ViewType& b, Slices&&... slices)
         requires(!IsConst && view_traits::is_writable)
         : Base(b),
-          m_extents(std::experimental::submdspan_extents(
-              b.extents(), std::forward<Slices>(slices)...)) {}
+          m_extents(
+              std::experimental::submdspan_extents(b.extents(), slices...)),
+          m_slices(std::forward<Slices>(slices)...) {}
 
     constexpr const extents_type& extents() const { return m_extents; }
 
@@ -101,6 +103,8 @@ class SliceView
         const auto& s = std::get<K>(m_slices);
         if constexpr (uvl::detail::is_integral_constant_v<
                           std::decay_t<decltype(s)>>) {
+            return s;
+        } else if constexpr (std::is_integral_v<std::decay_t<decltype(s)>>) {
             return s;
         } else {
             constexpr index_type start = std::experimental::detail::first_of(s);

@@ -168,6 +168,16 @@ class MatrixBase {
     template <typename Slice>
     auto col() const { return slice<full_extent_t,Slice>(); }
 
+    template <typename Slice>
+    auto row(Slice&& s) { return slice<Slice,full_extent_t>(std::forward<Slice>(s), full_extent_t{}); }
+    template <typename Slice>
+    auto col(Slice&& s) { return slice<full_extent_t,Slice>(full_extent_t{},std::forward<Slice>(s)); }
+
+    template <typename Slice>
+    auto row(Slice&& s) const { return slice<Slice,full_extent_t>(full_extent_t{},std::forward<Slice>(s)); }
+    template <typename Slice>
+    auto col(Slice&& s) const { return slice<full_extent_t,Slice>(std::forward<Slice>(s), full_extent_t{}); }
+
     /*
     template <index_type... Indices,
               typename mapping_type = std::experimental::layout_left>
