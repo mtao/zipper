@@ -15,6 +15,7 @@
 #include "views/binary/MatrixVectorProductView.hpp"
 #include "views/reductions/CoefficientSum.hpp"
 #include "views/unary/CastView.hpp"
+#include "views/unary/DiagonalView.hpp"
 #include "views/unary/IdentityView.hpp"
 #include "views/unary/ScalarArithmeticViews.hpp"
 #include "views/unary/SliceView.hpp"
@@ -156,6 +157,13 @@ class MatrixBase {
         } else if constexpr (rank == 2) {
             return MatrixBase<view_type>(view_type(view(), Slices{}...));
         }
+    }
+
+    auto diagonal() const {
+        return VectorBase<views::unary::DiagonalView<view_type, true>>(view());
+    }
+    auto diagonal() {
+        return VectorBase<views::unary::DiagonalView<view_type, false>>(view());
     }
 
     template <typename Slice>

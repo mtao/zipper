@@ -191,5 +191,9 @@ TEST_CASE("test_all_extents", "[storage][dense]") {
         uvl::extents<4>{}, -900, 1e-2);
 
     print(MN);
+
+    spdlog::warn("Diagonal");
+
+    print(MN.diagonal());
     // MN.swizzle<1,0>() = MN;
 }
