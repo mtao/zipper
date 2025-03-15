@@ -22,6 +22,7 @@ struct DefaultUnaryViewTraits
         base_traits::is_coefficient_consistent;
     constexpr static bool holds_extents = false;
     constexpr static bool is_value_based = true;
+    constexpr static bool is_const = false;
 };
 }  // namespace detail
 
@@ -39,6 +40,7 @@ class UnaryViewBase : public views::ViewBase<Derived> {
     //     views::detail::ViewTraits<Derived>::template base_type<Derived>;
     using Base::extent;
     constexpr static bool is_value_based = traits::is_value_based;
+    constexpr static bool is_const = traits::is_const;
 
     Derived& derived() { return static_cast<Derived&>(*this); }
     const Derived& derived() const {
@@ -60,7 +62,11 @@ class UnaryViewBase : public views::ViewBase<Derived> {
         return derived().get_value(value);
     }
 
-    ChildType& view() { return m_view; }
+    ChildType& view()
+        requires(!is_const)
+    {
+        return const_cast<ChildType&>(m_view);
+    }
     const ChildType& view() const { return m_view; }
     template <typename... Args>
     value_type coeff(Args&&... args) const

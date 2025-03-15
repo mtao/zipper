@@ -15,7 +15,7 @@ class RandomView;
 template <typename T, typename Generator = std::default_random_engine,
           index_type... Indices>
 auto uniform_random_view(const extents<Indices...>& extents, const T& min = 0,
-                         const T& max = 1, const Generator& g = {}) {
+                         const T& max = 1, const Generator& g = Generator{std::random_device{}()}) {
     static_assert(std::is_arithmetic_v<T>);
     if constexpr (std::is_integral_v<T>) {
         return RandomView<std::uniform_int_distribution<T>, Generator,
@@ -31,7 +31,7 @@ auto uniform_random_view(const extents<Indices...>& extents, const T& min = 0,
 template <typename T, typename Generator = std::default_random_engine,
           index_type... Indices>
 auto normal_random_view(const extents<Indices...>& extents, const T& mean = 0,
-                        const T& stddev = 1, const Generator& g = {}) {
+                        const T& stddev = 1, const Generator& g = Generator{std::random_device{}()}) {
     static_assert(std::is_floating_point_v<T>);
     return RandomView<std::normal_distribution<T>, Generator, Indices...>(
         std::normal_distribution<T>{mean, stddev}, g, extents);

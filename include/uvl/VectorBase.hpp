@@ -158,6 +158,12 @@ class VectorBase {
     {
         return view()(std::forward<Args>(idxs)...);
     }
+    template <typename... Args>
+    value_type& operator()(Args&&... idxs)
+
+    {
+        return view()(std::forward<Args>(idxs)...);
+    }
 
     const View& view() const { return m_view; }
     View& view() { return m_view; }

@@ -154,13 +154,39 @@ TEST_CASE("test_all_extents", "[storage][dense]") {
         std::cout << std::endl;
     }
 
+    spdlog::info("Manipulating MN: ");
+    print(MN);
     spdlog::warn("Full slice");
     print(MN.slice<uvl::full_extent_t, uvl::full_extent_t>());
 
     spdlog::warn("single row");
-    //
-    // print(MN.slice<std::integral_constant<uvl::index_type, 1>,
-    //               uvl::full_extent_t>());
 
+    auto slice = MN.slice<std::integral_constant<uvl::index_type, 1>,
+                          uvl::full_extent_t>();
+    spdlog::info("Slice rank {} extent {}", slice.extents().rank(),
+                 slice.extent(0));
+    print(slice);
+    spdlog::info("Manipulating MN with access to slice: ");
+    slice(0) = 2.0;
+    slice(1) = 100000;
+    slice(2) = 104000;
+    slice(3) = 100003;
+
+    spdlog::info("slice values: ");
+    print(slice);
+    spdlog::info("mn values: ");
+    print(MN);
+    slice = uvl::views::nullary::normal_random_view<double>(uvl::extents<4>{},
+                                                            -200, 1e-2);
+    spdlog::info("re-randomized slice: ");
+
+    print(MN);
+
+    spdlog::info("re-randomized slice: ");
+
+    MN.row<std::integral_constant<uvl::index_type, 2>>() = slice;
+    MN.col<std::integral_constant<uvl::index_type, 2>>() = slice;
+
+    print(MN);
     // MN.swizzle<1,0>() = MN;
 }

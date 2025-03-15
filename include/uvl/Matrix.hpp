@@ -20,6 +20,8 @@ class Matrix
     using extents_type = Base::extents_type;
     using Base::extent;
     using Base::extents;
+    using Base::row;
+    using Base::col;
 
     template <concepts::MatrixViewDerived Other>
     Matrix(const Other& other) : Base(other) {}

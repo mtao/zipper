@@ -112,9 +112,16 @@ class MatrixBase {
     auto transpose() const { return swizzle<1, 0>(); }
     template <typename... Slices>
     auto slice(Slices&&... slices) const {
-        return MatrixBase<views::unary::SliceView<view_type, true, Slices...>>(
-            views::unary::SliceView<view_type, true, Slices...>(
-                view(), std::forward<Slices>(slices)...));
+        using view_type = views::unary::SliceView<view_type, true, Slices...>;
+
+        constexpr static rank_type rank = view_type::extents_type::rank();
+        if constexpr (rank == 1) {
+            return VectorBase<view_type>(
+                view_type(view(), std::forward<Slices>(slices)...));
+        } else if constexpr (rank == 2) {
+            return MatrixBase<view_type>(
+                view_type(view(), std::forward<Slices>(slices)...));
+        }
     }
     template <typename... Slices>
     auto slice() const {
@@ -126,6 +133,40 @@ class MatrixBase {
             return MatrixBase<view_type>(view_type(view(), Slices{}...));
         }
     }
+
+    template <typename... Slices>
+    auto slice(Slices&&... slices) {
+        using view_type = views::unary::SliceView<view_type, false, Slices...>;
+
+        constexpr static rank_type rank = view_type::extents_type::rank();
+        if constexpr (rank == 1) {
+            return VectorBase<view_type>(
+                view_type(view(), std::forward<Slices>(slices)...));
+        } else if constexpr (rank == 2) {
+            return MatrixBase<view_type>(
+                view_type(view(), std::forward<Slices>(slices)...));
+        }
+    }
+    template <typename... Slices>
+    auto slice() {
+        using view_type = views::unary::SliceView<view_type, false, Slices...>;
+        constexpr static rank_type rank = view_type::extents_type::rank();
+        if constexpr (rank == 1) {
+            return VectorBase<view_type>(view_type(view(), Slices{}...));
+        } else if constexpr (rank == 2) {
+            return MatrixBase<view_type>(view_type(view(), Slices{}...));
+        }
+    }
+
+    template <typename Slice>
+    auto row() { return slice<Slice,full_extent_t>(); }
+    template <typename Slice>
+    auto col() { return slice<full_extent_t,Slice>(); }
+
+    template <typename Slice>
+    auto row() const { return slice<Slice,full_extent_t>(); }
+    template <typename Slice>
+    auto col() const { return slice<full_extent_t,Slice>(); }
 
     /*
     template <index_type... Indices,
