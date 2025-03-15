@@ -14,6 +14,7 @@
 #include "views/binary/AdditionView.hpp"
 #include "views/unary/CastView.hpp"
 #include "views/unary/NegateView.hpp"
+#include "views/unary/IdempotentView.hpp"
 #include "views/unary/ScalarProductView.hpp"
 #include "views/unary/ScalarQuotientView.hpp"
 #include "views/unary/SwizzleView.hpp"
@@ -140,7 +141,7 @@ class VectorBase {
         return VectorBase<views::unary::CastView<T, view_type>>(view());
     }
 
-    auto as_array() const { return ArrayBase<View>(view()); }
+    auto as_array() const { return ArrayBase<views::unary::IdempotentView<View>>(view()); }
     template <index_type T>
     value_type norm_powered() const {
         if constexpr (T == 1) {
@@ -160,8 +161,15 @@ class VectorBase {
 
     template <index_type T = 2>
     value_type norm() const {
-        value_type p = value_type(1.0) / T;
-        return std::pow<value_type>(norm_powered<T>(), p);
+        const value_type v = norm_powered<T>();
+        if constexpr(T == 1) {
+            return v;
+        } else if constexpr(T == 2) {
+            return std::sqrt(v);
+        } else {
+        const value_type p = value_type(1.0) / T;
+        return std::pow<value_type>(v, p);
+        }
     }
     value_type norm(value_type T) const {
         value_type p = value_type(1.0) / T;

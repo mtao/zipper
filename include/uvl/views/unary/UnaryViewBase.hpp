@@ -51,7 +51,7 @@ class UnaryViewBase
 
     constexpr const extents_type& extents() const { return m_view.extents(); }
 
-    value_type get_value(const child_value_type&value) const
+    auto get_value(const child_value_type&value) const -> decltype(auto)
         requires(is_value_based)
     {
         return derived().get_value(value);

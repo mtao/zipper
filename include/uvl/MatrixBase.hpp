@@ -10,6 +10,7 @@
 #include "concepts/VectorBaseDerived.hpp"
 //
 #include "views/binary/AdditionView.hpp"
+#include "views/unary/IdempotentView.hpp"
 #include "views/binary/MatrixProductView.hpp"
 #include "views/binary/MatrixVectorProductView.hpp"
 #include "views/reductions/CoefficientSum.hpp"
@@ -65,6 +66,7 @@ class MatrixBase {
     MatrixBase(const Other& other)
         requires(view_type::is_writable)
         : MatrixBase(other.view()) {}
+
     template <concepts::MatrixBaseDerived Other>
     MatrixBase& operator=(const Other& other)
         requires(view_type::is_writable)
@@ -96,7 +98,7 @@ class MatrixBase {
     }
 
 
-    auto as_array() const { return ArrayBase<View>(view()); }
+    auto as_array() const { return ArrayBase<views::unary::IdempotentView<View>>(view()); }
 
     template <concepts::MatrixBaseDerived Other>
     friend auto operator+(const MatrixBase<view_type>& lhs, Other const& rhs) {

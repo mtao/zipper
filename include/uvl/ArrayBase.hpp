@@ -172,8 +172,15 @@ class ArrayBase {
 
     template <index_type T = 2>
     value_type norm() const {
-        value_type p = value_type(1.0) / T;
-        return std::pow<value_type>(norm_powered<T>(), p);
+        const value_type v = norm_powered<T>();
+        if constexpr(T == 1) {
+            return v;
+        } else if constexpr(T == 2) {
+            return std::sqrt(v);
+        } else {
+        const value_type p = value_type(1.0) / T;
+        return std::pow<value_type>(v, p);
+        }
     }
     value_type norm(value_type T) const {
         value_type p = value_type(1.0) / T;

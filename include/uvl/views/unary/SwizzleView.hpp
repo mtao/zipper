@@ -76,7 +76,7 @@ class SwizzleView
             std::make_integer_sequence<rank_type, extents_type::rank()>{});
     }
     template <typename... Args>
-    value_type& coeff_ref(Args&&... idxs) const
+    value_type& coeff_ref(Args&&... idxs)
         requires(traits::is_writable)
     {
         return _coeff_ref(
