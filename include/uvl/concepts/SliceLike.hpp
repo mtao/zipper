@@ -1,0 +1,23 @@
+#if !defined(UVL_CONCEPTS_SLICELIKE_HPP)
+#define UVL_CONCEPTS_SLICELIKE_HPP
+#include "IndexLike.hpp"
+#include "uvl/types.hpp"
+
+namespace uvl::concepts {
+namespace detail {
+template <typename T>
+struct slice_like : public index_like<T> {};
+
+template <IndexLike OffsetType, IndexLike ExtentType, IndexLike StrideType>
+struct slice_like<slice_type<OffsetType, ExtentType, StrideType>>
+    : public std::true_type {};
+
+template <>
+struct slice_like<full_extent_type> : public std::true_type {};
+
+}  // namespace detail
+
+template <typename T>
+concept SliceLike = detail::slice_like<T>::value;
+}  // namespace uvl::concepts
+#endif

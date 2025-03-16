@@ -4,6 +4,7 @@
 #include "uvl/detail/convert_extents.hpp"
 #include "uvl/types.hpp"
 #include "views/reductions/CoefficientSum.hpp"
+#include "views/unary/SliceView.hpp"
 //
 #include "concepts/ArrayBaseDerived.hpp"
 #include "concepts/ViewDerived.hpp"
@@ -11,10 +12,11 @@
 #include "views/unary/CastView.hpp"
 #include "views/unary/SwizzleView.hpp"
 ////
-#include "views/unary/AbsView.hpp"
-#include "uvl/views/unary/ScalarArithmeticViews.hpp"
-#include "uvl/views/binary/ArithmeticViews.hpp"
 #include "uvl/detail/declare_operations.hpp"
+#include "uvl/views/binary/ArithmeticViews.hpp"
+#include "uvl/views/unary/ScalarArithmeticViews.hpp"
+#include "views/unary/AbsView.hpp"
+#include "views/unary/DiagonalView.hpp"
 #include "views/unary/ScalarPowerView.hpp"
 #include "views/unary/detail/operation_implementations.hpp"
 
@@ -94,7 +96,6 @@ class ArrayBase {
         return *this = *this - other;
     }
 
-
     template <rank_type... ranks>
     auto swizzle() const {
         return ArrayBase<views::unary::SwizzleView<value_type, ranks...>>(
@@ -164,6 +165,38 @@ class ArrayBase {
 
     {
         return view()(std::forward<Args>(idxs)...);
+    }
+
+    template <typename... Slices>
+    auto slice(Slices&&... slices) const {
+        using view_type = views::unary::SliceView<view_type, true, Slices...>;
+
+        return ArrayBase<view_type>(
+            view_type(view(), std::forward<Slices>(slices)...));
+    }
+    template <typename... Slices>
+    auto slice() const {
+        using view_type = views::unary::SliceView<view_type, true, Slices...>;
+        return ArrayBase<view_type>(view_type(view(), Slices{}...));
+    }
+
+    template <typename... Slices>
+    auto slice(Slices&&... slices) {
+        using view_type = views::unary::SliceView<view_type, false, Slices...>;
+        return ArrayBase<view_type>(
+            view_type(view(), std::forward<Slices>(slices)...));
+    }
+    template <typename... Slices>
+    auto slice() {
+        using view_type = views::unary::SliceView<view_type, false, Slices...>;
+        return ArrayBase<view_type>(view_type(view(), Slices{}...));
+    }
+
+    auto diagonal() const {
+        return VectorBase<views::unary::DiagonalView<view_type, true>>(view());
+    }
+    auto diagonal() {
+        return VectorBase<views::unary::DiagonalView<view_type, false>>(view());
     }
 
     const View& view() const { return m_view; }

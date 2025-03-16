@@ -111,6 +111,7 @@ class MatrixBase {
             views::unary::SwizzleView<view_type, ranks...>(view()));
     }
     auto transpose() const { return swizzle<1, 0>(); }
+
     template <typename... Slices>
     auto slice(Slices&&... slices) const {
         using view_type = views::unary::SliceView<view_type, true, Slices...>;
@@ -167,24 +168,44 @@ class MatrixBase {
     }
 
     template <typename Slice>
-    auto row() { return slice<Slice,full_extent_t>(); }
+    auto row() {
+        return slice<Slice, full_extent_t>();
+    }
     template <typename Slice>
-    auto col() { return slice<full_extent_t,Slice>(); }
+    auto col() {
+        return slice<full_extent_t, Slice>();
+    }
 
     template <typename Slice>
-    auto row() const { return slice<Slice,full_extent_t>(); }
+    auto row() const {
+        return slice<Slice, full_extent_t>();
+    }
     template <typename Slice>
-    auto col() const { return slice<full_extent_t,Slice>(); }
+    auto col() const {
+        return slice<full_extent_t, Slice>();
+    }
 
     template <typename Slice>
-    auto row(Slice&& s) { return slice<Slice,full_extent_t>(std::forward<Slice>(s), full_extent_t{}); }
+    auto row(Slice&& s) {
+        return slice<Slice, full_extent_t>(std::forward<Slice>(s),
+                                           full_extent_t{});
+    }
     template <typename Slice>
-    auto col(Slice&& s) { return slice<full_extent_t,Slice>(full_extent_t{},std::forward<Slice>(s)); }
+    auto col(Slice&& s) {
+        return slice<full_extent_t, Slice>(full_extent_t{},
+                                           std::forward<Slice>(s));
+    }
 
     template <typename Slice>
-    auto row(Slice&& s) const { return slice<Slice,full_extent_t>(full_extent_t{},std::forward<Slice>(s)); }
+    auto row(Slice&& s) const {
+        return slice<Slice, full_extent_t>(full_extent_t{},
+                                           std::forward<Slice>(s));
+    }
     template <typename Slice>
-    auto col(Slice&& s) const { return slice<full_extent_t,Slice>(std::forward<Slice>(s), full_extent_t{}); }
+    auto col(Slice&& s) const {
+        return slice<full_extent_t, Slice>(std::forward<Slice>(s),
+                                           full_extent_t{});
+    }
 
     /*
     template <index_type... Indices,

@@ -2,6 +2,8 @@
 #define UVL_VIEWS_VIEWBASE_HPP
 #include <experimental/mdspan>
 
+#include "uvl/concepts/IndexPackLike.hpp"
+#include "uvl/concepts/SlicePackLike.hpp"
 #include "detail/ViewTraits.hpp"
 #include "uvl/concepts/TupleLike.hpp"
 #include "uvl/detail/ExtentsTraits.hpp"
@@ -111,7 +113,7 @@ class ViewBase {
     }
 
     template <typename... Args>
-    auto operator()(Args&&... idxs) const -> decltype(auto)
+    auto access(Args&&... idxs) const -> decltype(auto)
 
     {
         if constexpr (is_writable) {
@@ -121,11 +123,29 @@ class ViewBase {
         }
     }
     template <typename... Args>
-    auto operator()(Args&&... idxs) -> decltype(auto)
+    auto access(Args&&... idxs) -> decltype(auto)
         requires(is_writable)
 
     {
         return coeff_ref(std::forward<Args>(idxs)...);
+    }
+
+    template <typename... Args>
+    auto operator()(Args&&... idxs) const -> decltype(auto)
+
+    {
+        //if constexpr(concepts::IndexPackLike<std::decay_t<Args>...>) {
+            return access(std::forward<Args>(idxs)...);
+        //} else {
+        //}
+
+    }
+    template <typename... Args>
+    auto operator()(Args&&... idxs) -> decltype(auto)
+        requires(is_writable)
+
+    {
+        return access(std::forward<Args>(idxs)...);
     }
 };
 }  // namespace uvl::views
