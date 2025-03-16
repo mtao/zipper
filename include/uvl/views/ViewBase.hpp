@@ -147,6 +147,18 @@ class ViewBase {
     {
         return access(std::forward<Args>(idxs)...);
     }
+
+    template <typename... Args>
+    auto access_slice(Args&&... idxs) const -> decltype(auto)
+    rqeuires (concepts::SlicePackLikej
+
+    {
+        if constexpr (is_writable) {
+            return const_coeff_ref(std::forward<Args>(idxs)...);
+        } else {
+            return coeff(std::forward<Args>(idxs)...);
+        }
+    }
 };
 }  // namespace uvl::views
 #endif

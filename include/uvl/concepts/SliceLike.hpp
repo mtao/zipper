@@ -4,6 +4,7 @@
 #include "uvl/types.hpp"
 
 namespace uvl::concepts {
+
 namespace detail {
 template <typename T>
 struct slice_like : public index_like<T> {};
@@ -17,6 +18,8 @@ struct slice_like<full_extent_type> : public std::true_type {};
 
 }  // namespace detail
 
+// A value ois slice-like if it can belong in a slice.
+// That is, it's an index, or a component in a tuple
 template <typename T>
 concept SliceLike = detail::slice_like<T>::value;
 }  // namespace uvl::concepts
