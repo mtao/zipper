@@ -18,10 +18,10 @@ class Matrix
     using view_type = Base::view_type;
     using value_type = Base::value_type;
     using extents_type = Base::extents_type;
+    using Base::col;
     using Base::extent;
     using Base::extents;
     using Base::row;
-    using Base::col;
 
     template <concepts::MatrixViewDerived Other>
     Matrix(const Other& other) : Base(other) {}
@@ -36,16 +36,36 @@ class Matrix
     using Base::operator=;
 
     template <typename... Args>
-    const value_type& operator()(Args&&... idxs) const
+    auto operator()(Args&&... idxs) const -> decltype(auto)
 
     {
-        return view()(std::forward<Args>(idxs)...);
+        decltype(auto) r = view()(std::forward<Args>(idxs)...);
+        if constexpr (std::is_same_v<std::decay_t<decltype(r)>, value_type>) {
+            return r;
+        } else {
+            using R = typename std::decay_t<decltype(r)>;
+            if constexpr (R::extents_type::rank() == 1) {
+                return VectorBase<R>(r);
+            } else if constexpr (R::extents_type::rank() == 2) {
+                return MatrixBase<R>(r);
+            }
+        }
     }
     template <typename... Args>
-    value_type& operator()(Args&&... idxs)
+    auto operator()(Args&&... idxs) -> decltype(auto)
 
     {
-        return view()(std::forward<Args>(idxs)...);
+        decltype(auto) r = view()(std::forward<Args>(idxs)...);
+        if constexpr (std::is_same_v<std::decay_t<decltype(r)>, value_type>) {
+            return r;
+        } else {
+            using R = typename std::decay_t<decltype(r)>;
+            if constexpr (R::extents_type::rank() == 1) {
+                return VectorBase<R>(r);
+            } else if constexpr (R::extents_type::rank() == 2) {
+                return MatrixBase<R>(r);
+            }
+        }
     }
 };
 template <concepts::MatrixViewDerived MB>

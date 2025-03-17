@@ -195,5 +195,17 @@ TEST_CASE("test_all_extents", "[storage][dense]") {
     spdlog::warn("Diagonal");
 
     print(MN.diagonal());
+
+    auto slice2 = MN(std::integral_constant<uvl::index_type, 3>{},
+                          uvl::full_extent_t{});
+    //static_assert(std::is_same_v<std::decay_t<decltype(slice2)>, double>);
+    slice2 = 100 * slice;
+    spdlog::warn("slice2 assigns row 100 to be a multiple of row 1");
+    print(MN);
+    auto slice3 = MN(2,uvl::full_extent_t{});
+    slice3 = 100 * slice2;
+    spdlog::warn("slice3 assigns row 100 to be a multiple of row 2");
+    print(MN);
+
     // MN.swizzle<1,0>() = MN;
 }

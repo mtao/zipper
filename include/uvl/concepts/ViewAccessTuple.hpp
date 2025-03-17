@@ -18,7 +18,7 @@ template <TupleLike T>
 struct view_access_tuple<T> {
     template <std::size_t... N>
     constexpr static bool value_temp(std::index_sequence<N...>) {
-        return (SliceLike<std::tuple_element_t<N, T>> && ...);
+        return (SliceLike<std::decay_t<std::tuple_element_t<N, T>>> && ...);
     }
 
     constexpr static bool value =

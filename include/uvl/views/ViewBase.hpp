@@ -1,11 +1,15 @@
 #if !defined(UVL_VIEWS_VIEWBASE_HPP)
 #define UVL_VIEWS_VIEWBASE_HPP
 #include <experimental/mdspan>
+#include <type_traits>
 
+#include "uvl/concepts/ViewDerived.hpp"
+// #include "uvl/views/unary/SliceView.hpp"
+#include "detail/ViewTraits.hpp"
 #include "uvl/concepts/IndexPackLike.hpp"
 #include "uvl/concepts/SlicePackLike.hpp"
-#include "detail/ViewTraits.hpp"
 #include "uvl/concepts/TupleLike.hpp"
+#include "uvl/concepts/ViewAccessTuple.hpp"
 #include "uvl/detail/ExtentsTraits.hpp"
 #include "uvl/detail/tuple_size.hpp"
 
@@ -24,7 +28,8 @@ class ViewBase {
     using traits = detail::ViewTraits<Derived>;
     using extents_type = traits::extents_type;
     using value_type = traits::value_type;
-    constexpr static bool is_coefficient_consistent = traits::is_coefficient_consistent;
+    constexpr static bool is_coefficient_consistent =
+        traits::is_coefficient_consistent;
     constexpr static bool is_writable = traits::is_writable;
     constexpr static rank_type rank = extents_type::rank();
     using array_type = std::array<index_type, rank>;
@@ -36,81 +41,28 @@ class ViewBase {
     const extents_type& extents() const { return derived().extents(); }
 
    public:
-    template <std::size_t... Idxs>
-    auto _coeff(concepts::TupleLike auto const& t,
-                std::integer_sequence<index_type, Idxs...>) const
-        -> value_type {
-        return derived().coeff(std::get<Idxs>(t)...);
+    template <typename... Indices>
+    auto coeff(Indices&&... indices) const -> value_type
+        requires((concepts::IndexLike<std::decay_t<Indices>> && ...))
+    {
+        static_assert(sizeof...(Indices) == rank);
+        return derived().coeff(std::forward<Indices>(indices)...);
+    }
+    template <typename... Indices>
+    auto coeff_ref(Indices&&... indices) -> value_type& requires(
+        is_writable && (concepts::IndexLike<std::decay_t<Indices>> && ...)) {
+        static_assert(sizeof...(Indices) == rank);
+        return derived().coeff_ref(std::forward<Indices>(indices)...);
     }
 
     template <typename... Indices>
-    auto coeff(Indices&&... indices) const -> value_type {
-        if constexpr (sizeof...(Indices) == 1 &&
-                      (concepts::TupleLike<std::decay_t<Indices>> && ...)) {
-            static_assert(
-                ((uvl::detail::tuple_size<std::decay_t<Indices>>::value ==
-                  rank) &&
-                 ...));
-            return _coeff(indices...,
-                          std::make_integer_sequence<std::size_t, rank>{});
-        } else if constexpr ((std::is_integral_v<std::decay_t<Indices>> &&
-                              ...)) {
-            static_assert((!concepts::TupleLike<std::decay_t<Indices>> && ...));
-            static_assert(sizeof...(Indices) == rank);
-            return derived().coeff(std::forward<Indices>(indices)...);
-        }
-    }
-
-    template <std::size_t... Idxs>
-    auto _const_coeff_ref(concepts::TupleLike auto const& t,
-                          std::integer_sequence<index_type, Idxs...>) const
-        -> const value_type& requires(is_writable) {
-            return derived().const_coeff_ref(std::get<Idxs>(t)...);
-        }
-
-    template <typename... Indices>
-    auto const_coeff_ref(
-        Indices&&... indices) const -> const value_type& requires(is_writable) {
-        if constexpr (sizeof...(Indices) == 1 &&
-                      (concepts::TupleLike<std::decay_t<Indices>> && ...)) {
-            static_assert(
-                ((uvl::detail::tuple_size<std::decay_t<Indices>>::value ==
-                  rank) &&
-                 ...));
-            return _const_coeff_ref(
-                indices..., std::make_integer_sequence<std::size_t, rank>{});
-        } else if constexpr ((std::is_integral_v<std::decay_t<Indices>> &&
-                              ...)) {
-            static_assert((!concepts::TupleLike<std::decay_t<Indices>> && ...));
+    auto const_coeff_ref(Indices&&... indices) const
+        -> const value_type& requires(
+            is_writable &&
+            (concepts::IndexLike<std::decay_t<Indices>> && ...)) {
             static_assert(sizeof...(Indices) == rank);
             return derived().const_coeff_ref(std::forward<Indices>(indices)...);
         }
-    }
-
-    template <std::size_t... Idxs>
-    auto _coeff_ref(concepts::TupleLike auto const& t,
-                    std::integer_sequence<index_type, Idxs...>)
-        -> value_type& requires(is_writable) {
-            return derived().coeff_ref(std::get<Idxs>(t)...);
-        }
-
-    template <typename... Indices>
-    auto coeff_ref(Indices&&... indices) -> value_type& requires(is_writable) {
-        if constexpr (sizeof...(Indices) == 1 &&
-                      (concepts::TupleLike<std::decay_t<Indices>> && ...)) {
-            static_assert(
-                ((uvl::detail::tuple_size<std::decay_t<Indices>>::value ==
-                  rank) &&
-                 ...));
-            return _coeff_ref(indices...,
-                              std::make_integer_sequence<std::size_t, rank>{});
-        } else if constexpr ((std::is_integral_v<std::decay_t<Indices>> &&
-                              ...)) {
-            static_assert((!concepts::TupleLike<std::decay_t<Indices>> && ...));
-            static_assert(sizeof...(Indices) == rank);
-            return derived().coeff_ref(std::forward<Indices>(indices)...);
-        }
-    }
 
     template <typename... Args>
     auto access(Args&&... idxs) const -> decltype(auto)
@@ -134,24 +86,52 @@ class ViewBase {
     auto operator()(Args&&... idxs) const -> decltype(auto)
 
     {
-        //if constexpr(concepts::IndexPackLike<std::decay_t<Args>...>) {
-            return access(std::forward<Args>(idxs)...);
-        //} else {
-        //}
-
+        if constexpr (sizeof...(Args) == 1 &&
+                      (concepts::ViewAccessTuple<std::decay_t<Args>> && ...)) {
+            decltype(auto) v = access_tuple(std::forward<Args>(idxs)...);
+            static_assert(!std::is_void_v<std::decay_t<decltype(v)>>);
+            return v;
+        } else {
+            decltype(auto) v = access_pack(std::forward<Args>(idxs)...);
+            static_assert(!std::is_void_v<std::decay_t<decltype(v)>>);
+            return v;
+        }
     }
     template <typename... Args>
     auto operator()(Args&&... idxs) -> decltype(auto)
         requires(is_writable)
 
     {
-        return access(std::forward<Args>(idxs)...);
+        if constexpr (sizeof...(Args) == 1 &&
+                      (concepts::ViewAccessTuple<std::decay_t<Args>> && ...)) {
+            decltype(auto) v = access_tuple(std::forward<Args>(idxs)...);
+            static_assert(!std::is_void_v<std::decay_t<decltype(v)>>);
+            return v;
+        } else {
+            decltype(auto) v = access_pack(std::forward<Args>(idxs)...);
+            static_assert(!std::is_void_v<std::decay_t<decltype(v)>>);
+            return v;
+        }
     }
 
     template <typename... Args>
-    auto access_slice(Args&&... idxs) const -> decltype(auto)
-    rqeuires (concepts::SlicePackLikej
+    auto access_pack(Args&&... idxs) const -> decltype(auto)
 
+    {
+        static_assert(!(concepts::ViewAccessTuple<std::decay_t<Args>> && ...));
+        static_assert(!(concepts::TupleLike<std::decay_t<Args>> && ...));
+        // static_assert(concepts::IndexPackLike<Args...> ||
+        //               concepts::SlicePackLike<Args...>);
+        if constexpr (concepts::IndexPackLike<Args...>) {
+            return access_index_pack(std::forward<Args>(idxs)...);
+        } else if constexpr (concepts::SlicePackLike<Args...>) {
+            return access_slice(std::forward<Args>(idxs)...);
+        }
+    }
+
+    template <typename... Args>
+    auto access_index_pack(Args&&... idxs) const -> decltype(auto)
+        requires(concepts::SlicePackLike<Args...>)
     {
         if constexpr (is_writable) {
             return const_coeff_ref(std::forward<Args>(idxs)...);
@@ -159,6 +139,85 @@ class ViewBase {
             return coeff(std::forward<Args>(idxs)...);
         }
     }
+
+    template <typename... Args>
+    auto access_pack(Args&&... idxs) -> decltype(auto)
+
+    {
+        static_assert(concepts::IndexPackLike<Args...> ||
+                      concepts::SlicePackLike<Args...>);
+        if constexpr (concepts::IndexPackLike<Args...>) {
+            return access_index_pack(std::forward<Args>(idxs)...);
+        } else if constexpr (concepts::SlicePackLike<Args...>) {
+            return access_slice(std::forward<Args>(idxs)...);
+        }
+    }
+
+    template <typename... Args>
+    auto access_index_pack(Args&&... idxs) -> decltype(auto)
+        requires(concepts::SlicePackLike<Args...>)
+    {
+        return coeff_ref(std::forward<Args>(idxs)...);
+    }
+
+    template <typename... Slices>
+    auto access_slice(Slices&&... slices) const
+        requires(concepts::SlicePackLike<Slices...> &&
+                 !concepts::IndexPackLike<Slices...>);
+
+    template <concepts::ViewAccessTuple Tuple, std::size_t... N>
+    auto access_tuple(const Tuple& t, std::index_sequence<N...>) const
+        -> decltype(auto) {
+        return access_pack(std::get<N>(t)...);
+    }
+    template <concepts::ViewAccessTuple Tuple>
+    auto access_tuple(const Tuple& t) const -> decltype(auto) {
+        return access_tuple(
+            t,
+            std::make_index_sequence<std::tuple_size_v<std::decay_t<Tuple>>>{});
+    }
+
+    template <typename... Slices>
+    auto access_slice(Slices&&... slices)
+        requires(concepts::SlicePackLike<Slices...> &&
+                 !concepts::IndexPackLike<Slices...>);
+
+    template <concepts::ViewAccessTuple Tuple, std::size_t... N>
+    auto access_tuple(const Tuple& t, std::index_sequence<N...>)
+        -> decltype(auto) {
+        return access_pack(std::get<N>(t)...);
+    }
+    template <concepts::ViewAccessTuple Tuple>
+    auto access_tuple(const Tuple& t) -> decltype(auto) {
+        return access_tuple(
+            t,
+            std::make_index_sequence<std::tuple_size_v<std::decay_t<Tuple>>>{});
+    }
 };
+
+namespace unary {
+template <concepts::ViewDerived ViewType, bool IsConst, typename... Slices>
+class SliceView;
+}
+template <typename Derived>
+template <typename... Slices>
+auto ViewBase<Derived>::access_slice(Slices&&... slices) const
+    requires(concepts::SlicePackLike<Slices...> &&
+             !concepts::IndexPackLike<Slices...>)
+{
+    return unary::SliceView<Derived, true, std::decay_t<Slices>...>(
+        derived(), std::forward<Slices>(slices)...);
+}
+
+template <typename Derived>
+template <typename... Slices>
+auto ViewBase<Derived>::access_slice(Slices&&... slices)
+    requires(concepts::SlicePackLike<Slices...> &&
+             !concepts::IndexPackLike<Slices...>)
+{
+    return unary::SliceView<Derived, false, std::decay_t<Slices>...>(
+        derived(), std::forward<Slices>(slices)...);
+}
 }  // namespace uvl::views
 #endif
+

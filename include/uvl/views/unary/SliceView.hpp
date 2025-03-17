@@ -4,6 +4,7 @@
 #include "UnaryViewBase.hpp"
 #include "uvl/concepts/ViewDerived.hpp"
 #include "uvl/detail/is_integral_constant.hpp"
+#include "uvl/detail/pack_index.hpp"
 #include "uvl/storage/PlainObjectStorage.hpp"
 #include "uvl/views/DimensionedViewBase.hpp"
 
@@ -97,6 +98,26 @@ class SliceView
 
     constexpr const extents_type& extents() const { return m_extents; }
 
+    template <rank_type K, typename... Args>
+    index_type get_index(Args&&... a) const {
+        // const auto& s = std::get<K>(m_slices);
+        const auto& s = std::get<K>(m_slices);
+        if constexpr (uvl::detail::is_integral_constant_v<
+                          std::decay_t<decltype(s)>>) {
+            return s;
+        } else if constexpr (std::is_integral_v<std::decay_t<decltype(s)>>) {
+            return s;
+        } else {
+            constexpr index_type start = std::experimental::detail::first_of(s);
+            constexpr index_type stride =
+                std::experimental::detail::stride_of(s);
+
+            const auto& v =
+                uvl::detail::pack_index<actionable_indices[K]>(a...);
+            return start + v * stride;
+        }
+    }
+    /*
     template <rank_type K>
     index_type get_index(concepts::TupleLike auto const& a) const {
         // const auto& s = std::get<K>(m_slices);
@@ -115,6 +136,31 @@ class SliceView
             return start + v * stride;
         }
     }
+    */
+
+    template <typename... Args, rank_type... ranks>
+    auto _coeff(std::integer_sequence<rank_type, ranks...>,
+                Args&&... idxs) const -> value_type {
+        return view().coeff(get_index<ranks>(idxs...)...);
+    }
+    template <typename... Args, rank_type... ranks>
+    auto _coeff_ref(std::integer_sequence<rank_type, ranks...>, Args&&... idxs)
+        -> value_type& {
+        return view().coeff_ref(get_index<ranks>(idxs...)...);
+    }
+    template <typename... Args, rank_type... ranks>
+    auto _const_coeff_ref(std::integer_sequence<rank_type, ranks...>,
+                          Args&&... idxs) const -> const value_type& {
+        return view().const_coeff_ref(get_index<ranks>(idxs...)...);
+    }
+
+    /*
+    template <concepts::TupleLike T, rank_type... ranks>
+    auto _const_coeff_ref(const T& idxs,
+                          std::integer_sequence<rank_type, ranks...>) const
+        -> const value_type& requires(traits::is_writable) {
+            return view().const_coeff_ref(get_index<ranks>(idxs)...);
+        }
 
     template <concepts::TupleLike T, rank_type... ranks>
     auto _coeff(const T& idxs, std::integer_sequence<rank_type, ranks...>) const
@@ -133,28 +179,29 @@ class SliceView
         -> const value_type& requires(traits::is_writable) {
             return view().const_coeff_ref(get_index<ranks>(idxs)...);
         }
+    */
 
     template <typename... Args>
     value_type coeff(Args&&... idxs) const {
         return _coeff(
-            std::make_tuple(std::forward<Args>(idxs)...),
-            std::make_integer_sequence<rank_type, view_extents_type::rank()>{});
+            std::make_integer_sequence<rank_type, view_extents_type::rank()>{},
+            std::forward<Args>(idxs)...);
     }
     template <typename... Args>
     value_type& coeff_ref(Args&&... idxs)
         requires(traits::is_writable)
     {
         return _coeff_ref(
-            std::make_tuple(std::forward<Args>(idxs)...),
-            std::make_integer_sequence<rank_type, view_extents_type::rank()>{});
+            std::make_integer_sequence<rank_type, view_extents_type::rank()>{},
+            std::forward<Args>(idxs)...);
     }
     template <typename... Args>
     const value_type& const_coeff_ref(Args&&... idxs) const
         requires(traits::is_writable)
     {
         return _const_coeff_ref(
-            std::make_tuple(std::forward<Args>(idxs)...),
-            std::make_integer_sequence<rank_type, view_extents_type::rank()>{});
+            std::make_integer_sequence<rank_type, view_extents_type::rank()>{},
+            std::forward<Args>(idxs)...);
     }
 
    private:
@@ -193,6 +240,14 @@ class SliceView
     extents_type m_extents;
     std::tuple<Slices...> m_slices;
 };
+
+template <concepts::ViewDerived ViewType, typename... Slices>
+SliceView(const ViewType& view, Slices&&...)
+    -> SliceView<ViewType, true, std::decay_t<Slices>...>;
+
+template <concepts::ViewDerived ViewType, typename... Slices>
+SliceView(ViewType& view, Slices&&...)
+    -> SliceView<ViewType, false, std::decay_t<Slices>...>;
 
 }  // namespace unary
 }  // namespace uvl::views
