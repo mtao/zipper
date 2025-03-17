@@ -2,6 +2,7 @@
 #define UVL_VIEWS_UNARY_SLICEVIEW_HPP
 
 #include "UnaryViewBase.hpp"
+#include "uvl/concepts/SlicePackLike.hpp"
 #include "uvl/concepts/ViewDerived.hpp"
 #include "uvl/detail/is_integral_constant.hpp"
 #include "uvl/detail/pack_index.hpp"
@@ -11,6 +12,7 @@
 namespace uvl::views {
 namespace unary {
 template <concepts::ViewDerived ViewType, bool IsConst, typename... Slices>
+    requires(concepts::SlicePackLike<Slices...>)
 class SliceView;
 
 }
@@ -57,6 +59,7 @@ struct detail::ViewTraits<unary::SliceView<ViewType, IsConst, Slices...>>
 
 namespace unary {
 template <concepts::ViewDerived ViewType, bool IsConst, typename... Slices>
+    requires(concepts::SlicePackLike<Slices...>)
 class SliceView
     : public UnaryViewBase<SliceView<ViewType, IsConst, Slices...>, ViewType> {
    public:
@@ -95,6 +98,21 @@ class SliceView
           m_extents(
               std::experimental::submdspan_extents(b.extents(), slices...)),
           m_slices(std::forward<Slices>(slices)...) {}
+
+    // for some reason having uvl::full_extent makes this necessary. TODO fix
+    // this
+    SliceView(const ViewType& b, const Slices&... slices)
+        : Base(b),
+          m_extents(
+              std::experimental::submdspan_extents(b.extents(), slices...)),
+          m_slices(slices...) {}
+
+    SliceView(ViewType& b, const Slices&... slices)
+        requires(!IsConst && view_traits::is_writable)
+        : Base(b),
+          m_extents(
+              std::experimental::submdspan_extents(b.extents(), slices...)),
+          m_slices(slices...) {}
 
     constexpr const extents_type& extents() const { return m_extents; }
 

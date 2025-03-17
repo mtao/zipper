@@ -197,6 +197,7 @@ class ViewBase {
 
 namespace unary {
 template <concepts::ViewDerived ViewType, bool IsConst, typename... Slices>
+    requires(concepts::SlicePackLike<Slices...>)
 class SliceView;
 }
 template <typename Derived>
@@ -217,6 +218,9 @@ auto ViewBase<Derived>::access_slice(Slices&&... slices)
 {
     return unary::SliceView<Derived, false, std::decay_t<Slices>...>(
         derived(), std::forward<Slices>(slices)...);
+
+    // return unary::SliceView<Derived, false, std::decay_t<Slices>...>(
+    //     derived(), slices...);
 }
 }  // namespace uvl::views
 #endif

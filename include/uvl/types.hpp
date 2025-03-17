@@ -24,6 +24,11 @@ auto create_dextents(const Args&... args) {
 
 using full_extent_t = std::experimental::full_extent_t;
 using full_extent_type = std::experimental::full_extent_t;
+constexpr static full_extent_type full_extent;
+
+template <index_type N>
+constexpr static std::integral_constant<index_type, N> static_index = std::integral_constant<index_type, N>{};
+
 
 template <concepts::IndexLike OffsetType = index_type,
           concepts::IndexLike ExtentType = index_type,

@@ -202,7 +202,7 @@ TEST_CASE("test_all_extents", "[storage][dense]") {
     slice2 = 100 * slice;
     spdlog::warn("slice2 assigns row 100 to be a multiple of row 1");
     print(MN);
-    auto slice3 = MN(2,uvl::full_extent_t{});
+    auto slice3 = MN(2,uvl::full_extent);
     slice3 = 100 * slice2;
     spdlog::warn("slice3 assigns row 100 to be a multiple of row 2");
     print(MN);
