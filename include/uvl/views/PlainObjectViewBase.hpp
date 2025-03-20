@@ -103,7 +103,8 @@ class PlainObjectViewBase : public MappedViewBase<Derived_> {
                  extents_type>::value)
     {
         using VTraits = detail::ViewTraits<V>;
-        constexpr static bool should_resize = VTraits::extents_type::rank() > 0 && extents_traits::is_dynamic;
+        constexpr static bool assigning_from_infinite = VTraits::extents_type::rank() == 0;
+        constexpr static bool should_resize = !assigning_from_infinite && extents_traits::is_dynamic;
         if constexpr (VTraits::is_coefficient_consistent) {
             if constexpr (should_resize) {
                 this->resize(view.extents());

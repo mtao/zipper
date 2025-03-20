@@ -52,7 +52,7 @@ class IdentityView : public DimensionedViewBase<IdentityView<T, Indices...>> {
 
     constexpr static bool indicesAllSame(concepts::TupleLike auto const& t) {
         return _indicesAllSame(
-            t, std::make_index_sequence<extents_type::rank()>{});
+            t, std::make_index_sequence<std::tuple_size_v<std::decay_t<decltype(t)>>>{});
     }
 
     template <typename... Args>
