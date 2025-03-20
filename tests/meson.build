@@ -8,6 +8,8 @@ test_iterate = executable('test_iterate', 'test_iterate.cpp', dependencies: [uvl
 test('iterate', test_iterate)
 test_matrix = executable('test_matrix', 'test_matrix.cpp', dependencies: [uvl_dep,catch2_with_main_dep])
 test('matrix', test_matrix)
+test_tensor = executable('test_tensor', 'test_tensor.cpp', dependencies: [uvl_dep,catch2_with_main_dep])
+test('tensor', test_tensor)
 test_extents = executable('test_extents', 'test_extents.cpp', dependencies: [uvl_dep,catch2_with_main_dep])
 test('extents', test_extents)
 

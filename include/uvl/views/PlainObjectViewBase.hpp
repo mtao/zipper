@@ -90,7 +90,6 @@ class PlainObjectViewBase : public MappedViewBase<Derived_> {
    private:
     template <concepts::ViewDerived V>
     void assign_direct(const V& view) {
-        assert(extents() == view.extents());
         for (const auto& i : uvl::detail::all_extents_indices(extents())) {
             (*this)(i) = view(i);
         }
@@ -104,8 +103,9 @@ class PlainObjectViewBase : public MappedViewBase<Derived_> {
                  extents_type>::value)
     {
         using VTraits = detail::ViewTraits<V>;
+        constexpr static bool should_resize = VTraits::extents_type::rank() > 0 && extents_traits::is_dynamic;
         if constexpr (VTraits::is_coefficient_consistent) {
-            if constexpr (extents_traits::is_dynamic) {
+            if constexpr (should_resize) {
                 this->resize(view.extents());
             }
             assign_direct(view);
@@ -114,7 +114,7 @@ class PlainObjectViewBase : public MappedViewBase<Derived_> {
                                         accessor_policy>
                 pos(uvl::detail::convert_extents<extents_type>(view.extents()));
             pos.assign_direct(view);
-            if constexpr (extents_traits::is_dynamic) {
+            if constexpr (should_resize) {
                 this->resize(view.extents());
             }
             assign_direct(pos);

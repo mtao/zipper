@@ -27,7 +27,27 @@ struct DynamicExtentIndices<extents<indices...>> {
         }
         return r;
     }
+    using dynamic_indices_type = std::array<rank_type, sizeof...(indices)>;
 
+    template <std::size_t... Indices>
+    constexpr static dynamic_indices_type get_dynamic_indices(
+        std::index_sequence<Indices...>) {
+            dynamic_indices_type
+            ret;
+        size_t index = 0;
+        auto add = []<std::size_t J>(std::integral_constant<std::size_t, J>,
+                                     auto& ret, size_t& index) {
+            if (E::static_extent(J) == std::dynamic_extent) {
+                ret[J] = index++;
+            }
+        };
+        ((add(std::integral_constant<std::size_t, Indices>{}, ret, index),
+          ...));
+
+        return ret;
+    }
+
+    constexpr static dynamic_indices_type dynamic_indices = get_dynamic_indices(std::make_integer_sequence<rank_type, E::rank()>{});
     constexpr static auto value = _eval();
 
     template <std::size_t... N>

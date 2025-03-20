@@ -16,6 +16,8 @@ struct DefaultNullaryViewTraits
     template <typename Derived>
     using base_type = DimensionedViewBase<Derived>;
 };
+
+
 }  // namespace detail
 
 template <typename Derived, typename T, index_type... Indices>

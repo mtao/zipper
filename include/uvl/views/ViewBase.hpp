@@ -45,13 +45,15 @@ class ViewBase {
     auto coeff(Indices&&... indices) const -> value_type
         requires((concepts::IndexLike<std::decay_t<Indices>> && ...))
     {
-        static_assert(sizeof...(Indices) == rank);
+        constexpr static rank_type size = sizeof...(Indices);
+        static_assert(rank == 0 || size == rank);
         return derived().coeff(std::forward<Indices>(indices)...);
     }
     template <typename... Indices>
     auto coeff_ref(Indices&&... indices) -> value_type& requires(
         is_writable && (concepts::IndexLike<std::decay_t<Indices>> && ...)) {
-        static_assert(sizeof...(Indices) == rank);
+        constexpr static rank_type size = sizeof...(Indices);
+        static_assert(rank == 0 || size == rank);
         return derived().coeff_ref(std::forward<Indices>(indices)...);
     }
 
@@ -60,7 +62,8 @@ class ViewBase {
         -> const value_type& requires(
             is_writable &&
             (concepts::IndexLike<std::decay_t<Indices>> && ...)) {
-            static_assert(sizeof...(Indices) == rank);
+            constexpr static rank_type size = sizeof...(Indices);
+            static_assert(rank == 0 || size == rank);
             return derived().const_coeff_ref(std::forward<Indices>(indices)...);
         }
 

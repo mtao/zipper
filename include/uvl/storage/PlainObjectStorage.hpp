@@ -58,9 +58,10 @@ class PlainObjectStorage
     template <typename E2>
     void resize(const E2& e)
         requires(
-            uvl::views::detail::assignable_extents<extents_type, E2>::value &&
+            uvl::views::detail::assignable_extents<E2, extents_type>::value &&
             !IsStatic)
     {
+        static_assert(E2::rank() != 0);
         this->resize_extents(e);
         m_accessor.container().resize(extents_traits::size(e));
     }
@@ -75,7 +76,8 @@ namespace uvl::views {
 template <typename ValueType, typename Extents, typename LayoutPolicy,
           typename AccessorPolicy>
 struct detail::ViewTraits<uvl::storage::PlainObjectStorage<
-    ValueType, Extents, LayoutPolicy, AccessorPolicy>>: public detail::DefaultViewTraits<ValueType, Extents>
+    ValueType, Extents, LayoutPolicy, AccessorPolicy>>
+    : public detail::DefaultViewTraits<ValueType, Extents>
 /*: public detail::ViewTraits <
   views::PlainObjectViewBase<uvl::storage::PlainObjectStorage<
       ValueType, Extents, LayoutPolicy, AccessorPolicy>> */
