@@ -17,7 +17,7 @@ template <index_type... indices>
 struct DynamicExtentIndices<extents<indices...>> {
     using E = extents<indices...>;
     constexpr static rank_type rank_dynamic = E::rank_dynamic();
-    constexpr static auto _eval() {
+    consteval static auto _eval() {
         std::array<rank_type, rank_dynamic> r;
         rank_type idx = 0;
         for (rank_type j = 0; j < E::rank(); ++j) {
@@ -29,11 +29,12 @@ struct DynamicExtentIndices<extents<indices...>> {
     }
     using dynamic_indices_type = std::array<rank_type, sizeof...(indices)>;
 
+    // composes the indices that belong to dynamic indices.
+    // Note that due to swizzle the set of indices bieng
     template <std::size_t... Indices>
-    constexpr static dynamic_indices_type get_dynamic_indices(
+    consteval static const dynamic_indices_type get_dynamic_indices(
         std::index_sequence<Indices...>) {
-            dynamic_indices_type
-            ret;
+        dynamic_indices_type ret;
         size_t index = 0;
         auto add = []<std::size_t J>(std::integral_constant<std::size_t, J>,
                                      auto& ret, size_t& index) {
@@ -47,7 +48,8 @@ struct DynamicExtentIndices<extents<indices...>> {
         return ret;
     }
 
-    constexpr static dynamic_indices_type dynamic_indices = get_dynamic_indices(std::make_integer_sequence<rank_type, E::rank()>{});
+    static constexpr dynamic_indices_type dynamic_indices =
+        get_dynamic_indices(std::make_integer_sequence<rank_type, E::rank()>{});
     constexpr static auto value = _eval();
 
     template <std::size_t... N>
@@ -64,7 +66,7 @@ struct DynamicExtentIndices<extents<indices...>> {
 };
 
 template <typename T>
-constexpr static auto dynamic_extents_indices_v =
+constexpr auto dynamic_extents_indices_v =
     DynamicExtentIndices<T>::value;
 template <typename T, typename U = T>
 auto dynamic_extents(const T& extents) {

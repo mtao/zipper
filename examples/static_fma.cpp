@@ -5,9 +5,9 @@
 
 #include "uvl/views/nullary/RandomView.hpp"
 // Try running this in the build folder:
-// > $( ninja -t commands  examples/static_fma | head -n 1 | sed 's|static_fma.cpp.o|static_fma.cpp.s|g') -S -mavx -mfma
-// then obtaining the output file assembly with 
-// > cat examples/static_fma.p/static_fma.cpp.s
+// > $( ninja -t commands  examples/static_fma | head -n 1 | sed
+// 's|static_fma.cpp.o|static_fma.cpp.s|g') -S -mavx -mfma then obtaining the
+// output file assembly with > cat examples/static_fma.p/static_fma.cpp.s
 
 __attribute__((noinline)) auto DOOP(const auto& a, const auto& b,
                                     const auto& c) {
@@ -60,7 +60,7 @@ __attribute__((noinline)) auto m() {
     return DOOP(A, B, C);
 }
 
-int main(int argc, char* argv[]) {
+int main(int, char*[]) {
     std::cout << f().norm() << std::endl;
     // std::cout << g().norm() << std::endl;
     std::cout << h().norm() << std::endl;

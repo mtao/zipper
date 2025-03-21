@@ -13,4 +13,10 @@ test('tensor', test_tensor)
 test_extents = executable('test_extents', 'test_extents.cpp', dependencies: [uvl_dep,catch2_with_main_dep])
 test('extents', test_extents)
 
+test_swizzle = executable('test_swizzle', 'test_swizzle.cpp', dependencies: [uvl_dep,catch2_with_main_dep])
+test('swizzle', test_swizzle)
+
+test_slicing = executable('test_slicing', 'test_slicing.cpp', dependencies: [uvl_dep,catch2_with_main_dep])
+test('slicing', test_slicing)
+
 test_declare_operations = executable('test_declare_operations', 'test_declare_operations.cpp', dependencies: [uvl_dep,catch2_with_main_dep])

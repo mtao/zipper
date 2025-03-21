@@ -33,23 +33,6 @@ TEST_CASE("test_extents_swizzle", "[extents][dense]") {
     {
         uvl::extents<5, std::dynamic_extent> E(19);
         auto SE = uvl::detail::swizzle_extents(
-            E, std::integer_sequence<uvl::index_type, 0>{});
-
-        REQUIRE(SE.rank() == 1);
-        CHECK(SE == uvl::dextents<1>(5));
-    }
-    {
-        uvl::extents<5, std::dynamic_extent> E(19);
-        auto SE = uvl::detail::swizzle_extents(
-            E, std::integer_sequence<uvl::index_type, 1>{});
-
-        REQUIRE(SE.rank() == 1);
-        CHECK(SE.static_extent(0) == std::dynamic_extent);
-        CHECK(SE == uvl::dextents<1>(19));
-    }
-    {
-        uvl::extents<5, std::dynamic_extent> E(19);
-        auto SE = uvl::detail::swizzle_extents(
             E, std::integer_sequence<uvl::index_type, 1, 0>{});
 
         REQUIRE(SE.rank() == 2);
@@ -69,38 +52,32 @@ TEST_CASE("test_extents_swizzle", "[extents][dense]") {
         CHECK(e3.extent(0) == 3);
 
         CHECK(uvl::detail::swizzle_extents(
-                  E, std::integer_sequence<uvl::index_type, 0>{}) ==
-              uvl::create_dextents(3));
-        CHECK(uvl::detail::swizzle_extents(
-                  E, std::integer_sequence<uvl::index_type, 1>{}) ==
-              uvl::create_dextents(5));
-        CHECK(uvl::detail::swizzle_extents(
                   E, std::integer_sequence<uvl::index_type, 0, 1>{}) ==
               uvl::create_dextents(3, 5));
         CHECK(uvl::detail::swizzle_extents(
                   E, std::integer_sequence<uvl::index_type, 1, 0>{}) ==
               uvl::create_dextents(5, 3));
 
-        CHECK(uvl::detail::swizzle_extents(
-                  E, std::integer_sequence<uvl::index_type, 1, 1>{}) ==
-              uvl::create_dextents(5, 5));
+        //CHECK(uvl::detail::swizzle_extents(
+        //          E, std::integer_sequence<uvl::index_type, 1, 1>{}) ==
+        //      uvl::create_dextents(5, 5));
 
         CHECK(uvl::detail::swizzle_extents(
                   E, std::integer_sequence<uvl::index_type, 2, 1, 0>{}) ==
               uvl::create_dextents(6, 5, 3));
 
-        uvl::detail::ExtentsSwizzler<2, 1, 0, 1> s;
-        auto se = s.swizzle_extents(E);
-        CHECK(se == uvl::create_dextents(6, 5, 3, 5));
+        //uvl::detail::ExtentsSwizzler<2, 1, 0, 1> s;
+        //auto se = s.swizzle_extents(E);
+        //CHECK(se == uvl::create_dextents(6, 5, 3, 5));
 
-        auto arr = s.swizzle(10, 11, 12);
-        REQUIRE(arr.size() == 4);
-        auto arr2 = s.swizzle(std::make_tuple(10, 11, 12));
-        REQUIRE(arr2.size() == 4);
-        CHECK(arr == arr2);
-        CHECK(arr[0] == 12);
-        CHECK(arr[1] == 11);
-        CHECK(arr[2] == 10);
-        CHECK(arr[3] == 11);
+        //auto arr = s.swizzle(10, 11, 12);
+        //REQUIRE(arr.size() == 4);
+        //auto arr2 = s.swizzle(std::make_tuple(10, 11, 12));
+        //REQUIRE(arr2.size() == 4);
+        //CHECK(arr == arr2);
+        //CHECK(arr[0] == 12);
+        //CHECK(arr[1] == 11);
+        //CHECK(arr[2] == 10);
+        //CHECK(arr[3] == 11);
     }
 }

@@ -14,6 +14,8 @@
 #include "views/binary/MatrixProductView.hpp"
 #include "views/binary/MatrixVectorProductView.hpp"
 #include "views/reductions/CoefficientSum.hpp"
+#include "views/reductions/Any.hpp"
+#include "views/reductions/All.hpp"
 #include "views/unary/CastView.hpp"
 #include "views/unary/DiagonalView.hpp"
 #include "views/unary/IdentityView.hpp"
@@ -40,13 +42,11 @@ class MatrixBase {
 
     MatrixBase(View&& v) : m_view(v) {}
     MatrixBase(const View& v) : m_view(v) {}
-    MatrixBase& operator=(View&& v) { m_view = v; }
-    MatrixBase& operator=(const View& v) { m_view = v; }
+    MatrixBase& operator=(concepts::ViewDerived auto const& v) { m_view = v; return *this;}
+    MatrixBase& operator=(concepts::MatrixBaseDerived auto const& v) { m_view = v.view(); return *this; }
 
     MatrixBase(MatrixBase&& v) = default;
     MatrixBase(const MatrixBase& v) = default;
-    MatrixBase& operator=(MatrixBase&& v) = default;
-    MatrixBase& operator=(const MatrixBase& v) = default;
 
     template <concepts::MatrixViewDerived Other>
     MatrixBase(const Other& other)
@@ -205,6 +205,13 @@ class MatrixBase {
     auto col(Slice&& s) const {
         return slice<full_extent_t, Slice>(std::forward<Slice>(s),
                                            full_extent_t{});
+    }
+
+    bool any() const requires(std::is_same_v<value_type,bool>) {
+        return views::reductions::Any(view())();
+    }
+    bool all() const requires(std::is_same_v<value_type,bool>) {
+        return views::reductions::All(view())();
     }
 
     /*

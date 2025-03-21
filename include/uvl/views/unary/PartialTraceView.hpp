@@ -1,7 +1,5 @@
-
-
-#if !defined(UVL_VIEWS_UNARY_SWIZZLEVIEW_HPP)
-#define UVL_VIEWS_UNARY_SWIZZLEVIEW_HPP
+#if !defined(UVL_VIEWS_UNARY_PARTIALTRACEVIEW_HPP)
+#define UVL_VIEWS_UNARY_PARTIALTRACEVIEW_HPP
 
 #include "UnaryViewBase.hpp"
 #include "uvl/concepts/ViewDerived.hpp"
@@ -11,14 +9,14 @@
 namespace uvl::views {
 namespace unary {
 template <concepts::ViewDerived ViewType, index_type... Indices>
-class SwizzleView;
+class PartialTraceView;
 
 }
 template <concepts::ViewDerived ViewType, index_type... Indices>
-struct detail::ViewTraits<unary::SwizzleView<ViewType, Indices...>>
+struct detail::ViewTraits<unary::PartialTraceView<ViewType, Indices...>>
     : public uvl::views::unary::detail::DefaultUnaryViewTraits<
           ViewType, DimensionedViewBase> {
-    using swizzler_type = uvl::detail::ExtentsSwizzler<Indices...>;
+    using swizzler_type = uvl::detail::ExtentsPartialTracer<Indices...>;
     using Base = detail::ViewTraits<ViewType>;
     using extents_type = swizzler_type::template extents_type_swizzler_t<
         typename Base::extents_type>;
@@ -30,10 +28,10 @@ struct detail::ViewTraits<unary::SwizzleView<ViewType, Indices...>>
 
 namespace unary {
 template <concepts::ViewDerived ViewType, index_type... Indices>
-class SwizzleView
-    : public UnaryViewBase<SwizzleView<ViewType, Indices...>, ViewType> {
+class PartialTraceView
+    : public UnaryViewBase<PartialTraceView<ViewType, Indices...>, ViewType> {
    public:
-    using self_type = SwizzleView<ViewType, Indices...>;
+    using self_type = PartialTraceView<ViewType, Indices...>;
     using traits = uvl::views::detail::ViewTraits<self_type>;
     using extents_type = traits::extents_type;
     using value_type = traits::value_type;
@@ -41,15 +39,12 @@ class SwizzleView
     using Base = UnaryViewBase<self_type, ViewType>;
     using Base::extent;
     using Base::view;
-    constexpr static rank_type internal_rank = ViewType::extents_type::rank();
-    constexpr static std::array<rank_type, internal_rank>
-        to_internal_rank_indices = swizzler_type::valid_internal_indices;
 
-    SwizzleView(const SwizzleView&) = default;
-    SwizzleView(SwizzleView&&) = default;
-    SwizzleView& operator=(const SwizzleView&) = default;
-    SwizzleView& operator=(SwizzleView&&) = default;
-    SwizzleView(const ViewType& b)
+    PartialTraceView(const SwizzleView&) = default;
+    PartialTraceView(SwizzleView&&) = default;
+    PartialTraceView& operator=(const SwizzleView&) = default;
+    PartialTraceView& operator=(SwizzleView&&) = default;
+    PartialTraceView(const ViewType& b)
         : Base(b), m_extents(swizzler_type::swizzle_extents(b.extents())) {}
 
     constexpr const extents_type& extents() const { return m_extents; }
@@ -74,24 +69,25 @@ class SwizzleView
 
     template <typename... Args>
     value_type coeff(Args&&... idxs) const {
-        return _coeff(swizzler_type::unswizzle(std::forward<Args>(idxs))...,
-                      std::make_integer_sequence<rank_type, internal_rank>{});
+        return _coeff(
+            swizzler_type::swizzle(std::forward<Args>(idxs)...),
+            std::make_integer_sequence<rank_type, extents_type::rank()>{});
     }
     template <typename... Args>
     value_type& coeff_ref(Args&&... idxs)
         requires(traits::is_writable)
     {
         return _coeff_ref(
-            swizzler_type::unswizzle(std::forward<Args>(idxs)...),
-            std::make_integer_sequence<rank_type, internal_rank>{});
+            swizzler_type::swizzle(std::forward<Args>(idxs)...),
+            std::make_integer_sequence<rank_type, extents_type::rank()>{});
     }
     template <typename... Args>
     const value_type& const_coeff_ref(Args&&... idxs) const
         requires(traits::is_writable)
     {
         return _const_coeff_ref(
-            swizzler_type::unswizzle(std::forward<Args>(idxs)...),
-            std::make_integer_sequence<rank_type, internal_rank>{});
+            swizzler_type::swizzle(std::forward<Args>(idxs)...),
+            std::make_integer_sequence<rank_type, extents_type::rank()>{});
     }
 
    private:

@@ -2,6 +2,8 @@
 #define UVL_TENSORBASE_HPP
 
 #include "uvl/detail/convert_extents.hpp"
+#include "views/reductions/Any.hpp"
+#include "views/reductions/All.hpp"
 #include "uvl/types.hpp"
 #include "views/reductions/CoefficientSum.hpp"
 #include "views/unary/SliceView.hpp"
@@ -42,13 +44,11 @@ class TensorBase {
 
     TensorBase(View&& v) : m_view(v) {}
     TensorBase(const View& v) : m_view(v) {}
-    TensorBase& operator=(View&& v) { m_view = v; }
-    TensorBase& operator=(const View& v) { m_view = v; }
+    TensorBase& operator=(concepts::ViewDerived auto const& v) { m_view = v; return *this;}
+    TensorBase& operator=(concepts::TensorBaseDerived auto const& v) { m_view = v.view(); return *this; }
 
     TensorBase(TensorBase&& v) = default;
     TensorBase(const TensorBase& v) = default;
-    TensorBase& operator=(TensorBase&& v) = default;
-    TensorBase& operator=(const TensorBase& v) = default;
 
     template <concepts::ViewDerived Other>
     TensorBase(const Other& other)
@@ -204,6 +204,13 @@ class TensorBase {
     View& view() { return m_view; }
     const extents_type& extents() const { return view().extents(); }
     constexpr index_type extent(rank_type i) const { return m_view.extent(i); }
+
+    bool any() const requires(std::is_same_v<value_type,bool>) {
+        return views::reductions::Any(view())();
+    }
+    bool all() const requires(std::is_same_v<value_type,bool>) {
+        return views::reductions::All(view())();
+    }
 
    private:
     View m_view;

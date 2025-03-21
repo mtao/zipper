@@ -4,6 +4,7 @@
 #define UVL_VIEWS_BINARY_OPERATIONVIEW_HPP
 
 #include "BinaryViewBase.hpp"
+#include "uvl/detail/extents_formatter.hpp"
 #include "detail/CoeffWiseTraits.hpp"
 #include "uvl/concepts/ViewDerived.hpp"
 #include "uvl/detail/convert_extents.hpp"
@@ -42,15 +43,42 @@ class OperationView
     constexpr static bool is_static = extents_traits::is_static;
     static_assert(holds_extents);
 
+    using a_extents_type = traits::ATraits::extents_type;
+    using b_extents_type = traits::BTraits::extents_type;
+
+    constexpr static bool valid_input_extents(const a_extents_type& a, const b_extents_type& b) {
+        if constexpr(a_extents_type::rank() == 0 || b_extents_type::rank() == 0) { // infinite tensor case
+            return true;
+        } else if constexpr(a_extents_type::rank() == b_extents_type::rank() ) { 
+            for(rank_type j = 0; j < a_extents_type::rank(); ++j) {
+                if(a.extent(j) != b.extent(j)) {
+                    return false;
+                }
+            }
+            return true;
+
+        } else {
+        return false;
+        }
+    }
+
     using Base::lhs;
     using Base::rhs;
     OperationView(const A& a, const B& b, const Operation& op = {})
         requires(is_static)
-        : Base(a, b), m_op(op) {}
+        : Base(a, b), m_op(op) {
+            if(!valid_input_extents(a.extents(),b.extents())) {
+                throw std::runtime_error(fmt::format("OperationView between {} and {} is invalid", a.extents(), b.extents()));
+            }
+        }
     OperationView(const A& a, const B& b, const Operation& op = {})
         requires(!is_static)
         : Base(a, b, uvl::detail::convert_extents<extents_type>(a.extents())),
-          m_op(op) {}
+          m_op(op) {
+            if(!valid_input_extents(a.extents(),b.extents())) {
+                throw std::runtime_error(fmt::format("OperationView between {} and {} is invalid", a.extents(), b.extents()));
+            }
+          }
 
     value_type get_value(const auto& a, const auto& b) const {
         return m_op(a, b);

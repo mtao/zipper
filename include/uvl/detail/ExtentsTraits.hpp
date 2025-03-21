@@ -23,11 +23,11 @@ struct extent_values<extents<Idxs...>> {
 template <typename Extents>
 struct ExtentsTraits {
     using extents_type = Extents;
+    constexpr static rank_type rank = extents_type::rank();
     constexpr static rank_type rank_dynamic = extents_type::rank_dynamic();
-    constexpr static rank_type rank_static = extents_type::rank_static();
+    constexpr static rank_type rank_static = rank - rank_dynamic;
     constexpr static bool is_dynamic = rank_dynamic != 0;
     constexpr static bool is_static = !is_dynamic;
-    constexpr static rank_type rank = extents_type::rank();
 
     constexpr static index_type static_size =
         extent_values<extents_type>::static_size;
@@ -50,7 +50,7 @@ struct ExtentsTraits {
         }
     }
 
-    constexpr static bool is_dynamic_extent(rank_type i) {
+    consteval bool is_dynamic_extent(rank_type i) {
         return extents_type::static_extent(i) == std::dynamic_extent;
     }
 };

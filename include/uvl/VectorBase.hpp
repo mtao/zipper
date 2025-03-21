@@ -2,6 +2,8 @@
 #if !defined(UVL_VECTORBASE_HPP)
 #define UVL_VECTORBASE_HPP
 
+#include "views/reductions/Any.hpp"
+#include "views/reductions/All.hpp"
 #include <cmath>
 
 #include "uvl/detail/convert_extents.hpp"
@@ -19,6 +21,8 @@
 #include "views/unary/detail/operation_implementations.hpp"
 //
 #include "ArrayBase.hpp"
+#include "MatrixBase.hpp"
+#include "TensorBase.hpp"
 #include "views/reductions/CoefficientSum.hpp"
 
 namespace uvl {
@@ -38,13 +42,11 @@ class VectorBase {
 
     VectorBase(View&& v) : m_view(v) {}
     VectorBase(const View& v) : m_view(v) {}
-    VectorBase& operator=(View&& v) { m_view = v; }
-    VectorBase& operator=(const View& v) { m_view = v; }
+    VectorBase& operator=(concepts::ViewDerived auto const& v) { m_view = v; return *this;}
+    VectorBase& operator=(concepts::VectorBaseDerived auto const& v) { m_view = v.view(); return *this; }
 
     VectorBase(VectorBase&& v) = default;
     VectorBase(const VectorBase& v) = default;
-    VectorBase& operator=(VectorBase&& v) = default;
-    VectorBase& operator=(const VectorBase& v) = default;
 
     auto eval() const { return Vector(*this); }
 
@@ -94,11 +96,12 @@ class VectorBase {
         return *this = *this - other;
     }
 
-    // template <rank_type... ranks>
-    // auto swizzle() const {
-    //     return VectorBase<views::unary::SwizzleView<value_type, ranks...>>(
-    //         view());
-    // }
+    // requires being told which base type to use (MatrixBase/TensorBase are the
+    // usual suspects)
+    template <template <typename> typename BaseType, rank_type... ranks>
+    auto swizzle() const {
+        return BaseType<views::unary::SwizzleView<view_type, ranks...>>(view());
+    }
     template <typename T>
     auto cast() const {
         return VectorBase<views::unary::CastView<T, view_type>>(view());
@@ -107,6 +110,13 @@ class VectorBase {
     auto as_array() const {
         return ArrayBase<views::unary::IdentityView<View>>(view());
     }
+    auto as_col_matrix() const {
+        return MatrixBase<views::unary::IdentityView<View>>(view());
+    }
+    auto as_tensor() const {
+        return TensorBase<views::unary::IdentityView<View>>(view());
+    }
+
     template <index_type T>
     value_type norm_powered() const {
         if constexpr (T == 1) {
@@ -151,6 +161,13 @@ class VectorBase {
         *this /= norm<T>();
     }
     void normalize(value_type T) { *this /= norm(T); }
+
+    bool any() const requires(std::is_same_v<value_type,bool>) {
+        return views::reductions::Any(view())();
+    }
+    bool all() const requires(std::is_same_v<value_type,bool>) {
+        return views::reductions::All(view())();
+    }
 
     template <typename... Args>
     value_type operator()(Args&&... idxs) const

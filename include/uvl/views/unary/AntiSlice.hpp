@@ -1,8 +1,7 @@
-#if !defined(UVL_VIEWS_UNARY_SLICEVIEW_HPP)
-#define UVL_VIEWS_UNARY_SLICEVIEW_HPP
+#if !defined(UVL_VIEWS_UNARY_ANTISLICEVIEW_HPP)
+#define UVL_VIEWS_UNARY_ANTISLICEVIEW_HPP
 
 #include "UnaryViewBase.hpp"
-#include "uvl/concepts/SlicePackLike.hpp"
 #include "uvl/concepts/ViewDerived.hpp"
 #include "uvl/detail/is_integral_constant.hpp"
 #include "uvl/detail/pack_index.hpp"
@@ -11,20 +10,41 @@
 
 namespace uvl::views {
 namespace unary {
-template <concepts::ViewDerived ViewType, bool IsConst, typename... Slices>
-    requires(concepts::SlicePackLike<Slices...>)
-class SliceView;
+    // the opposite of a slice (we can add indices)
+template <concepts::ViewDerived ViewType, bool IsConst, rank_type TotalRank, typename IndexSequence>
+class AntiSliceView;
 
 }
-template <concepts::ViewDerived ViewType, bool IsConst, typename... Slices>
-struct detail::ViewTraits<unary::SliceView<ViewType, IsConst, Slices...>>
+template <concepts::ViewDerived ViewType, bool IsConst, rank_type TotalRank, rank_type... indices>
+struct detail::ViewTraits<unary::AntiSliceView<ViewType, IsConst, TotalRank, std::integer_sequence<rank_type, indices...>>>
     : public uvl::views::unary::detail::DefaultUnaryViewTraits<
           ViewType, DimensionedViewBase> {
     using Base = detail::ViewTraits<ViewType>;
+
+    template <std::size_t... N>
+    constexpr static std::array<rank_type, TotalRank> indices(std::index_sequence<N...>) {
+
+        std::array<rank_type, TotalRank> R;
+        std::ranges::fill(R.begin(),R.end(), 1);
+
+        ((R[uvl::detail::template pack_index<N>(indices...)] = ViewType::extents_type::static_extent(N)),...);
+
+
+    }
+
+    constexpr static std::array<rank_type, TotalRank> indices() {
+
+        std::array<rank_type, TotalRank> R;
+        std::ranges::fill(R.begin(),R.end(), 1);
+
+
+    }
+
+
     using extents_type =
         std::decay_t<decltype(std::experimental::submdspan_extents(
             std::declval<typename Base::extents_type>(),
-            std::declval<Slices>()...))>;
+            std::declval<AntiSlices>()...))>;
     using value_type = Base::value_type;
     constexpr static bool is_writable = Base::is_writable && !IsConst;
     constexpr static bool is_coefficient_consistent = false;
@@ -34,29 +54,18 @@ struct detail::ViewTraits<unary::SliceView<ViewType, IsConst, Slices...>>
     //
     template <std::size_t... Indices>
     constexpr static std::array<rank_type, sizeof...(Indices)> get_actionable(
-        std::index_sequence<Indices...>)
-        requires(sizeof...(Indices) == Base::extents_type::rank())
-    {
+        std::index_sequence<Indices...>) {
         constexpr size_t Rank = sizeof...(Indices);
         std::array<rank_type, Rank> ret;
-        using tuple_type = std::tuple<Slices...>;
+        using tuple_type = std::tuple<AntiSlices...>;
         size_t index = 0;
         auto add = []<std::size_t J>(std::integral_constant<std::size_t, J>,
                                      auto& ret, size_t& index) {
-            if (concepts::SliceLike<std::tuple_element_t<J, tuple_type>> &&
-                !concepts::IndexLike<std::tuple_element_t<J, tuple_type>>) {
+            if (uvl::detail::is_integral_constant_v<
+                    std::tuple_element_t<J, tuple_type>>) {
                 ret[J] = index++;
-            } else {
-                ret[J] = std::dynamic_extent;
             }
         };
-        // auto add = []<std::size_t J>(std::integral_constant<std::size_t, J>,
-        //                              auto& ret, size_t& index) {
-        //     if (uvl::detail::is_integral_constant_v<
-        //             std::tuple_element_t<J, tuple_type>>) {
-        //         ret[J] = index++;
-        //     }
-        // };
         ((add(std::integral_constant<std::size_t, Indices>{}, ret, index),
           ...));
 
@@ -69,12 +78,12 @@ struct detail::ViewTraits<unary::SliceView<ViewType, IsConst, Slices...>>
 };
 
 namespace unary {
-template <concepts::ViewDerived ViewType, bool IsConst, typename... Slices>
-    requires(concepts::SlicePackLike<Slices...>)
-class SliceView
-    : public UnaryViewBase<SliceView<ViewType, IsConst, Slices...>, ViewType> {
+template <concepts::ViewDerived ViewType, bool IsConst, typename... AntiSlices>
+    requires(concepts::AntiSlicePackLike<AntiSlices...>)
+class AntiSliceView
+    : public UnaryViewBase<AntiSliceView<ViewType, IsConst, AntiSlices...>, ViewType> {
    public:
-    using self_type = SliceView<ViewType, IsConst, Slices...>;
+    using self_type = AntiSliceView<ViewType, IsConst, AntiSlices...>;
     using traits = uvl::views::detail::ViewTraits<self_type>;
     using extents_type = traits::extents_type;
     using value_type = traits::value_type;
@@ -83,8 +92,6 @@ class SliceView
     using Base::view;
     using view_traits = uvl::views::detail::ViewTraits<ViewType>;
     using view_extents_type = view_traits::extents_type;
-
-    using slice_storage_type = std::tuple<Slices...>;
 
     constexpr static std::array<rank_type, view_extents_type::rank()>
         actionable_indices = traits::actionable_indices;
@@ -95,35 +102,32 @@ class SliceView
         return const_cast<ViewType&>(Base::view());
     }
 
-    SliceView(const SliceView&) = default;
-    SliceView(SliceView&&) = default;
-
-    SliceView& operator=(concepts::ViewDerived auto const& v) {
-        assign(v);
-        return *this;
-    }
-    SliceView(const ViewType& b, Slices&&... slices)
+    AntiSliceView(const AntiSliceView&) = default;
+    AntiSliceView(AntiSliceView&&) = default;
+    AntiSliceView& operator=(const AntiSliceView&) = default;
+    AntiSliceView& operator=(AntiSliceView&&) = default;
+    AntiSliceView(const ViewType& b, AntiSlices&&... slices)
         : Base(b),
           m_extents(
               std::experimental::submdspan_extents(b.extents(), slices...)),
-          m_slices(std::forward<Slices>(slices)...) {}
+          m_slices(std::forward<AntiSlices>(slices)...) {}
 
-    SliceView(ViewType& b, Slices&&... slices)
+    AntiSliceView(ViewType& b, AntiSlices&&... slices)
         requires(!IsConst && view_traits::is_writable)
         : Base(b),
           m_extents(
               std::experimental::submdspan_extents(b.extents(), slices...)),
-          m_slices(std::forward<Slices>(slices)...) {}
+          m_slices(std::forward<AntiSlices>(slices)...) {}
 
     // for some reason having uvl::full_extent makes this necessary. TODO fix
     // this
-    SliceView(const ViewType& b, const Slices&... slices)
+    AntiSliceView(const ViewType& b, const AntiSlices&... slices)
         : Base(b),
           m_extents(
               std::experimental::submdspan_extents(b.extents(), slices...)),
           m_slices(slices...) {}
 
-    SliceView(ViewType& b, const Slices&... slices)
+    AntiSliceView(ViewType& b, const AntiSlices&... slices)
         requires(!IsConst && view_traits::is_writable)
         : Base(b),
           m_extents(
@@ -136,17 +140,11 @@ class SliceView
     index_type get_index(Args&&... a) const {
         // const auto& s = std::get<K>(m_slices);
         const auto& s = std::get<K>(m_slices);
-
         if constexpr (uvl::detail::is_integral_constant_v<
                           std::decay_t<decltype(s)>>) {
             return s;
         } else if constexpr (std::is_integral_v<std::decay_t<decltype(s)>>) {
             return s;
-        } else if constexpr (std::is_same_v<std::decay_t<decltype(s)>,
-                                            uvl::full_extent_type>) {
-            const auto& v =
-                uvl::detail::pack_index<actionable_indices[K]>(a...);
-            return v;
         } else {
             constexpr index_type start = std::experimental::detail::first_of(s);
             constexpr index_type stride =
@@ -247,6 +245,7 @@ class SliceView
    private:
     template <concepts::ViewDerived V>
     void assign_direct(const V& view) {
+        assert(extents() == view.extents());
         for (const auto& i : uvl::detail::all_extents_indices(extents())) {
             (*this)(i) = view(i);
         }
@@ -262,12 +261,6 @@ class SliceView
         using VTraits = views::detail::ViewTraits<V>;
         using layout_policy = uvl::default_layout_policy;
         using accessor_policy = uvl::default_accessor_policy<value_type>;
-#if !defined(NDEBUG)
-        constexpr static bool assigning_from_infinite =
-            VTraits::extents_type::rank() == 0;
-
-        assert(assigning_from_infinite || extents() == view.extents());
-#endif
         if constexpr (VTraits::is_coefficient_consistent) {
             // TODO: check sizing
             assign_direct(view);
@@ -283,16 +276,16 @@ class SliceView
 
    private:
     extents_type m_extents;
-    slice_storage_type m_slices;
+    std::tuple<AntiSlices...> m_slices;
 };
 
-template <concepts::ViewDerived ViewType, typename... Slices>
-SliceView(const ViewType& view, Slices&&...)
-    -> SliceView<ViewType, true, std::decay_t<Slices>...>;
+template <concepts::ViewDerived ViewType, typename... AntiSlices>
+AntiSliceView(const ViewType& view, AntiSlices&&...)
+    -> AntiSliceView<ViewType, true, std::decay_t<AntiSlices>...>;
 
-template <concepts::ViewDerived ViewType, typename... Slices>
-SliceView(ViewType& view, Slices&&...)
-    -> SliceView<ViewType, false, std::decay_t<Slices>...>;
+template <concepts::ViewDerived ViewType, typename... AntiSlices>
+AntiSliceView(ViewType& view, AntiSlices&&...)
+    -> AntiSliceView<ViewType, false, std::decay_t<AntiSlices>...>;
 
 }  // namespace unary
 }  // namespace uvl::views

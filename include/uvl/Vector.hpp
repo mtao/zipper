@@ -23,6 +23,9 @@ class Vector : public VectorBase<
     Vector(const Other& other) : Base(other) {}
     template <concepts::VectorBaseDerived Other>
     Vector(const Other& other) : Base(other) {}
+
+    template <concepts::ViewDerived Other>
+    Vector(const Other& other) : Base(other) {}
     template <typename... Args>
     Vector(Args&&... args)
         requires((std::is_convertible_v<Args, index_type> && ...))

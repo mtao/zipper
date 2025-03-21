@@ -1,6 +1,7 @@
 #if !defined(UVL_DETAIL_SWIZZLE_EXTENTS_HPP)
 #define UVL_DETAIL_SWIZZLE_EXTENTS_HPP
 
+#include "ExtentsTraits.hpp"
 #include "dynamic_extents_indices.hpp"
 #include "uvl/concepts/TupleLike.hpp"
 #include "uvl/types.hpp"
@@ -10,16 +11,59 @@ namespace uvl::detail {
 template <index_type... SwizzleIndices>
 struct ExtentsSwizzler {
     using swizzle_extents_type = extents<SwizzleIndices...>;
+    using swizzle_extents_traits = ExtentsTraits<swizzle_extents_type>;
 
     constexpr static index_type size = sizeof...(SwizzleIndices);
+
+    constexpr static rank_type valid_indices_rank =
+        swizzle_extents_traits::rank_static;
+
+    consteval static auto get_valid_indices()
+        -> std::array<rank_type, valid_indices_rank> {
+        rank_type r[valid_indices_rank];
+        for (rank_type j = 0; j < swizzle_extents_type::rank(); ++j) {
+            if (index_type index = swizzle_extents_type::static_extent(j);
+                index != std::dynamic_extent) {
+                r[index] = j;
+            }
+        }
+
+        std::array<rank_type, valid_indices_rank> r2;
+        for (rank_type j = 0; j < valid_indices_rank; ++j) {
+            r2[j] = r[j];
+        }
+
+        return r2;
+    }
+    // swizzling can support dimensions that don't exist in the child view to
+    // lift to higher order tensors (like making a vector a matrix) this keeps
+    // track of which indices are ok or not
+    constexpr static std::array<rank_type, valid_indices_rank>
+        valid_internal_indices = get_valid_indices();
+
+    // the required size of the object being swizzled
+    constexpr static auto valid_internal_size = valid_internal_indices.size();
+
+    consteval static auto get_indices()
+        -> std::array<rank_type, valid_indices_rank> {
+        std::array<rank_type, valid_indices_rank> r;
+        for (rank_type j = 0; j < valid_indices_rank; ++j) {
+            r[j] =
+                swizzle_extents_type::static_extent(valid_internal_indices[j]);
+        }
+        return r;
+    }
+
 #if !defined(__cpp_pack_indexing)
     // this sort of tool isn't necessary with pack indexing
     constexpr static std::array<index_type, size> swizzle_indices = {
-        {SwizzleIndices...}};
+        {SwizzleIndices == std::dynamic_extent ? 1 : SwizzleIndices...}};
 #endif
     template <index_type... Indices>
     using swizzled_extents_type =
-        extents<extents<Indices...>::static_extent(SwizzleIndices)...>;
+        extents<SwizzleIndices == std::dynamic_extent
+                    ? 1
+                    : extents<Indices...>::static_extent(SwizzleIndices)...>;
 
     template <typename T>
     struct extents_type_swizzler {};
@@ -80,29 +124,61 @@ struct ExtentsSwizzler {
         }
     }
 
-    constexpr static auto _swizzle(concepts::TupleLike auto const& t)
-        -> std::array<index_type, size> {
+    template <index_type Index>
+
+        requires(Index < valid_internal_indices.size())
+    constexpr static auto _unswizzle_single_index(
+        concepts::TupleLike auto const& t) -> index_type {
+        if constexpr (Index != std::dynamic_extent) {
+            static_assert(valid_internal_indices[Index] < size);
+            return std::get<valid_internal_indices[Index]>(t);
+        } else {
+            return 0;
+        }
+    }
+
+    template <std::size_t... ValidIndices>
+    constexpr static auto _unswizzle(concepts::TupleLike auto const& t,
+                                     std::index_sequence<ValidIndices...>)
+        -> std::array<index_type, valid_indices_rank> {
         using input_type = std::decay_t<decltype(t)>;
         constexpr std::size_t my_size = std::tuple_size_v<input_type>;
-        static_assert(((SwizzleIndices < my_size) && ...));
-        std::array<index_type, size> r{
-            {index_type(std::get<SwizzleIndices>(t))...}};
+        static_assert(
+            ((valid_internal_indices[ValidIndices] < my_size) && ...));
+        static_assert(((SwizzleIndices < my_size ||
+                        SwizzleIndices == std::dynamic_extent) &&
+                       ...));
+        std::array<index_type, valid_indices_rank> r{
+            {_unswizzle_single_index<ValidIndices>(t)...}};
         return r;
     }
 
+    constexpr static auto _unswizzle(concepts::TupleLike auto const& t)
+        -> std::array<index_type, valid_indices_rank> {
+        return _unswizzle(t, std::make_index_sequence<valid_indices_rank>{});
+        // using input_type = std::decay_t<decltype(t)>;
+        // constexpr std::size_t my_size = std::tuple_size_v<input_type>;
+        // static_assert(((SwizzleIndices < my_size ||
+        //                 SwizzleIndices == std::dynamic_extent) &&
+        //                ...));
+        // std::array<index_type, size> r{
+        //     {_swizzle_single_index<SwizzleIndices>(t)...}};
+        // return r;
+    }
+
     template <typename... Indices>
-    constexpr static auto swizzle(Indices&&... indices)
-        -> std::array<index_type, size> {
+    constexpr static auto unswizzle(Indices&&... indices)
+        -> std::array<index_type, valid_indices_rank> {
         if constexpr (sizeof...(Indices) == 1 &&
                       (concepts::TupleLike<Indices> && ...)) {
-            return _swizzle(std::forward<Indices>(indices)...);
+            return _unswizzle(std::forward<Indices>(indices)...);
         } else {
 #if defined(__cpp_pack_indexing) && false
-            return {{index_type(indices...[SwizzledIndices])...}};
+            return {{index_type(indices...[SwizzledIndices`])...}};
 #else
             // if we had parameter pack indexing this wouldn't be necsesary<
             // hoping the compiler inlines all of this
-            return _swizzle(std::make_tuple(indices...));
+            return _unswizzle(std::make_tuple(indices...));
 #endif
         }
     }

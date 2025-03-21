@@ -4,7 +4,10 @@
 #include <utility>
 namespace uvl::detail {
 template <std::size_t K, typename Arg0, typename... Args>
-auto pack_index(Arg0&& arg, Args&&... args) -> decltype(auto) {
+constexpr auto pack_index(Arg0&& arg, Args&&... args) -> decltype(auto)
+    requires(K <= sizeof...(Args))
+
+{
     if constexpr (K == 0) {
         return std::forward<Arg0>(arg);
     } else {

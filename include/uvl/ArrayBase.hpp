@@ -1,6 +1,8 @@
 #if !defined(UVL_ARRAYBASE_HPP)
 #define UVL_ARRAYBASE_HPP
 
+#include "views/reductions/Any.hpp"
+#include "views/reductions/All.hpp"
 #include "uvl/detail/convert_extents.hpp"
 #include "uvl/types.hpp"
 #include "views/reductions/CoefficientSum.hpp"
@@ -41,13 +43,11 @@ class ArrayBase {
 
     ArrayBase(View&& v) : m_view(v) {}
     ArrayBase(const View& v) : m_view(v) {}
-    ArrayBase& operator=(View&& v) { m_view = v; }
-    ArrayBase& operator=(const View& v) { m_view = v; }
+    ArrayBase& operator=(concepts::ViewDerived auto const& v) { m_view = v; return *this;}
+    ArrayBase& operator=(concepts::ArrayBaseDerived auto const& v) { m_view = v.view(); return *this; }
 
     ArrayBase(ArrayBase&& v) = default;
     ArrayBase(const ArrayBase& v) = default;
-    ArrayBase& operator=(ArrayBase&& v) = default;
-    ArrayBase& operator=(const ArrayBase& v) = default;
 
     template <concepts::ViewDerived Other>
     ArrayBase(const Other& other)
@@ -203,6 +203,12 @@ class ArrayBase {
     View& view() { return m_view; }
     const extents_type& extents() const { return view().extents(); }
     constexpr index_type extent(rank_type i) const { return m_view.extent(i); }
+    bool any() const requires(std::is_same_v<value_type,bool>) {
+        return views::reductions::Any(view())();
+    }
+    bool all() const requires(std::is_same_v<value_type,bool>) {
+        return views::reductions::All(view())();
+    }
 
    private:
     View m_view;

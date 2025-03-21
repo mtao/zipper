@@ -23,17 +23,33 @@ class Matrix
     using Base::extents;
     using Base::row;
 
+
+    Matrix(const Matrix& other):Base(other.view()) {}
+    template <index_type R2, index_type C2>
+    Matrix(const Matrix<value_type,R2,C2>& other) : Base(other.view()) {}
     template <concepts::MatrixViewDerived Other>
     Matrix(const Other& other) : Base(other) {}
     template <concepts::MatrixBaseDerived Other>
     Matrix(const Other& other) : Base(other) {}
+    template <concepts::ViewDerived Other>
+    Matrix(const Other& other) : Base(other) {}
     template <typename... Args>
     Matrix(Args&&... args)
-        requires((std::is_convertible_v<Args, index_type> && ...))
+        requires(concepts::IndexPackLike<Args...>)
         : Base(uvl::extents<Rows, Cols>(std::forward<Args>(args)...)) {}
     template <index_type... indices>
     Matrix(const uvl::extents<indices...>& e) : Base(e) {}
     using Base::operator=;
+
+    Matrix& operator=(const Matrix& other) {
+        Base::operator=(other.view());
+        return *this;
+    }
+    template <index_type R2, index_type C2>
+    Matrix& operator=(const Matrix<value_type,R2,C2>& other) {
+        Base::operator=(other.view());
+        return *this;
+    }
 
     template <typename... Args>
     auto operator()(Args&&... idxs) const -> decltype(auto)

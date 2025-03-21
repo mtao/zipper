@@ -38,6 +38,8 @@ class IdentityView : public DimensionedViewBase<IdentityView<T, Indices...>> {
     IdentityView& operator=(IdentityView&&) = default;
 
     IdentityView(const extents_type& e) : m_extents(e) {}
+    template <typename... Args>
+    IdentityView(Args&&... args) requires (concepts::IndexPackLike<Args...>): m_extents(std::forward<Args>(args)...) {}
     using Base = DimensionedViewBase<self_type>;
     using Base::extent;
 
