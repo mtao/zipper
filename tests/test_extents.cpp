@@ -19,6 +19,10 @@ TEST_CASE("test_invert_integer_sequence", "[extents]") {
 
         static_assert(a.size() == b.size());
         CHECK(a == b);
+
+        using E = uvl::views::unary::detail::invert_integer_sequence<
+            3, 0, 1, 2>::assign_types<uvl::extents>;
+        static_assert(std::is_same_v<E, uvl::extents<>>);
     }
     {
         auto a = to_array(std::integer_sequence<rank_type, 0>{});
@@ -28,6 +32,10 @@ TEST_CASE("test_invert_integer_sequence", "[extents]") {
 
         static_assert(a.size() == b.size());
         CHECK(a == b);
+
+        using E = uvl::views::unary::detail::invert_integer_sequence<
+            3, 1, 2>::assign_types<uvl::extents>;
+        static_assert(std::is_same_v<E, uvl::extents<0>>);
     }
     {
         auto a = to_array(std::integer_sequence<rank_type, 0, 2>{});
@@ -44,6 +52,10 @@ TEST_CASE("test_invert_integer_sequence", "[extents]") {
 
         static_assert(a.size() == b.size());
         CHECK(a == b);
+
+        using E = uvl::views::unary::detail::invert_integer_sequence<
+            3>::assign_types<uvl::extents>;
+        static_assert(std::is_same_v<E, uvl::extents<0, 1, 2>>);
     }
 }
 

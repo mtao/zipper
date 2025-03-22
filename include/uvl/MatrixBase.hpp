@@ -16,6 +16,8 @@
 #include "views/reductions/CoefficientSum.hpp"
 #include "views/reductions/Any.hpp"
 #include "views/reductions/All.hpp"
+#include "views/reductions/Trace.hpp"
+//#include "views/reductions/Determinant.hpp"
 #include "views/unary/CastView.hpp"
 #include "views/unary/DiagonalView.hpp"
 #include "views/unary/IdentityView.hpp"
@@ -165,6 +167,10 @@ class MatrixBase {
     }
     auto diagonal() {
         return VectorBase<views::unary::DiagonalView<view_type, false>>(view());
+    }
+
+    value_type trace() const {
+        return views::reductions::Trace(view())();
     }
 
     template <typename Slice>

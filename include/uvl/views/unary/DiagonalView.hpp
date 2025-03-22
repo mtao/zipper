@@ -9,11 +9,11 @@
 
 namespace uvl::views {
 namespace unary {
-template <concepts::ViewDerived ViewType, bool IsConst >
+template <concepts::ViewDerived ViewType, bool IsConst>
 class DiagonalView;
 
 }
-template <concepts::ViewDerived ViewType, bool IsConst >
+template <concepts::ViewDerived ViewType, bool IsConst>
 struct detail::ViewTraits<unary::DiagonalView<ViewType, IsConst> >
     : public uvl::views::unary::detail::DefaultUnaryViewTraits<
           ViewType, DimensionedViewBase> {
@@ -29,33 +29,35 @@ struct detail::ViewTraits<unary::DiagonalView<ViewType, IsConst> >
     //
     template <std::size_t... Indices>
 
-    constexpr static index_type get_min_extent_static(std::integer_sequence<index_type,
-        Indices...>) {
+    constexpr static index_type get_min_extent_static(
+        std::integer_sequence<index_type, Indices...>) {
         return std::min({base_extents_type::static_extent(Indices)...});
     }
 
     constexpr static index_type get_min_extent_static() {
-        if constexpr(base_extents_traits::is_dynamic) {
+        if constexpr (base_extents_traits::is_dynamic) {
             return std::dynamic_extent;
         } else {
             return get_min_extent_static(
-            std::make_integer_sequence<index_type, base_extents_type::rank()>{});
+                std::make_integer_sequence<index_type,
+                                           base_extents_type::rank()>{});
         }
     }
     static index_type get_min_extent(const base_extents_type& e) {
-        if constexpr(base_extents_traits::is_static) {
+        if constexpr (base_extents_traits::is_static) {
             return get_min_extent_static();
         } else {
-            index_type min = std::numeric_limits<index_type>::max();;
-            for(rank_type j = 0; j < e.rank(); ++j) {
-                min = std::min(min,e.extent(j));
+            index_type min = std::numeric_limits<index_type>::max();
+            ;
+            for (rank_type j = 0; j < e.rank(); ++j) {
+                min = std::min(min, e.extent(j));
             }
             return min;
         }
     }
     using extents_type = uvl::extents<get_min_extent_static()>;
     static extents_type get_extents(const base_extents_type& e) {
-        if constexpr(base_extents_traits::is_static) {
+        if constexpr (base_extents_traits::is_static) {
             return {};
         } else {
             return extents_type(get_min_extent(e));
@@ -64,7 +66,7 @@ struct detail::ViewTraits<unary::DiagonalView<ViewType, IsConst> >
 };
 
 namespace unary {
-template <concepts::ViewDerived ViewType, bool IsConst >
+template <concepts::ViewDerived ViewType, bool IsConst>
 class DiagonalView
     : public UnaryViewBase<DiagonalView<ViewType, IsConst>, ViewType> {
    public:
@@ -89,18 +91,12 @@ class DiagonalView
 
     DiagonalView(const DiagonalView&) = default;
     DiagonalView(DiagonalView&&) = default;
-    DiagonalView& operator=(const DiagonalView&) = default;
-    DiagonalView& operator=(DiagonalView&&) = default;
     DiagonalView(const ViewType& b)
-        : Base(b),
-          m_extents(traits::get_extents(b.extents()))
-        {}
+        : Base(b), m_extents(traits::get_extents(b.extents())) {}
 
     DiagonalView(ViewType& b)
         requires(!IsConst && view_traits::is_writable)
-        : Base(b),
-          m_extents(traits::get_extents(b.extents()))
-        {}
+        : Base(b), m_extents(traits::get_extents(b.extents())) {}
 
     constexpr const extents_type& extents() const { return m_extents; }
 
@@ -185,6 +181,11 @@ class DiagonalView
    private:
     extents_type m_extents;
 };
+template <concepts::ViewDerived ViewType>
+DiagonalView(ViewType& v) -> DiagonalView<ViewType, false>;
+
+template <concepts::ViewDerived ViewType>
+DiagonalView(const ViewType& v) -> DiagonalView<ViewType, true>;
 
 }  // namespace unary
 }  // namespace uvl::views

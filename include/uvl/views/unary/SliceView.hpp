@@ -194,32 +194,6 @@ class SliceView
         return view().const_coeff_ref(get_index<ranks>(idxs...)...);
     }
 
-    /*
-    template <concepts::TupleLike T, rank_type... ranks>
-    auto _const_coeff_ref(const T& idxs,
-                          std::integer_sequence<rank_type, ranks...>) const
-        -> const value_type& requires(traits::is_writable) {
-            return view().const_coeff_ref(get_index<ranks>(idxs)...);
-        }
-
-    template <concepts::TupleLike T, rank_type... ranks>
-    auto _coeff(const T& idxs, std::integer_sequence<rank_type, ranks...>) const
-        -> value_type {
-        return view().coeff(get_index<ranks>(idxs)...);
-    }
-    template <concepts::TupleLike T, rank_type... ranks>
-    auto _coeff_ref(const T& idxs, std::integer_sequence<rank_type, ranks...>)
-        -> value_type& requires(traits::is_writable) {
-            return view().coeff_ref(get_index<ranks>(idxs)...);
-        }
-
-    template <concepts::TupleLike T, rank_type... ranks>
-    auto _const_coeff_ref(const T& idxs,
-                          std::integer_sequence<rank_type, ranks...>) const
-        -> const value_type& requires(traits::is_writable) {
-            return view().const_coeff_ref(get_index<ranks>(idxs)...);
-        }
-    */
 
     template <typename... Args>
     value_type coeff(Args&&... idxs) const {

@@ -21,6 +21,7 @@ struct detail::ViewTraits<unary::PartialTraceView<ViewType, Indices...>>
         unary::detail::invert_integer_sequence<Base::extents_type::rank(),
                                                Indices...>;
     using extents_type = typename index_remover::template assign_types<uvl::extents>;
+    using summed_extents_type = uvl::extents<Indices...>;
     using value_type = Base::value_type;
     constexpr static bool is_writable = false;
     constexpr static bool is_coefficient_consistent = false;

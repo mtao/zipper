@@ -104,6 +104,7 @@ TEST_CASE("test_assignment", "[matrix][storage][dense]") {
     CHECK(N(1, 4) == 13);
     CHECK(N(2, 4) == 14);
 }
+
 TEST_CASE("test_transpose", "[matrix][storage][dense]") {
     uvl::Matrix<double, 3, std::dynamic_extent> M(3);
     uvl::Matrix<double, 3, 5> N(3, 5);
@@ -249,6 +250,23 @@ TEST_CASE("test_identity", "[matrix][vector][lift]") {
     print(rowMat);
 }
 
+TEST_CASE("test_trace", "[matrix][storage][dense]") {
+    uvl::Matrix<double, 3, 3> N(3, 5);
+    N = uvl::views::nullary::uniform_random_view<double>(uvl::extents<3, 3>{},
+                                                         -1, 1);
+    N.diagonal() = uvl::views::nullary::ConstantView<double, 3>(0.0);
+    CHECK(N.trace() == 0);
+
+    N.diagonal() = uvl::views::nullary::ConstantView<double, 3>(1.0);
+    print(N);
+    CHECK(N.trace() == 3);
+    N(0, 0) = 2;
+    CHECK(N.trace() == 4);
+    N(1, 1) = 2;
+    CHECK(N.trace() == 5);
+    N(2, 2) = 2;
+    CHECK(N.trace() == 6);
+}
 /*
 TEST_CASE("test_all_extents", "[storage][dense]") {
 

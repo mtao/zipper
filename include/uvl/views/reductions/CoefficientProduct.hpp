@@ -1,5 +1,5 @@
-#if !defined(UVL_VIEWS_COEFFICIENTSUM_HPP)
-#define UVL_VIEWS_COEFFICIENTSUM_HPP
+#if !defined(UVL_VIEWS_COEFFICIENTPRODUCT_HPP)
+#define UVL_VIEWS_COEFFICIENTPRODUCT_HPP
 
 #include "uvl/concepts/ViewDerived.hpp"
 #include "uvl/detail/all_extents_indices.hpp"
@@ -9,28 +9,24 @@ namespace uvl::views {
 namespace reductions {
 
 template <concepts::ViewDerived View>
-class CoefficientSum {
+class CoefficientProduct {
    public:
-    using self_type = CoefficientSum<View>;
+    using self_type = CoefficientProduct<View>;
     using view_type = View;
     using view_traits = uvl::views::detail::ViewTraits<view_type>;
     using value_type = typename View::value_type;
 
-    CoefficientSum(View&& v) : m_view(v) {}
-    CoefficientSum(const View& v) : m_view(v) {}
-    CoefficientSum& operator=(View&& v) { m_view = v; }
-    CoefficientSum& operator=(const View& v) { m_view = v; }
+    CoefficientProduct(View&& v) : m_view(v) {}
+    CoefficientProduct(const View& v) : m_view(v) {}
 
-    CoefficientSum(CoefficientSum&& v) = default;
-    CoefficientSum(const CoefficientSum& v) = default;
-    CoefficientSum& operator=(CoefficientSum&& v) = default;
-    CoefficientSum& operator=(const CoefficientSum& v) = default;
+    CoefficientProduct(CoefficientProduct&& v) = default;
+    CoefficientProduct(const CoefficientProduct& v) = default;
 
     value_type operator()() const {
-        value_type v = 0.0;
+        value_type v = 1.0;
         for (const auto& i :
              uvl::detail::all_extents_indices(m_view.extents())) {
-            v += m_view(i);
+            v *= m_view(i);
         }
         return v;
     }
@@ -40,7 +36,7 @@ class CoefficientSum {
 };  // namespace unarytemplate<typenameA,typenameB>class AdditionView
 
 template <concepts::ViewDerived View>
-CoefficientSum(const View&) -> CoefficientSum<View>;
+CoefficientProduct(const View&) -> CoefficientProduct<View>;
 
 }  // namespace reductions
 }  // namespace uvl::views

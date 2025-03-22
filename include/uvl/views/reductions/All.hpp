@@ -17,13 +17,9 @@ class All {
 
     All(View&& v) : m_view(v) {}
     All(const View& v) : m_view(v) {}
-    All& operator=(View&& v) { m_view = v; }
-    All& operator=(const View& v) { m_view = v; }
 
     All(All&& v) = default;
     All(const All& v) = default;
-    All& operator=(All&& v) = default;
-    All& operator=(const All& v) = default;
 
     value_type operator()() const {
         for (const auto& i :
