@@ -23,13 +23,15 @@ struct invert_integer_sequence {
         (add(std::integral_constant<rank_type, M>{}, R, index), ...);
         return R;
     }
-    constexpr static std::array<rank_type, total_rank - sizeof...(Indices)> R =
-        make_arr(std::make_integer_sequence<rank_type, total_rank>{});
+    constexpr static std::array<rank_type, total_rank - sizeof...(Indices)>
+        reversal_array =
+            make_arr(std::make_integer_sequence<rank_type, total_rank>{});
 
     template <rank_type... M>
     constexpr static auto make(std::integer_sequence<rank_type, M...>) {
         // return std::integer_sequence<rank_type, M...>{};
-        return std::integer_sequence<rank_type, std::get<M>(R)...>{};
+        return std::integer_sequence<rank_type,
+                                     std::get<M>(reversal_array)...>{};
         // return std::integer_sequence<rank_type, std::get<M>(R)...>{};
     }
 
@@ -41,17 +43,20 @@ struct invert_integer_sequence {
 
     using type = decltype(make());
 
-    template <template <rank_type...>typename,typename>
-        struct assign_types_i;
+    template <template <rank_type...> typename, typename>
+    struct assign_types_i;
 
-    template <template <rank_type...>typename rank_vartype,rank_type... types>
-        struct assign_types_i<rank_vartype, std::integer_sequence<rank_type,types...>> {
-            using type = rank_vartype<R[types]...>;
-        };
-
+    template <template <rank_type...> typename rank_vartype, rank_type... types>
+    struct assign_types_i<rank_vartype,
+                          std::integer_sequence<rank_type, types...>> {
+        using type = rank_vartype<reversal_array[types]...>;
+    };
 
     template <template <rank_type...> typename rank_vartype>
-        using assign_types = assign_types_i<rank_vartype, decltype(std::make_integer_sequence<rank_type, total_rank - sizeof...(Indices)>{})>::type;
+    using assign_types = assign_types_i<
+        rank_vartype,
+        decltype(std::make_integer_sequence<
+                 rank_type, total_rank - sizeof...(Indices)>{})>::type;
 };
 
 }  // namespace uvl::views::unary::detail

@@ -205,12 +205,6 @@ class TensorBase {
     const extents_type& extents() const { return view().extents(); }
     constexpr index_type extent(rank_type i) const { return m_view.extent(i); }
 
-    bool any() const requires(std::is_same_v<value_type,bool>) {
-        return views::reductions::Any(view())();
-    }
-    bool all() const requires(std::is_same_v<value_type,bool>) {
-        return views::reductions::All(view())();
-    }
 
    private:
     View m_view;
@@ -229,34 +223,44 @@ SCALAR_BINARY_DECLARATION(TensorBase, Plus, operator+)
 SCALAR_BINARY_DECLARATION(TensorBase, Minus, operator-)
 SCALAR_BINARY_DECLARATION(TensorBase, Multiplies, operator*)
 SCALAR_BINARY_DECLARATION(TensorBase, Divides, operator/)
-SCALAR_BINARY_DECLARATION(TensorBase, Modulus, operator%)
-SCALAR_BINARY_DECLARATION(TensorBase, EqualsTo, operator==)
-SCALAR_BINARY_DECLARATION(TensorBase, NotEqualsTo, operator!=)
-SCALAR_BINARY_DECLARATION(TensorBase, Greater, operator>)
-SCALAR_BINARY_DECLARATION(TensorBase, Less, operator<)
-SCALAR_BINARY_DECLARATION(TensorBase, GreaterEqual, operator>=)
-SCALAR_BINARY_DECLARATION(TensorBase, LessEqual, operator<=)
-SCALAR_BINARY_DECLARATION(TensorBase, LogicalAnd, operator&&)
-SCALAR_BINARY_DECLARATION(TensorBase, LogicalOr, operator||)
-SCALAR_BINARY_DECLARATION(TensorBase, BitAnd, operator&)
-SCALAR_BINARY_DECLARATION(TensorBase, BitOr, operator|)
-SCALAR_BINARY_DECLARATION(TensorBase, BitXor, operator^)
+//SCALAR_BINARY_DECLARATION(TensorBase, Modulus, operator%)
+//SCALAR_BINARY_DECLARATION(TensorBase, EqualsTo, operator==)
+//SCALAR_BINARY_DECLARATION(TensorBase, NotEqualsTo, operator!=)
+//SCALAR_BINARY_DECLARATION(TensorBase, Greater, operator>)
+//SCALAR_BINARY_DECLARATION(TensorBase, Less, operator<)
+//SCALAR_BINARY_DECLARATION(TensorBase, GreaterEqual, operator>=)
+//SCALAR_BINARY_DECLARATION(TensorBase, LessEqual, operator<=)
+//SCALAR_BINARY_DECLARATION(TensorBase, LogicalAnd, operator&&)
+//SCALAR_BINARY_DECLARATION(TensorBase, LogicalOr, operator||)
+//SCALAR_BINARY_DECLARATION(TensorBase, BitAnd, operator&)
+//SCALAR_BINARY_DECLARATION(TensorBase, BitOr, operator|)
+//SCALAR_BINARY_DECLARATION(TensorBase, BitXor, operator^)
 
 BINARY_DECLARATION(TensorBase, Plus, operator+)
 BINARY_DECLARATION(TensorBase, Minus, operator-)
-BINARY_DECLARATION(TensorBase, Divides, operator/)
-BINARY_DECLARATION(TensorBase, Modulus, operator%)
-BINARY_DECLARATION(TensorBase, EqualsTo, operator==)
-BINARY_DECLARATION(TensorBase, NotEqualsTo, operator!=)
-BINARY_DECLARATION(TensorBase, Greater, operator>)
-BINARY_DECLARATION(TensorBase, Less, operator<)
-BINARY_DECLARATION(TensorBase, GreaterEqual, operator>=)
-BINARY_DECLARATION(TensorBase, LessEqual, operator<=)
-BINARY_DECLARATION(TensorBase, LogicalAnd, operator&&)
-BINARY_DECLARATION(TensorBase, LogicalOr, operator||)
-BINARY_DECLARATION(TensorBase, BitAnd, operator&)
-BINARY_DECLARATION(TensorBase, BitOr, operator|)
-BINARY_DECLARATION(TensorBase, BitXor, operator^)
+//BINARY_DECLARATION(TensorBase, Divides, operator/)
+//BINARY_DECLARATION(TensorBase, Modulus, operator%)
+//BINARY_DECLARATION(TensorBase, EqualsTo, operator==)
+//BINARY_DECLARATION(TensorBase, NotEqualsTo, operator!=)
+//BINARY_DECLARATION(TensorBase, Greater, operator>)
+//BINARY_DECLARATION(TensorBase, Less, operator<)
+//BINARY_DECLARATION(TensorBase, GreaterEqual, operator>=)
+//BINARY_DECLARATION(TensorBase, LessEqual, operator<=)
+//BINARY_DECLARATION(TensorBase, LogicalAnd, operator&&)
+//BINARY_DECLARATION(TensorBase, LogicalOr, operator||)
+//BINARY_DECLARATION(TensorBase, BitAnd, operator&)
+//BINARY_DECLARATION(TensorBase, BitOr, operator|)
+//BINARY_DECLARATION(TensorBase, BitXor, operator^)
+
+template <concepts::TensorBaseDerived View1, concepts::TensorBaseDerived View2>
+bool operator==(View1 const& lhs, View2 const& rhs) {
+    return (lhs.as_array() == rhs.as_array()).all();
+}
+
+template <concepts::TensorBaseDerived View1, concepts::TensorBaseDerived View2>
+bool operator!=(View1 const& lhs, View2 const& rhs) {
+    return (lhs.as_array() != rhs.as_array()).any();
+}
 
 template <concepts::TensorBaseDerived View1, concepts::TensorBaseDerived View2>
 auto operator*(View1 const& lhs, View2 const& rhs) {

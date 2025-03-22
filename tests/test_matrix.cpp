@@ -195,13 +195,11 @@ TEST_CASE("test_identity", "[matrix][identity]") {
         (I ==
          uvl::MatrixBase(
              uvl::views::nullary::IdentityView<double, std::dynamic_extent, 3>{
-                 3}))
-            .all());
-    CHECK(
-        (I == uvl::MatrixBase(
-                  uvl::views::nullary::IdentityView<double, std::dynamic_extent,
-                                                    std::dynamic_extent>{3, 3}))
-            .all());
+                 3})));
+    CHECK((I ==
+           uvl::MatrixBase(
+               uvl::views::nullary::IdentityView<double, std::dynamic_extent,
+                                                 std::dynamic_extent>{3, 3})));
 
     check_identity(uvl::MatrixBase(
         uvl::views::nullary::IdentityView<double, std::dynamic_extent,
@@ -213,8 +211,8 @@ TEST_CASE("test_identity", "[matrix][identity]") {
 
     uvl::Matrix<double, 3, 3> MI = I * M;
     uvl::Matrix<double, 3, 3> IM = M * I;
-    CHECK((M == MI).all());
-    CHECK((M == IM).all());
+    CHECK((M == MI));
+    CHECK((M == IM));
 }
 
 TEST_CASE("test_identity", "[matrix][vector][lift]") {

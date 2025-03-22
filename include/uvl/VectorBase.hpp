@@ -162,12 +162,6 @@ class VectorBase {
     }
     void normalize(value_type T) { *this /= norm(T); }
 
-    bool any() const requires(std::is_same_v<value_type,bool>) {
-        return views::reductions::Any(view())();
-    }
-    bool all() const requires(std::is_same_v<value_type,bool>) {
-        return views::reductions::All(view())();
-    }
 
     template <typename... Args>
     value_type operator()(Args&&... idxs) const
@@ -204,17 +198,26 @@ SCALAR_BINARY_DECLARATION(VectorBase, Divides, operator/)
 
 BINARY_DECLARATION(VectorBase, Plus, operator+)
 BINARY_DECLARATION(VectorBase, Minus, operator-)
-BINARY_DECLARATION(VectorBase, EqualsTo, operator==)
-BINARY_DECLARATION(VectorBase, NotEqualsTo, operator!=)
-BINARY_DECLARATION(VectorBase, Greater, operator>)
-BINARY_DECLARATION(VectorBase, Less, operator<)
-BINARY_DECLARATION(VectorBase, GreaterEqual, operator>=)
-BINARY_DECLARATION(VectorBase, LessEqual, operator<=)
-BINARY_DECLARATION(VectorBase, LogicalAnd, operator&&)
-BINARY_DECLARATION(VectorBase, LogicalOr, operator||)
-BINARY_DECLARATION(VectorBase, BitAnd, operator&)
-BINARY_DECLARATION(VectorBase, BitOr, operator|)
-BINARY_DECLARATION(VectorBase, BitXor, operator^)
+//BINARY_DECLARATION(VectorBase, EqualsTo, operator==)
+//BINARY_DECLARATION(VectorBase, NotEqualsTo, operator!=)
+//BINARY_DECLARATION(VectorBase, Greater, operator>)
+//BINARY_DECLARATION(VectorBase, Less, operator<)
+//BINARY_DECLARATION(VectorBase, GreaterEqual, operator>=)
+//BINARY_DECLARATION(VectorBase, LessEqual, operator<=)
+//BINARY_DECLARATION(VectorBase, LogicalAnd, operator&&)
+//BINARY_DECLARATION(VectorBase, LogicalOr, operator||)
+//BINARY_DECLARATION(VectorBase, BitAnd, operator&)
+//BINARY_DECLARATION(VectorBase, BitOr, operator|)
+//BINARY_DECLARATION(VectorBase, BitXor, operator^)
+template <concepts::VectorBaseDerived View1, concepts::VectorBaseDerived View2>
+bool operator==(View1 const& lhs, View2 const& rhs) {
+    return (lhs.as_array() == rhs.as_array()).all();
+}
+
+template <concepts::VectorBaseDerived View1, concepts::VectorBaseDerived View2>
+bool operator!=(View1 const& lhs, View2 const& rhs) {
+    return (lhs.as_array() != rhs.as_array()).any();
+}
 template <concepts::VectorBaseDerived View>
 auto operator*(View const& lhs, typename View::value_type const& rhs) {
     return VectorBase<views::unary::ScalarMultipliesView<

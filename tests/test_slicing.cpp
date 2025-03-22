@@ -14,6 +14,14 @@
 #include <uvl/views/nullary/RandomView.hpp>
 
 namespace {
+void print(uvl::concepts::ArrayBaseDerived auto const& M) {
+    for (uvl::index_type j = 0; j < M.extent(0); ++j) {
+        for (uvl::index_type k = 0; k < M.extent(1); ++k) {
+            std::cout << M(j, k) << " ";
+        }
+        std::cout << std::endl;
+    }
+}
 
 void print(uvl::concepts::MatrixBaseDerived auto const& M) {
     for (uvl::index_type j = 0; j < M.extent(0); ++j) {
@@ -122,9 +130,10 @@ TEST_CASE("test_matrix_slicing", "[extents][matrix][slice]") {
     spdlog::info("full slice");
     print(MN.slice<uvl::full_extent_t, uvl::full_extent_t>());
     spdlog::info("are same");
-    print((MN.slice<uvl::full_extent_t, uvl::full_extent_t>() == MN));
+    print((MN.slice<uvl::full_extent_t, uvl::full_extent_t>().as_array() ==
+           MN.as_array()));
 
-    CHECK((MN.slice<uvl::full_extent_t, uvl::full_extent_t>() == MN).all());
+    CHECK((MN.slice<uvl::full_extent_t, uvl::full_extent_t>() == MN));
 
     auto slice = MN.slice<std::integral_constant<uvl::index_type, 1>,
                           uvl::full_extent_t>();

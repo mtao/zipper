@@ -56,13 +56,12 @@ void print(uvl::concepts::TensorBaseDerived auto const& M) {
     }
 }
 }  // namespace
-TEST_CASE("test_all_extents", "[storage][dense]") {
-    uvl::Tensor<double, 3, 3> I =
-        uvl::views::nullary::IdentityView<double>{};
+TEST_CASE("test_tensor_product", "[storage][dense]") {
+    uvl::Tensor<double, 3, 3> I = uvl::views::nullary::IdentityView<double>{};
     uvl::Tensor<double, 3, std::dynamic_extent> M(3);
     uvl::Tensor<double, 3> x;
 
-    uvl::Tensor<double, 3, 3,3> J =
+    uvl::Tensor<double, 3, 3, 3> J =
         uvl::views::nullary::ConstantView<double>{6};
     spdlog::info("Constant tensor from infinite view");
     print(J);
@@ -81,6 +80,17 @@ TEST_CASE("test_all_extents", "[storage][dense]") {
     print(M * x);
     spdlog::info("Prod of matrix Matrix identity");
     print(I * M);
+    auto IM = I * M;
+
+    // CHECK(IM.slice(std::integral_constant<uvl::rank_type, 0>{},
+    //                std::integral_constant<uvl::rank_type, 0>{},
+    //                uvl::full_extent, uvl::full_extent) == M);
 
     // uvl::Tensor C ;
+}
+
+TEST_CASE("test_product", "[storage][tensor]") {
+    uvl::Tensor<double, 3, 3> I = uvl::views::nullary::IdentityView<double>{};
+    uvl::Tensor<double, 3, 3> M =
+        uvl::views::nullary::normal_random_infinite_view<double>(0, 1);
 }

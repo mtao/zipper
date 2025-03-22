@@ -213,12 +213,6 @@ class MatrixBase {
                                            full_extent_t{});
     }
 
-    bool any() const requires(std::is_same_v<value_type,bool>) {
-        return views::reductions::Any(view())();
-    }
-    bool all() const requires(std::is_same_v<value_type,bool>) {
-        return views::reductions::All(view())();
-    }
 
     /*
     template <index_type... Indices,
@@ -263,17 +257,27 @@ SCALAR_BINARY_DECLARATION(MatrixBase, Divides, operator/)
 
 BINARY_DECLARATION(MatrixBase, Plus, operator+)
 BINARY_DECLARATION(MatrixBase, Minus, operator-)
-BINARY_DECLARATION(MatrixBase, EqualsTo, operator==)
-BINARY_DECLARATION(MatrixBase, NotEqualsTo, operator!=)
-BINARY_DECLARATION(MatrixBase, Greater, operator>)
-BINARY_DECLARATION(MatrixBase, Less, operator<)
-BINARY_DECLARATION(MatrixBase, GreaterEqual, operator>=)
-BINARY_DECLARATION(MatrixBase, LessEqual, operator<=)
-BINARY_DECLARATION(MatrixBase, LogicalAnd, operator&&)
-BINARY_DECLARATION(MatrixBase, LogicalOr, operator||)
-BINARY_DECLARATION(MatrixBase, BitAnd, operator&)
-BINARY_DECLARATION(MatrixBase, BitOr, operator|)
-BINARY_DECLARATION(MatrixBase, BitXor, operator^)
+//BINARY_DECLARATION(MatrixBase, EqualsTo, operator==)
+//BINARY_DECLARATION(MatrixBase, NotEqualsTo, operator!=)
+//BINARY_DECLARATION(MatrixBase, Greater, operator>)
+//BINARY_DECLARATION(MatrixBase, Less, operator<)
+//BINARY_DECLARATION(MatrixBase, GreaterEqual, operator>=)
+//BINARY_DECLARATION(MatrixBase, LessEqual, operator<=)
+//BINARY_DECLARATION(MatrixBase, LogicalAnd, operator&&)
+//BINARY_DECLARATION(MatrixBase, LogicalOr, operator||)
+//BINARY_DECLARATION(MatrixBase, BitAnd, operator&)
+//BINARY_DECLARATION(MatrixBase, BitOr, operator|)
+//BINARY_DECLARATION(MatrixBase, BitXor, operator^)
+//
+template <concepts::MatrixBaseDerived View1, concepts::MatrixBaseDerived View2>
+bool operator==(View1 const& lhs, View2 const& rhs) {
+    return (lhs.as_array() == rhs.as_array()).all();
+}
+
+template <concepts::MatrixBaseDerived View1, concepts::MatrixBaseDerived View2>
+bool operator!=(View1 const& lhs, View2 const& rhs) {
+    return (lhs.as_array() != rhs.as_array()).any();
+}
 
 template <concepts::MatrixBaseDerived View1, concepts::MatrixBaseDerived View2>
 auto operator*(View1 const& lhs, View2 const& rhs) {
