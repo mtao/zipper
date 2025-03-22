@@ -2,8 +2,8 @@
 #define UVL_VIEWS_UNARY_PARTIALTRACEVIEW_HPP
 
 #include "UnaryViewBase.hpp"
+#include "detail/invert_integer_sequence.hpp"
 #include "uvl/concepts/ViewDerived.hpp"
-#include "uvl/detail/swizzle_extents.hpp"
 #include "uvl/views/DimensionedViewBase.hpp"
 
 namespace uvl::views {
@@ -16,12 +16,13 @@ template <concepts::ViewDerived ViewType, index_type... Indices>
 struct detail::ViewTraits<unary::PartialTraceView<ViewType, Indices...>>
     : public uvl::views::unary::detail::DefaultUnaryViewTraits<
           ViewType, DimensionedViewBase> {
-    using swizzler_type = uvl::detail::ExtentsPartialTracer<Indices...>;
     using Base = detail::ViewTraits<ViewType>;
-    using extents_type = swizzler_type::template extents_type_swizzler_t<
-        typename Base::extents_type>;
+    using index_remover =
+        unary::detail::invert_integer_sequence<Base::extents_type::rank(),
+                                               Indices...>;
+    using extents_type = typename index_remover::template assign_types<uvl::extents>;
     using value_type = Base::value_type;
-    constexpr static bool is_writable = Base::is_writable;
+    constexpr static bool is_writable = false;
     constexpr static bool is_coefficient_consistent = false;
     constexpr static bool is_value_based = false;
 };
@@ -40,10 +41,10 @@ class PartialTraceView
     using Base::extent;
     using Base::view;
 
-    PartialTraceView(const SwizzleView&) = default;
-    PartialTraceView(SwizzleView&&) = default;
-    PartialTraceView& operator=(const SwizzleView&) = default;
-    PartialTraceView& operator=(SwizzleView&&) = default;
+    PartialTraceView(const PartialTraceView&) = default;
+    PartialTraceView(PartialTraceView&&) = default;
+    PartialTraceView& operator=(const PartialTraceView&) = default;
+    PartialTraceView& operator=(PartialTraceView&&) = default;
     PartialTraceView(const ViewType& b)
         : Base(b), m_extents(swizzler_type::swizzle_extents(b.extents())) {}
 
@@ -54,38 +55,9 @@ class PartialTraceView
         -> value_type {
         return view().coeff(std::get<ranks>(idxs)...);
     }
-    template <concepts::TupleLike T, rank_type... ranks>
-    auto _coeff_ref(const T& idxs, std::integer_sequence<rank_type, ranks...>)
-        -> value_type& requires(traits::is_writable) {
-            return view().coeff_ref(std::get<ranks>(idxs)...);
-        }
-
-    template <concepts::TupleLike T, rank_type... ranks>
-    auto _const_coeff_ref(const T& idxs,
-                          std::integer_sequence<rank_type, ranks...>) const
-        -> const value_type& requires(traits::is_writable) {
-            return view().const_coeff_ref(std::get<ranks>(idxs)...);
-        }
-
     template <typename... Args>
     value_type coeff(Args&&... idxs) const {
         return _coeff(
-            swizzler_type::swizzle(std::forward<Args>(idxs)...),
-            std::make_integer_sequence<rank_type, extents_type::rank()>{});
-    }
-    template <typename... Args>
-    value_type& coeff_ref(Args&&... idxs)
-        requires(traits::is_writable)
-    {
-        return _coeff_ref(
-            swizzler_type::swizzle(std::forward<Args>(idxs)...),
-            std::make_integer_sequence<rank_type, extents_type::rank()>{});
-    }
-    template <typename... Args>
-    const value_type& const_coeff_ref(Args&&... idxs) const
-        requires(traits::is_writable)
-    {
-        return _const_coeff_ref(
             swizzler_type::swizzle(std::forward<Args>(idxs)...),
             std::make_integer_sequence<rank_type, extents_type::rank()>{});
     }
