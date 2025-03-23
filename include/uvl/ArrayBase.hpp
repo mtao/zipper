@@ -1,10 +1,9 @@
 #if !defined(UVL_ARRAYBASE_HPP)
 #define UVL_ARRAYBASE_HPP
 
-#include "views/reductions/Any.hpp"
-#include "views/reductions/All.hpp"
-#include "uvl/detail/convert_extents.hpp"
 #include "uvl/types.hpp"
+#include "views/reductions/All.hpp"
+#include "views/reductions/Any.hpp"
 #include "views/reductions/CoefficientSum.hpp"
 #include "views/unary/SliceView.hpp"
 //
@@ -32,6 +31,7 @@ class ArrayBase {
     using view_type = View;
     using value_type = View::value_type;
     using extents_type = View::extents_type;
+    using extents_traits = detail::ExtentsTraits<extents_type>;
 
     template <index_type... N>
     auto eval(const extents<N...>&) const {
@@ -43,8 +43,14 @@ class ArrayBase {
 
     ArrayBase(View&& v) : m_view(v) {}
     ArrayBase(const View& v) : m_view(v) {}
-    ArrayBase& operator=(concepts::ViewDerived auto const& v) { m_view = v; return *this;}
-    ArrayBase& operator=(concepts::ArrayBaseDerived auto const& v) { m_view = v.view(); return *this; }
+    ArrayBase& operator=(concepts::ViewDerived auto const& v) {
+        m_view = v;
+        return *this;
+    }
+    ArrayBase& operator=(concepts::ArrayBaseDerived auto const& v) {
+        m_view = v.view();
+        return *this;
+    }
 
     ArrayBase(ArrayBase&& v) = default;
     ArrayBase(const ArrayBase& v) = default;
@@ -52,7 +58,7 @@ class ArrayBase {
     template <concepts::ViewDerived Other>
     ArrayBase(const Other& other)
         requires(view_type::is_writable)
-        : m_view(detail::convert_extents<extents_type>(other.extents())) {
+        : m_view(extents_traits::convert_from(other.extents())) {
         m_view.assign(other);
     }
     template <concepts::ViewDerived Other>
@@ -203,10 +209,14 @@ class ArrayBase {
     View& view() { return m_view; }
     const extents_type& extents() const { return view().extents(); }
     constexpr index_type extent(rank_type i) const { return m_view.extent(i); }
-    bool any() const requires(std::is_same_v<value_type,bool>) {
+    bool any() const
+        requires(std::is_same_v<value_type, bool>)
+    {
         return views::reductions::Any(view())();
     }
-    bool all() const requires(std::is_same_v<value_type,bool>) {
+    bool all() const
+        requires(std::is_same_v<value_type, bool>)
+    {
         return views::reductions::All(view())();
     }
 

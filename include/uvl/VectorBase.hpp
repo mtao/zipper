@@ -2,11 +2,8 @@
 #if !defined(UVL_VECTORBASE_HPP)
 #define UVL_VECTORBASE_HPP
 
-#include "views/reductions/Any.hpp"
-#include "views/reductions/All.hpp"
 #include <cmath>
 
-#include "uvl/detail/convert_extents.hpp"
 #include "uvl/types.hpp"
 //
 #include "concepts/VectorBaseDerived.hpp"
@@ -37,13 +34,20 @@ class VectorBase {
     using view_type = View;
     using value_type = View::value_type;
     using extents_type = View::extents_type;
+    using extents_traits = detail::ExtentsTraits<extents_type>;
     template <typename... Args>
     VectorBase(Args&&... v) : m_view(std::forward<Args>(v)...) {}
 
     VectorBase(View&& v) : m_view(v) {}
     VectorBase(const View& v) : m_view(v) {}
-    VectorBase& operator=(concepts::ViewDerived auto const& v) { m_view = v; return *this;}
-    VectorBase& operator=(concepts::VectorBaseDerived auto const& v) { m_view = v.view(); return *this; }
+    VectorBase& operator=(concepts::ViewDerived auto const& v) {
+        m_view = v;
+        return *this;
+    }
+    VectorBase& operator=(concepts::VectorBaseDerived auto const& v) {
+        m_view = v.view();
+        return *this;
+    }
 
     VectorBase(VectorBase&& v) = default;
     VectorBase(const VectorBase& v) = default;
@@ -53,7 +57,7 @@ class VectorBase {
     template <concepts::VectorViewDerived Other>
     VectorBase(const Other& other)
         requires(view_type::is_writable)
-        : m_view(detail::convert_extents<extents_type>(other.extents())) {
+        : m_view(extents_traits::convert_from(other.extents())) {
         m_view.assign(other);
     }
     template <concepts::VectorViewDerived Other>
@@ -162,7 +166,6 @@ class VectorBase {
     }
     void normalize(value_type T) { *this /= norm(T); }
 
-
     template <typename... Args>
     value_type operator()(Args&&... idxs) const
 
@@ -198,17 +201,17 @@ SCALAR_BINARY_DECLARATION(VectorBase, Divides, operator/)
 
 BINARY_DECLARATION(VectorBase, Plus, operator+)
 BINARY_DECLARATION(VectorBase, Minus, operator-)
-//BINARY_DECLARATION(VectorBase, EqualsTo, operator==)
-//BINARY_DECLARATION(VectorBase, NotEqualsTo, operator!=)
-//BINARY_DECLARATION(VectorBase, Greater, operator>)
-//BINARY_DECLARATION(VectorBase, Less, operator<)
-//BINARY_DECLARATION(VectorBase, GreaterEqual, operator>=)
-//BINARY_DECLARATION(VectorBase, LessEqual, operator<=)
-//BINARY_DECLARATION(VectorBase, LogicalAnd, operator&&)
-//BINARY_DECLARATION(VectorBase, LogicalOr, operator||)
-//BINARY_DECLARATION(VectorBase, BitAnd, operator&)
-//BINARY_DECLARATION(VectorBase, BitOr, operator|)
-//BINARY_DECLARATION(VectorBase, BitXor, operator^)
+// BINARY_DECLARATION(VectorBase, EqualsTo, operator==)
+// BINARY_DECLARATION(VectorBase, NotEqualsTo, operator!=)
+// BINARY_DECLARATION(VectorBase, Greater, operator>)
+// BINARY_DECLARATION(VectorBase, Less, operator<)
+// BINARY_DECLARATION(VectorBase, GreaterEqual, operator>=)
+// BINARY_DECLARATION(VectorBase, LessEqual, operator<=)
+// BINARY_DECLARATION(VectorBase, LogicalAnd, operator&&)
+// BINARY_DECLARATION(VectorBase, LogicalOr, operator||)
+// BINARY_DECLARATION(VectorBase, BitAnd, operator&)
+// BINARY_DECLARATION(VectorBase, BitOr, operator|)
+// BINARY_DECLARATION(VectorBase, BitXor, operator^)
 template <concepts::VectorBaseDerived View1, concepts::VectorBaseDerived View2>
 bool operator==(View1 const& lhs, View2 const& rhs) {
     return (lhs.as_array() == rhs.as_array()).all();

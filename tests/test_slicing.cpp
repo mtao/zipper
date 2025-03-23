@@ -6,8 +6,8 @@
 #include <uvl/Matrix.hpp>
 #include <uvl/Vector.hpp>
 #include <uvl/VectorBase.hpp>
-#include <uvl/detail/dynamic_extents_indices.hpp>
-#include <uvl/detail/swizzle_extents.hpp>
+#include <uvl/detail/extents/dynamic_extents_indices.hpp>
+#include <uvl/detail/extents/swizzle_extents.hpp>
 #include <uvl/storage/PlainObjectStorage.hpp>
 #include <uvl/types.hpp>
 #include <uvl/views/nullary/ConstantView.hpp>
@@ -213,4 +213,14 @@ TEST_CASE("test_matrix_slicing", "[extents][matrix][slice]") {
     CHECK(slice3(1) == 50 * NN(1, 1));
     CHECK(slice3(2) == 50 * NN(1, 2));
     CHECK(slice3(3) == 50 * 100 * NN(1, 3));
+
+    auto slice4 = MN(3, uvl::full_extent_t{});
+    CHECK(slice4(0) == MN(3, 0));
+    CHECK(slice4(1) == MN(3, 1));
+    CHECK(slice4(2) == MN(3, 2));
+    CHECK(slice4(3) == MN(3, 3));
+}
+
+TEST_CASE("test_partial_slice", "[extents][tensor][slice]") {
+    spdlog::info("Manipulating MN: ");
 }

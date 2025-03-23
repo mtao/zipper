@@ -4,10 +4,9 @@
 #define UVL_VIEWS_BINARY_OPERATIONVIEW_HPP
 
 #include "BinaryViewBase.hpp"
-#include "uvl/detail/extents_formatter.hpp"
+#include "uvl/detail/extents/extents_formatter.hpp"
 #include "detail/CoeffWiseTraits.hpp"
 #include "uvl/concepts/ViewDerived.hpp"
-#include "uvl/detail/convert_extents.hpp"
 
 namespace uvl::views {
 namespace binary {
@@ -73,7 +72,7 @@ class OperationView
         }
     OperationView(const A& a, const B& b, const Operation& op = {})
         requires(!is_static)
-        : Base(a, b, uvl::detail::convert_extents<extents_type>(a.extents())),
+        : Base(a, b, extents_traits::convert_from(a.extents())),
           m_op(op) {
             if(!valid_input_extents(a.extents(),b.extents())) {
                 throw std::runtime_error(fmt::format("OperationView between {} and {} is invalid", a.extents(), b.extents()));

@@ -4,7 +4,7 @@
 #define UVL_STORAGE_PLAINOBJECTSTORAGE_HPP
 
 #include "PlainObjectAccessor.hpp"
-#include "uvl/detail/ExtentsTraits.hpp"
+#include "uvl/detail//ExtentsTraits.hpp"
 #include "uvl/views/PlainObjectViewBase.hpp"
 
 namespace uvl::storage {
@@ -55,10 +55,10 @@ class PlainObjectStorage
     PlainObjectStorage(const extents_type& extents, Args&&... args)
         : ParentType(extents), m_accessor(std::forward<Args>(args)...) {}
 
-    template <typename E2>
+    template <concepts::ExtentsType E2>
     void resize(const E2& e)
-        requires(
-            uvl::views::detail::assignable_extents<E2, extents_type>::value &&
+        requires(extents_traits::template is_convertable_from<
+                 E2>() && 
             !IsStatic)
     {
         static_assert(E2::rank() != 0);

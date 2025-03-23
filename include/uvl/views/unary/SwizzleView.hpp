@@ -5,7 +5,7 @@
 
 #include "UnaryViewBase.hpp"
 #include "uvl/concepts/ViewDerived.hpp"
-#include "uvl/detail/swizzle_extents.hpp"
+#include "uvl/detail/extents/swizzle_extents.hpp"
 #include "uvl/views/DimensionedViewBase.hpp"
 
 namespace uvl::views {
@@ -18,7 +18,7 @@ template <concepts::ViewDerived ViewType, index_type... Indices>
 struct detail::ViewTraits<unary::SwizzleView<ViewType, Indices...>>
     : public uvl::views::unary::detail::DefaultUnaryViewTraits<
           ViewType, DimensionedViewBase> {
-    using swizzler_type = uvl::detail::ExtentsSwizzler<Indices...>;
+    using swizzler_type = uvl::detail::extents::ExtentsSwizzler<Indices...>;
     using Base = detail::ViewTraits<ViewType>;
     using extents_type = swizzler_type::template extents_type_swizzler_t<
         typename Base::extents_type>;

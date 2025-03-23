@@ -1,7 +1,7 @@
 #if !defined(UVL_VIEWS_DIMENSIONEDVIEWBASE_HPP)
 #define UVL_VIEWS_DIMENSIONEDVIEWBASE_HPP
 
-#include "uvl/detail/ExtentsTraits.hpp"
+#include "uvl/detail//ExtentsTraits.hpp"
 #include "uvl/views/detail/ViewTraits.hpp"
 #include "StaticViewBase.hpp"
 #include "DynamicViewBase.hpp"

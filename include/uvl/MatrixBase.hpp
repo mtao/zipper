@@ -2,7 +2,6 @@
 #define UVL_MATRIXBASE_HPP
 
 #include "ArrayBase.hpp"
-#include "uvl/detail/convert_extents.hpp"
 #include "uvl/types.hpp"
 //
 #include "concepts/MatrixBaseDerived.hpp"
@@ -13,11 +12,8 @@
 #include "uvl/views/binary/ArithmeticViews.hpp"
 #include "views/binary/MatrixProductView.hpp"
 #include "views/binary/MatrixVectorProductView.hpp"
-#include "views/reductions/CoefficientSum.hpp"
-#include "views/reductions/Any.hpp"
-#include "views/reductions/All.hpp"
 #include "views/reductions/Trace.hpp"
-//#include "views/reductions/Determinant.hpp"
+// #include "views/reductions/Determinant.hpp"
 #include "views/unary/CastView.hpp"
 #include "views/unary/DiagonalView.hpp"
 #include "views/unary/IdentityView.hpp"
@@ -38,14 +34,21 @@ class MatrixBase {
     using view_type = View;
     using value_type = View::value_type;
     using extents_type = View::extents_type;
+    using extents_traits = detail::ExtentsTraits<extents_type>;
     auto eval() const { return Matrix(*this); }
     template <typename... Args>
     MatrixBase(Args&&... v) : m_view(std::forward<Args>(v)...) {}
 
     MatrixBase(View&& v) : m_view(v) {}
     MatrixBase(const View& v) : m_view(v) {}
-    MatrixBase& operator=(concepts::ViewDerived auto const& v) { m_view = v; return *this;}
-    MatrixBase& operator=(concepts::MatrixBaseDerived auto const& v) { m_view = v.view(); return *this; }
+    MatrixBase& operator=(concepts::ViewDerived auto const& v) {
+        m_view = v;
+        return *this;
+    }
+    MatrixBase& operator=(concepts::MatrixBaseDerived auto const& v) {
+        m_view = v.view();
+        return *this;
+    }
 
     MatrixBase(MatrixBase&& v) = default;
     MatrixBase(const MatrixBase& v) = default;
@@ -53,7 +56,7 @@ class MatrixBase {
     template <concepts::MatrixViewDerived Other>
     MatrixBase(const Other& other)
         requires(view_type::is_writable)
-        : m_view(detail::convert_extents<extents_type>(other.extents())) {
+        : m_view(extents_traits::convert_from(other.extents())) {
         m_view.assign(other);
     }
     template <concepts::MatrixViewDerived Other>
@@ -169,9 +172,7 @@ class MatrixBase {
         return VectorBase<views::unary::DiagonalView<view_type, false>>(view());
     }
 
-    value_type trace() const {
-        return views::reductions::Trace(view())();
-    }
+    value_type trace() const { return views::reductions::Trace(view())(); }
 
     template <typename Slice>
     auto row() {
@@ -212,7 +213,6 @@ class MatrixBase {
         return slice<full_extent_t, Slice>(std::forward<Slice>(s),
                                            full_extent_t{});
     }
-
 
     /*
     template <index_type... Indices,
@@ -257,17 +257,17 @@ SCALAR_BINARY_DECLARATION(MatrixBase, Divides, operator/)
 
 BINARY_DECLARATION(MatrixBase, Plus, operator+)
 BINARY_DECLARATION(MatrixBase, Minus, operator-)
-//BINARY_DECLARATION(MatrixBase, EqualsTo, operator==)
-//BINARY_DECLARATION(MatrixBase, NotEqualsTo, operator!=)
-//BINARY_DECLARATION(MatrixBase, Greater, operator>)
-//BINARY_DECLARATION(MatrixBase, Less, operator<)
-//BINARY_DECLARATION(MatrixBase, GreaterEqual, operator>=)
-//BINARY_DECLARATION(MatrixBase, LessEqual, operator<=)
-//BINARY_DECLARATION(MatrixBase, LogicalAnd, operator&&)
-//BINARY_DECLARATION(MatrixBase, LogicalOr, operator||)
-//BINARY_DECLARATION(MatrixBase, BitAnd, operator&)
-//BINARY_DECLARATION(MatrixBase, BitOr, operator|)
-//BINARY_DECLARATION(MatrixBase, BitXor, operator^)
+// BINARY_DECLARATION(MatrixBase, EqualsTo, operator==)
+// BINARY_DECLARATION(MatrixBase, NotEqualsTo, operator!=)
+// BINARY_DECLARATION(MatrixBase, Greater, operator>)
+// BINARY_DECLARATION(MatrixBase, Less, operator<)
+// BINARY_DECLARATION(MatrixBase, GreaterEqual, operator>=)
+// BINARY_DECLARATION(MatrixBase, LessEqual, operator<=)
+// BINARY_DECLARATION(MatrixBase, LogicalAnd, operator&&)
+// BINARY_DECLARATION(MatrixBase, LogicalOr, operator||)
+// BINARY_DECLARATION(MatrixBase, BitAnd, operator&)
+// BINARY_DECLARATION(MatrixBase, BitOr, operator|)
+// BINARY_DECLARATION(MatrixBase, BitXor, operator^)
 //
 template <concepts::MatrixBaseDerived View1, concepts::MatrixBaseDerived View2>
 bool operator==(View1 const& lhs, View2 const& rhs) {

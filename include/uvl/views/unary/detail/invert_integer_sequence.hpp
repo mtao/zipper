@@ -6,6 +6,8 @@
 
 namespace uvl::views::unary::detail {
 
+// defines a sequence [a,b,c..f] by the entries in [0...total_rank] NOT
+// identified in Indices
 template <rank_type total_rank, rank_type... Indices>
 struct invert_integer_sequence {
     template <rank_type... M>
@@ -23,6 +25,7 @@ struct invert_integer_sequence {
         (add(std::integral_constant<rank_type, M>{}, R, index), ...);
         return R;
     }
+    // makes an array mapping each reduced index
     constexpr static std::array<rank_type, total_rank - sizeof...(Indices)>
         reversal_array =
             make_arr(std::make_integer_sequence<rank_type, total_rank>{});

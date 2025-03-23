@@ -246,7 +246,7 @@ class AntiSliceView
     template <concepts::ViewDerived V>
     void assign_direct(const V& view) {
         assert(extents() == view.extents());
-        for (const auto& i : uvl::detail::all_extents_indices(extents())) {
+        for (const auto& i : uvl::detail::extents::all_extents_indices(extents())) {
             (*this)(i) = view(i);
         }
     }

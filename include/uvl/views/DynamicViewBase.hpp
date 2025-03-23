@@ -4,7 +4,6 @@
 
 #include "ViewBase.hpp"
 #include "detail/ViewTraits.hpp"
-#include "detail/assignable_extents.hpp"
 #include "uvl/detail/ExtentsTraits.hpp"
 
 namespace uvl::views {

@@ -32,6 +32,7 @@ struct detail::ViewTraits<unary::PartialTraceView<ViewType, Indices...>>
 };
 
 namespace unary {
+// indices are the indices being traced
 template <concepts::ViewDerived ViewType, index_type... Indices>
 class PartialTraceView
     : public UnaryViewBase<PartialTraceView<ViewType, Indices...>, ViewType> {
@@ -46,7 +47,7 @@ class PartialTraceView
 
     PartialTraceView(const PartialTraceView&) = default;
     PartialTraceView(PartialTraceView&&) = default;
-    PartialTraceView(const ViewType& b) {}
+    PartialTraceView(const ViewType& b) : Base(b) {}
     //: Base(b), m_extents(swizzler_type::swizzle_extents(b.extents())) {}
 
     constexpr const extents_type& extents() const { return m_extents; }
@@ -64,7 +65,9 @@ class PartialTraceView
 
     template <typename... Args, rank_type... N>
     value_type _coeff(std::integer_sequence<rank_type, N...>,
-                      Args&&... idxs) const {
+                      Args&&... idxs) const
+        requires(sizeof...(N) == ViewType::extents_type::rank())
+    {
         const auto slice = SliceView<ViewType, true>(
             view(), get_index(std::integral_constant<rank_type, N>{},
                               std::forward<Args>(idxs)...)...);
@@ -75,9 +78,13 @@ class PartialTraceView
 
     template <typename... Args>
     value_type coeff(Args&&... idxs) const {
-        return _coeff(
-            std::make_integer_sequence<rank_type, sizeof...(Indices)>{},
-            std::forward<Args>(idxs)...);
+        if constexpr (sizeof...(Indices) == 0) {
+            return view().coeff(std::forward<Args>(idxs)...);
+        } else {
+            return _coeff(
+                std::make_integer_sequence<rank_type, extents_type::rank()>{},
+                std::forward<Args>(idxs)...);
+        }
     }
 
    private:

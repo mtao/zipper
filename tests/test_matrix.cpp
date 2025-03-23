@@ -10,6 +10,7 @@
 #include <uvl/views/nullary/ConstantView.hpp>
 #include <uvl/views/nullary/IdentityView.hpp>
 #include <uvl/views/nullary/RandomView.hpp>
+#include <uvl/views/unary/PartialTraceView.hpp>
 #include <uvl/views/unary/SwizzleView.hpp>
 // #include <uvl/Vector.hpp>
 
@@ -265,6 +266,42 @@ TEST_CASE("test_trace", "[matrix][storage][dense]") {
     N(2, 2) = 2;
     CHECK(N.trace() == 6);
 }
+
+/*
+TEST_CASE("test_partial_trace_matrix", "[matrix][storage][dense]") {
+    uvl::Matrix<double, 3, 3> N(3, 5);
+    N = uvl::views::nullary::uniform_random_view<double>(uvl::extents<3, 3>{},
+                                                         -1, 1);
+    N.diagonal() = uvl::views::nullary::ConstantView<double, 3>(0.0);
+    CHECK(N.trace() == 0);
+
+    N.diagonal() = uvl::views::nullary::ConstantView<double, 3>(1.0);
+
+    uvl::MatrixBase empty_partial_trace =
+        uvl::views::unary::PartialTraceView<std::decay_t<decltype(N.view())>>(
+            N.view());
+    CHECK(empty_partial_trace == N);
+
+    uvl::VectorBase first_row_trace =
+        uvl::views::unary::PartialTraceView<std::decay_t<decltype(N.view())>,
+                                            0>(N.view());
+
+    CHECK(first_row_trace == N.row(0));
+
+    uvl::VectorBase first_col_trace =
+        uvl::views::unary::PartialTraceView<std::decay_t<decltype(N.view())>,
+                                            1>(N.view());
+    CHECK(first_col_trace == N.col(0));
+    print(N);
+    CHECK(N.trace() == 3);
+    N(0, 0) = 2;
+    CHECK(N.trace() == 4);
+    N(1, 1) = 2;
+    CHECK(N.trace() == 5);
+    N(2, 2) = 2;
+    CHECK(N.trace() == 6);
+}
+*/
 /*
 TEST_CASE("test_all_extents", "[storage][dense]") {
 

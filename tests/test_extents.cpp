@@ -1,7 +1,7 @@
 
 #include <catch2/catch_all.hpp>
-#include <uvl/detail/dynamic_extents_indices.hpp>
-#include <uvl/detail/swizzle_extents.hpp>
+#include <uvl/detail/extents/dynamic_extents_indices.hpp>
+#include <uvl/detail/extents/swizzle_extents.hpp>
 #include <uvl/storage/PlainObjectStorage.hpp>
 #include <uvl/types.hpp>
 #include <uvl/views/unary/detail/invert_integer_sequence.hpp>
@@ -63,21 +63,21 @@ TEST_CASE("test_extents_dynamic_size", "[extents][dense]") {
     {
         uvl::extents<5, std::dynamic_extent> E(19);
         constexpr static auto dyn =
-            uvl::detail::dynamic_extents_indices_v<decltype(E)>;
+            uvl::detail::extents::dynamic_extents_indices_v<decltype(E)>;
         static_assert(dyn.size() == 1);
         static_assert(dyn[0] == 1);
-        auto val = uvl::detail::dynamic_extents(E);
+        auto val = uvl::detail::extents::dynamic_extents(E);
         static_assert(val.size() == 1);
         CHECK(val[0] == 19);
     }
     {
         uvl::extents<std::dynamic_extent, 5, std::dynamic_extent> E(3, 5);
         constexpr static auto dyn =
-            uvl::detail::dynamic_extents_indices_v<decltype(E)>;
+            uvl::detail::extents::dynamic_extents_indices_v<decltype(E)>;
         static_assert(dyn.size() == 2);
         static_assert(dyn[0] == 0);
         static_assert(dyn[1] == 2);
-        auto val = uvl::detail::dynamic_extents(E);
+        auto val = uvl::detail::extents::dynamic_extents(E);
         static_assert(val.size() == 2);
         CHECK(val[0] == 3);
         CHECK(val[1] == 5);
@@ -86,7 +86,7 @@ TEST_CASE("test_extents_dynamic_size", "[extents][dense]") {
 TEST_CASE("test_extents_swizzle", "[extents][dense]") {
     {
         uvl::extents<5, std::dynamic_extent> E(19);
-        auto SE = uvl::detail::swizzle_extents(
+        auto SE = uvl::detail::extents::swizzle_extents(
             E, std::integer_sequence<uvl::index_type, 1, 0>{});
 
         REQUIRE(SE.rank() == 2);
@@ -99,24 +99,24 @@ TEST_CASE("test_extents_swizzle", "[extents][dense]") {
         uvl::extents<std::dynamic_extent, 5, std::dynamic_extent> E(3, 6);
         REQUIRE(E == uvl::dextents<3>(3, 5, 6));
 
-        auto e3 = uvl::detail::swizzle_extents(
+        auto e3 = uvl::detail::extents::swizzle_extents(
             E, std::integer_sequence<uvl::index_type, 0>{});
         static_assert(decltype(e3)::rank() == 1);
         static_assert(decltype(e3)::static_extent(0) == std::dynamic_extent);
         CHECK(e3.extent(0) == 3);
 
-        CHECK(uvl::detail::swizzle_extents(
+        CHECK(uvl::detail::extents::swizzle_extents(
                   E, std::integer_sequence<uvl::index_type, 0, 1>{}) ==
               uvl::create_dextents(3, 5));
-        CHECK(uvl::detail::swizzle_extents(
+        CHECK(uvl::detail::extents::swizzle_extents(
                   E, std::integer_sequence<uvl::index_type, 1, 0>{}) ==
               uvl::create_dextents(5, 3));
 
-        // CHECK(uvl::detail::swizzle_extents(
+        // CHECK(uvl::detail::extents::swizzle_extents(
         //           E, std::integer_sequence<uvl::index_type, 1, 1>{}) ==
         //       uvl::create_dextents(5, 5));
 
-        CHECK(uvl::detail::swizzle_extents(
+        CHECK(uvl::detail::extents::swizzle_extents(
                   E, std::integer_sequence<uvl::index_type, 2, 1, 0>{}) ==
               uvl::create_dextents(6, 5, 3));
 

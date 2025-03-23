@@ -1,16 +1,16 @@
-#if !defined(UVL_DETAIL_SWIZZLE_EXTENTS_HPP)
-#define UVL_DETAIL_SWIZZLE_EXTENTS_HPP
+#if !defined(UVL_DETAIL_EXTENTS_SWIZZLE_EXTENTS_HPP)
+#define UVL_DETAIL_EXTENTS_SWIZZLE_EXTENTS_HPP
 
-#include "ExtentsTraits.hpp"
+#include "uvl/detail/ExtentsTraits.hpp"
 #include "dynamic_extents_indices.hpp"
 #include "uvl/concepts/TupleLike.hpp"
 #include "uvl/types.hpp"
 
-namespace uvl::detail {
+namespace uvl::detail::extents {
 
 template <index_type... SwizzleIndices>
 struct ExtentsSwizzler {
-    using swizzle_extents_type = extents<SwizzleIndices...>;
+    using swizzle_extents_type = uvl::extents<SwizzleIndices...>;
     using swizzle_extents_traits = ExtentsTraits<swizzle_extents_type>;
 
     constexpr static index_type size = sizeof...(SwizzleIndices);
@@ -61,14 +61,14 @@ struct ExtentsSwizzler {
 #endif
     template <index_type... Indices>
     using swizzled_extents_type =
-        extents<SwizzleIndices == std::dynamic_extent
+        uvl::extents<SwizzleIndices == std::dynamic_extent
                     ? 1
-                    : extents<Indices...>::static_extent(SwizzleIndices)...>;
+                    : uvl::extents<Indices...>::static_extent(SwizzleIndices)...>;
 
     template <typename T>
     struct extents_type_swizzler {};
     template <index_type... Indices>
-    struct extents_type_swizzler<extents<Indices...>> {
+    struct extents_type_swizzler<uvl::extents<Indices...>> {
         using type = swizzled_extents_type<Indices...>;
     };
     template <typename T>
@@ -80,7 +80,7 @@ struct ExtentsSwizzler {
     // dest_dyn_indices is 2
 
     template <index_type... Indices, std::size_t... N>
-    static auto get_dynamic(const extents<Indices...>& e,
+    static auto get_dynamic(const uvl::extents<Indices...>& e,
                             std::integer_sequence<std::size_t, N...>) {
         using my_extents = swizzled_extents_type<Indices...>;
         constexpr static auto dynamic_indices =
@@ -104,7 +104,7 @@ struct ExtentsSwizzler {
             {e.extent(std::get<N>(dynamic_swizzled_indices))...}};
     }
     template <index_type... Indices>
-    static auto get_dynamic(const extents<Indices...>& e) {
+    static auto get_dynamic(const uvl::extents<Indices...>& e) {
         using my_extents = swizzled_extents_type<Indices...>;
         const auto sizes = get_dynamic(
             e, std::make_index_sequence<my_extents::rank_dynamic()>{});
@@ -113,7 +113,7 @@ struct ExtentsSwizzler {
     }
 
     template <index_type... Indices>
-    static auto swizzle_extents(const extents<Indices...>& e) {
+    static auto swizzle_extents(const uvl::extents<Indices...>& e) {
         using my_extents = swizzled_extents_type<Indices...>;
         if constexpr (my_extents::rank_dynamic() > 0) {
             const auto sizes = get_dynamic(e);
@@ -185,16 +185,16 @@ struct ExtentsSwizzler {
 };
 
 template <index_type... SwizzledIndices, index_type... Indices>
-auto swizzle_extents(const extents<Indices...>& a,
+auto swizzle_extents(const uvl::extents<Indices...>& a,
                      std::integer_sequence<index_type, SwizzledIndices...>) {
     return ExtentsSwizzler<SwizzledIndices...>::swizzle_extents(a);
 }
 
 // template <index_type... Indices, index_type... SIndices>
-// auto merge_extents(const extents<Indices...>& a,
-// const extents<SIndices...>& b
+// auto merge_extents(const uvl::extents<Indices...>& a,
+// const uvl::extents<SIndices...>& b
 //         ) {
-//     return ExtentsSwizzler<extents<Indices...>, A>::extents(a);
+//     return ExtentsSwizzler<uvl::extents<Indices...>, A>::extents(a);
 // }
 }  // namespace uvl::detail
 #endif

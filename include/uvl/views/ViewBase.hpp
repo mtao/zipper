@@ -10,7 +10,7 @@
 #include "uvl/concepts/SlicePackLike.hpp"
 #include "uvl/concepts/TupleLike.hpp"
 #include "uvl/concepts/ViewAccessTuple.hpp"
-#include "uvl/detail/ExtentsTraits.hpp"
+#include "uvl/detail//ExtentsTraits.hpp"
 #include "uvl/detail/tuple_size.hpp"
 
 namespace uvl::views {

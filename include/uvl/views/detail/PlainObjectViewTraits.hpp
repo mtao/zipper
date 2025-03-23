@@ -1,7 +1,7 @@
 #if !defined(UVL_VIEWS_DETAIL_PLAINOBJECTVIEWTRAITS_HPP)
 #define UVL_VIEWS_DETAIL_PLAINOBJECTVIEWTRAITS_HPP
 #include "ViewTraits.hpp"
-#include "uvl/detail/ExtentsTraits.hpp"
+#include "uvl/detail//ExtentsTraits.hpp"
 #include "uvl/types.hpp"
 
 namespace uvl::views {

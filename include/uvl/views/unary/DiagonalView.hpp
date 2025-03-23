@@ -3,7 +3,6 @@
 
 #include "UnaryViewBase.hpp"
 #include "uvl/concepts/ViewDerived.hpp"
-#include "uvl/detail/is_integral_constant.hpp"
 #include "uvl/storage/PlainObjectStorage.hpp"
 #include "uvl/views/DimensionedViewBase.hpp"
 
@@ -79,6 +78,7 @@ class DiagonalView
     using Base::view;
     using view_traits = uvl::views::detail::ViewTraits<ViewType>;
     using view_extents_type = view_traits::extents_type;
+    using extents_traits = uvl::detail::ExtentsTraits<extents_type>;
 
     constexpr static std::array<rank_type, view_extents_type::rank()>
         actionable_indices = traits::actionable_indices;
@@ -150,7 +150,7 @@ class DiagonalView
     template <concepts::ViewDerived V>
     void assign_direct(const V& view) {
         assert(extents() == view.extents());
-        for (const auto& i : uvl::detail::all_extents_indices(extents())) {
+        for (const auto& i : uvl::detail::extents::all_extents_indices(extents())) {
             (*this)(i) = view(i);
         }
     }
@@ -158,9 +158,8 @@ class DiagonalView
    public:
     template <concepts::ViewDerived V>
     void assign(const V& view)
-        requires(uvl::views::detail::assignable_extents<
-                 typename views::detail::ViewTraits<V>::extents_type,
-                 extents_type>::value)
+        requires(extents_traits::template is_convertable_from<
+                 typename uvl::views::detail::ViewTraits<V>::extents_type>())
     {
         using VTraits = views::detail::ViewTraits<V>;
         using layout_policy = uvl::default_layout_policy;
@@ -171,7 +170,7 @@ class DiagonalView
         } else {
             uvl::storage::PlainObjectStorage<value_type, extents_type,
                                              layout_policy, accessor_policy>
-                pos(uvl::detail::convert_extents<extents_type>(view.extents()));
+                pos(extents_traits::convert_from(view.extents()));
             pos.assign(view);
             // TODO: check sizing
             assign_direct(pos);

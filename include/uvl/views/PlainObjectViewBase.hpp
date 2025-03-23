@@ -5,11 +5,9 @@
 #include "MappedViewBase.hpp"
 #include "ViewBase.hpp"
 #include "detail/PlainObjectViewTraits.hpp"
-#include "detail/assignable_extents.hpp"
 #include "uvl/concepts/TupleLike.hpp"
 #include "uvl/concepts/ViewDerived.hpp"
-#include "uvl/detail/all_extents_indices.hpp"
-#include "uvl/detail/convert_extents.hpp"
+#include "uvl/detail/extents/all_extents_indices.hpp"
 namespace uvl::storage {
 template <typename ValueType, typename Extents, typename LayoutPolicy,
           typename AccessorPolicy>
@@ -90,7 +88,7 @@ class PlainObjectViewBase : public MappedViewBase<Derived_> {
    private:
     template <concepts::ViewDerived V>
     void assign_direct(const V& view) {
-        for (const auto& i : uvl::detail::all_extents_indices(extents())) {
+        for (const auto& i : uvl::detail::extents::all_extents_indices(extents())) {
             (*this)(i) = view(i);
         }
     }
@@ -98,9 +96,8 @@ class PlainObjectViewBase : public MappedViewBase<Derived_> {
    public:
     template <concepts::ViewDerived V>
     void assign(const V& view)
-        requires(detail::assignable_extents<
-                 typename detail::ViewTraits<V>::extents_type,
-                 extents_type>::value)
+        requires(extents_traits::template is_convertable_from<
+                 typename detail::ViewTraits<V>::extents_type>())
     {
         using VTraits = detail::ViewTraits<V>;
         constexpr static bool assigning_from_infinite = VTraits::extents_type::rank() == 0;
@@ -113,7 +110,7 @@ class PlainObjectViewBase : public MappedViewBase<Derived_> {
         } else {
             storage::PlainObjectStorage<value_type, extents_type, layout_policy,
                                         accessor_policy>
-                pos(uvl::detail::convert_extents<extents_type>(view.extents()));
+                pos(extents_traits::convert_from(view.extents()));
             pos.assign_direct(view);
             if constexpr (should_resize) {
                 this->resize(view.extents());

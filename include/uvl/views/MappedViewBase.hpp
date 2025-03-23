@@ -1,7 +1,7 @@
 #if !defined(UVL_VIEWS_MAPPEDVIEWBASE_HPP)
 #define UVL_VIEWS_MAPPEDVIEWBASE_HPP
 
-#include "uvl/detail/ExtentsTraits.hpp"
+#include "uvl/detail//ExtentsTraits.hpp"
 #include "uvl/views/detail/ViewTraits.hpp"
 #include "StaticMappedViewBase.hpp"
 #include "DynamicMappedViewBase.hpp"

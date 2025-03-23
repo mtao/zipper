@@ -2,7 +2,7 @@
 #define UVL_VIEWS_COEFFICIENTPRODUCT_HPP
 
 #include "uvl/concepts/ViewDerived.hpp"
-#include "uvl/detail/all_extents_indices.hpp"
+#include "uvl/detail/extents/all_extents_indices.hpp"
 #include "uvl/views/detail/ViewTraits.hpp"
 
 namespace uvl::views {
@@ -25,7 +25,7 @@ class CoefficientProduct {
     value_type operator()() const {
         value_type v = 1.0;
         for (const auto& i :
-             uvl::detail::all_extents_indices(m_view.extents())) {
+             uvl::detail::extents::all_extents_indices(m_view.extents())) {
             v *= m_view(i);
         }
         return v;

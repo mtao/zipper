@@ -3,7 +3,7 @@
 
 #include "StaticViewBase.hpp"
 #include "detail/ViewTraits.hpp"
-#include "uvl/detail/ExtentsTraits.hpp"
+#include "uvl/detail//ExtentsTraits.hpp"
 
 namespace uvl::views {
 

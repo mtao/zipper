@@ -1,6 +1,6 @@
 #if !defined(UVL_VIEWS_BINARY_DETAIL_PIVOT_UTILS_HPP)
 #define UVL_VIEWS_BINARY_DETAIL_PIVOT_UTILS_HPP
-#include "uvl/detail/ExtentsTraits.hpp"
+#include "uvl/detail//ExtentsTraits.hpp"
 
 namespace uvl::views::binary::detail {
     template <rank_type a, rank_type b, index_type... Indices, rank_type... Idxs>

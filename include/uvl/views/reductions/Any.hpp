@@ -2,7 +2,7 @@
 #define UVL_VIEWS_ANY_HPP
 
 #include "uvl/concepts/ViewDerived.hpp"
-#include "uvl/detail/all_extents_indices.hpp"
+#include "uvl/detail/extents/all_extents_indices.hpp"
 #include "uvl/views/detail/ViewTraits.hpp"
 
 namespace uvl::views {
@@ -28,7 +28,7 @@ class Any {
 
     value_type operator()() const {
         for (const auto& i :
-             uvl::detail::all_extents_indices(m_view.extents())) {
+             uvl::detail::extents::all_extents_indices(m_view.extents())) {
             if (value_type(m_view.coeff(i))) {
                 return true;
             }

@@ -3,9 +3,7 @@
 
 #include "BinaryViewBase.hpp"
 #include "uvl/concepts/ViewDerived.hpp"
-#include "uvl/detail/dynamic_extents_indices.hpp"
 #include "uvl/detail/pack_index.hpp"
-#include "uvl/views/DimensionedViewBase.hpp"
 
 namespace uvl::views {
 namespace binary {
@@ -20,14 +18,18 @@ struct coeffwise_extents_values;
 template <index_type... A, index_type... B>
 struct coeffwise_extents_values<extents<A...>, extents<B...>> {
     using product_extents_type = uvl::extents<A..., B...>;
+    using a_extents_type = extents<A...>;
+    using b_extents_type = extents<B...>;
+    using a_extents_traits = uvl::detail::ExtentsTraits<a_extents_type>;
+    using b_extents_traits = uvl::detail::ExtentsTraits<b_extents_type>;
 
     template <rank_type... N, rank_type... M>
     constexpr static product_extents_type merge(
         const extents<A...>& a, const extents<B...>& b,
         std::integer_sequence<rank_type, N...>,
         std::integer_sequence<rank_type, M...>) {
-        using AEI = uvl::detail::DynamicExtentIndices<extents<A...>>;
-        using BEI = uvl::detail::DynamicExtentIndices<extents<B...>>;
+        using AEI = a_extents_traits::dynamic_indices_helper;
+        using BEI = b_extents_traits::dynamic_indices_helper;
 
         constexpr auto ADI = AEI::dynamic_indices;
         constexpr auto BDI = BEI::dynamic_indices;

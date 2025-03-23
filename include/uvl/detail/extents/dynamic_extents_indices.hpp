@@ -1,10 +1,10 @@
 
-#if !defined(UVL_DETAIL_DYNAMIC_EXTENT_INDICES_HPP)
-#define UVL_DETAIL_DYNAMIC_EXTENT_INDICES_HPP
+#if !defined(UVL_DETAIL_EXTENTS_DYNAMIC_EXTENT_INDICES_HPP)
+#define UVL_DETAIL_EXTENTS_DYNAMIC_EXTENT_INDICES_HPP
 
 #include "uvl/types.hpp"
 
-namespace uvl::detail {
+namespace uvl::detail::extents {
 
 // template <index_type... Indices>
 // constexpr auto dynamic_extent_indices(index_type... Indices) {
@@ -14,8 +14,8 @@ template <typename T>
 struct DynamicExtentIndices;
 
 template <index_type... indices>
-struct DynamicExtentIndices<extents<indices...>> {
-    using E = extents<indices...>;
+struct DynamicExtentIndices<uvl::extents<indices...>> {
+    using E = uvl::extents<indices...>;
     constexpr static rank_type rank_dynamic = E::rank_dynamic();
     consteval static auto _eval() {
         std::array<rank_type, rank_dynamic> r;
@@ -53,12 +53,12 @@ struct DynamicExtentIndices<extents<indices...>> {
     constexpr static auto value = _eval();
 
     template <std::size_t... N>
-    static auto run(const extents<indices...>& e,
+    static auto run(const uvl::extents<indices...>& e,
                     std::integer_sequence<std::size_t, N...>) {
         return std::array<index_type, rank_dynamic>{
             {e.extent(std::get<N>(value))...}};
     }
-    static auto run(const extents<indices...>& e) {
+    static auto run(const uvl::extents<indices...>& e) {
         return run(e, std::make_index_sequence<std::size_t(rank_dynamic)>{});
     }
 

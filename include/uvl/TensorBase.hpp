@@ -1,9 +1,6 @@
 #if !defined(UVL_TENSORBASE_HPP)
 #define UVL_TENSORBASE_HPP
 
-#include "uvl/detail/convert_extents.hpp"
-#include "views/reductions/Any.hpp"
-#include "views/reductions/All.hpp"
 #include "uvl/types.hpp"
 #include "views/reductions/CoefficientSum.hpp"
 #include "views/unary/SliceView.hpp"
@@ -33,6 +30,7 @@ class TensorBase {
     using view_type = View;
     using value_type = View::value_type;
     using extents_type = View::extents_type;
+    using extents_traits = detail::ExtentsTraits<extents_type>;
 
     template <index_type... N>
     auto eval(const extents<N...>&) const {
@@ -44,8 +42,14 @@ class TensorBase {
 
     TensorBase(View&& v) : m_view(v) {}
     TensorBase(const View& v) : m_view(v) {}
-    TensorBase& operator=(concepts::ViewDerived auto const& v) { m_view = v; return *this;}
-    TensorBase& operator=(concepts::TensorBaseDerived auto const& v) { m_view = v.view(); return *this; }
+    TensorBase& operator=(concepts::ViewDerived auto const& v) {
+        m_view = v;
+        return *this;
+    }
+    TensorBase& operator=(concepts::TensorBaseDerived auto const& v) {
+        m_view = v.view();
+        return *this;
+    }
 
     TensorBase(TensorBase&& v) = default;
     TensorBase(const TensorBase& v) = default;
@@ -53,7 +57,7 @@ class TensorBase {
     template <concepts::ViewDerived Other>
     TensorBase(const Other& other)
         requires(view_type::is_writable)
-        : m_view(detail::convert_extents<extents_type>(other.extents())) {
+        : m_view(extents_traits::convert_from(other.extents())) {
         m_view.assign(other);
     }
     template <concepts::ViewDerived Other>
@@ -205,7 +209,6 @@ class TensorBase {
     const extents_type& extents() const { return view().extents(); }
     constexpr index_type extent(rank_type i) const { return m_view.extent(i); }
 
-
    private:
     View m_view;
 };
@@ -223,34 +226,34 @@ SCALAR_BINARY_DECLARATION(TensorBase, Plus, operator+)
 SCALAR_BINARY_DECLARATION(TensorBase, Minus, operator-)
 SCALAR_BINARY_DECLARATION(TensorBase, Multiplies, operator*)
 SCALAR_BINARY_DECLARATION(TensorBase, Divides, operator/)
-//SCALAR_BINARY_DECLARATION(TensorBase, Modulus, operator%)
-//SCALAR_BINARY_DECLARATION(TensorBase, EqualsTo, operator==)
-//SCALAR_BINARY_DECLARATION(TensorBase, NotEqualsTo, operator!=)
-//SCALAR_BINARY_DECLARATION(TensorBase, Greater, operator>)
-//SCALAR_BINARY_DECLARATION(TensorBase, Less, operator<)
-//SCALAR_BINARY_DECLARATION(TensorBase, GreaterEqual, operator>=)
-//SCALAR_BINARY_DECLARATION(TensorBase, LessEqual, operator<=)
-//SCALAR_BINARY_DECLARATION(TensorBase, LogicalAnd, operator&&)
-//SCALAR_BINARY_DECLARATION(TensorBase, LogicalOr, operator||)
-//SCALAR_BINARY_DECLARATION(TensorBase, BitAnd, operator&)
-//SCALAR_BINARY_DECLARATION(TensorBase, BitOr, operator|)
-//SCALAR_BINARY_DECLARATION(TensorBase, BitXor, operator^)
+// SCALAR_BINARY_DECLARATION(TensorBase, Modulus, operator%)
+// SCALAR_BINARY_DECLARATION(TensorBase, EqualsTo, operator==)
+// SCALAR_BINARY_DECLARATION(TensorBase, NotEqualsTo, operator!=)
+// SCALAR_BINARY_DECLARATION(TensorBase, Greater, operator>)
+// SCALAR_BINARY_DECLARATION(TensorBase, Less, operator<)
+// SCALAR_BINARY_DECLARATION(TensorBase, GreaterEqual, operator>=)
+// SCALAR_BINARY_DECLARATION(TensorBase, LessEqual, operator<=)
+// SCALAR_BINARY_DECLARATION(TensorBase, LogicalAnd, operator&&)
+// SCALAR_BINARY_DECLARATION(TensorBase, LogicalOr, operator||)
+// SCALAR_BINARY_DECLARATION(TensorBase, BitAnd, operator&)
+// SCALAR_BINARY_DECLARATION(TensorBase, BitOr, operator|)
+// SCALAR_BINARY_DECLARATION(TensorBase, BitXor, operator^)
 
 BINARY_DECLARATION(TensorBase, Plus, operator+)
 BINARY_DECLARATION(TensorBase, Minus, operator-)
-//BINARY_DECLARATION(TensorBase, Divides, operator/)
-//BINARY_DECLARATION(TensorBase, Modulus, operator%)
-//BINARY_DECLARATION(TensorBase, EqualsTo, operator==)
-//BINARY_DECLARATION(TensorBase, NotEqualsTo, operator!=)
-//BINARY_DECLARATION(TensorBase, Greater, operator>)
-//BINARY_DECLARATION(TensorBase, Less, operator<)
-//BINARY_DECLARATION(TensorBase, GreaterEqual, operator>=)
-//BINARY_DECLARATION(TensorBase, LessEqual, operator<=)
-//BINARY_DECLARATION(TensorBase, LogicalAnd, operator&&)
-//BINARY_DECLARATION(TensorBase, LogicalOr, operator||)
-//BINARY_DECLARATION(TensorBase, BitAnd, operator&)
-//BINARY_DECLARATION(TensorBase, BitOr, operator|)
-//BINARY_DECLARATION(TensorBase, BitXor, operator^)
+// BINARY_DECLARATION(TensorBase, Divides, operator/)
+// BINARY_DECLARATION(TensorBase, Modulus, operator%)
+// BINARY_DECLARATION(TensorBase, EqualsTo, operator==)
+// BINARY_DECLARATION(TensorBase, NotEqualsTo, operator!=)
+// BINARY_DECLARATION(TensorBase, Greater, operator>)
+// BINARY_DECLARATION(TensorBase, Less, operator<)
+// BINARY_DECLARATION(TensorBase, GreaterEqual, operator>=)
+// BINARY_DECLARATION(TensorBase, LessEqual, operator<=)
+// BINARY_DECLARATION(TensorBase, LogicalAnd, operator&&)
+// BINARY_DECLARATION(TensorBase, LogicalOr, operator||)
+// BINARY_DECLARATION(TensorBase, BitAnd, operator&)
+// BINARY_DECLARATION(TensorBase, BitOr, operator|)
+// BINARY_DECLARATION(TensorBase, BitXor, operator^)
 
 template <concepts::TensorBaseDerived View1, concepts::TensorBaseDerived View2>
 bool operator==(View1 const& lhs, View2 const& rhs) {

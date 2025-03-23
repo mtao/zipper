@@ -4,7 +4,7 @@
 #include <array>
 #include <vector>
 
-#include "uvl/detail/ExtentsTraits.hpp"
+#include "uvl/detail//ExtentsTraits.hpp"
 namespace uvl::storage {
 template <typename ValueType, std::size_t N>
 class StaticValueAccessor {

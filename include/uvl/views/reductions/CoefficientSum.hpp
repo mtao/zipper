@@ -2,7 +2,7 @@
 #define UVL_VIEWS_COEFFICIENTSUM_HPP
 
 #include "uvl/concepts/ViewDerived.hpp"
-#include "uvl/detail/all_extents_indices.hpp"
+#include "uvl/detail/extents/all_extents_indices.hpp"
 #include "uvl/views/detail/ViewTraits.hpp"
 
 namespace uvl::views {
@@ -29,7 +29,7 @@ class CoefficientSum {
     value_type operator()() const {
         value_type v = 0.0;
         for (const auto& i :
-             uvl::detail::all_extents_indices(m_view.extents())) {
+             uvl::detail::extents::all_extents_indices(m_view.extents())) {
             v += m_view(i);
         }
         return v;
