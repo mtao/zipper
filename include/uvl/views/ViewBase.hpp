@@ -11,6 +11,7 @@
 #include "uvl/concepts/TupleLike.hpp"
 #include "uvl/concepts/ViewAccessTuple.hpp"
 #include "uvl/detail//ExtentsTraits.hpp"
+#include "uvl/detail/extents/indices_in_range.hpp"
 #include "uvl/detail/tuple_size.hpp"
 
 namespace uvl::views {
@@ -68,24 +69,6 @@ class ViewBase {
         }
 
     template <typename... Args>
-    auto access(Args&&... idxs) const -> decltype(auto)
-
-    {
-        if constexpr (is_writable) {
-            return const_coeff_ref(std::forward<Args>(idxs)...);
-        } else {
-            return coeff(std::forward<Args>(idxs)...);
-        }
-    }
-    template <typename... Args>
-    auto access(Args&&... idxs) -> decltype(auto)
-        requires(is_writable)
-
-    {
-        return coeff_ref(std::forward<Args>(idxs)...);
-    }
-
-    template <typename... Args>
     auto operator()(Args&&... idxs) const -> decltype(auto)
 
     {
@@ -136,6 +119,9 @@ class ViewBase {
     auto access_index_pack(Args&&... idxs) const -> decltype(auto)
         requires(concepts::SlicePackLike<Args...>)
     {
+#if !defined(NDEBUG)
+        uvl::detail::extents::indices_in_range(extents(), idxs...);
+#endif
         if constexpr (is_writable) {
             return const_coeff_ref(std::forward<Args>(idxs)...);
         } else {
@@ -160,6 +146,9 @@ class ViewBase {
     auto access_index_pack(Args&&... idxs) -> decltype(auto)
         requires(concepts::SlicePackLike<Args...>)
     {
+#if !defined(NDEBUG)
+        uvl::detail::extents::indices_in_range(extents(), idxs...);
+#endif
         return coeff_ref(std::forward<Args>(idxs)...);
     }
 

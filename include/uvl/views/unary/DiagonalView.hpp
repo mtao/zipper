@@ -27,10 +27,13 @@ struct detail::ViewTraits<unary::DiagonalView<ViewType, IsConst> >
 
     //
     template <std::size_t... Indices>
-
     constexpr static index_type get_min_extent_static(
         std::integer_sequence<index_type, Indices...>) {
-        return std::min({base_extents_type::static_extent(Indices)...});
+        if constexpr (sizeof...(Indices) == 1) {
+            return 1;
+        } else {
+            return std::min({base_extents_type::static_extent(Indices)...});
+        }
     }
 
     constexpr static index_type get_min_extent_static() {
@@ -45,6 +48,8 @@ struct detail::ViewTraits<unary::DiagonalView<ViewType, IsConst> >
     static index_type get_min_extent(const base_extents_type& e) {
         if constexpr (base_extents_traits::is_static) {
             return get_min_extent_static();
+        } else if constexpr (base_extents_type::rank() == 1) {
+            return std::min<index_type>(0, e.extent(0));
         } else {
             index_type min = std::numeric_limits<index_type>::max();
             ;
@@ -150,7 +155,8 @@ class DiagonalView
     template <concepts::ViewDerived V>
     void assign_direct(const V& view) {
         assert(extents() == view.extents());
-        for (const auto& i : uvl::detail::extents::all_extents_indices(extents())) {
+        for (const auto& i :
+             uvl::detail::extents::all_extents_indices(extents())) {
             (*this)(i) = view(i);
         }
     }

@@ -6,13 +6,6 @@
 #include "uvl/types.hpp"
 
 namespace uvl::detail {
-// template <uvl::index_type... Extents>
-// struct StorageExtentsTraits {
-//     using extents_type = uvl::template extents_type<Extents...>;
-//     using is_dynamic = extents_type::rank_dynamic();
-//     using is_static = extents_type::rank_static();
-//     using rank = extents_type::rank;
-// };
 
 template <typename>
 struct extent_values;

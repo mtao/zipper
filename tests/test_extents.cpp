@@ -11,6 +11,7 @@ TEST_CASE("test_invert_integer_sequence", "[extents]") {
     auto to_array = []<rank_type... N>(std::integer_sequence<rank_type, N...>) {
         return std::array<rank_type, sizeof...(N)>{{N...}};
     };
+    constexpr static std::array<index_type,3> A{{0,1,2}};
     {
         auto a = to_array(std::integer_sequence<rank_type>{});
         auto b = to_array(
@@ -21,7 +22,7 @@ TEST_CASE("test_invert_integer_sequence", "[extents]") {
         CHECK(a == b);
 
         using E = uvl::views::unary::detail::invert_integer_sequence<
-            3, 0, 1, 2>::assign_types<uvl::extents>;
+            3, 0, 1, 2>::assign_types<uvl::extents,A>;
         static_assert(std::is_same_v<E, uvl::extents<>>);
     }
     {
@@ -34,7 +35,7 @@ TEST_CASE("test_invert_integer_sequence", "[extents]") {
         CHECK(a == b);
 
         using E = uvl::views::unary::detail::invert_integer_sequence<
-            3, 1, 2>::assign_types<uvl::extents>;
+            3, 1, 2>::assign_types<uvl::extents,A>;
         static_assert(std::is_same_v<E, uvl::extents<0>>);
     }
     {
@@ -54,7 +55,7 @@ TEST_CASE("test_invert_integer_sequence", "[extents]") {
         CHECK(a == b);
 
         using E = uvl::views::unary::detail::invert_integer_sequence<
-            3>::assign_types<uvl::extents>;
+            3>::assign_types<uvl::extents,A>;
         static_assert(std::is_same_v<E, uvl::extents<0, 1, 2>>);
     }
 }

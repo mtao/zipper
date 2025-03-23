@@ -29,7 +29,7 @@ class Any {
     value_type operator()() const {
         for (const auto& i :
              uvl::detail::extents::all_extents_indices(m_view.extents())) {
-            if (value_type(m_view.coeff(i))) {
+            if (value_type(m_view(i))) {
                 return true;
             }
         }

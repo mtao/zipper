@@ -9,8 +9,7 @@ namespace uvl::views::binary {
 namespace detail {
 template <concepts::ViewDerived ChildA, concepts::ViewDerived ChildB,
           template <typename> typename Base = DimensionedViewBase>
-struct DefaultBinaryViewTraits: public views::detail::DefaultViewTraits<>
-    {
+struct DefaultBinaryViewTraits : public views::detail::DefaultViewTraits<> {
     using ATraits = views::detail::ViewTraits<ChildA>;
     using BTraits = views::detail::ViewTraits<ChildB>;
     using lhs_value_type = ATraits::value_type;
@@ -24,7 +23,9 @@ struct DefaultBinaryViewTraits: public views::detail::DefaultViewTraits<>
     // defaulting to first parameter
     using value_type = typename ATraits::value_type;
     constexpr static bool holds_extents = true;
-    constexpr static bool is_coefficient_consistent = ATraits::is_coefficient_consistent && BTraits::is_coefficient_consistent; 
+    constexpr static bool is_coefficient_consistent =
+        ATraits::is_coefficient_consistent &&
+        BTraits::is_coefficient_consistent;
     constexpr static bool is_value_based = true;
 
     // to pass a base type to the BinaryViewBase
@@ -81,16 +82,17 @@ class BinaryViewBase
         return m_extents;
     }
 
-    value_type get_value(const lhs_value_type& l, const rhs_value_type& r) const {
-        return derived().get_value(l,r);
+    value_type get_value(const lhs_value_type& l,
+                         const rhs_value_type& r) const {
+        return derived().get_value(l, r);
     }
-
 
     template <typename... Args>
     value_type coeff(Args&&... args) const
         requires(is_value_based)
     {
-        return get_value(m_lhs(std::forward<Args>(args)...),m_rhs(std::forward<Args>(args)...));
+        return get_value(m_lhs(std::forward<Args>(args)...),
+                         m_rhs(std::forward<Args>(args)...));
     }
 
    private:

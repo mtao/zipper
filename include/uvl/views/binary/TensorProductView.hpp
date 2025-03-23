@@ -14,12 +14,16 @@ class TensorProductView;
 namespace detail {
 
 template <typename A, typename B>
-struct coeffwise_extents_values;
+struct tensor_coeffwise_extents_values;
 template <index_type... A, index_type... B>
-struct coeffwise_extents_values<extents<A...>, extents<B...>> {
+struct tensor_coeffwise_extents_values<extents<A...>, extents<B...>> {
     using product_extents_type = uvl::extents<A..., B...>;
     using a_extents_type = extents<A...>;
     using b_extents_type = extents<B...>;
+
+    static_assert(product_extents_type::rank() ==
+                  a_extents_type::rank() + b_extents_type::rank());
+
     using a_extents_traits = uvl::detail::ExtentsTraits<a_extents_type>;
     using b_extents_traits = uvl::detail::ExtentsTraits<b_extents_type>;
 
@@ -58,9 +62,17 @@ struct detail::ViewTraits<binary::TensorProductView<A, B>>
     using BTraits = views::detail::ViewTraits<B>;
     constexpr static rank_type rhs_rank = BTraits::extents_type::rank();
     using CEV =
-        detail::coeffwise_extents_values<typename ATraits::extents_type,
-                                         typename BTraits::extents_type>;
+        detail::tensor_coeffwise_extents_values<typename ATraits::extents_type,
+                                                typename BTraits::extents_type>;
+
+    static_assert(std::is_same_v<typename CEV::a_extents_type,
+                                 typename ATraits::extents_type>);
+    static_assert(std::is_same_v<typename CEV::b_extents_type,
+                                 typename BTraits::extents_type>);
     using extents_type = CEV::product_extents_type;
+    static_assert(
+        std::is_same_v<typename CEV::product_extents_type, extents_type>);
+    static_assert(extents_type::rank() == lhs_rank + rhs_rank);
 
     constexpr static bool is_coefficient_consistent = false;
     constexpr static bool is_value_based = false;

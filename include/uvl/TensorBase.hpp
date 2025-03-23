@@ -1,23 +1,20 @@
 #if !defined(UVL_TENSORBASE_HPP)
 #define UVL_TENSORBASE_HPP
 
-#include "uvl/types.hpp"
-#include "views/reductions/CoefficientSum.hpp"
-#include "views/unary/SliceView.hpp"
-//
 #include "concepts/TensorBaseDerived.hpp"
 #include "concepts/ViewDerived.hpp"
-//
-#include "views/unary/CastView.hpp"
-#include "views/unary/SwizzleView.hpp"
-////
 #include "uvl/detail/declare_operations.hpp"
+#include "uvl/types.hpp"
 #include "uvl/views/binary/ArithmeticViews.hpp"
 #include "uvl/views/binary/TensorProductView.hpp"
 #include "uvl/views/unary/ScalarArithmeticViews.hpp"
+#include "views/reductions/CoefficientSum.hpp"
 #include "views/unary/AbsView.hpp"
+#include "views/unary/CastView.hpp"
 #include "views/unary/DiagonalView.hpp"
 #include "views/unary/ScalarPowerView.hpp"
+#include "views/unary/SliceView.hpp"
+#include "views/unary/SwizzleView.hpp"
 #include "views/unary/detail/operation_implementations.hpp"
 
 namespace uvl {

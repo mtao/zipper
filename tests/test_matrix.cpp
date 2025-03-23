@@ -267,30 +267,52 @@ TEST_CASE("test_trace", "[matrix][storage][dense]") {
     CHECK(N.trace() == 6);
 }
 
-/*
 TEST_CASE("test_partial_trace_matrix", "[matrix][storage][dense]") {
     uvl::Matrix<double, 3, 3> N(3, 5);
     N = uvl::views::nullary::uniform_random_view<double>(uvl::extents<3, 3>{},
                                                          -1, 1);
+    spdlog::info("Random matrix n:");
+    print(N);
     N.diagonal() = uvl::views::nullary::ConstantView<double, 3>(0.0);
     CHECK(N.trace() == 0);
 
     N.diagonal() = uvl::views::nullary::ConstantView<double, 3>(1.0);
 
+    {
     uvl::MatrixBase empty_partial_trace =
         uvl::views::unary::PartialTraceView<std::decay_t<decltype(N.view())>>(
             N.view());
+    static_assert(std::decay_t<decltype(empty_partial_trace.extents())>::rank() == 2);
+    using reducer = std::decay_t<decltype(empty_partial_trace.view())>::traits::index_remover;
+    constexpr static auto f2r = reducer::full_rank_to_reduced_indices;
+    constexpr static auto r2f = reducer::reduced_rank_to_full_indices;
+    static_assert(f2r.size() == 2);
+    static_assert(r2f.size() == 2);
+    static_assert(f2r[0] == 0);
+    static_assert(f2r[1] == 1);
+    static_assert(r2f[0] == 0);
+    static_assert(f2r[1] == 1);
+    static_assert(std::decay_t<decltype(empty_partial_trace.extents())>::static_extent(0) == 3);
+    static_assert(std::decay_t<decltype(empty_partial_trace.extents())>::static_extent(1) == 3);
     CHECK(empty_partial_trace == N);
+    }
 
     uvl::VectorBase first_row_trace =
         uvl::views::unary::PartialTraceView<std::decay_t<decltype(N.view())>,
                                             0>(N.view());
 
+    spdlog::info("slice first row  of n:");
+    print(first_row_trace);
+    print(N.row(0));
     CHECK(first_row_trace == N.row(0));
 
     uvl::VectorBase first_col_trace =
         uvl::views::unary::PartialTraceView<std::decay_t<decltype(N.view())>,
                                             1>(N.view());
+    spdlog::info("slice first col of n:");
+    print(first_col_trace);
+    print(N.col(0));
+
     CHECK(first_col_trace == N.col(0));
     print(N);
     CHECK(N.trace() == 3);
@@ -301,7 +323,6 @@ TEST_CASE("test_partial_trace_matrix", "[matrix][storage][dense]") {
     N(2, 2) = 2;
     CHECK(N.trace() == 6);
 }
-*/
 /*
 TEST_CASE("test_all_extents", "[storage][dense]") {
 

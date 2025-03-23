@@ -2,11 +2,16 @@
 #if !defined(UVL_VIEWS_UNARY_PARTIALTRACEVIEW_HPP)
 #define UVL_VIEWS_UNARY_PARTIALTRACEVIEW_HPP
 
+#include <spdlog/spdlog.h>
+
 #include "UnaryViewBase.hpp"
 #include "detail/invert_integer_sequence.hpp"
 #include "uvl/concepts/ViewDerived.hpp"
+#include "uvl/detail/extents/extents_formatter.hpp"
+#include "uvl/detail/extents/static_extents_to_array.hpp"
 #include "uvl/detail/pack_index.hpp"
 #include "uvl/views/DimensionedViewBase.hpp"
+#include "DiagonalView.hpp"
 
 namespace uvl::views {
 namespace unary {
@@ -22,8 +27,9 @@ struct detail::ViewTraits<unary::PartialTraceView<ViewType, Indices...>>
     using index_remover =
         unary::detail::invert_integer_sequence<Base::extents_type::rank(),
                                                Indices...>;
-    using extents_type =
-        typename index_remover::template assign_types<uvl::extents>;
+    using extents_type = typename index_remover::template assign_types<
+        uvl::extents, uvl::detail::extents::static_extents_to_array_v<
+                          typename ViewType::extents_type>>;
     using summed_extents_type = uvl::extents<Indices...>;
     using value_type = Base::value_type;
     constexpr static bool is_writable = false;
@@ -52,14 +58,29 @@ class PartialTraceView
 
     constexpr const extents_type& extents() const { return m_extents; }
 
+    template <typename>
+    struct slice_type_;
+    template <rank_type... N>
+    struct slice_type_<std::integer_sequence<rank_type, N...>> {
+        using type =
+            SliceView<ViewType, true,
+                      std::conditional_t<traits::index_remover::in_sequence(N),
+                                         index_type, full_extent_type>...>;
+    };
+
+    using slice_type = slice_type_<std::decay_t<
+        decltype(std::make_integer_sequence<
+                 rank_type, ViewType::extents_type::rank()>{})>>::type;
+
     template <typename... Args, rank_type N>
     auto get_index(std::integral_constant<rank_type, N>, Args&&... idxs) const {
         if constexpr (((N == Indices) || ...)) {
             return uvl::full_extent;
         } else {
-            return uvl::detail::pack_index<
-                traits::index_remover::reversal_array[N]>(
-                std::forward<Args>(idxs)...);
+            constexpr static rank_type Index =
+                traits::index_remover::full_rank_to_reduced_indices[N];
+            static_assert(Index <= sizeof...(Args));
+            return uvl::detail::pack_index<Index>(std::forward<Args>(idxs)...);
         }
     }
 
@@ -68,21 +89,25 @@ class PartialTraceView
                       Args&&... idxs) const
         requires(sizeof...(N) == ViewType::extents_type::rank())
     {
-        const auto slice = SliceView<ViewType, true>(
-            view(), get_index(std::integral_constant<rank_type, N>{},
-                              std::forward<Args>(idxs)...)...);
+        const auto slice =
+            slice_type(view(), get_index(std::integral_constant<rank_type, N>{},
+                                         std::forward<Args>(idxs)...)...);
 
-        auto diag = DiagonalView(slice);
+        DiagonalView<slice_type, true> diag(slice);
+        spdlog::info("Slice extents {}, diag extents {}", slice.extents(),
+                     diag.extents());
         return reductions::CoefficientSum(diag)();
     }
 
     template <typename... Args>
     value_type coeff(Args&&... idxs) const {
+        uvl::detail::extents::indices_in_range(extents(), idxs...);
         if constexpr (sizeof...(Indices) == 0) {
             return view().coeff(std::forward<Args>(idxs)...);
         } else {
             return _coeff(
-                std::make_integer_sequence<rank_type, extents_type::rank()>{},
+                std::make_integer_sequence<rank_type,
+                                           ViewType::extents_type::rank()>{},
                 std::forward<Args>(idxs)...);
         }
     }
