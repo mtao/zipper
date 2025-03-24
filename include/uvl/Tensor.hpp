@@ -3,13 +3,12 @@
 
 #include "TensorBase.hpp"
 #include "concepts/TensorBaseDerived.hpp"
-#include "concepts/MatrixViewDerived.hpp"
-#include "concepts/VectorViewDerived.hpp"
 #include "storage/PlainObjectStorage.hpp"
 #include "uvl/types.hpp"
 namespace uvl {
 
 template <typename ValueType, index_type... Dims>
+    requires(sizeof...(Dims) > 0)
 class Tensor
     : public TensorBase<
           storage::PlainObjectStorage<ValueType, uvl::extents<Dims...>>> {

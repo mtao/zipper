@@ -1,7 +1,6 @@
 #if !defined(UVL_MATRIXBASE_HPP)
 #define UVL_MATRIXBASE_HPP
 
-#include "ArrayBase.hpp"
 #include "UVLBase.hpp"
 #include "concepts/MatrixBaseDerived.hpp"
 #include "concepts/MatrixViewDerived.hpp"
@@ -12,6 +11,7 @@
 #include "views/binary/MatrixVectorProductView.hpp"
 #include "views/reductions/Trace.hpp"
 // #include "views/reductions/Determinant.hpp"
+#include "ArrayBase.hpp"
 #include "views/unary/IdentityView.hpp"
 
 namespace uvl {
@@ -38,7 +38,12 @@ class MatrixBase : public UVLBase<MatrixBase, View> {
     using Base::view;
 
     auto eval() const { return Matrix(*this); }
-    template <typename... Args>
+
+    template <concepts::MatrixBaseDerived Other>
+    MatrixBase(const Other& other)
+        requires(view_type::is_writable)
+        : MatrixBase(other.view()) {}
+
     MatrixBase& operator=(concepts::MatrixBaseDerived auto const& v) {
         return operator=(v.view());
     }
@@ -49,10 +54,6 @@ class MatrixBase : public UVLBase<MatrixBase, View> {
     {
         return Base::operator=(other);
     }
-    template <concepts::MatrixBaseDerived Other>
-    MatrixBase(const Other& other)
-        requires(view_type::is_writable)
-        : MatrixBase(other.view()) {}
 
     auto as_array() const {
         return ArrayBase<views::unary::IdentityView<View>>(view());
@@ -196,12 +197,12 @@ auto operator*(View1 const& lhs, View2 const& rhs) {
 template <concepts::MatrixBaseDerived View>
 auto operator*(View const& lhs, typename View::value_type const& rhs) {
     return MatrixBase<views::unary::ScalarMultipliesView<
-        typename View::value_type, View, true>>(lhs.view(), rhs);
+        typename View::value_type, typename View::view_type, true>>(lhs.view(), rhs);
 }
 template <concepts::MatrixBaseDerived View>
 auto operator*(typename View::value_type const& lhs, View const& rhs) {
     return MatrixBase<views::unary::ScalarMultipliesView<
-        typename View::value_type, View, false>>(lhs, rhs.view());
+        typename View::value_type,typename View::view_type, false>>(lhs, rhs.view());
 }
 
 template <concepts::MatrixBaseDerived View1, concepts::VectorBaseDerived View2>

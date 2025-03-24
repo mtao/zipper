@@ -1,6 +1,5 @@
 
 
-
 #if !defined(UVL_CONCEPTS_TENSORBASE_DERIVED_HPP)
 #define UVL_CONCEPTS_TENSORBASE_DERIVED_HPP
 #include <concepts>
@@ -13,6 +12,7 @@ namespace uvl {
 template <concepts::ViewDerived T>
 class TensorBase;
 template <typename T, index_type... Indices>
+    requires(sizeof...(Indices) > 0)
 class Tensor;
 }  // namespace uvl
 namespace uvl::concepts {

@@ -1,6 +1,7 @@
 #if !defined(UVL_ARRAYBASE_HPP)
 #define UVL_ARRAYBASE_HPP
 
+#include "UVLBase.hpp"
 #include "uvl/types.hpp"
 #include "views/reductions/All.hpp"
 #include "views/reductions/Any.hpp"
@@ -10,8 +11,6 @@
 #include "concepts/ArrayBaseDerived.hpp"
 #include "concepts/ViewDerived.hpp"
 //
-#include "views/unary/CastView.hpp"
-#include "views/unary/SwizzleView.hpp"
 ////
 #include "uvl/detail/declare_operations.hpp"
 #include "uvl/views/binary/ArithmeticViews.hpp"
@@ -20,11 +19,12 @@
 #include "views/unary/DiagonalView.hpp"
 #include "views/unary/ScalarPowerView.hpp"
 #include "views/unary/detail/operation_implementations.hpp"
+#include "detail/extents/static_extents_to_integral_sequence.hpp"
 
 namespace uvl {
 
 template <concepts::ViewDerived View>
-class ArrayBase {
+class ArrayBase : public UVLBase<ArrayBase, View> {
    public:
     ArrayBase() = default;
 
@@ -32,52 +32,27 @@ class ArrayBase {
     using value_type = View::value_type;
     using extents_type = View::extents_type;
     using extents_traits = detail::ExtentsTraits<extents_type>;
+    using Base = UVLBase<ArrayBase, View>;
+    using Base::Base;
+    using Base::cast;
+    using Base::swizzle;
+    using Base::view;
 
     template <index_type... N>
-    auto eval(const extents<N...>&) const {
-        return Array<value_type, N...>(*this);
-    }
-    auto eval() const { return eval(extents()); }
-    template <typename... Args>
-    ArrayBase(Args&&... v) : m_view(std::forward<Args>(v)...) {}
-
-    ArrayBase(View&& v) : m_view(v) {}
-    ArrayBase(const View& v) : m_view(v) {}
-    ArrayBase& operator=(concepts::ViewDerived auto const& v) {
-        m_view = v;
-        return *this;
-    }
-    ArrayBase& operator=(concepts::ArrayBaseDerived auto const& v) {
-        m_view = v.view();
-        return *this;
-    }
-
-    ArrayBase(ArrayBase&& v) = default;
-    ArrayBase(const ArrayBase& v) = default;
-
-    template <concepts::ViewDerived Other>
-    ArrayBase(const Other& other)
-        requires(view_type::is_writable)
-        : m_view(extents_traits::convert_from(other.extents())) {
-        m_view.assign(other);
-    }
-    template <concepts::ViewDerived Other>
-    ArrayBase& operator=(const Other& other)
-        requires(view_type::is_writable)
+    auto eval(const std::integer_sequence<index_type,N...>&) const
+        requires(std::is_same_v<extents<N...>, extents_type>)
     {
-        m_view.assign(other);
-        return *this;
+        return Array<value_type, N...>(this->view());
     }
+    auto eval() const { return eval(detail::extents::static_extents_to_integral_sequence_t<extents_type>{}); }
+    ArrayBase& operator=(concepts::ArrayBaseDerived auto const& v) {
+        return Base::operator=(v.view());
+    }
+
     template <concepts::ArrayBaseDerived Other>
     ArrayBase(const Other& other)
         requires(view_type::is_writable)
         : ArrayBase(other.view()) {}
-    template <concepts::ArrayBaseDerived Other>
-    ArrayBase& operator=(const Other& other)
-        requires(view_type::is_writable)
-    {
-        return operator=(other.view());
-    }
 
     ArrayBase& operator*=(const value_type& other)
         requires(view_type::is_writable)
@@ -101,15 +76,17 @@ class ArrayBase {
     {
         return *this = *this - other;
     }
-
-    template <rank_type... ranks>
-    auto swizzle() const {
-        return ArrayBase<views::unary::SwizzleView<value_type, ranks...>>(
-            view());
+    template <concepts::ArrayBaseDerived Other>
+    ArrayBase& operator*=(const Other& other)
+        requires(view_type::is_writable)
+    {
+        return *this = *this * other;
     }
-    template <typename T>
-    auto cast() const {
-        return ArrayBase<views::unary::CastView<T, view_type>>(view());
+    template <concepts::ArrayBaseDerived Other>
+    ArrayBase& operator/=(const Other& other)
+        requires(view_type::is_writable)
+    {
+        return *this = *this / other;
     }
 
     //--------------------------------------------------------------
@@ -166,49 +143,6 @@ class ArrayBase {
     }
     void normalize(value_type T) { *this /= norm(T); }
 
-    template <typename... Args>
-    value_type operator()(Args&&... idxs) const
-
-    {
-        return view()(std::forward<Args>(idxs)...);
-    }
-
-    template <typename... Slices>
-    auto slice(Slices&&... slices) const {
-        using view_type = views::unary::SliceView<view_type, true, Slices...>;
-
-        return ArrayBase<view_type>(
-            view_type(view(), std::forward<Slices>(slices)...));
-    }
-    template <typename... Slices>
-    auto slice() const {
-        using view_type = views::unary::SliceView<view_type, true, Slices...>;
-        return ArrayBase<view_type>(view_type(view(), Slices{}...));
-    }
-
-    template <typename... Slices>
-    auto slice(Slices&&... slices) {
-        using view_type = views::unary::SliceView<view_type, false, Slices...>;
-        return ArrayBase<view_type>(
-            view_type(view(), std::forward<Slices>(slices)...));
-    }
-    template <typename... Slices>
-    auto slice() {
-        using view_type = views::unary::SliceView<view_type, false, Slices...>;
-        return ArrayBase<view_type>(view_type(view(), Slices{}...));
-    }
-
-    auto diagonal() const {
-        return VectorBase<views::unary::DiagonalView<view_type, true>>(view());
-    }
-    auto diagonal() {
-        return VectorBase<views::unary::DiagonalView<view_type, false>>(view());
-    }
-
-    const View& view() const { return m_view; }
-    View& view() { return m_view; }
-    const extents_type& extents() const { return view().extents(); }
-    constexpr index_type extent(rank_type i) const { return m_view.extent(i); }
     bool any() const
         requires(std::is_same_v<value_type, bool>)
     {
@@ -219,9 +153,30 @@ class ArrayBase {
     {
         return views::reductions::All(view())();
     }
+    template <typename... Slices>
+    auto slice() {
+        auto v = Base::template slice_view<Slices...>();
+        return ArrayBase<std::decay_t<decltype(v)>>(std::move(v));
+    }
 
-   private:
-    View m_view;
+    template <typename... Slices>
+    auto slice(Slices&&... slices) const {
+        auto v = Base::template slice_view<Slices...>(
+            std::forward<Slices>(slices)...);
+        return ArrayBase<std::decay_t<decltype(v)>>(std::move(v));
+    }
+    template <typename... Slices>
+    auto slice() const {
+        auto v = Base::template slice_view<Slices...>();
+        return ArrayBase<std::decay_t<decltype(v)>>(std::move(v));
+    }
+
+    template <typename... Slices>
+    auto slice(Slices&&... slices) {
+        auto v = Base::template slice_view<Slices...>(
+            std::forward<Slices>(slices)...);
+        return ArrayBase<std::decay_t<decltype(v)>>(std::move(v));
+    }
 };
 
 template <concepts::ViewDerived View>
@@ -269,4 +224,5 @@ BINARY_DECLARATION(ArrayBase, BitXor, operator^)
 
 }  // namespace uvl
 
+#include "Array.hpp"
 #endif

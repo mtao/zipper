@@ -6,7 +6,7 @@
 #include "VectorViewDerived.hpp"
 
 namespace uvl {
-template <concepts::VectorViewDerived T>
+template <concepts::ViewDerived T>
 class VectorBase;
 template <typename T, index_type R>
 class Vector;

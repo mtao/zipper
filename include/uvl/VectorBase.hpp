@@ -2,32 +2,22 @@
 #if !defined(UVL_VECTORBASE_HPP)
 #define UVL_VECTORBASE_HPP
 
-#include <cmath>
-
-#include "uvl/types.hpp"
-//
+#include "UVLBase.hpp"
 #include "concepts/VectorBaseDerived.hpp"
 #include "concepts/VectorViewDerived.hpp"
-//
-// Scalar stuff
-#include "uvl/detail/declare_operations.hpp"
-#include "uvl/views/binary/ArithmeticViews.hpp"
-#include "views/unary/CastView.hpp"
-#include "views/unary/IdentityView.hpp"
-#include "views/unary/ScalarArithmeticViews.hpp"
-#include "views/unary/detail/operation_implementations.hpp"
 //
 #include "ArrayBase.hpp"
 #include "MatrixBase.hpp"
 #include "TensorBase.hpp"
 #include "views/reductions/CoefficientSum.hpp"
+#include "views/unary/IdentityView.hpp"
 
 namespace uvl {
 template <typename ValueType, index_type Rows>
 class Vector;
 
-template <concepts::VectorViewDerived View>
-class VectorBase {
+template <concepts::ViewDerived View>
+class VectorBase : public UVLBase<VectorBase, View> {
    public:
     VectorBase() = default;
 
@@ -36,91 +26,45 @@ class VectorBase {
     using extents_type = View::extents_type;
     using traits = uvl::views::detail::ViewTraits<view_type>;
     using extents_traits = detail::ExtentsTraits<extents_type>;
-    template <typename... Args>
-    VectorBase(Args&&... v) : m_view(std::forward<Args>(v)...) {}
+    static_assert(extents_traits::rank == 1);
+    using Base = UVLBase<VectorBase, View>;
 
-    VectorBase(View&& v) : m_view(v) {}
-    VectorBase(const View& v) : m_view(v) {}
-    VectorBase& operator=(concepts::ViewDerived auto const& v) {
-        m_view = v;
-        return *this;
-    }
-    VectorBase& operator=(concepts::VectorBaseDerived auto const& v) {
-        m_view = v.view();
-        return *this;
-    }
-
-    VectorBase(VectorBase&& v) = default;
-    VectorBase(const VectorBase& v) = default;
+    using Base::Base;
+    // using Base::operator=;
+    using Base::cast;
+    using Base::swizzle;
+    using Base::view;
 
     auto eval() const { return Vector(*this); }
+    VectorBase& operator=(concepts::ViewDerived auto const& v) {
+        return Base::operator=(v);
+    }
+    VectorBase& operator=(concepts::VectorBaseDerived auto const& v) {
+        return operator=(v.view());
+    }
 
-    template <concepts::VectorViewDerived Other>
-    VectorBase(const Other& other)
-        requires(view_type::is_writable)
-        : m_view(extents_traits::convert_from(other.extents())) {
-        m_view.assign(other);
-    }
-    template <concepts::VectorViewDerived Other>
-    VectorBase& operator=(const Other& other)
-        requires(view_type::is_writable)
-    {
-        m_view.assign(other);
-        return *this;
-    }
     template <concepts::VectorBaseDerived Other>
     VectorBase(const Other& other)
         requires(view_type::is_writable)
         : VectorBase(other.view()) {}
+
     template <concepts::VectorBaseDerived Other>
     VectorBase& operator=(const Other& other)
         requires(view_type::is_writable)
     {
         return operator=(other.view());
     }
-    VectorBase& operator*=(const value_type& other)
-        requires(view_type::is_writable)
-    {
-        return *this = other * *this;
-    }
-    VectorBase& operator/=(const value_type& other)
-        requires(view_type::is_writable)
-    {
-        return *this = *this / other;
-    }
-    template <concepts::VectorBaseDerived Other>
-    VectorBase& operator+=(const Other& other)
-        requires(view_type::is_writable)
-    {
-        return *this = *this + other;
-    }
-    template <concepts::VectorBaseDerived Other>
-    VectorBase& operator-=(const Other& other)
-        requires(view_type::is_writable)
-    {
-        return *this = *this - other;
-    }
-
-    // requires being told which base type to use (MatrixBase/TensorBase are the
-    // usual suspects)
-    template <template <typename> typename BaseType, rank_type... ranks>
-    auto swizzle() const {
-        using V = views::unary::SwizzleView<view_type, ranks...>;
-        return BaseType<V>(V(view()));
-    }
-    template <typename T>
-    auto cast() const {
-        return VectorBase<views::unary::CastView<T, view_type>>(view());
-    }
 
     auto as_array() const {
-        return ArrayBase<views::unary::IdentityView<View>>(view());
+        using V = views::unary::IdentityView<View>;
+        return ArrayBase<V>(V(view()));
     }
-    auto as_col_matrix() const {
-        return MatrixBase<views::unary::IdentityView<View>>(view());
-    }
+    // auto as_col_matrix() const {
+    //     return MatrixBase<views::unary::IdentityView<View>>(view());
+    // }
     auto as_tensor() const {
-        return TensorBase<views::unary::IdentityView<View>>(view());
+        using V = views::unary::IdentityView<View>;
+        return TensorBase<V>(V(view()));
     }
 
     template <index_type T>
@@ -167,28 +111,6 @@ class VectorBase {
         *this /= norm<T>();
     }
     void normalize(value_type T) { *this /= norm(T); }
-
-    template <typename... Args>
-    value_type operator()(Args&&... idxs) const
-
-    {
-        return view()(std::forward<Args>(idxs)...);
-    }
-    template <typename... Args>
-    value_type& operator()(Args&&... idxs)
-        requires(traits::is_writable)
-
-    {
-        return view()(std::forward<Args>(idxs)...);
-    }
-
-    const View& view() const { return m_view; }
-    View& view() { return m_view; }
-    const extents_type& extents() const { return view().extents(); }
-    constexpr index_type extent(rank_type i) const { return m_view.extent(i); }
-
-   private:
-    View m_view;
 };
 
 template <concepts::VectorViewDerived View>
@@ -204,17 +126,7 @@ SCALAR_BINARY_DECLARATION(VectorBase, Divides, operator/)
 
 BINARY_DECLARATION(VectorBase, Plus, operator+)
 BINARY_DECLARATION(VectorBase, Minus, operator-)
-// BINARY_DECLARATION(VectorBase, EqualsTo, operator==)
-// BINARY_DECLARATION(VectorBase, NotEqualsTo, operator!=)
-// BINARY_DECLARATION(VectorBase, Greater, operator>)
-// BINARY_DECLARATION(VectorBase, Less, operator<)
-// BINARY_DECLARATION(VectorBase, GreaterEqual, operator>=)
-// BINARY_DECLARATION(VectorBase, LessEqual, operator<=)
-// BINARY_DECLARATION(VectorBase, LogicalAnd, operator&&)
-// BINARY_DECLARATION(VectorBase, LogicalOr, operator||)
-// BINARY_DECLARATION(VectorBase, BitAnd, operator&)
-// BINARY_DECLARATION(VectorBase, BitOr, operator|)
-// BINARY_DECLARATION(VectorBase, BitXor, operator^)
+
 template <concepts::VectorBaseDerived View1, concepts::VectorBaseDerived View2>
 bool operator==(View1 const& lhs, View2 const& rhs) {
     return (lhs.as_array() == rhs.as_array()).all();

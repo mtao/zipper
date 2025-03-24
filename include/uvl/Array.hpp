@@ -10,6 +10,7 @@
 namespace uvl {
 
 template <typename ValueType, index_type... Dims>
+    requires(sizeof...(Dims) > 0)
 class Array
     : public ArrayBase<
           storage::PlainObjectStorage<ValueType, uvl::extents<Dims...>>> {

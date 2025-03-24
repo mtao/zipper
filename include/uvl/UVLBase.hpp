@@ -51,13 +51,17 @@ class UVLBase {
 
     template <concepts::ViewDerived Other>
     UVLBase(const Other& other)
-        requires(view_type::is_writable)
+        requires(view_type::is_writable &&
+                 detail::extents::assignable_extents_v<
+                     typename Other::extents_type, extents_type>)
         : m_view(extents_traits::convert_from(other.extents())) {
         m_view.assign(other);
     }
     template <concepts::ViewDerived Other>
     Derived& operator=(const Other& other)
-        requires(view_type::is_writable)
+        requires(view_type::is_writable &&
+                 detail::extents::assignable_extents_v<
+                     typename Other::extents_type, extents_type>)
     {
         m_view.assign(other);
         return derived();

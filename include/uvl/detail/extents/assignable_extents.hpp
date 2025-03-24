@@ -34,8 +34,12 @@ struct assignable_extents<uvl::extents<FromIndices...>,
 };
 
 template <index_type... ToIndices>
-struct assignable_extents<uvl::extents<>, uvl::extents<ToIndices...>> {
-    constexpr static bool value = true;
+struct assignable_extents<uvl::extents<>, uvl::extents<ToIndices...>>
+    : public std::true_type {};
+template <index_type... FromIndices, index_type... ToIndices>
+    requires(sizeof...(ToIndices) != sizeof...(FromIndices))
+struct assignable_extents<uvl::extents<FromIndices...>,
+                          uvl::extents<ToIndices...>> : public std::false_type {
 };
 
 template <concepts::ExtentsType From, concepts::ExtentsType To>

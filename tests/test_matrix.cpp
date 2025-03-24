@@ -106,6 +106,18 @@ TEST_CASE("test_assignment", "[matrix][storage][dense]") {
     CHECK(N(2, 4) == 14);
 }
 
+TEST_CASE("test_matrix_eval", "[matrix][storage][dense]") {
+    uvl::Matrix<double, 3, 5> N(3, 5);
+
+    auto x = (N * 2).eval();
+    auto v = N.as_array();
+    static_assert(std::is_same_v< std::decay_t<decltype(v)>::extents_type, decltype(N)::extents_type>);
+    static_assert(std::is_same_v<decltype(v.extents()), decltype(N.extents())>);
+    static_assert(std::decay_t<decltype(v)>::extents_type::rank() == 2);
+    auto y = N.as_array().eval();
+    print(x);
+}
+
 TEST_CASE("test_transpose", "[matrix][storage][dense]") {
     uvl::Matrix<double, 3, std::dynamic_extent> M(3);
     uvl::Matrix<double, 3, 5> N(3, 5);
