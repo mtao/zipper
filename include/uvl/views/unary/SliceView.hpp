@@ -186,15 +186,14 @@ class SliceView
     }
     template <typename... Args, rank_type... ranks>
     auto _coeff_ref(std::integer_sequence<rank_type, ranks...>, Args&&... idxs)
-        -> value_type& {
-        return view().coeff_ref(get_index<ranks>(idxs...)...);
-    }
-    template <typename... Args, rank_type... ranks>
-    auto _const_coeff_ref(std::integer_sequence<rank_type, ranks...>,
-                          Args&&... idxs) const -> const value_type& {
-        return view().const_coeff_ref(get_index<ranks>(idxs...)...);
-    }
-
+        -> value_type& requires(traits::is_writable) {
+            return view().coeff_ref(get_index<ranks>(idxs...)...);
+        } template <typename... Args, rank_type... ranks>
+        auto _const_coeff_ref(std::integer_sequence<rank_type, ranks...>,
+                              Args&&... idxs) const
+        -> const value_type& requires(traits::is_writable) {
+            return view().const_coeff_ref(get_index<ranks>(idxs...)...);
+        }
 
     template <typename... Args>
     value_type coeff(Args&&... idxs) const {
@@ -221,8 +220,11 @@ class SliceView
 
    private:
     template <concepts::ViewDerived V>
-    void assign_direct(const V& view) {
-        for (const auto& i : uvl::detail::extents::all_extents_indices(extents())) {
+    void assign_direct(const V& view)
+        requires(traits::is_writable)
+    {
+        for (const auto& i :
+             uvl::detail::extents::all_extents_indices(extents())) {
             (*this)(i) = view(i);
         }
     }
@@ -230,8 +232,10 @@ class SliceView
    public:
     template <concepts::ViewDerived V>
     void assign(const V& view)
-        requires(extents_traits::template is_convertable_from<
-                 typename uvl::views::detail::ViewTraits<V>::extents_type>())
+        requires(
+            traits::is_writable &&
+            extents_traits::template is_convertable_from<
+                typename uvl::views::detail::ViewTraits<V>::extents_type>())
     {
         using VTraits = views::detail::ViewTraits<V>;
         using layout_policy = uvl::default_layout_policy;

@@ -5,7 +5,9 @@
 
 #include "UnaryViewBase.hpp"
 #include "uvl/concepts/ViewDerived.hpp"
+#include "uvl/detail/extents/all_extents_indices.hpp"
 #include "uvl/detail/extents/swizzle_extents.hpp"
+#include "uvl/storage/PlainObjectStorage.hpp"
 #include "uvl/views/DimensionedViewBase.hpp"
 
 namespace uvl::views {
@@ -37,6 +39,7 @@ class SwizzleView
     using traits = uvl::views::detail::ViewTraits<self_type>;
     using extents_type = traits::extents_type;
     using value_type = traits::value_type;
+    using extents_traits = uvl::detail::ExtentsTraits<extents_type>;
     using swizzler_type = traits::swizzler_type;
     using Base = UnaryViewBase<self_type, ViewType>;
     using Base::extent;
@@ -92,6 +95,47 @@ class SwizzleView
         return _const_coeff_ref(
             swizzler_type::unswizzle(std::forward<Args>(idxs)...),
             std::make_integer_sequence<rank_type, internal_rank>{});
+    }
+
+   private:
+    template <concepts::ViewDerived V>
+    void assign_direct(const V& view)
+        requires(traits::is_writable)
+    {
+        for (const auto& i :
+             uvl::detail::extents::all_extents_indices(extents())) {
+            (*this)(i) = view(i);
+        }
+    }
+
+   public:
+    template <concepts::ViewDerived V>
+    void assign(const V& view)
+        requires(
+            traits::is_writable &&
+            extents_traits::template is_convertable_from<
+                typename uvl::views::detail::ViewTraits<V>::extents_type>())
+    {
+        using VTraits = views::detail::ViewTraits<V>;
+        using layout_policy = uvl::default_layout_policy;
+        using accessor_policy = uvl::default_accessor_policy<value_type>;
+#if !defined(NDEBUG)
+        constexpr static bool assigning_from_infinite =
+            VTraits::extents_type::rank() == 0;
+
+        assert(assigning_from_infinite || extents() == view.extents());
+#endif
+        if constexpr (VTraits::is_coefficient_consistent) {
+            // TODO: check sizing
+            assign_direct(view);
+        } else {
+            uvl::storage::PlainObjectStorage<value_type, extents_type,
+                                             layout_policy, accessor_policy>
+                pos(extents_traits::convert_from(view.extents()));
+            pos.assign(view);
+            // TODO: check sizing
+            assign_direct(pos);
+        }
     }
 
    private:

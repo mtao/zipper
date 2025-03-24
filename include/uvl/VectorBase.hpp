@@ -34,6 +34,7 @@ class VectorBase {
     using view_type = View;
     using value_type = View::value_type;
     using extents_type = View::extents_type;
+    using traits = uvl::views::detail::ViewTraits<view_type>;
     using extents_traits = detail::ExtentsTraits<extents_type>;
     template <typename... Args>
     VectorBase(Args&&... v) : m_view(std::forward<Args>(v)...) {}
@@ -104,7 +105,8 @@ class VectorBase {
     // usual suspects)
     template <template <typename> typename BaseType, rank_type... ranks>
     auto swizzle() const {
-        return BaseType<views::unary::SwizzleView<view_type, ranks...>>(view());
+        using V = views::unary::SwizzleView<view_type, ranks...>;
+        return BaseType<V>(V(view()));
     }
     template <typename T>
     auto cast() const {
@@ -174,6 +176,7 @@ class VectorBase {
     }
     template <typename... Args>
     value_type& operator()(Args&&... idxs)
+        requires(traits::is_writable)
 
     {
         return view()(std::forward<Args>(idxs)...);

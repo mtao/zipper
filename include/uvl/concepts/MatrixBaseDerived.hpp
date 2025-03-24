@@ -7,7 +7,7 @@
 #include "MatrixViewDerived.hpp"
 
 namespace uvl {
-template <concepts::MatrixViewDerived T>
+template <concepts::ViewDerived T>
 class MatrixBase;
 template <typename T, index_type R, index_type C>
 class Matrix;

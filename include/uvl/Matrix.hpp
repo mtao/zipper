@@ -22,11 +22,11 @@ class Matrix
     using Base::extent;
     using Base::extents;
     using Base::row;
+    using Base::transpose;
 
-
-    Matrix(const Matrix& other):Base(other.view()) {}
+    Matrix(const Matrix& other) : Base(other.view()) {}
     template <index_type R2, index_type C2>
-    Matrix(const Matrix<value_type,R2,C2>& other) : Base(other.view()) {}
+    Matrix(const Matrix<value_type, R2, C2>& other) : Base(other.view()) {}
     template <concepts::MatrixViewDerived Other>
     Matrix(const Other& other) : Base(other) {}
     template <concepts::MatrixBaseDerived Other>
@@ -46,7 +46,7 @@ class Matrix
         return *this;
     }
     template <index_type R2, index_type C2>
-    Matrix& operator=(const Matrix<value_type,R2,C2>& other) {
+    Matrix& operator=(const Matrix<value_type, R2, C2>& other) {
         Base::operator=(other.view());
         return *this;
     }
