@@ -1,5 +1,5 @@
-#if !defined(UVL_VIEWS_BINARY_TENSORPRODUCTVIEW_HPP)
-#define UVL_VIEWS_BINARY_TENSORPRODUCTVIEW_HPP
+#if !defined(UVL_VIEWS_BINARY_WEDGEPRODUCTVIEW_HPP)
+#define UVL_VIEWS_BINARY_WEDGEPRODUCTVIEW_HPP
 
 #include "BinaryViewBase.hpp"
 #include "uvl/concepts/ViewDerived.hpp"
@@ -8,15 +8,15 @@
 namespace uvl::views {
 namespace binary {
 template <concepts::ViewDerived A, concepts::ViewDerived B>
-class TensorProductView;
+class WedgeProductView;
 
 }
 namespace detail {
 
 template <typename A, typename B>
-struct tensor_coeffwise_extents_values;
+struct wedge_coeffwise_extents_values;
 template <index_type... A, index_type... B>
-struct tensor_coeffwise_extents_values<extents<A...>, extents<B...>> {
+struct wedge_coeffwise_extents_values<extents<A...>, extents<B...>> {
     using product_extents_type = uvl::extents<A..., B...>;
     using a_extents_type = extents<A...>;
     using b_extents_type = extents<B...>;
@@ -52,17 +52,15 @@ struct tensor_coeffwise_extents_values<extents<A...>, extents<B...>> {
 
 }  // namespace detail
 template <typename A, typename B>
-struct detail::ViewTraits<binary::TensorProductView<A, B>>
+struct detail::ViewTraits<binary::WedgeProductView<A, B>>
     : public binary::detail::DefaultBinaryViewTraits<A, B>
-//: public binary::detail::WiseTraits<A, B> {
-//: public detail::ViewTraits<A> {
 {
     using ATraits = views::detail::ViewTraits<A>;
     constexpr static rank_type lhs_rank = ATraits::extents_type::rank();
     using BTraits = views::detail::ViewTraits<B>;
     constexpr static rank_type rhs_rank = BTraits::extents_type::rank();
     using CEV =
-        detail::tensor_coeffwise_extents_values<typename ATraits::extents_type,
+        detail::wedge_coeffwise_extents_values<typename ATraits::extents_type,
                                                 typename BTraits::extents_type>;
 
     static_assert(std::is_same_v<typename CEV::a_extents_type,
@@ -80,9 +78,9 @@ struct detail::ViewTraits<binary::TensorProductView<A, B>>
 
 namespace binary {
 template <concepts::ViewDerived A, concepts::ViewDerived B>
-class TensorProductView : public BinaryViewBase<TensorProductView<A, B>, A, B> {
+class WedgeProductView : public BinaryViewBase<WedgeProductView<A, B>, A, B> {
    public:
-    using self_type = TensorProductView<A, B>;
+    using self_type = WedgeProductView<A, B>;
     using ViewBase<self_type>::operator();
     using traits = uvl::views::detail::ViewTraits<self_type>;
     using value_type = traits::value_type;
@@ -96,24 +94,24 @@ class TensorProductView : public BinaryViewBase<TensorProductView<A, B>, A, B> {
     using extents_type = traits::extents_type;
     using extents_traits = uvl::detail::ExtentsTraits<extents_type>;
 
-    TensorProductView(const A& a, const B& b)
+    WedgeProductView(const A& a, const B& b)
         requires(extents_traits::is_static)
         : Base(a, b) {
     }
-    TensorProductView(const A& a, const B& b)
+    WedgeProductView(const A& a, const B& b)
         requires(!extents_traits::is_static)
         : Base(a, b, traits::CEV::merge(a.extents(), b.extents())) {}
 
-    template <typename... Args, rank_type... ranks>
+    template <bool DoOffset, typename... Args, rank_type... ranks>
     auto lhs_value(std::integer_sequence<rank_type, ranks...>,
                    Args&&... args) const -> decltype(auto) {
         return lhs()(
-            uvl::detail::pack_index<ranks>(std::forward<Args>(args)...)...);
+            uvl::detail::pack_index<ranks + (DoOffset ? rhs_rank : 0)>(std::forward<Args>(args)...)...);
     }
-    template <typename... Args, rank_type... ranks>
+    template <bool DoOffset, typename... Args, rank_type... ranks>
     auto rhs_value(std::integer_sequence<rank_type, ranks...>,
                    Args&&... args) const -> decltype(auto) {
-        return rhs()(uvl::detail::pack_index<ranks + lhs_rank>(
+        return rhs()(uvl::detail::pack_index<ranks + (DoOffset ? lhs_rank : 0)>(
             std::forward<Args>(args)...)...);
     }
 
@@ -121,16 +119,21 @@ class TensorProductView : public BinaryViewBase<TensorProductView<A, B>, A, B> {
     value_type coeff(Args&&... args) const {
         // rvalue type stuff will be forwarded but not moved except for in one
         // place so forwarding twice shouldn't be an issue
-        return lhs_value(std::make_integer_sequence<rank_type, lhs_rank>{},
+        return lhs_value<false>(std::make_integer_sequence<rank_type, lhs_rank>{},
                          std::forward<Args>(args)...) *
-               rhs_value(std::make_integer_sequence<rank_type, rhs_rank>{},
+               rhs_value<true>(std::make_integer_sequence<rank_type, rhs_rank>{},
+                         std::forward<Args>(args)...);
+
+         - lhs_value<true>(std::make_integer_sequence<rank_type, lhs_rank>{},
+                         std::forward<Args>(args)...) *
+               rhs_value<false>(std::make_integer_sequence<rank_type, rhs_rank>{},
                          std::forward<Args>(args)...);
     }
 
-};  // namespace binarytemplate<typenameA,typenameB>class TensorProductView
+};  // namespace binarytemplate<typenameA,typenameB>class WedgeProductView
 
 template <concepts::ViewDerived A, concepts::ViewDerived B>
-TensorProductView(const A& a, const B& b) -> TensorProductView<A, B>;
+WedgeProductView(const A& a, const B& b) -> WedgeProductView<A, B>;
 }  // namespace binary
 }  // namespace uvl::views
 #endif
