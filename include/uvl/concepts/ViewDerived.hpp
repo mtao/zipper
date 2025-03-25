@@ -1,7 +1,6 @@
 #if !defined(UVL_CONCEPTS_VIEW_DERIVED_HPP)
 #define UVL_CONCEPTS_VIEW_DERIVED_HPP
 #include <concepts>
-#include <type_traits>
 
 namespace uvl::views {
 template <typename T>

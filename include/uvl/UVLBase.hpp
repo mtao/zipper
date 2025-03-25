@@ -45,6 +45,10 @@ class UVLBase {
         m_view = v;
         return derived();
     }
+    
+    operator value_type() const requires(extents_type::rank() == 0) {
+        return (*this)();
+    }
 
     UVLBase(UVLBase&& v) = default;
     UVLBase(const UVLBase& v) = default;

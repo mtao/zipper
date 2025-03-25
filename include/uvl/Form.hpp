@@ -3,8 +3,6 @@
 
 #include "FormBase.hpp"
 #include "concepts/FormBaseDerived.hpp"
-#include "concepts/MatrixViewDerived.hpp"
-#include "concepts/VectorViewDerived.hpp"
 #include "storage/PlainObjectStorage.hpp"
 #include "uvl/types.hpp"
 namespace uvl {
@@ -35,18 +33,6 @@ class Form
     Form(const uvl::extents<indices...>& e) : Base(e) {}
     using Base::operator=;
 
-    template <typename... Args>
-    const value_type& operator()(Args&&... idxs) const
-
-    {
-        return view()(std::forward<Args>(idxs)...);
-    }
-    template <typename... Args>
-    value_type& operator()(Args&&... idxs)
-
-    {
-        return view()(std::forward<Args>(idxs)...);
-    }
 };
 }  // namespace uvl
 

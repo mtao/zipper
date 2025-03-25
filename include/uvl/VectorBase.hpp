@@ -9,6 +9,7 @@
 #include "ArrayBase.hpp"
 #include "MatrixBase.hpp"
 #include "TensorBase.hpp"
+#include "FormBase.hpp"
 #include "views/reductions/CoefficientSum.hpp"
 #include "views/unary/IdentityView.hpp"
 
@@ -65,6 +66,10 @@ class VectorBase : public UVLBase<VectorBase, View> {
     auto as_tensor() const {
         using V = views::unary::IdentityView<View>;
         return TensorBase<V>(V(view()));
+    }
+    auto as_form() const {
+        using V = views::unary::IdentityView<View>;
+        return FormBase<V>(V(view()));
     }
 
     template <index_type T>

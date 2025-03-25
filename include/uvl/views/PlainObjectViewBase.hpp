@@ -1,18 +1,14 @@
-#include <ranges>
 #if !defined(UVL_VIEWS_PLAINOBJECTVIEWBASE_HPP)
 #define UVL_VIEWS_PLAINOBJECTVIEWBASE_HPP
+#include <ranges>
 
 #include "MappedViewBase.hpp"
 #include "ViewBase.hpp"
+#include "detail/AssignHelper.hpp"
 #include "detail/PlainObjectViewTraits.hpp"
 #include "uvl/concepts/TupleLike.hpp"
 #include "uvl/concepts/ViewDerived.hpp"
 #include "uvl/detail/extents/all_extents_indices.hpp"
-namespace uvl::storage {
-template <typename ValueType, typename Extents, typename LayoutPolicy,
-          typename AccessorPolicy>
-class PlainObjectStorage;
-}
 namespace uvl::views {
 template <typename Derived_>
 class PlainObjectViewBase : public MappedViewBase<Derived_> {
@@ -85,38 +81,13 @@ class PlainObjectViewBase : public MappedViewBase<Derived_> {
         return derived().resize(extents);
     }
 
-   private:
-    template <concepts::ViewDerived V>
-    void assign_direct(const V& view) {
-        for (const auto& i : uvl::detail::extents::all_extents_indices(extents())) {
-            (*this)(i) = view(i);
-        }
-    }
-
    public:
     template <concepts::ViewDerived V>
     void assign(const V& view)
         requires(extents_traits::template is_convertable_from<
                  typename detail::ViewTraits<V>::extents_type>())
     {
-        using VTraits = detail::ViewTraits<V>;
-        constexpr static bool assigning_from_infinite = VTraits::extents_type::rank() == 0;
-        constexpr static bool should_resize = !assigning_from_infinite && extents_traits::is_dynamic;
-        if constexpr (VTraits::is_coefficient_consistent) {
-            if constexpr (should_resize) {
-                this->resize(view.extents());
-            }
-            assign_direct(view);
-        } else {
-            storage::PlainObjectStorage<value_type, extents_type, layout_policy,
-                                        accessor_policy>
-                pos(extents_traits::convert_from(view.extents()));
-            pos.assign_direct(view);
-            if constexpr (should_resize) {
-                this->resize(view.extents());
-            }
-            assign_direct(pos);
-        }
+        detail::AssignHelper<V, Derived>::assign(view, derived());
     }
 
     /*

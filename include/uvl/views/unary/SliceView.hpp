@@ -8,6 +8,7 @@
 #include "uvl/detail/pack_index.hpp"
 #include "uvl/storage/PlainObjectStorage.hpp"
 #include "uvl/views/DimensionedViewBase.hpp"
+#include "uvl/views/detail/AssignHelper.hpp"
 
 namespace uvl::views {
 namespace unary {
@@ -218,18 +219,6 @@ class SliceView
             std::forward<Args>(idxs)...);
     }
 
-   private:
-    template <concepts::ViewDerived V>
-    void assign_direct(const V& view)
-        requires(traits::is_writable)
-    {
-        for (const auto& i :
-             uvl::detail::extents::all_extents_indices(extents())) {
-            (*this)(i) = view(i);
-        }
-    }
-
-   public:
     template <concepts::ViewDerived V>
     void assign(const V& view)
         requires(
@@ -237,26 +226,7 @@ class SliceView
             extents_traits::template is_convertable_from<
                 typename uvl::views::detail::ViewTraits<V>::extents_type>())
     {
-        using VTraits = views::detail::ViewTraits<V>;
-        using layout_policy = uvl::default_layout_policy;
-        using accessor_policy = uvl::default_accessor_policy<value_type>;
-#if !defined(NDEBUG)
-        constexpr static bool assigning_from_infinite =
-            VTraits::extents_type::rank() == 0;
-
-        assert(assigning_from_infinite || extents() == view.extents());
-#endif
-        if constexpr (VTraits::is_coefficient_consistent) {
-            // TODO: check sizing
-            assign_direct(view);
-        } else {
-            uvl::storage::PlainObjectStorage<value_type, extents_type,
-                                             layout_policy, accessor_policy>
-                pos(extents_traits::convert_from(view.extents()));
-            pos.assign(view);
-            // TODO: check sizing
-            assign_direct(pos);
-        }
+        views::detail::AssignHelper<V, self_type>::assign(view, *this);
     }
 
    private:

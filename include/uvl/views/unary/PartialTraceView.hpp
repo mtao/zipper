@@ -2,8 +2,8 @@
 #if !defined(UVL_VIEWS_UNARY_PARTIALTRACEVIEW_HPP)
 #define UVL_VIEWS_UNARY_PARTIALTRACEVIEW_HPP
 
-#include <spdlog/spdlog.h>
 
+#include <spdlog/spdlog.h>
 #include "UnaryViewBase.hpp"
 #include "detail/invert_integer_sequence.hpp"
 #include "uvl/concepts/ViewDerived.hpp"
@@ -94,8 +94,7 @@ class PartialTraceView
                                          std::forward<Args>(idxs)...)...);
 
         DiagonalView<slice_type, true> diag(slice);
-        spdlog::info("Slice extents {}, diag extents {}", slice.extents(),
-                     diag.extents());
+        spdlog::info("Computing stuff! {}: {} {} {}", diag.extents(), diag(0), diag(1), diag(2));
         return reductions::CoefficientSum(diag)();
     }
 

@@ -53,15 +53,14 @@ struct wedge_coeffwise_extents_values<extents<A...>, extents<B...>> {
 }  // namespace detail
 template <typename A, typename B>
 struct detail::ViewTraits<binary::WedgeProductView<A, B>>
-    : public binary::detail::DefaultBinaryViewTraits<A, B>
-{
+    : public binary::detail::DefaultBinaryViewTraits<A, B> {
     using ATraits = views::detail::ViewTraits<A>;
     constexpr static rank_type lhs_rank = ATraits::extents_type::rank();
     using BTraits = views::detail::ViewTraits<B>;
     constexpr static rank_type rhs_rank = BTraits::extents_type::rank();
     using CEV =
         detail::wedge_coeffwise_extents_values<typename ATraits::extents_type,
-                                                typename BTraits::extents_type>;
+                                               typename BTraits::extents_type>;
 
     static_assert(std::is_same_v<typename CEV::a_extents_type,
                                  typename ATraits::extents_type>);
@@ -96,8 +95,7 @@ class WedgeProductView : public BinaryViewBase<WedgeProductView<A, B>, A, B> {
 
     WedgeProductView(const A& a, const B& b)
         requires(extents_traits::is_static)
-        : Base(a, b) {
-    }
+        : Base(a, b) {}
     WedgeProductView(const A& a, const B& b)
         requires(!extents_traits::is_static)
         : Base(a, b, traits::CEV::merge(a.extents(), b.extents())) {}
@@ -105,8 +103,8 @@ class WedgeProductView : public BinaryViewBase<WedgeProductView<A, B>, A, B> {
     template <bool DoOffset, typename... Args, rank_type... ranks>
     auto lhs_value(std::integer_sequence<rank_type, ranks...>,
                    Args&&... args) const -> decltype(auto) {
-        return lhs()(
-            uvl::detail::pack_index<ranks + (DoOffset ? rhs_rank : 0)>(std::forward<Args>(args)...)...);
+        return lhs()(uvl::detail::pack_index<ranks + (DoOffset ? rhs_rank : 0)>(
+            std::forward<Args>(args)...)...);
     }
     template <bool DoOffset, typename... Args, rank_type... ranks>
     auto rhs_value(std::integer_sequence<rank_type, ranks...>,
@@ -119,14 +117,18 @@ class WedgeProductView : public BinaryViewBase<WedgeProductView<A, B>, A, B> {
     value_type coeff(Args&&... args) const {
         // rvalue type stuff will be forwarded but not moved except for in one
         // place so forwarding twice shouldn't be an issue
-        return lhs_value<false>(std::make_integer_sequence<rank_type, lhs_rank>{},
-                         std::forward<Args>(args)...) *
-               rhs_value<true>(std::make_integer_sequence<rank_type, rhs_rank>{},
-                         std::forward<Args>(args)...);
+        return lhs_value<false>(
+                   std::make_integer_sequence<rank_type, lhs_rank>{},
+                   std::forward<Args>(args)...) *
+                   rhs_value<true>(
+                       std::make_integer_sequence<rank_type, rhs_rank>{},
+                       std::forward<Args>(args)...)
 
-         - lhs_value<true>(std::make_integer_sequence<rank_type, lhs_rank>{},
-                         std::forward<Args>(args)...) *
-               rhs_value<false>(std::make_integer_sequence<rank_type, rhs_rank>{},
+               - lhs_value<true>(
+                     std::make_integer_sequence<rank_type, lhs_rank>{},
+                     std::forward<Args>(args)...) *
+                     rhs_value<false>(
+                         std::make_integer_sequence<rank_type, rhs_rank>{},
                          std::forward<Args>(args)...);
     }
 

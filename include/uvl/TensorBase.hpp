@@ -3,6 +3,7 @@
 
 #include "UVLBase.hpp"
 #include "concepts/TensorBaseDerived.hpp"
+#include "detail/extents/static_extents_to_integral_sequence.hpp"
 #include "uvl/views/binary/TensorProductView.hpp"
 
 namespace uvl {
@@ -19,10 +20,12 @@ class TensorBase : public UVLBase<TensorBase, View> {
     using extents_traits = detail::ExtentsTraits<extents_type>;
 
     template <index_type... N>
-    auto eval(const extents<N...>&) const {
-        return Tensor<value_type, N...>(*this);
+    auto eval(const std::integer_sequence<index_type,N...>&) const
+        requires(std::is_same_v<extents<N...>, extents_type>)
+    {
+        return Tensor<value_type, N...>(this->view());
     }
-    auto eval() const { return eval(extents()); }
+    auto eval() const { return eval(detail::extents::static_extents_to_integral_sequence_t<extents_type>{}); }
 
     using Base::Base;
     using Base::operator=;
@@ -97,4 +100,5 @@ auto operator*(View1 const& lhs, View2 const& rhs) {
 }
 }  // namespace uvl
 
+#include "Tensor.hpp"
 #endif

@@ -12,7 +12,6 @@ namespace uvl {
 template <concepts::ViewDerived T>
 class ArrayBase;
 template <typename T, index_type... Indices>
-    requires(sizeof...(Indices) > 0)
 class Array;
 }  // namespace uvl
 namespace uvl::concepts {

@@ -10,7 +10,6 @@
 namespace uvl {
 
 template <typename ValueType, index_type... Dims>
-    requires(sizeof...(Dims) > 0)
 class Array
     : public ArrayBase<
           storage::PlainObjectStorage<ValueType, uvl::extents<Dims...>>> {
@@ -36,18 +35,6 @@ class Array
     Array(const uvl::extents<indices...>& e) : Base(e) {}
     using Base::operator=;
 
-    template <typename... Args>
-    const value_type& operator()(Args&&... idxs) const
-
-    {
-        return view()(std::forward<Args>(idxs)...);
-    }
-    template <typename... Args>
-    value_type& operator()(Args&&... idxs)
-
-    {
-        return view()(std::forward<Args>(idxs)...);
-    }
 };
 // template <concepts::ViewDerived MB>
 // Array(const MB& o)->typename MB::array_typeA;

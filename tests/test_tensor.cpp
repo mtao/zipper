@@ -6,8 +6,10 @@
 #include <catch2/catch_all.hpp>
 #include <iostream>
 #include <uvl/Tensor.hpp>
+#include <uvl/Vector.hpp>
 #include <uvl/TensorBase.hpp>
 #include <uvl/MatrixBase.hpp>
+#include <uvl/FormBase.hpp>
 #include <uvl/views/nullary/ConstantView.hpp>
 #include <uvl/views/nullary/IdentityView.hpp>
 #include <uvl/views/nullary/RandomView.hpp>
@@ -16,7 +18,7 @@
 
 namespace {
 
-void print(uvl::concepts::TensorBaseDerived auto const& M) {
+void print(auto const& M) {
     constexpr static uvl::rank_type rank =
         std::decay_t<decltype(M)>::extents_type::rank();
 
@@ -114,5 +116,62 @@ TEST_CASE("test_product", "[storage][tensor]") {
     CHECK(mM*mN == MN_tensor);
 
 
+
+}
+TEST_CASE("test_form_product", "[storage][tensor]") {
+
+    uvl::Vector<double,3> O;
+    O(0) = 1;
+    O(1) = 1;
+    O(2) = 1;
+
+    uvl::Vector<double,3> T;
+    T(0) = 0;
+    T(1) = 1;
+    T(2) = 1;
+    uvl::Vector<double,3> a = 
+        uvl::views::nullary::normal_random_infinite_view<double>(0, 1);
+    uvl::Vector<double,3> b = 
+        uvl::views::nullary::normal_random_infinite_view<double>(0, 1);
+    uvl::Vector<double,3> c = 
+        uvl::views::nullary::normal_random_infinite_view<double>(0, 1);
+
+    uvl::Vector<double,3> x = 
+        uvl::views::nullary::normal_random_infinite_view<double>(0, 1);
+    uvl::Vector<double,3> y = 
+        uvl::views::nullary::normal_random_infinite_view<double>(0, 1);
+    uvl::Vector<double,3> z = 
+        uvl::views::nullary::normal_random_infinite_view<double>(0, 1);
+
+    auto AB = (a.as_tensor() * b.as_tensor()).eval();
+
+    auto XY= (x.as_form() * y.as_form()).eval();
+
+    spdlog::warn("Tensor:");
+    print(AB);
+    spdlog::warn("Form:");
+    print(XY);
+
+    spdlog::warn("PRODUCT:");
+    print(XY * a);
+    spdlog::warn("PRODUCT PRODUCT  should be near 0:");
+    double M = (XY * O * O).eval();
+    spdlog::info("Otput: {}", M);
+
+    spdlog::warn("PRODUCT PRODUCT  should be otherwise:");
+    double M2 = (XY * O * T).eval();
+    spdlog::info("Otput: {}", M2);
+    //print();
+
+
+
+    auto ABC = a.as_tensor() * b.as_tensor() * c.as_tensor();
+
+    auto XYZ = x.as_form() * y.as_form() * z.as_form();
+
+    spdlog::warn("Tensor:");
+    print(ABC);
+    spdlog::warn("Form:");
+    print(XYZ);
 
 }

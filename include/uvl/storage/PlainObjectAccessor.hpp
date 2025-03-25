@@ -6,8 +6,11 @@
 
 #include "uvl/detail//ExtentsTraits.hpp"
 namespace uvl::storage {
-template <typename ValueType, std::size_t N>
+template <typename ValueType, std::size_t N_>
 class StaticValueAccessor {
+    constexpr static std::size_t N = std::max<std::size_t>(
+        N_, 1);  // if we have empty extents we have a scalar
+
    public:
     using value_type = ValueType;
     constexpr static auto size() -> std::size_t { return N; }
@@ -38,6 +41,7 @@ class DynamicValueAccessor {
 
     const auto& container() const { return m_data; }
     auto& container() { return m_data; }
+
    private:
     std::vector<value_type> m_data;
 };

@@ -72,8 +72,31 @@ class ViewBase {
     auto operator()(Args&&... idxs) const -> decltype(auto)
 
     {
-        if constexpr (sizeof...(Args) == 1 &&
-                      (concepts::ViewAccessTuple<std::decay_t<Args>> && ...)) {
+        if constexpr (extents_type::rank() == 0) {
+            if constexpr (sizeof...(Args) == 0) {
+                decltype(auto) v = access_index_pack();
+                static_assert(!std::is_void_v<std::decay_t<decltype(v)>>);
+                return v;
+            } else {
+                static_assert(sizeof...(Args) == 1);
+                static_assert((concepts::TupleLike<std::decay_t<Args>> && ...));
+
+                if constexpr (((std::tuple_size_v<std::decay_t<Args>> == 0) &&
+                               ... && true)) {
+                    decltype(auto) v = access_index_pack();
+                    static_assert(!std::is_void_v<std::decay_t<decltype(v)>>);
+                    return v;
+                } else {
+                    decltype(auto) v =
+                        access_tuple(std::forward<Args>(idxs)...);
+                    static_assert(!std::is_void_v<std::decay_t<decltype(v)>>);
+                    return v;
+                }
+            }
+
+        } else if constexpr (sizeof...(Args) == 1 &&
+                             (concepts::ViewAccessTuple<std::decay_t<Args>> &&
+                              ...)) {
             decltype(auto) v = access_tuple(std::forward<Args>(idxs)...);
             static_assert(!std::is_void_v<std::decay_t<decltype(v)>>);
             return v;
@@ -88,8 +111,31 @@ class ViewBase {
         requires(is_writable)
 
     {
-        if constexpr (sizeof...(Args) == 1 &&
-                      (concepts::ViewAccessTuple<std::decay_t<Args>> && ...)) {
+        if constexpr (extents_type::rank() == 0) {
+            if constexpr (sizeof...(Args) == 0) {
+                decltype(auto) v = access_index_pack();
+                static_assert(!std::is_void_v<std::decay_t<decltype(v)>>);
+                return v;
+            } else {
+                static_assert(sizeof...(Args) == 1);
+                static_assert((concepts::TupleLike<std::decay_t<Args>> && ...));
+
+                if constexpr (((std::tuple_size_v<std::decay_t<Args>> == 0) &&
+                               ... && true)) {
+                    decltype(auto) v = access_index_pack();
+                    static_assert(!std::is_void_v<std::decay_t<decltype(v)>>);
+                    return v;
+                } else {
+                    decltype(auto) v =
+                        access_tuple(std::forward<Args>(idxs)...);
+                    static_assert(!std::is_void_v<std::decay_t<decltype(v)>>);
+                    return v;
+                }
+            }
+
+        } else if constexpr (sizeof...(Args) == 1 &&
+                             (concepts::ViewAccessTuple<std::decay_t<Args>> &&
+                              ...)) {
             decltype(auto) v = access_tuple(std::forward<Args>(idxs)...);
             static_assert(!std::is_void_v<std::decay_t<decltype(v)>>);
             return v;
