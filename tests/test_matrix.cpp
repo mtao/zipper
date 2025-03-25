@@ -309,23 +309,23 @@ TEST_CASE("test_partial_trace_matrix", "[matrix][storage][dense]") {
     CHECK(empty_partial_trace == N);
     }
 
-    uvl::VectorBase first_row_trace =
-        uvl::views::unary::PartialTraceView<std::decay_t<decltype(N.view())>,
-                                            0>(N.view());
+    //uvl::VectorBase first_row_trace =
+    //    uvl::views::unary::PartialTraceView<std::decay_t<decltype(N.view())>,
+    //                                        0>(N.view());
 
-    spdlog::info("slice first row  of n:");
-    print(first_row_trace);
-    print(N.row(0));
-    CHECK(first_row_trace == N.row(0));
+    //spdlog::info("slice first row  of n:");
+    //print(first_row_trace);
+    //print(N.row(0));
+    //CHECK(first_row_trace == N.row(0));
 
-    uvl::VectorBase first_col_trace =
-        uvl::views::unary::PartialTraceView<std::decay_t<decltype(N.view())>,
-                                            1>(N.view());
-    spdlog::info("slice first col of n:");
-    print(first_col_trace);
-    print(N.col(0));
+    //uvl::VectorBase first_col_trace =
+    //    uvl::views::unary::PartialTraceView<std::decay_t<decltype(N.view())>,
+    //                                        1>(N.view());
+    //spdlog::info("slice first col of n:");
+    //print(first_col_trace);
+    //print(N.col(0));
 
-    CHECK(first_col_trace == N.col(0));
+    //CHECK(first_col_trace == N.col(0));
     print(N);
     CHECK(N.trace() == 3);
     N(0, 0) = 2;

@@ -36,8 +36,8 @@ class UVLBase {
     View& view() { return m_view; }
     const extents_type& extents() const { return view().extents(); }
     constexpr index_type extent(rank_type i) const { return m_view.extent(i); }
-    template <typename... Args>
-    UVLBase(Args&&... v) : m_view(std::forward<Args>(v)...) {}
+    // template <typename... Args>
+    // UVLBase(Args&&... v) : m_view(std::forward<Args>(v)...) {}
 
     UVLBase(View&& v) : m_view(v) {}
     UVLBase(const View& v) : m_view(v) {}
@@ -45,8 +45,10 @@ class UVLBase {
         m_view = v;
         return derived();
     }
-    
-    operator value_type() const requires(extents_type::rank() == 0) {
+
+    operator value_type() const
+        requires(extents_type::rank() == 0)
+    {
         return (*this)();
     }
 

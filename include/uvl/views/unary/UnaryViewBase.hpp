@@ -50,8 +50,8 @@ class UnaryViewBase : public views::ViewBase<Derived> {
 
     UnaryViewBase(const UnaryViewBase&) = default;
     UnaryViewBase(UnaryViewBase&&) = default;
-    UnaryViewBase& operator=(const UnaryViewBase&) = default;
-    UnaryViewBase& operator=(UnaryViewBase&&) = default;
+    UnaryViewBase& operator=(const UnaryViewBase&) = delete;
+    UnaryViewBase& operator=(UnaryViewBase&&) = delete;
     UnaryViewBase(const ChildType& b) : m_view(b) {}
 
     constexpr const extents_type& extents() const { return m_view.extents(); }

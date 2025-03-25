@@ -18,13 +18,11 @@ class Any {
 
     Any(View&& v) : m_view(v) {}
     Any(const View& v) : m_view(v) {}
-    Any& operator=(View&& v) { m_view = v; }
-    Any& operator=(const View& v) { m_view = v; }
 
     Any(Any&& v) = default;
     Any(const Any& v) = default;
-    Any& operator=(Any&& v) = default;
-    Any& operator=(const Any& v) = default;
+    Any& operator=(Any&& v) = delete;
+    Any& operator=(const Any& v) = delete;
 
     value_type operator()() const {
         for (const auto& i :

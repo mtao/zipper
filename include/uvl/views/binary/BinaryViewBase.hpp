@@ -56,8 +56,8 @@ class BinaryViewBase
 
     BinaryViewBase(const BinaryViewBase&) = default;
     BinaryViewBase(BinaryViewBase&&) = default;
-    BinaryViewBase& operator=(const BinaryViewBase&) = default;
-    BinaryViewBase& operator=(BinaryViewBase&&) = default;
+    BinaryViewBase& operator=(const BinaryViewBase&) = delete;
+    BinaryViewBase& operator=(BinaryViewBase&&) = delete;
     BinaryViewBase(const ChildTypeA& a, const ChildTypeB& b)
         requires(!holds_extents || is_static)
         : m_lhs(a), m_rhs(b) {}

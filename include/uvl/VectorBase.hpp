@@ -7,9 +7,9 @@
 #include "concepts/VectorViewDerived.hpp"
 //
 #include "ArrayBase.hpp"
+#include "FormBase.hpp"
 #include "MatrixBase.hpp"
 #include "TensorBase.hpp"
-#include "FormBase.hpp"
 #include "views/reductions/CoefficientSum.hpp"
 #include "views/unary/IdentityView.hpp"
 
@@ -143,15 +143,18 @@ bool operator!=(View1 const& lhs, View2 const& rhs) {
 }
 template <concepts::VectorBaseDerived View>
 auto operator*(View const& lhs, typename View::value_type const& rhs) {
-    return VectorBase<views::unary::ScalarMultipliesView<
-        typename View::value_type, typename View::view_type, true>>(lhs.view(),
-                                                                    rhs);
+    using V =
+        views::unary::ScalarMultipliesView<typename View::value_type,
+                                           typename View::view_type, true>;
+    return VectorBase<V>(V(lhs.view(), rhs));
 }
 template <concepts::VectorBaseDerived View>
 auto operator*(typename View::value_type const& lhs, View const& rhs) {
-    return VectorBase<views::unary::ScalarMultipliesView<
-        typename View::value_type, typename View::view_type, false>>(
-        lhs, rhs.view());
+    using V =
+        views::unary::ScalarMultipliesView<typename View::value_type,
+                                           typename View::view_type, false>;
+    return VectorBase<V>(V(lhs, rhs.view()));
 }
+
 }  // namespace uvl
 #endif

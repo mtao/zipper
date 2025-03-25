@@ -2,8 +2,9 @@
 #if !defined(UVL_VIEWS_UNARY_PARTIALTRACEVIEW_HPP)
 #define UVL_VIEWS_UNARY_PARTIALTRACEVIEW_HPP
 
-
 #include <spdlog/spdlog.h>
+
+#include "DiagonalView.hpp"
 #include "UnaryViewBase.hpp"
 #include "detail/invert_integer_sequence.hpp"
 #include "uvl/concepts/ViewDerived.hpp"
@@ -11,15 +12,15 @@
 #include "uvl/detail/extents/static_extents_to_array.hpp"
 #include "uvl/detail/pack_index.hpp"
 #include "uvl/views/DimensionedViewBase.hpp"
-#include "DiagonalView.hpp"
 
 namespace uvl::views {
 namespace unary {
-template <concepts::ViewDerived ViewType, index_type... Indices>
+template <concepts::ViewDerived ViewType, rank_type... Indices>
+requires(sizeof...(Indices) % 2 == 0)
 class PartialTraceView;
 
 }
-template <concepts::ViewDerived ViewType, index_type... Indices>
+template <concepts::ViewDerived ViewType, rank_type... Indices>
 struct detail::ViewTraits<unary::PartialTraceView<ViewType, Indices...>>
     : public uvl::views::unary::detail::DefaultUnaryViewTraits<
           ViewType, DimensionedViewBase> {
@@ -39,8 +40,9 @@ struct detail::ViewTraits<unary::PartialTraceView<ViewType, Indices...>>
 
 namespace unary {
 // indices are the indices being traced
-template <concepts::ViewDerived ViewType, index_type... Indices>
-class PartialTraceView
+template <concepts::ViewDerived ViewType, rank_type... Indices>
+requires(sizeof...(Indices) % 2 == 0)
+class PartialTraceView 
     : public UnaryViewBase<PartialTraceView<ViewType, Indices...>, ViewType> {
    public:
     using self_type = PartialTraceView<ViewType, Indices...>;
@@ -51,9 +53,11 @@ class PartialTraceView
     using Base::extent;
     using Base::view;
 
-    PartialTraceView(const PartialTraceView&) = default;
-    PartialTraceView(PartialTraceView&&) = default;
-    PartialTraceView(const ViewType& b) : Base(b) {}
+    PartialTraceView(const PartialTraceView& o): PartialTraceView(o.view()) {
+    }
+    PartialTraceView(PartialTraceView&& o): PartialTraceView(o.view()) {
+    }
+    PartialTraceView(const ViewType& b) : Base(b), m_extents(traits::index_remover::get_extents(b.extents())) {}
     //: Base(b), m_extents(swizzler_type::swizzle_extents(b.extents())) {}
 
     constexpr const extents_type& extents() const { return m_extents; }
@@ -65,7 +69,7 @@ class PartialTraceView
         using type =
             SliceView<ViewType, true,
                       std::conditional_t<traits::index_remover::in_sequence(N),
-                                         index_type, full_extent_type>...>;
+                                         rank_type, full_extent_type>...>;
     };
 
     using slice_type = slice_type_<std::decay_t<
@@ -93,8 +97,11 @@ class PartialTraceView
             slice_type(view(), get_index(std::integral_constant<rank_type, N>{},
                                          std::forward<Args>(idxs)...)...);
 
+
         DiagonalView<slice_type, true> diag(slice);
-        spdlog::info("Computing stuff! {}: {} {} {}", diag.extents(), diag(0), diag(1), diag(2));
+        // spdlog::info("Computing stuff! {}: {} {} {}", diag.extents(),
+        // diag(0),
+        //              diag(1), diag(2));
         return reductions::CoefficientSum(diag)();
     }
 

@@ -51,8 +51,8 @@ class SwizzleView
 
     SwizzleView(const SwizzleView&) = default;
     SwizzleView(SwizzleView&&) = default;
-    SwizzleView& operator=(const SwizzleView&) = default;
-    SwizzleView& operator=(SwizzleView&&) = default;
+    SwizzleView& operator=(const SwizzleView&) = delete;
+    SwizzleView& operator=(SwizzleView&&) = delete;
     SwizzleView(const ViewType& b)
         : Base(b), m_extents(swizzler_type::swizzle_extents(b.extents())) {}
 

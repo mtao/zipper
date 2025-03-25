@@ -18,13 +18,11 @@ class CoefficientSum {
 
     CoefficientSum(View&& v) : m_view(v) {}
     CoefficientSum(const View& v) : m_view(v) {}
-    CoefficientSum& operator=(View&& v) { m_view = v; }
-    CoefficientSum& operator=(const View& v) { m_view = v; }
 
     CoefficientSum(CoefficientSum&& v) = default;
     CoefficientSum(const CoefficientSum& v) = default;
-    CoefficientSum& operator=(CoefficientSum&& v) = default;
-    CoefficientSum& operator=(const CoefficientSum& v) = default;
+    CoefficientSum& operator=(CoefficientSum&& v) = delete;
+    CoefficientSum& operator=(const CoefficientSum& v) = delete;
 
     value_type operator()() const {
         value_type v = 0.0;

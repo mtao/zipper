@@ -44,10 +44,9 @@ class UnitView : public DimensionedViewBase<UnitView<T, Extent, IndexType>> {
         requires(extents_traits::is_static && dynamic_index)
     = default;
 
-    UnitView(const index_type size)
-        : m_extents(extent)
-              requires(dynamic_size && !dynamic_index)
-    {}
+    UnitView(const index_type index)
+        requires(!dynamic_size && dynamic_index)
+        : m_index(index) {}
     UnitView(const index_type extent, IndexType index)
         : m_extents(extent), m_index(index) {}
     using Base = DimensionedViewBase<self_type>;
@@ -55,13 +54,12 @@ class UnitView : public DimensionedViewBase<UnitView<T, Extent, IndexType>> {
 
     constexpr const extents_type& extents() const { return m_extents; }
 
-    template <typename... Args>
-    value_type coeff(Args&&... idxs) const {
-        if constexpr (sizeof...(Args) == 1 &&
-                      (concepts::TupleLike<Args> && ...)) {
-            return (std::get<0>(idxs) == m_index && ...);
+    template <typename T_>
+    value_type coeff(const T_& idx) const {
+        if (idx == m_index) {
+            return 1;
         } else {
-            return ((idxs == m_index) && ...);
+            return 0;
         }
     }
 
@@ -80,8 +78,10 @@ auto unit_vector(index_type size, index_type index) {
 }
 
 template <typename T, index_type size>
-auto unit_vector(index_type index) requires(size != std::dynamic_extent>{
-    return UnitView<T, size, index_type>{index};
+auto unit_vector(index_type index)
+    requires(size != std::dynamic_extent)
+{
+    return UnitView<T, size, index_type>(index);
 }
 
 }  // namespace nullary

@@ -189,27 +189,32 @@ auto operator!=(View1 const& lhs, View2 const& rhs) {
 
 template <concepts::MatrixBaseDerived View1, concepts::MatrixBaseDerived View2>
 auto operator*(View1 const& lhs, View2 const& rhs) {
-    return MatrixBase<views::binary::MatrixProductView<
-        typename View1::view_type, typename View2::view_type>>(lhs.view(),
-                                                               rhs.view());
+    using V = views::binary::MatrixProductView<typename View1::view_type,
+                                               typename View2::view_type>;
+    return MatrixBase<V>(V(lhs.view(), rhs.view()));
 }
 
 template <concepts::MatrixBaseDerived View>
 auto operator*(View const& lhs, typename View::value_type const& rhs) {
-    return MatrixBase<views::unary::ScalarMultipliesView<
-        typename View::value_type, typename View::view_type, true>>(lhs.view(), rhs);
+    using V =
+        views::unary::ScalarMultipliesView<typename View::value_type,
+                                           typename View::view_type, true>;
+    return MatrixBase<V>(V(lhs.view(), rhs));
 }
 template <concepts::MatrixBaseDerived View>
 auto operator*(typename View::value_type const& lhs, View const& rhs) {
-    return MatrixBase<views::unary::ScalarMultipliesView<
-        typename View::value_type,typename View::view_type, false>>(lhs, rhs.view());
+    using V =
+        views::unary::ScalarMultipliesView<typename View::value_type,
+                                           typename View::view_type, false>;
+    return MatrixBase<V>(V(lhs, rhs.view()));
 }
 
 template <concepts::MatrixBaseDerived View1, concepts::VectorBaseDerived View2>
 auto operator*(View1 const& lhs, View2 const& rhs) {
-    return VectorBase<views::binary::MatrixVectorProductView<
-        typename View1::view_type, typename View2::view_type>>(lhs.view(),
-                                                               rhs.view());
+    using V = views::binary::MatrixVectorProductView<typename View1::view_type,
+                                                     typename View2::view_type>;
+
+    return VectorBase<V>(V(lhs.view(), rhs.view()));
 }
 
 }  // namespace uvl

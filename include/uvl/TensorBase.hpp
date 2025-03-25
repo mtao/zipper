@@ -20,12 +20,15 @@ class TensorBase : public UVLBase<TensorBase, View> {
     using extents_traits = detail::ExtentsTraits<extents_type>;
 
     template <index_type... N>
-    auto eval(const std::integer_sequence<index_type,N...>&) const
+    auto eval(const std::integer_sequence<index_type, N...>&) const
         requires(std::is_same_v<extents<N...>, extents_type>)
     {
         return Tensor<value_type, N...>(this->view());
     }
-    auto eval() const { return eval(detail::extents::static_extents_to_integral_sequence_t<extents_type>{}); }
+    auto eval() const {
+        return eval(detail::extents::static_extents_to_integral_sequence_t<
+                    extents_type>{});
+    }
 
     using Base::Base;
     using Base::operator=;
@@ -94,9 +97,9 @@ BINARY_DECLARATION(TensorBase, Minus, operator-)
 
 template <concepts::TensorBaseDerived View1, concepts::TensorBaseDerived View2>
 auto operator*(View1 const& lhs, View2 const& rhs) {
-    return TensorBase<views::binary::TensorProductView<
-        typename View1::view_type, typename View2::view_type>>(lhs.view(),
-                                                               rhs.view());
+    using V = views::binary::TensorProductView<typename View1::view_type,
+                                               typename View2::view_type>;
+    return TensorBase<V>(V(lhs.view(), rhs.view()));
 }
 }  // namespace uvl
 

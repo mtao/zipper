@@ -95,8 +95,11 @@ class DiagonalView
         return const_cast<ViewType&>(Base::view());
     }
 
-    DiagonalView(const DiagonalView&) = default;
-    DiagonalView(DiagonalView&&) = default;
+    DiagonalView(const DiagonalView& o): DiagonalView(o.view()) {}
+    DiagonalView(DiagonalView&&o): DiagonalView(o.view()) {}
+
+    DiagonalView& operator=(const DiagonalView&) = delete;
+    DiagonalView& operator=(DiagonalView&&) = delete;
     DiagonalView(const ViewType& b)
         : Base(b), m_extents(traits::get_extents(b.extents())) {}
 

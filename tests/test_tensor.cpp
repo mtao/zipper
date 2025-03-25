@@ -4,6 +4,7 @@
 #include <spdlog/spdlog.h>
 
 #include <catch2/catch_all.hpp>
+#include <uvl/views/nullary/UnitView.hpp>
 #include <iostream>
 #include <uvl/Tensor.hpp>
 #include <uvl/Vector.hpp>
@@ -125,6 +126,34 @@ TEST_CASE("test_form_product", "[storage][tensor]") {
     O(1) = 1;
     O(2) = 1;
 
+    uvl::Vector<double,3> E0 = uvl::views::nullary::unit_vector<double,3>(0);
+    uvl::Vector<double,3> E1 = uvl::views::nullary::unit_vector<double,3>(1);
+    uvl::Vector<double,3> E2 = uvl::views::nullary::unit_vector<double,3>(2);
+
+    uvl::Form<double,3> D0 = uvl::views::nullary::unit_vector<double,3>(0);
+    uvl::Form<double,3> D1 = uvl::views::nullary::unit_vector<double,3>(1);
+    uvl::Form<double,3> D2 = uvl::views::nullary::unit_vector<double,3>(2);
+
+    spdlog::warn("Identity matrix products");
+    auto E = (D0*E0).eval();
+    spdlog::info("E extents: {} {}", E.extents(), double(E));
+
+    spdlog::info("{} {} {}", 
+            double(D0*E0),
+            double(D1*E0),
+            double(D2*E0));
+
+    spdlog::info("{} {} {}", 
+            double(D0*E1),
+            double(D1*E1),
+            double(D2*E1));
+
+
+    spdlog::info("{} {} {}", 
+            double(D0*E2),
+            double(D1*E2),
+            double(D2*E2));
+
     uvl::Vector<double,3> T;
     T(0) = 0;
     T(1) = 1;
@@ -143,6 +172,10 @@ TEST_CASE("test_form_product", "[storage][tensor]") {
     uvl::Vector<double,3> z = 
         uvl::views::nullary::normal_random_infinite_view<double>(0, 1);
 
+
+    spdlog::warn("Dot product {}", double(O.as_form() * O));
+
+
     auto AB = (a.as_tensor() * b.as_tensor()).eval();
 
     auto XY= (x.as_form() * y.as_form()).eval();
@@ -151,15 +184,19 @@ TEST_CASE("test_form_product", "[storage][tensor]") {
     print(AB);
     spdlog::warn("Form:");
     print(XY);
+    spdlog::info("Contracted should be: {} got {}",
+            double(y.as_form() * b.as_tensor()) * 
+            double(x.as_form() * c.as_tensor())
+            ,double(XY * AB));
 
     spdlog::warn("PRODUCT:");
     print(XY * a);
     spdlog::warn("PRODUCT PRODUCT  should be near 0:");
-    double M = (XY * O * O).eval();
+    double M = ((XY * O).eval() * O).eval();
     spdlog::info("Otput: {}", M);
 
     spdlog::warn("PRODUCT PRODUCT  should be otherwise:");
-    double M2 = (XY * O * T).eval();
+    double M2 = ((XY * O).eval() * T).eval();
     spdlog::info("Otput: {}", M2);
     //print();
 
@@ -173,5 +210,11 @@ TEST_CASE("test_form_product", "[storage][tensor]") {
     print(ABC);
     spdlog::warn("Form:");
     print(XYZ);
+
+    spdlog::info("Contracted should be: {} got {}",
+            double(z.as_form() * a.as_tensor()) * 
+            double(y.as_form() * b.as_tensor()) * 
+            double(x.as_form() * c.as_tensor())
+            ,double(XYZ * ABC));
 
 }

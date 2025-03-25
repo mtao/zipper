@@ -4,10 +4,10 @@
 #include "UVLBase.hpp"
 #include "concepts/FormBaseDerived.hpp"
 #include "concepts/TensorBaseDerived.hpp"
-#include "detail/extents/static_extents_to_integral_sequence.hpp"
 #include "concepts/VectorBaseDerived.hpp"
-#include "uvl/views/binary/WedgeProductView.hpp"
+#include "detail/extents/static_extents_to_integral_sequence.hpp"
 #include "uvl/views/binary/FormTensorProductView.hpp"
+#include "uvl/views/binary/WedgeProductView.hpp"
 
 namespace uvl {
 
@@ -23,12 +23,15 @@ class FormBase : public UVLBase<FormBase, View> {
     using extents_traits = detail::ExtentsTraits<extents_type>;
 
     template <index_type... N>
-    auto eval(const std::integer_sequence<index_type,N...>&) const
+    auto eval(const std::integer_sequence<index_type, N...>&) const
         requires(std::is_same_v<extents<N...>, extents_type>)
     {
         return Form<value_type, N...>(this->view());
     }
-    auto eval() const { return eval(detail::extents::static_extents_to_integral_sequence_t<extents_type>{}); }
+    auto eval() const {
+        return eval(detail::extents::static_extents_to_integral_sequence_t<
+                    extents_type>{});
+    }
 
     using Base::Base;
     using Base::operator=;
@@ -97,30 +100,33 @@ BINARY_DECLARATION(FormBase, Minus, operator-)
 
 template <concepts::FormBaseDerived View1, concepts::FormBaseDerived View2>
 auto operator*(View1 const& lhs, View2 const& rhs) {
-    return FormBase<views::binary::WedgeProductView<
-        typename View1::view_type, typename View2::view_type>>(lhs.view(),
-                                                               rhs.view());
+    using V = views::binary::WedgeProductView<typename View1::view_type,
+                                              typename View2::view_type>;
+    return FormBase<V>(V(lhs.view(), rhs.view()));
 }
 
 template <concepts::FormBaseDerived View1, concepts::TensorBaseDerived View2>
 auto operator*(View1 const& lhs, View2 const& rhs) {
-    return FormBase<views::binary::FormTensorProductView<
-        typename View1::view_type, typename View2::view_type>>(lhs.view(),
-                                                               rhs.view());
+    using V = views::binary::FormTensorProductView<typename View1::view_type,
+                                                   typename View2::view_type>;
+
+    return FormBase<V>(V(lhs.view(), rhs.view()));
 }
 template <concepts::FormBaseDerived View1, concepts::VectorBaseDerived View2>
 auto operator*(View1 const& lhs, View2 const& rhs) {
-    using TV = views::binary::TensorProductView<typename View1::view_type, typename View2::view_type>;
-    using R = views::unary::PartialTraceView<
-TV, View1::extents_type::rank()-1, View1::extents_type::rank()>;
+    // using TV = views::binary::TensorProductView<typename View1::view_type,
+    //                                             typename View2::view_type>;
+    // using R =
+    //     views::unary::PartialTraceView<TV, View1::extents_type::rank() - 1,
+    //                                    View1::extents_type::rank()>;
 
-    TV t(lhs.view(), rhs.view());
-    R r(t);
-    return FormBase<R>(t);
-    //unary::PartialTraceView<binary::TensorProductView<A,B>> m_trace;
-    //return FormBase<views::binary::FormTensorProductView<
-    //    typename View1::view_type, typename View2::view_type>>(lhs.view(),
-    //                                                           rhs.view());
+    using V = views::binary::FormTensorProductView<typename View1::view_type,
+                                                   typename View2::view_type>;
+    return FormBase<V>(V(lhs.view(), rhs.view()));
+
+    // TV t(lhs.view(), rhs.view());
+    // R r(t);
+    // return FormBase<R>(t).eval();
 }
 
 }  // namespace uvl
