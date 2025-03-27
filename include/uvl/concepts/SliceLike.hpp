@@ -1,7 +1,11 @@
 #if !defined(UVL_CONCEPTS_SLICELIKE_HPP)
 #define UVL_CONCEPTS_SLICELIKE_HPP
 #include "IndexLike.hpp"
+#include "IndexList.hpp"
 #include "uvl/types.hpp"
+#include <vector>
+#include <array>
+#include <map>
 
 namespace uvl::concepts {
 
@@ -15,6 +19,12 @@ struct slice_like<slice_type<OffsetType, ExtentType, StrideType>>
 
 template <>
 struct slice_like<full_extent_type> : public std::true_type {};
+
+template <IndexList L>
+struct slice_like<L> : public std::true_type {};
+
+template <typename T>
+struct slice_like<std::initializer_list<T>> : public std::true_type {};
 
 }  // namespace detail
 

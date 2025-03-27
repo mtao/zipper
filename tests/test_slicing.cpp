@@ -224,3 +224,25 @@ TEST_CASE("test_matrix_slicing", "[extents][matrix][slice]") {
 TEST_CASE("test_partial_slice", "[extents][tensor][slice]") {
     spdlog::info("Manipulating MN: ");
 }
+
+TEST_CASE("test_vector_index", "[extents][vector][slice]") {
+    uvl::Vector x = uvl::views::nullary::normal_random_view<double>(
+        uvl::extents<4>{}, 0, 20);
+
+    using T = std::decay_t<decltype(std::initializer_list{0, 2})>;
+    static_assert(uvl::concepts::SliceLike<T>);
+    static_assert(uvl::concepts::SlicePackLike<T>);
+    static_assert(!uvl::concepts::IndexPackLike<T>);
+    auto vec = std::vector<uvl::index_type>{0, 1};
+
+    REQUIRE(std::experimental::detail::first_of(vec) == 0);
+    REQUIRE(std::experimental::detail::first_of(
+                std::integral_constant<uvl::index_type, 3>{}) == 3);
+
+    auto sub = std::experimental::submdspan_extents(uvl::extents<4>{}, vec);
+
+    // auto s = x(std::vector<uvl::index_type>{0, 2});
+    //// auto s = x(std::initializer_list<uvl::index_type>{0, 2});
+    // CHECK(s(0) == x(0));
+    // CHECK(s(1) == x(2));
+}

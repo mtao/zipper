@@ -4,6 +4,7 @@
 #include "UnaryViewBase.hpp"
 #include "uvl/concepts/SlicePackLike.hpp"
 #include "uvl/concepts/ViewDerived.hpp"
+#include "uvl/detail/extents/indexed_stl_extent.hpp"
 #include "uvl/detail/is_integral_constant.hpp"
 #include "uvl/detail/pack_index.hpp"
 #include "uvl/storage/PlainObjectStorage.hpp"
@@ -86,7 +87,9 @@ class SliceView
     using view_extents_type = view_traits::extents_type;
     using extents_traits = uvl::detail::ExtentsTraits<extents_type>;
 
-    using slice_storage_type = std::tuple<Slices...>;
+    using slice_storage_type = std::tuple<std::conditional_t<
+        std::is_same_v<std::decay_t<Slices>, std::initializer_list<index_type>>,
+        std::vector<index_type>, Slices>...>;
 
     constexpr static std::array<rank_type, view_extents_type::rank()>
         actionable_indices = traits::actionable_indices;
@@ -149,6 +152,10 @@ class SliceView
             const auto& v =
                 uvl::detail::pack_index<actionable_indices[K]>(a...);
             return v;
+        } else if constexpr (concepts::IndexList<decltype(s)>) {
+            const auto& v =
+                uvl::detail::pack_index<actionable_indices[K]>(a...);
+            return s.at(v);
         } else {
             constexpr index_type start = std::experimental::detail::first_of(s);
             constexpr index_type stride =
