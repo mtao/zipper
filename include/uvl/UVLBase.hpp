@@ -111,7 +111,6 @@ class UVLBase {
     template <typename... Args>
     auto operator()(Args&&... idxs) -> decltype(auto)
         requires(view_traits::is_writable)
-
     {
         return view()(std::forward<Args>(idxs)...);
     }

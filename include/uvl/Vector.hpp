@@ -34,18 +34,6 @@ class Vector : public VectorBase<
     Vector(const uvl::extents<indices...>& e) : Base(e) {}
     using Base::operator=;
 
-    template <typename... Args>
-    const value_type& operator()(Args&&... idxs) const
-
-    {
-        return view()(std::forward<Args>(idxs)...);
-    }
-    template <typename... Args>
-    value_type& operator()(Args&&... idxs)
-
-    {
-        return view()(std::forward<Args>(idxs)...);
-    }
 };
 
 template <concepts::VectorViewDerived MB>
