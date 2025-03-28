@@ -47,6 +47,7 @@ class UnaryViewBase : public views::ViewBase<Derived> {
         return static_cast<const Derived&>(*this);
     }
     using child_value_type = traits::base_value_type;
+    UnaryViewBase() = delete;
 
     UnaryViewBase(const UnaryViewBase&) = default;
     UnaryViewBase(UnaryViewBase&&) = default;

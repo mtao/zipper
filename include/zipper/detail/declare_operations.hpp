@@ -1,7 +1,7 @@
 #if !defined(ZIPPER_DETAIL_DECLARE_OPERATIONS_HPP)
 #define ZIPPER_DETAIL_DECLARE_OPERATIONS_HPP
 
-#include "zipper/concepts/ZIPPERBaseDerived.hpp"
+#include "zipper/concepts/ZipperBaseDerived.hpp"
 #include "zipper/concepts/ViewDerived.hpp"
 #include "zipper/views/binary/detail/operation_implementations.hpp"
 #include "zipper/views/unary/detail/operation_implementations.hpp"
@@ -10,7 +10,7 @@
     template <concepts::BASETYPE##Derived ViewType, typename Scalar>      \
         requires(!concepts::BASETYPE##Derived<Scalar> &&                  \
                  std::is_scalar_v<Scalar> && \
-                 !concepts::ZIPPERBaseDerived<Scalar>)                       \
+                 !concepts::ZipperBaseDerived<Scalar>)                       \
     auto OP(const ViewType& a, const Scalar& b) {                         \
         return views::unary::detail::operation_implementation<            \
             views::unary::Scalar##NAME##View, zipper::BASETYPE,              \
@@ -19,7 +19,7 @@
     template <concepts::BASETYPE##Derived ViewType, typename Scalar>      \
         requires(!concepts::BASETYPE##Derived<Scalar> &&                  \
                  std::is_scalar_v<Scalar> && \
-                 !concepts::ZIPPERBaseDerived<Scalar>)                       \
+                 !concepts::ZipperBaseDerived<Scalar>)                       \
     auto OP(const Scalar& a, const ViewType& b) {                         \
         return views::unary::detail::operation_implementation<            \
             views::unary::Scalar##NAME##View, zipper::BASETYPE,              \

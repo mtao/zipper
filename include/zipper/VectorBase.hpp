@@ -2,7 +2,7 @@
 #if !defined(ZIPPER_VECTORBASE_HPP)
 #define ZIPPER_VECTORBASE_HPP
 
-#include "ZIPPERBase.hpp"
+#include "ZipperBase.hpp"
 #include "concepts/VectorBaseDerived.hpp"
 #include "concepts/VectorViewDerived.hpp"
 //
@@ -18,7 +18,7 @@ template <typename ValueType, index_type Rows>
 class Vector;
 
 template <concepts::ViewDerived View>
-class VectorBase : public ZIPPERBase<VectorBase, View> {
+class VectorBase : public ZipperBase<VectorBase, View> {
    public:
     VectorBase() = default;
 
@@ -28,7 +28,7 @@ class VectorBase : public ZIPPERBase<VectorBase, View> {
     using traits = zipper::views::detail::ViewTraits<view_type>;
     using extents_traits = detail::ExtentsTraits<extents_type>;
     static_assert(extents_traits::rank == 1);
-    using Base = ZIPPERBase<VectorBase, View>;
+    using Base = ZipperBase<VectorBase, View>;
 
     using Base::Base;
     // using Base::operator=;

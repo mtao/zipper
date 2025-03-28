@@ -1,7 +1,7 @@
 #if !defined(ZIPPER_TENSORBASE_HPP)
 #define ZIPPER_TENSORBASE_HPP
 
-#include "ZIPPERBase.hpp"
+#include "ZipperBase.hpp"
 #include "concepts/TensorBaseDerived.hpp"
 #include "detail/extents/static_extents_to_integral_sequence.hpp"
 #include "zipper/views/binary/TensorProductView.hpp"
@@ -9,9 +9,9 @@
 namespace zipper {
 
 template <concepts::ViewDerived View>
-class TensorBase : public ZIPPERBase<TensorBase, View> {
+class TensorBase : public ZipperBase<TensorBase, View> {
    public:
-    using Base = ZIPPERBase<TensorBase, View>;
+    using Base = ZipperBase<TensorBase, View>;
     TensorBase() = default;
 
     using view_type = View;

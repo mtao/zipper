@@ -1,7 +1,7 @@
 #if !defined(ZIPPER_MATRIXBASE_HPP)
 #define ZIPPER_MATRIXBASE_HPP
 
-#include "ZIPPERBase.hpp"
+#include "ZipperBase.hpp"
 #include "concepts/MatrixBaseDerived.hpp"
 #include "concepts/MatrixViewDerived.hpp"
 #include "concepts/VectorBaseDerived.hpp"
@@ -20,7 +20,7 @@ class ArrayBase;
 
 // template <concepts::MatrixViewDerived View>
 template <concepts::ViewDerived View>
-class MatrixBase : public ZIPPERBase<MatrixBase, View> {
+class MatrixBase : public ZipperBase<MatrixBase, View> {
    public:
     MatrixBase() = default;
 
@@ -29,7 +29,7 @@ class MatrixBase : public ZIPPERBase<MatrixBase, View> {
     using extents_type = View::extents_type;
     using extents_traits = detail::ExtentsTraits<extents_type>;
     static_assert(extents_traits::rank == 2);
-    using Base = ZIPPERBase<MatrixBase, View>;
+    using Base = ZipperBase<MatrixBase, View>;
 
     using Base::Base;
     // using Base::operator=;

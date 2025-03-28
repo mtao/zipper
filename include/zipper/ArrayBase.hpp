@@ -1,7 +1,7 @@
 #if !defined(ZIPPER_ARRAYBASE_HPP)
 #define ZIPPER_ARRAYBASE_HPP
 
-#include "ZIPPERBase.hpp"
+#include "ZipperBase.hpp"
 #include "zipper/types.hpp"
 #include "views/reductions/All.hpp"
 #include "views/reductions/Any.hpp"
@@ -24,7 +24,7 @@
 namespace zipper {
 
 template <concepts::ViewDerived View>
-class ArrayBase : public ZIPPERBase<ArrayBase, View> {
+class ArrayBase : public ZipperBase<ArrayBase, View> {
    public:
     ArrayBase() = default;
 
@@ -32,7 +32,7 @@ class ArrayBase : public ZIPPERBase<ArrayBase, View> {
     using value_type = View::value_type;
     using extents_type = View::extents_type;
     using extents_traits = detail::ExtentsTraits<extents_type>;
-    using Base = ZIPPERBase<ArrayBase, View>;
+    using Base = ZipperBase<ArrayBase, View>;
     using Base::Base;
     using Base::cast;
     using Base::swizzle;

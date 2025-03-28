@@ -1,7 +1,7 @@
 #if !defined(ZIPPER_FORMBASE_HPP)
 #define ZIPPER_FORMBASE_HPP
 
-#include "ZIPPERBase.hpp"
+#include "ZipperBase.hpp"
 #include "concepts/FormBaseDerived.hpp"
 #include "concepts/TensorBaseDerived.hpp"
 #include "concepts/VectorBaseDerived.hpp"
@@ -12,9 +12,9 @@
 namespace zipper {
 
 template <concepts::ViewDerived View>
-class FormBase : public ZIPPERBase<FormBase, View> {
+class FormBase : public ZipperBase<FormBase, View> {
    public:
-    using Base = ZIPPERBase<FormBase, View>;
+    using Base = ZipperBase<FormBase, View>;
     FormBase() = default;
 
     using view_type = View;
