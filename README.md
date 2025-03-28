@@ -1,6 +1,5 @@
-# OATS
-unnamed vector library
-
+# Zipper
+A zippy tensor processing library
 
 ```bash
 conan install . --output-folder=build/conan --build=missing # prepare conan

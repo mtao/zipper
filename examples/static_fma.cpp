@@ -1,9 +1,9 @@
 #include <iostream>
-#include <uvl/Array.hpp>
-#include <uvl/Matrix.hpp>
-#include <uvl/Vector.hpp>
+#include <zipper/Array.hpp>
+#include <zipper/Matrix.hpp>
+#include <zipper/Vector.hpp>
 
-#include "uvl/views/nullary/RandomView.hpp"
+#include "zipper/views/nullary/RandomView.hpp"
 // Try running this in the build folder:
 // > $( ninja -t commands  examples/static_fma | head -n 1 | sed
 // 's|static_fma.cpp.o|static_fma.cpp.s|g') -S -mavx -mfma then obtaining the
@@ -14,48 +14,48 @@ __attribute__((noinline)) auto DOOP(const auto& a, const auto& b,
     return (a.as_array() * (b + c).as_array()).eval();
 }
 __attribute__((noinline)) auto f() {
-    auto R = uvl::views::nullary::uniform_random_view<float>(
-        uvl::extents<20, 20>{}, 0, 1);
-    uvl::Matrix A = R;
-    uvl::Matrix B = R;
-    uvl::Matrix C = R;
+    auto R = zipper::views::nullary::uniform_random_view<float>(
+        zipper::extents<20, 20>{}, 0, 1);
+    zipper::Matrix A = R;
+    zipper::Matrix B = R;
+    zipper::Matrix C = R;
 
     return DOOP(A, B, C);
 }
 //__attribute__((noinline)) auto g() {
-//    auto R = uvl::views::nullary::uniform_random_view<float>(
-//        uvl::extents<20, 20>{}, 0, 1);
-//    uvl::Array A = R;
-//    uvl::Array B = R;
-//    uvl::Array C = R;
+//    auto R = zipper::views::nullary::uniform_random_view<float>(
+//        zipper::extents<20, 20>{}, 0, 1);
+//    zipper::Array A = R;
+//    zipper::Array B = R;
+//    zipper::Array C = R;
 //
 //    return DOOP(A, B, C);
 //}
 __attribute__((noinline)) auto h() {
-    auto R = uvl::views::nullary::uniform_random_view<float>(uvl::extents<20>{},
+    auto R = zipper::views::nullary::uniform_random_view<float>(zipper::extents<20>{},
                                                              0, 1);
-    uvl::Vector A = R;
-    uvl::Vector B = R;
-    uvl::Vector C = R;
+    zipper::Vector A = R;
+    zipper::Vector B = R;
+    zipper::Vector C = R;
 
     return DOOP(A, B, C);
 }
 
 __attribute__((noinline)) auto l() {
-    auto R = uvl::views::nullary::uniform_random_view<float>(
-        uvl::extents<4, 4>{}, 0, 1);
-    uvl::Matrix A = R;
-    uvl::Matrix B = R;
-    uvl::Matrix C = R;
+    auto R = zipper::views::nullary::uniform_random_view<float>(
+        zipper::extents<4, 4>{}, 0, 1);
+    zipper::Matrix A = R;
+    zipper::Matrix B = R;
+    zipper::Matrix C = R;
 
     return DOOP(A, B, C);
 }
 __attribute__((noinline)) auto m() {
-    auto R = uvl::views::nullary::uniform_random_view<float>(uvl::extents<4>{},
+    auto R = zipper::views::nullary::uniform_random_view<float>(zipper::extents<4>{},
                                                              0, 1);
-    uvl::Vector A = R;
-    uvl::Vector B = R;
-    uvl::Vector C = R;
+    zipper::Vector A = R;
+    zipper::Vector B = R;
+    zipper::Vector C = R;
 
     return DOOP(A, B, C);
 }

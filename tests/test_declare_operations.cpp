@@ -1,11 +1,11 @@
 #include <catch2/catch_all.hpp>
 
-#include "uvl/detail/declare_operations.hpp"
-#include "uvl/views/binary/ArithmeticViews.hpp"
-#include "uvl/views/nullary/ConstantView.hpp"
-#include "uvl/views/unary/ScalarArithmeticViews.hpp"
+#include "zipper/detail/declare_operations.hpp"
+#include "zipper/views/binary/ArithmeticViews.hpp"
+#include "zipper/views/nullary/ConstantView.hpp"
+#include "zipper/views/unary/ScalarArithmeticViews.hpp"
 
-namespace uvl {
+namespace zipper {
 template <concepts::ViewDerived View>
 class TestBase {
    public:
@@ -70,14 +70,14 @@ BINARY_DECLARATION(TestBase, BitAnd, operator&)
 BINARY_DECLARATION(TestBase, BitOr, operator|)
 BINARY_DECLARATION(TestBase, BitXor, operator^)
 
-}  // namespace uvl
+}  // namespace zipper
 
 TEST_CASE("TestOpMacros", "[macros]") {
-    uvl::TestBase<uvl::views::nullary::ConstantView<double, 5>> A(5);
+    zipper::TestBase<zipper::views::nullary::ConstantView<double, 5>> A(5);
     -A;
     2 - (double(5) * A);
-    uvl::TestBase<uvl::views::nullary::ConstantView<double, 5>> B(4);
-    uvl::TestBase<uvl::views::nullary::ConstantView<bool, 5>> C(true);
+    zipper::TestBase<zipper::views::nullary::ConstantView<double, 5>> B(4);
+    zipper::TestBase<zipper::views::nullary::ConstantView<bool, 5>> C(true);
 
     !(4.0 < A);
     A* B;

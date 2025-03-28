@@ -1,11 +1,11 @@
 
 
 #include <catch2/catch_all.hpp>
-#include <uvl/views/unary/SwizzleView.hpp>
-// #include <uvl/Vector.hpp>
+#include <zipper/views/unary/SwizzleView.hpp>
+// #include <zipper/Vector.hpp>
 
 TEST_CASE("test_swizzle_pair", "[swizzle]") {
-    using Swizzler = uvl::detail::extents::ExtentsSwizzler<1, 0>;
+    using Swizzler = zipper::detail::extents::ExtentsSwizzler<1, 0>;
 
     REQUIRE(Swizzler::size == 2);
     REQUIRE(Swizzler::valid_indices_rank == 2);
@@ -23,7 +23,7 @@ TEST_CASE("test_swizzle_pair", "[swizzle]") {
 TEST_CASE("test_swizzle_lift", "[swizzle]") {
     {
         using Swizzler =
-            uvl::detail::extents::ExtentsSwizzler<std::dynamic_extent, 0>;
+            zipper::detail::extents::ExtentsSwizzler<std::dynamic_extent, 0>;
 
         REQUIRE(Swizzler::size == 2);
         REQUIRE(Swizzler::valid_indices_rank == 1);
@@ -40,7 +40,7 @@ TEST_CASE("test_swizzle_lift", "[swizzle]") {
     }
     {
         using Swizzler =
-            uvl::detail::extents::ExtentsSwizzler<0, std::dynamic_extent>;
+            zipper::detail::extents::ExtentsSwizzler<0, std::dynamic_extent>;
 
         REQUIRE(Swizzler::size == 2);
         REQUIRE(Swizzler::valid_indices_rank == 1);
@@ -57,7 +57,7 @@ TEST_CASE("test_swizzle_lift", "[swizzle]") {
 
     {
         using Swizzler =
-            uvl::detail::extents::ExtentsSwizzler<1, std::dynamic_extent, 0>;
+            zipper::detail::extents::ExtentsSwizzler<1, std::dynamic_extent, 0>;
 
         REQUIRE(Swizzler::size == 3);
         REQUIRE(Swizzler::valid_indices_rank == 2);

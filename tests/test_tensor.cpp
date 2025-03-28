@@ -1,44 +1,44 @@
 
 
-#include <uvl/views/unary/PartialTraceView.hpp>
+#include <zipper/views/unary/PartialTraceView.hpp>
 #include <spdlog/spdlog.h>
 
 #include <catch2/catch_all.hpp>
-#include <uvl/views/nullary/UnitView.hpp>
+#include <zipper/views/nullary/UnitView.hpp>
 #include <iostream>
-#include <uvl/Tensor.hpp>
-#include <uvl/Vector.hpp>
-#include <uvl/TensorBase.hpp>
-#include <uvl/MatrixBase.hpp>
-#include <uvl/FormBase.hpp>
-#include <uvl/views/nullary/ConstantView.hpp>
-#include <uvl/views/nullary/IdentityView.hpp>
-#include <uvl/views/nullary/RandomView.hpp>
-#include <uvl/views/unary/SwizzleView.hpp>
-// #include <uvl/Vector.hpp>
+#include <zipper/Tensor.hpp>
+#include <zipper/Vector.hpp>
+#include <zipper/TensorBase.hpp>
+#include <zipper/MatrixBase.hpp>
+#include <zipper/FormBase.hpp>
+#include <zipper/views/nullary/ConstantView.hpp>
+#include <zipper/views/nullary/IdentityView.hpp>
+#include <zipper/views/nullary/RandomView.hpp>
+#include <zipper/views/unary/SwizzleView.hpp>
+// #include <zipper/Vector.hpp>
 
 namespace {
 
 void print(auto const& M) {
-    constexpr static uvl::rank_type rank =
+    constexpr static zipper::rank_type rank =
         std::decay_t<decltype(M)>::extents_type::rank();
 
     if constexpr (rank == 1) {
-        for (uvl::index_type j = 0; j < M.extent(0); ++j) {
+        for (zipper::index_type j = 0; j < M.extent(0); ++j) {
             std::cout << M(j) << " ";
             std::cout << std::endl;
         }
     } else if constexpr (rank == 2) {
-        for (uvl::index_type j = 0; j < M.extent(0); ++j) {
-            for (uvl::index_type k = 0; k < M.extent(1); ++k) {
+        for (zipper::index_type j = 0; j < M.extent(0); ++j) {
+            for (zipper::index_type k = 0; k < M.extent(1); ++k) {
                 std::cout << M(j, k) << " ";
             }
             std::cout << std::endl;
         }
     } else if constexpr (rank == 3) {
-        for (uvl::index_type j = 0; j < M.extent(0); ++j) {
-            for (uvl::index_type k = 0; k < M.extent(1); ++k) {
-                for (uvl::index_type l = 0; l < M.extent(2); ++l) {
+        for (zipper::index_type j = 0; j < M.extent(0); ++j) {
+            for (zipper::index_type k = 0; k < M.extent(1); ++k) {
+                for (zipper::index_type l = 0; l < M.extent(2); ++l) {
                     std::cout << M(j, k, l) << " ";
                 }
                 std::cout << std::endl;
@@ -46,10 +46,10 @@ void print(auto const& M) {
             std::cout << "-----" << std::endl;
         }
     } else if constexpr (rank == 4) {
-        for (uvl::index_type j = 0; j < M.extent(0); ++j) {
-            for (uvl::index_type k = 0; k < M.extent(1); ++k) {
-                for (uvl::index_type l = 0; l < M.extent(2); ++l) {
-                    for (uvl::index_type m = 0; m < M.extent(3); ++m) {
+        for (zipper::index_type j = 0; j < M.extent(0); ++j) {
+            for (zipper::index_type k = 0; k < M.extent(1); ++k) {
+                for (zipper::index_type l = 0; l < M.extent(2); ++l) {
+                    for (zipper::index_type m = 0; m < M.extent(3); ++m) {
                         std::cout << M(j, k, l, m) << " ";
                     }
                     std::cout << std::endl;
@@ -62,18 +62,18 @@ void print(auto const& M) {
 }
 }  // namespace
 TEST_CASE("test_tensor_product", "[storage][dense]") {
-    uvl::Tensor<double, 3, 3> I = uvl::views::nullary::IdentityView<double>{};
-    uvl::Tensor<double, 3, std::dynamic_extent> M(3);
-    uvl::Tensor<double, 3> x;
+    zipper::Tensor<double, 3, 3> I = zipper::views::nullary::IdentityView<double>{};
+    zipper::Tensor<double, 3, std::dynamic_extent> M(3);
+    zipper::Tensor<double, 3> x;
 
-    uvl::Tensor<double, 3, 3, 3> J =
-        uvl::views::nullary::ConstantView<double>{6};
+    zipper::Tensor<double, 3, 3, 3> J =
+        zipper::views::nullary::ConstantView<double>{6};
     spdlog::info("Constant tensor from infinite view");
     print(J);
 
-    M = uvl::views::nullary::normal_random_infinite_view<double>(0, 1);
+    M = zipper::views::nullary::normal_random_infinite_view<double>(0, 1);
 
-    x = uvl::views::nullary::normal_random_infinite_view<double>(10, 1);
+    x = zipper::views::nullary::normal_random_infinite_view<double>(10, 1);
 
     print(M);
 
@@ -90,30 +90,30 @@ TEST_CASE("test_tensor_product", "[storage][dense]") {
     static_assert(decltype(M)::extents_type::rank() == 2);
     static_assert(decltype(IM)::extents_type::rank() == 4);
 
-    // CHECK(IM.slice(std::integral_constant<uvl::rank_type, 0>{},
-    //                std::integral_constant<uvl::rank_type, 0>{},
-    //                uvl::full_extent, uvl::full_extent) == M);
+    // CHECK(IM.slice(std::integral_constant<zipper::rank_type, 0>{},
+    //                std::integral_constant<zipper::rank_type, 0>{},
+    //                zipper::full_extent, zipper::full_extent) == M);
 
-    // uvl::Tensor C ;
+    // zipper::Tensor C ;
 }
 
 TEST_CASE("test_product", "[storage][tensor]") {
-    uvl::Tensor<double, 3, 3> I = uvl::views::nullary::IdentityView<double>{};
-    uvl::Tensor<double, 3, 3> M =
-        uvl::views::nullary::normal_random_infinite_view<double>(0, 1);
+    zipper::Tensor<double, 3, 3> I = zipper::views::nullary::IdentityView<double>{};
+    zipper::Tensor<double, 3, 3> M =
+        zipper::views::nullary::normal_random_infinite_view<double>(0, 1);
 
-    uvl::Tensor<double, 3, 3> N =
-        uvl::views::nullary::normal_random_infinite_view<double>(0, 1);
+    zipper::Tensor<double, 3, 3> N =
+        zipper::views::nullary::normal_random_infinite_view<double>(0, 1);
 
 
-    uvl::MatrixBase mM = M.view();
-    uvl::MatrixBase mN = N.view();
+    zipper::MatrixBase mM = M.view();
+    zipper::MatrixBase mN = N.view();
 
     auto TP = M * N;
 
     static_assert(decltype(TP)::extents_type::rank() == 4);
-    uvl::MatrixBase MN_tensor =
-        uvl::views::unary::PartialTraceView<std::decay_t<decltype(TP.view())>,1,2>(TP.view());
+    zipper::MatrixBase MN_tensor =
+        zipper::views::unary::PartialTraceView<std::decay_t<decltype(TP.view())>,1,2>(TP.view());
     CHECK(mM*mN == MN_tensor);
 
 
@@ -121,18 +121,18 @@ TEST_CASE("test_product", "[storage][tensor]") {
 }
 TEST_CASE("test_form_product", "[storage][tensor]") {
 
-    uvl::Vector<double,3> O;
+    zipper::Vector<double,3> O;
     O(0) = 1;
     O(1) = 1;
     O(2) = 1;
 
-    uvl::Vector<double,3> E0 = uvl::views::nullary::unit_vector<double,3>(0);
-    uvl::Vector<double,3> E1 = uvl::views::nullary::unit_vector<double,3>(1);
-    uvl::Vector<double,3> E2 = uvl::views::nullary::unit_vector<double,3>(2);
+    zipper::Vector<double,3> E0 = zipper::views::nullary::unit_vector<double,3>(0);
+    zipper::Vector<double,3> E1 = zipper::views::nullary::unit_vector<double,3>(1);
+    zipper::Vector<double,3> E2 = zipper::views::nullary::unit_vector<double,3>(2);
 
-    uvl::Form<double,3> D0 = uvl::views::nullary::unit_vector<double,3>(0);
-    uvl::Form<double,3> D1 = uvl::views::nullary::unit_vector<double,3>(1);
-    uvl::Form<double,3> D2 = uvl::views::nullary::unit_vector<double,3>(2);
+    zipper::Form<double,3> D0 = zipper::views::nullary::unit_vector<double,3>(0);
+    zipper::Form<double,3> D1 = zipper::views::nullary::unit_vector<double,3>(1);
+    zipper::Form<double,3> D2 = zipper::views::nullary::unit_vector<double,3>(2);
 
     spdlog::warn("Identity matrix products");
     auto E = (D0*E0).eval();
@@ -154,23 +154,23 @@ TEST_CASE("test_form_product", "[storage][tensor]") {
             double(D1*E2),
             double(D2*E2));
 
-    uvl::Vector<double,3> T;
+    zipper::Vector<double,3> T;
     T(0) = 0;
     T(1) = 1;
     T(2) = 1;
-    uvl::Vector<double,3> a = 
-        uvl::views::nullary::normal_random_infinite_view<double>(0, 1);
-    uvl::Vector<double,3> b = 
-        uvl::views::nullary::normal_random_infinite_view<double>(0, 1);
-    uvl::Vector<double,3> c = 
-        uvl::views::nullary::normal_random_infinite_view<double>(0, 1);
+    zipper::Vector<double,3> a = 
+        zipper::views::nullary::normal_random_infinite_view<double>(0, 1);
+    zipper::Vector<double,3> b = 
+        zipper::views::nullary::normal_random_infinite_view<double>(0, 1);
+    zipper::Vector<double,3> c = 
+        zipper::views::nullary::normal_random_infinite_view<double>(0, 1);
 
-    uvl::Vector<double,3> x = 
-        uvl::views::nullary::normal_random_infinite_view<double>(0, 1);
-    uvl::Vector<double,3> y = 
-        uvl::views::nullary::normal_random_infinite_view<double>(0, 1);
-    uvl::Vector<double,3> z = 
-        uvl::views::nullary::normal_random_infinite_view<double>(0, 1);
+    zipper::Vector<double,3> x = 
+        zipper::views::nullary::normal_random_infinite_view<double>(0, 1);
+    zipper::Vector<double,3> y = 
+        zipper::views::nullary::normal_random_infinite_view<double>(0, 1);
+    zipper::Vector<double,3> z = 
+        zipper::views::nullary::normal_random_infinite_view<double>(0, 1);
 
 
     spdlog::warn("Dot product {}", double(O.as_form() * O));
