@@ -18,10 +18,13 @@ required_deps = [spdlog_dep, range_v3_dep, fmt_dep, mdspan_dep]
 sources = []
 
 include_dirs = [include_directories('include')]
-zipper_lib = library('zipper', sources, include_directories: include_dirs, dependencies: required_deps)
 
-zipper_dep = declare_dependency(link_with: zipper_lib, dependencies: required_deps, include_directories: include_dirs)
+zipper_dep = declare_dependency(dependencies: required_deps, include_directories: include_dirs)
 
 
-subdir('tests')
-subdir('examples')
+if get_option('testing')
+  subdir('tests')
+endif
+if get_option('examples')
+  subdir('examples')
+endif

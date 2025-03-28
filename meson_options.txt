@@ -1,0 +1,2 @@
+option('testing', type: 'boolean', value: true, description: 'enable unit testing')
+option('examples', type: 'boolean', value: true, description: 'enable example targets')
