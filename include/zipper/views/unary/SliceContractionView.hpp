@@ -16,12 +16,12 @@ struct SliceEnumerationTraits {
 template <template <concepts::ViewDerived> typename ZipperBaseDerived,
           concepts::ViewDerived ViewType, bool IsConst, typename... Slices>
     requires(concepts::SlicePackLike<Slices...>)
-class SliceViewer {
+class SliceContractionView {
     using traits =
         SliceEnumerationTraits<ZipperBaseDerived, ViewType, Slices...>;
     using slice_type = typename traits::slice_type;
 
-    SliceViewer(const SliceViewer& o)
+    SliceContractionView(const SliceContractionView& o)
         : m_slice(o.m_slice().view(), m_slice.m_slices) {}
 
     slice_type create_slice() {}
