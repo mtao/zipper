@@ -1,17 +1,17 @@
-#if !defined(ZIPPER_VIEWS_PLAINOBJECTVIEWBASE_HPP)
-#define ZIPPER_VIEWS_PLAINOBJECTVIEWBASE_HPP
+#if !defined(ZIPPER_VIEWS_OBJECTVIEWBASE_HPP)
+#define ZIPPER_VIEWS_OBJECTVIEWBASE_HPP
 #include <ranges>
 
 #include "MappedViewBase.hpp"
 #include "ViewBase.hpp"
 #include "detail/AssignHelper.hpp"
-#include "detail/PlainObjectViewTraits.hpp"
+#include "detail/StorageViewTraits.hpp"
 #include "zipper/concepts/TupleLike.hpp"
 #include "zipper/concepts/ViewDerived.hpp"
 #include "zipper/detail/extents/all_extents_indices.hpp"
 namespace zipper::views {
 template <typename Derived_>
-class PlainObjectViewBase : public MappedViewBase<Derived_> {
+class StorageViewBase : public MappedViewBase<Derived_> {
    public:
     constexpr static bool IsStatic = zipper::detail::ExtentsTraits<
         typename detail::ViewTraits<Derived_>::extents_type>::is_static;
@@ -71,8 +71,8 @@ class PlainObjectViewBase : public MappedViewBase<Derived_> {
         }
     }
 
-    auto as_span() -> span_type { return span_type(accessor().container()); }
-    auto as_span() const -> const span_type {
+    auto as_std_span() -> span_type { return span_type(accessor().container()); }
+    auto as_std_span() const -> const span_type {
         return span_type(accessor().container());
     }
 

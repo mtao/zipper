@@ -2,6 +2,7 @@
 #define ZIPPER_TENSOR_HPP
 
 #include "TensorBase.hpp"
+#include "TensorSpan.hpp"
 #include "concepts/TensorBaseDerived.hpp"
 #include "storage/PlainObjectStorage.hpp"
 #include "zipper/types.hpp"
@@ -20,6 +21,7 @@ class Tensor
     using extents_type = Base::extents_type;
     using Base::extent;
     using Base::extents;
+    using span_type = TensorSpan<ValueType, false, Dims...>;
 
     template <concepts::ViewDerived Other>
     Tensor(const Other& other) : Base(other) {}

@@ -1,28 +1,34 @@
-
-
 #if !defined(ZIPPER_STORAGE_PLAINOBJECTSTORAGE_HPP)
 #define ZIPPER_STORAGE_PLAINOBJECTSTORAGE_HPP
 
 #include "PlainObjectAccessor.hpp"
+#include "SpanStorage.hpp"
 #include "zipper/detail//ExtentsTraits.hpp"
-#include "zipper/views/PlainObjectViewBase.hpp"
+#include "zipper/views/StorageViewBase.hpp"
 
 namespace zipper::storage {
 
-template <typename ValueType, typename Extents,
-          typename LayoutPolicy = zipper::default_layout_policy,
-          typename AccessorPolicy = zipper::default_accessor_policy<ValueType>>
+// SpanStorage predeclares the defaults now?
+// template <typename ValueType, typename Extents,
+//           typename LayoutPolicy = zipper::default_layout_policy,
+//           typename AccessorPolicy =
+//           zipper::default_accessor_policy<ValueType>>
+template <typename ValueType, typename Extents, typename LayoutPolicy,
+          typename AccessorPolicy>
 class PlainObjectStorage
-    : public views::PlainObjectViewBase<PlainObjectStorage<
+    : public views::StorageViewBase<PlainObjectStorage<
           ValueType, Extents, LayoutPolicy, AccessorPolicy>> {
    public:
-    using ParentType = views::PlainObjectViewBase<
+    using ParentType = views::StorageViewBase<
         PlainObjectStorage<ValueType, Extents, LayoutPolicy, AccessorPolicy>>;
     using value_type = ValueType;
     using extents_type = Extents;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
     constexpr static bool IsStatic =
         zipper::detail::ExtentsTraits<extents_type>::is_static;
+
+    using span_type =
+        SpanStorage<ValueType, Extents, LayoutPolicy, AccessorPolicy>;
 
     using accessor_type = PlainObjectAccessor<value_type, extents_type>;
     const accessor_type& accessor() const { return m_accessor; }
@@ -51,15 +57,29 @@ class PlainObjectStorage
         requires(IsStatic)
         : ParentType(extents) {}
 
+    span_type as_span() {
+        if constexpr (IsStatic) {
+            return span_type(accessor().span());
+        } else {
+            return span_type(accessor().span(), extents());
+        }
+    }
+    const span_type as_span() const {
+        if constexpr (IsStatic) {
+            return span_type(accessor().span());
+        } else {
+            return span_type(accessor().span(), extents());
+        }
+    }
+
     template <typename... Args>
     PlainObjectStorage(const extents_type& extents, Args&&... args)
         : ParentType(extents), m_accessor(std::forward<Args>(args)...) {}
 
     template <concepts::ExtentsType E2>
     void resize(const E2& e)
-        requires(extents_traits::template is_convertable_from<
-                 E2>() && 
-            !IsStatic)
+        requires(extents_traits::template is_convertable_from<E2>() &&
+                 !IsStatic)
     {
         static_assert(E2::rank() != 0);
         this->resize_extents(e);
@@ -79,7 +99,7 @@ struct detail::ViewTraits<zipper::storage::PlainObjectStorage<
     ValueType, Extents, LayoutPolicy, AccessorPolicy>>
     : public detail::DefaultViewTraits<ValueType, Extents>
 /*: public detail::ViewTraits <
-  views::PlainObjectViewBase<zipper::storage::PlainObjectStorage<
+  views::StorageViewBase<zipper::storage::PlainObjectStorage<
       ValueType, Extents, LayoutPolicy, AccessorPolicy>> */
 {
     using value_type = ValueType;

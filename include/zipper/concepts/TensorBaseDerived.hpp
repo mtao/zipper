@@ -9,6 +9,7 @@
 namespace zipper {
 template <concepts::ViewDerived T>
 class TensorBase;
+// TODO: this really should get an extents back as a parameter
 template <typename T, index_type... Indices>
 class Tensor;
 }  // namespace zipper
