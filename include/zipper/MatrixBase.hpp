@@ -155,12 +155,12 @@ class MatrixBase : public ZipperBase<MatrixBase, View> {
     auto diagonal() {
         return VectorBase<views::unary::DiagonalView<view_type, false>>(view());
     }
-    auto transpose() const { return swizzle<MatrixBase, 1, 0>(); }
 
     template <rank_type... ranks>
     auto swizzle() const {
         return Base::template swizzle<MatrixBase, ranks...>();
     }
+    auto transpose() const { return Base::template swizzle<MatrixBase, 1, 0>(); }
 };
 
 template <concepts::MatrixViewDerived View>

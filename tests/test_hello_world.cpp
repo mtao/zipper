@@ -45,14 +45,14 @@ TEST_CASE("test_storage", "[storage][dense]") {
         fmt::print("\n");
     }
 
-    zipper::views::binary::PlusView av(a, b);
+    zipper::views::binary::PlusView<std::decay_t<decltype(a)>, std::decay_t<decltype(b)>> av(a, b);
 
     for (zipper::index_type j = 0; j < av.extent(0); ++j) {
         for (zipper::index_type k = 0; k < av.extent(1); ++k) {
             spdlog::warn("{} {} {}", j, k, av(j, k));
         }
     }
-    zipper::views::binary::MultipliesView pv(a, a);
+    zipper::views::binary::MultipliesView<std::decay_t<decltype(a)>, std::decay_t<decltype(a)>> pv(a, a);
 
     for (zipper::index_type j = 0; j < pv.extent(0); ++j) {
         for (zipper::index_type k = 0; k < pv.extent(1); ++k) {

@@ -89,11 +89,6 @@ class DiagonalView
     constexpr static std::array<rank_type, view_extents_type::rank()>
         actionable_indices = traits::actionable_indices;
 
-    ViewType& view()
-        requires(!IsConst)
-    {
-        return const_cast<ViewType&>(Base::view());
-    }
 
     DiagonalView(const DiagonalView& o): DiagonalView(o.view()) {}
     DiagonalView(DiagonalView&&o): DiagonalView(o.view()) {}
