@@ -9,15 +9,15 @@
 namespace zipper {
 template <concepts::ViewDerived T>
 class MatrixBase;
-template <typename T, index_type R, index_type C>
+template <typename T, index_type R, index_type C, bool RowMajor = false>
 class Matrix;
 }  // namespace zipper
 namespace zipper::concepts {
 namespace detail {
 template <typename>
 struct IsMatrix : std::false_type {};
-template <typename T, index_type R, index_type C>
-struct IsMatrix<Matrix<T, R, C>> : std::true_type {};
+template <typename T, index_type R, index_type C, bool RowMajor>
+struct IsMatrix<Matrix<T, R, C, RowMajor>> : std::true_type {};
 
 template <typename>
 struct IsMatrixBase : std::false_type {};

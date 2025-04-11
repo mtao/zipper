@@ -2,18 +2,25 @@
 #define ZIPPER_MATRIX_HPP
 
 #include "MatrixBase.hpp"
+#include "MatrixSpan.hpp"
 #include "concepts/MatrixBaseDerived.hpp"
 #include "storage/PlainObjectStorage.hpp"
 #include "zipper/types.hpp"
 namespace zipper {
 
-template <typename ValueType, index_type Rows, index_type Cols>
-class Matrix
-    : public MatrixBase<
-          storage::PlainObjectStorage<ValueType, zipper::extents<Rows, Cols>>> {
+template <typename ValueType, index_type Rows, index_type Cols, bool RowMajor>
+class Matrix : public MatrixBase<storage::PlainObjectStorage<
+                   ValueType, zipper::extents<Rows, Cols>,
+                   std::conditional_t<RowMajor, std::experimental::layout_left,
+                                      std::experimental::layout_right>>> {
    public:
-    using Base = MatrixBase<
-        storage::PlainObjectStorage<ValueType, zipper::extents<Rows, Cols>>>;
+    using layout_type =
+        std::conditional_t<RowMajor, std::experimental::layout_left,
+                           std::experimental::layout_right>;
+    using Base = MatrixBase<storage::PlainObjectStorage<
+        ValueType, zipper::extents<Rows, Cols>, layout_type
+
+        >>;
     using Base::view;
     using view_type = Base::view_type;
     using value_type = Base::value_type;
@@ -22,23 +29,43 @@ class Matrix
     using Base::extent;
     using Base::extents;
     using Base::row;
+    using extents_traits = detail::ExtentsTraits<extents_type>;
+    using span_type = MatrixSpan<ValueType, Rows, Cols, RowMajor>;
     using Base::transpose;
 
-    Matrix(const Matrix& other) : Base(other.view()) {}
-    template <index_type R2, index_type C2>
-    Matrix(const Matrix<value_type, R2, C2>& other) : Base(other.view()) {}
-    template <concepts::MatrixViewDerived Other>
-    Matrix(const Other& other) : Base(other) {}
+    Matrix()
+        requires(extents_traits::is_static)
+    = default;
+
+    Matrix(index_type dyn_size)
+        requires(extents_traits::rank_dynamic == 1)
+        : Base(extents_type(dyn_size)) {}
+
+    Matrix(index_type rows, index_type cols)
+        requires(extents_traits::is_dynamic)
+        : Base(extents_type(rows, cols)) {}
+
     template <concepts::MatrixBaseDerived Other>
     Matrix(const Other& other) : Base(other) {}
+
     template <concepts::ViewDerived Other>
     Matrix(const Other& other) : Base(other) {}
-    template <typename... Args>
-    Matrix(Args&&... args)
-        requires(concepts::IndexPackLike<Args...>)
-        : Base(zipper::extents<Rows, Cols>(std::forward<Args>(args)...)) {}
-    template <index_type... indices>
-    Matrix(const zipper::extents<indices...>& e) : Base(e) {}
+
+    // Matrix(const Matrix& other) : Base(other.view()) {}
+    template <index_type R2, index_type C2>
+    Matrix(const Matrix<value_type, R2, C2>& other) : Base(other.view()) {}
+    // template <concepts::MatrixViewDerived Other>
+    // Matrix(const Other& other) : Base(other) {}
+    // template <concepts::MatrixBaseDerived Other>
+    // Matrix(const Other& other) : Base(other) {}
+    // template <concepts::ViewDerived Other>
+    // Matrix(const Other& other) : Base(other) {}
+    // template <typename... Args>
+    // Matrix(Args&&... args)
+    //     requires(concepts::IndexPackLike<Args...>)
+    //     : Base(zipper::extents<Rows, Cols>(std::forward<Args>(args)...)) {}
+    // template <index_type... indices>
+    // Matrix(const zipper::extents<indices...>& e) : Base(e) {}
     using Base::operator=;
 
     Matrix& operator=(const Matrix& other) {
@@ -98,9 +125,11 @@ Matrix(const MB& o)
 
 namespace zipper::views {
 
-template <typename ValueType, index_type Rows, index_type Cols>
-struct detail::ViewTraits<Matrix<ValueType, Rows, Cols>>
+template <typename ValueType, index_type Rows, index_type Cols, bool RowMajor>
+struct detail::ViewTraits<Matrix<ValueType, Rows, Cols, RowMajor>>
     : public detail::ViewTraits<zipper::storage::PlainObjectStorage<
-          ValueType, zipper::extents<Rows, Cols>>> {};
+          ValueType, zipper::extents<Rows, Cols>,
+          std::conditional_t<RowMajor, std::experimental::layout_left,
+                             std::experimental::layout_right>>> {};
 }  // namespace zipper::views
 #endif

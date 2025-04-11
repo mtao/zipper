@@ -49,8 +49,8 @@ class DynamicValueAccessor {
 template <typename ValueType, typename Extents>
 using PlainObjectAccessor = std::conditional_t<
     zipper::detail::ExtentsTraits<Extents>::is_static,
-    StaticValueAccessor<
-        ValueType, zipper::detail::template ExtentsTraits<Extents>::static_size>,
+    StaticValueAccessor<ValueType, zipper::detail::template ExtentsTraits<
+                                       Extents>::static_size>,
     DynamicValueAccessor<ValueType>>;
 }  // namespace zipper::storage
 #endif

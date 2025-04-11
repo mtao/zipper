@@ -11,7 +11,7 @@ template <typename>
 struct extent_values;
 template <index_type... Idxs>
 struct extent_values<zipper::extents<Idxs...>> {
-    constexpr static index_type static_size =
+    constexpr static index_type static_sub_size =
         ((Idxs == std::dynamic_extent ? 1 : Idxs) * ... * 1);
 };
 
@@ -24,10 +24,11 @@ struct ExtentsTraits {
     constexpr static bool is_dynamic = rank_dynamic != 0;
     constexpr static bool is_static = !is_dynamic;
 
+    constexpr static index_type static_sub_size =
+        extent_values<extents_type>::static_sub_size;
+
     constexpr static index_type static_size =
-        extent_values<extents_type>::static_size;
-    constexpr static index_type _size =
-        extent_values<extents_type>::static_size;
+        is_dynamic ? std::dynamic_extent : static_sub_size;
 
     template <typename T>
     using span_type = std::conditional_t<is_static, std::span<T, static_size>,

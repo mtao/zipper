@@ -34,7 +34,7 @@ void print(zipper::concepts::VectorBaseDerived auto const& M) {
    //
 TEST_CASE("test_assignment", "[matrix][storage][dense]") {
     zipper::Matrix<double, 3, std::dynamic_extent> M(3);
-    zipper::Matrix<double, 3, 5> N(3, 5);
+    zipper::Matrix<double, 3, 5> N;
     zipper::Matrix<double, std::dynamic_extent, std::dynamic_extent> O(2, 2);
     zipper::Vector<double, 3> x;
 
@@ -107,7 +107,9 @@ TEST_CASE("test_assignment", "[matrix][storage][dense]") {
 }
 
 TEST_CASE("test_matrix_eval", "[matrix][storage][dense]") {
-    zipper::Matrix<double, 3, 5> N(3, 5);
+    zipper::Matrix<double, 3, 5> N=
+        zipper::views::nullary::uniform_random_view<double>({});
+
 
     auto x = (N * 2).eval();
     auto v = N.as_array();
@@ -120,7 +122,7 @@ TEST_CASE("test_matrix_eval", "[matrix][storage][dense]") {
 
 TEST_CASE("test_transpose", "[matrix][storage][dense]") {
     zipper::Matrix<double, 3, std::dynamic_extent> M(3);
-    zipper::Matrix<double, 3, 5> N(3, 5);
+    zipper::Matrix<double, 3, 5> N;
 
     for (int j = 0; j < 3; ++j) {
         for (int k = 0; k < 3; ++k) {
@@ -262,7 +264,7 @@ TEST_CASE("test_identity", "[matrix][vector][lift]") {
 }
 
 TEST_CASE("test_trace", "[matrix][storage][dense]") {
-    zipper::Matrix<double, 3, 3> N(3, 5);
+    zipper::Matrix<double, 3, 3> N;
     N = zipper::views::nullary::uniform_random_view<double>(zipper::extents<3, 3>{},
                                                          -1, 1);
     N.diagonal() = zipper::views::nullary::ConstantView<double, 3>(0.0);
@@ -280,7 +282,7 @@ TEST_CASE("test_trace", "[matrix][storage][dense]") {
 }
 
 TEST_CASE("test_partial_trace_matrix", "[matrix][storage][dense]") {
-    zipper::Matrix<double, 3, 3> N(3, 5);
+    zipper::Matrix<double, 3, 3> N;
     N = zipper::views::nullary::uniform_random_view<double>(zipper::extents<3, 3>{},
                                                          -1, 1);
     spdlog::info("Random matrix n:");

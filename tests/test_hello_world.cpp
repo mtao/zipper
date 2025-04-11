@@ -10,7 +10,7 @@
 TEST_CASE("test_storage", "[storage][dense]") {
     zipper::storage::PlainObjectStorage<double, zipper::extents<4, 4>> a;
 
-    auto as = a.as_span();
+    auto as = a.as_std_span();
     zipper::storage::PlainObjectStorage<
         double, zipper::extents<4, std::experimental::dynamic_extent>>
         b(zipper::extents<4, std::experimental::dynamic_extent>{4});
@@ -18,7 +18,7 @@ TEST_CASE("test_storage", "[storage][dense]") {
     spdlog::info("A size: {} {} {}", a.accessor().container().size(),
                  decltype(a)::extents_traits::static_size,
                  zipper::detail::ExtentsTraits<zipper::extents<4, 4>>::static_size);
-    auto bs = b.as_span();
+    auto bs = b.as_std_span();
 
     int j = 0;
     for (auto& v : bs) {

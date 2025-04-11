@@ -131,5 +131,4 @@ auto operator*(View1 const& lhs, View2 const& rhs) {
 
 }  // namespace zipper
 
-#include "Form.hpp"
 #endif
