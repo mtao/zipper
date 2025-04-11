@@ -32,13 +32,16 @@ class VectorSpan : public VectorBase<
     using Base::operator=;
 };
 
+template <typename T, std::size_t size>
+VectorSpan(const std::array<T,size>& arr) -> VectorSpan<T,size>;
+
+template <typename T, typename Alloc>
+VectorSpan(const std::vector<T, Alloc>& arr) -> VectorSpan<T, std::dynamic_extent>;
+
+template <typename T, std::size_t size>
+VectorSpan(const std::extent<T, size>& arr) -> VectorSpan<T, size>;
+
+
 }  // namespace zipper
 
-namespace zipper::views {
-
-template <typename ValueType, index_type Rows>
-struct detail::ViewTraits<VectorSpan<ValueType, Rows>>
-    : public detail::ViewTraits<
-          zipper::storage::SpanStorage<ValueType, extents<Rows>>> {};
-}  // namespace zipper::views
 #endif

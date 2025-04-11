@@ -3,22 +3,28 @@
 #include <concepts>
 #include <type_traits>
 
+#include "ExtentsType.hpp"
 #include "ViewDerived.hpp"
 #include "zipper/types.hpp"
 
 namespace zipper {
 template <concepts::ViewDerived T>
 class TensorBase;
-// TODO: this really should get an extents back as a parameter
-template <typename T, index_type... Indices>
-class Tensor;
+template <typename ValueType, concepts::ExtentsType Extents,
+          bool LeftMajor = false>
+class Tensor_;
+template <typename ValueType, concepts::ExtentsType Extents,
+          bool LeftMajor = false>
+class TensorSpan_;
 }  // namespace zipper
 namespace zipper::concepts {
 namespace detail {
 template <typename>
 struct IsTensor : std::false_type {};
-template <typename T, index_type... Indices>
-struct IsTensor<Tensor<T, Indices...>> : std::true_type {};
+template <typename ValueType, concepts::ExtentsType Extents, bool LeftMajor>
+struct IsTensor<Tensor_<ValueType, Extents, LeftMajor>> : std::true_type {};
+template <typename ValueType, concepts::ExtentsType Extents, bool LeftMajor>
+struct IsTensor<TensorSpan_<ValueType, Extents, LeftMajor>> : std::true_type {};
 
 template <typename>
 struct IsTensorBase : std::false_type {};

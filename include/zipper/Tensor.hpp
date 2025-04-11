@@ -3,47 +3,46 @@
 
 #include "TensorBase.hpp"
 #include "TensorSpan.hpp"
+#include "concepts/ExtentsType.hpp"
 #include "concepts/TensorBaseDerived.hpp"
 #include "storage/PlainObjectStorage.hpp"
 #include "zipper/types.hpp"
 namespace zipper {
 
-template <typename ValueType, index_type... Dims>
-class Tensor
-    : public TensorBase<
-          storage::PlainObjectStorage<ValueType, zipper::extents<Dims...>>> {
+template <typename ValueType, concepts::ExtentsType Extents, bool LeftMajor>
+class Tensor_
+    : public TensorBase<storage::PlainObjectStorage<
+          ValueType, Extents,
+          std::conditional_t<LeftMajor, std::experimental::layout_left,
+                             std::experimental::layout_right>>> {
    public:
+    using layout_type =
+        std::conditional_t<LeftMajor, std::experimental::layout_left,
+                           std::experimental::layout_right>;
     using Base = TensorBase<
-        storage::PlainObjectStorage<ValueType, zipper::extents<Dims...>>>;
+        storage::PlainObjectStorage<ValueType, Extents, layout_type>>;
     using Base::view;
     using view_type = Base::view_type;
     using value_type = Base::value_type;
     using extents_type = Base::extents_type;
     using Base::extent;
     using Base::extents;
-    using span_type = TensorSpan<ValueType, false, Dims...>;
+    using span_type = TensorSpan_<ValueType, Extents>;
 
     template <concepts::ViewDerived Other>
-    Tensor(const Other& other) : Base(other) {}
+    Tensor_(const Other& other) : Base(other) {}
     template <concepts::TensorBaseDerived Other>
-    Tensor(const Other& other) : Base(other) {}
+    Tensor_(const Other& other) : Base(other) {}
     template <typename... Args>
-    Tensor(Args&&... args)
+    Tensor_(Args&&... args)
         requires((std::is_convertible_v<Args, index_type> && ...))
-        : Base(zipper::extents<Dims...>(std::forward<Args>(args)...)) {}
+        : Base(Extents(std::forward<Args>(args)...)) {}
     template <index_type... indices>
-    Tensor(const zipper::extents<indices...>& e) : Base(e) {}
+    Tensor_(const zipper::extents<indices...>& e) : Base(e) {}
     using Base::operator=;
-
 };
+template <typename ValueType, index_type... Indxs>
+using Tensor = Tensor_<ValueType, zipper::extents<Indxs...>>;
 }  // namespace zipper
 
-namespace zipper::views {
-
-template <typename ValueType, index_type... Dims>
-struct detail::ViewTraits<Tensor<ValueType, Dims...>>
-    : public detail::ViewTraits<
-          zipper::storage::PlainObjectStorage<ValueType, zipper::extents<Dims...>>> {
-};
-}  // namespace zipper::views
 #endif

@@ -1,14 +1,15 @@
-#if !defined(ZIPPER_TENSOR_SPAN_HPP)
-#define ZIPPER_TENSOR_SPAN_HPP
 
-#include "TensorBase.hpp"
+#if !defined(ZIPPER_FORM_SPAN_HPP)
+#define ZIPPER_FORM_SPAN_HPP
+
+#include "FormBase.hpp"
 #include "storage/SpanStorage.hpp"
 #include "zipper/types.hpp"
 namespace zipper {
 
 template <typename ValueType, concepts::ExtentsType Extents, bool LeftMajor>
-class TensorSpan_
-    : public TensorBase<storage::SpanStorage<
+class FormSpan_
+    : public FormBase<storage::SpanStorage<
           ValueType, Extents,
           std::conditional_t<LeftMajor, std::experimental::layout_left,
                              std::experimental::layout_right>>> {
@@ -17,7 +18,7 @@ class TensorSpan_
         std::conditional_t<LeftMajor, std::experimental::layout_left,
                            std::experimental::layout_right>;
     using Storage = storage::SpanStorage<ValueType, Extents, layout_type>;
-    using Base = TensorBase<Storage>;
+    using Base = FormBase<Storage>;
 
     using Base::view;
     using view_type = Base::view_type;
@@ -28,12 +29,12 @@ class TensorSpan_
     using Base::extent;
     using Base::extents;
 
-    TensorSpan_(const std_span_type& e)
+    FormSpan_(const std_span_type& e)
         requires(extents_traits::is_static)
         : Base(Storage(e)) {}
 
     template <typename... Args>
-    TensorSpan_(const std_span_type& e, Args&&... args)
+    FormSpan_(const std_span_type& e, Args&&... args)
         requires((std::is_convertible_v<Args, index_type> && ...))
         : Base(Storage(e, Extents(std::forward<Args>(args)...))) {}
 
@@ -41,7 +42,7 @@ class TensorSpan_
 };
 
 template <typename ValueType, index_type... Indxs>
-using TensorSpan = TensorSpan_<ValueType, zipper::extents<Indxs...>>;
+using FormSpan = FormSpan_<ValueType, zipper::extents<Indxs...>>;
 }  // namespace zipper
 
 #endif
