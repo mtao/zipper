@@ -85,6 +85,12 @@ class PlainObjectStorage
         this->resize_extents(e);
         m_accessor.container().resize(extents_traits::size(e));
     }
+    using iterator_type = accessor_type::iterator_type;
+    using const_iterator_type = accessor_type::const_iterator_type;
+    auto begin() { return m_accessor.begin(); }
+    auto end() { return m_accessor.end(); }
+    auto begin() const { return m_accessor.begin(); }
+    auto end() const { return m_accessor.end(); }
 
    private:
     accessor_type m_accessor;

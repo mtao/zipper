@@ -17,7 +17,6 @@ struct DefaultNullaryViewTraits
     using base_type = DimensionedViewBase<Derived>;
 };
 
-
 }  // namespace detail
 
 template <typename Derived, typename T, index_type... Indices>
@@ -41,11 +40,9 @@ class NullaryViewBase
 
     NullaryViewBase(const NullaryViewBase&) = default;
     NullaryViewBase(NullaryViewBase&&) = default;
-    NullaryViewBase& operator=(const NullaryViewBase&) = default;
-    NullaryViewBase& operator=(NullaryViewBase&&) = default;
     NullaryViewBase()
         requires(is_static)
-    {}
+    = default;
 
     NullaryViewBase(const extents_type& e) : m_extents(e) {}
     using Base =

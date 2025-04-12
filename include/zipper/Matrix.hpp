@@ -51,7 +51,7 @@ class Matrix : public MatrixBase<storage::PlainObjectStorage<
     template <concepts::ViewDerived Other>
     Matrix(const Other& other) : Base(other) {}
 
-    // Matrix(const Matrix& other) : Base(other.view()) {}
+    Matrix(const Matrix& other) : Base(other.view()) {}
     template <index_type R2, index_type C2>
     Matrix(const Matrix<value_type, R2, C2>& other) : Base(other.view()) {}
     // template <concepts::MatrixViewDerived Other>
@@ -67,6 +67,10 @@ class Matrix : public MatrixBase<storage::PlainObjectStorage<
     // template <index_type... indices>
     // Matrix(const zipper::extents<indices...>& e) : Base(e) {}
     using Base::operator=;
+    Matrix& operator=(Matrix&& other) {
+        Base::operator=(std::move(other.view()));
+        return *this;
+    }
 
     Matrix& operator=(const Matrix& other) {
         Base::operator=(other.view());

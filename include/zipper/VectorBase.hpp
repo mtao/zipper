@@ -44,6 +44,15 @@ class VectorBase : public ZipperBase<VectorBase, View> {
         return operator=(v.view());
     }
 
+    // TODO: make vectorbase or zipperbase assignable from initializer lists
+    // template <typename T>
+    // VectorBase& operator=(const std::initializer_list<T>& l)
+    //    requires(extents_traits::is_dynamic)
+    //{
+    //    view().resize(extents_type(l.size()));
+    //    std::ranges::copy(l, begin());
+    //}
+
     template <concepts::VectorBaseDerived Other>
     VectorBase(const Other& other)
         requires(view_type::is_writable)
