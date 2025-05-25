@@ -1,17 +1,17 @@
 #if !defined(ZIPPER_ZIPPERBASE_HPP)
 #define ZIPPER_ZIPPERBASE_HPP
 
-#include "concepts/ZipperBaseDerived.hpp"
 #include "concepts/ViewDerived.hpp"
-#include "zipper/detail/declare_operations.hpp"
-#include "zipper/types.hpp"
-#include "zipper/views/binary/ArithmeticViews.hpp"
-#include "zipper/views/unary/ScalarArithmeticViews.hpp"
+#include "concepts/ZipperBaseDerived.hpp"
 #include "views/unary/CastView.hpp"
 #include "views/unary/DiagonalView.hpp"
 #include "views/unary/SliceView.hpp"
 #include "views/unary/SwizzleView.hpp"
 #include "views/unary/detail/operation_implementations.hpp"
+#include "zipper/detail/declare_operations.hpp"
+#include "zipper/types.hpp"
+#include "zipper/views/binary/ArithmeticViews.hpp"
+#include "zipper/views/unary/ScalarArithmeticViews.hpp"
 
 namespace zipper {
 
@@ -124,26 +124,31 @@ class ZipperBase {
    protected:
     // slicing has fairly dimension specific effects for most derived types,
     // so we will just return the view and let base class return things
-    template <typename... Slices>
+    template <concepts::SliceLike... Slices>
     auto slice_view(Slices&&... slices) const {
-        using view_type = views::unary::SliceView<view_type, true, Slices...>;
+        using view_type =
+            views::unary::SliceView<view_type, true, std::decay_t<Slices>...>;
 
         return view_type(view(), std::forward<Slices>(slices)...);
     }
-    template <typename... Slices>
+
+    template <concepts::SliceLike... Slices>
     auto slice_view() const {
-        using view_type = views::unary::SliceView<view_type, true, Slices...>;
+        using view_type =
+            views::unary::SliceView<view_type, true, std::decay_t<Slices>...>;
         return view_type(view(), Slices{}...);
     }
 
-    template <typename... Slices>
+    template <concepts::SliceLike... Slices>
     auto slice_view(Slices&&... slices) {
-        using view_type = views::unary::SliceView<view_type, false, Slices...>;
+        using view_type =
+            views::unary::SliceView<view_type, false, std::decay_t<Slices>...>;
         return view_type(view(), std::forward<Slices>(slices)...);
     }
-    template <typename... Slices>
+    template <concepts::SliceLike... Slices>
     auto slice_view() {
-        using view_type = views::unary::SliceView<view_type, false, Slices...>;
+        using view_type =
+            views::unary::SliceView<view_type, false, std::decay_t<Slices>...>;
         return view_type(view(), Slices{}...);
     }
 
