@@ -1,7 +1,7 @@
 #if !defined(ZIPPER_STORAGE_SPANSTORAGE_HPP)
 #define ZIPPER_STORAGE_SPANSTORAGE_HPP
 
-#include "SpanAccessor.hpp"
+#include "SpanData.hpp"
 #include "zipper/detail//ExtentsTraits.hpp"
 #include "zipper/views/StorageViewBase.hpp"
 
@@ -28,17 +28,11 @@ class SpanStorage
     constexpr static bool IsStatic =
         zipper::detail::ExtentsTraits<extents_type>::is_static;
 
-    using accessor_type = SpanAccessor<value_type, extents_traits::static_size>;
+    using accessor_type = SpanData<value_type, extents_traits::static_size>;
     const accessor_type& accessor() const { return m_accessor; }
     accessor_type& accessor() { return m_accessor; }
     using ParentType::assign;
 
-    /*
-    template <typename... Args>
-    SpanStorage(Args&&... args)
-        requires(IsStatic)
-        : m_accessor(std::forward<Args>(args)...) {}
-    */
     SpanStorage()
         requires(IsStatic)
         : ParentType() {}
@@ -86,7 +80,7 @@ struct detail::ViewTraits<zipper::storage::SpanStorage<
     using extents_type = Extents;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
     using value_accessor_type =
-        storage::SpanAccessor<ValueType, extents_traits::static_size>;
+        storage::SpanData<ValueType, extents_traits::static_size>;
     using layout_policy = LayoutPolicy;
     using accessor_policy = AccessorPolicy;
     using mapping_type = typename layout_policy::template mapping<extents_type>;

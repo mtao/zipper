@@ -35,12 +35,6 @@ class PlainObjectStorage
     accessor_type& accessor() { return m_accessor; }
     using ParentType::assign;
 
-    /*
-    template <typename... Args>
-    PlainObjectStorage(Args&&... args)
-        requires(IsStatic)
-        : m_accessor(std::forward<Args>(args)...) {}
-    */
     PlainObjectStorage()
         requires(IsStatic)
         : ParentType() {}
