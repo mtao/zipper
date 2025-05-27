@@ -9,12 +9,15 @@
 
 namespace zipper::storage::concepts {
 template <typename T>
-concept DenseDataLike = DataLike<T> && requires(T& t, const T& const_t) {
+concept DenseDataLike = DataLike<T> && requires(T &t) {
+    // can create a mutable span
     {
         t.as_std_span()
     } -> std::same_as<std::span<typename T::value_type, T::static_size>>;
+} && requires(const T &t) {
     {
-        const_t.as_std_span()
+        // can create a const span
+        t.as_std_span()
     } -> std::same_as<std::span<typename T::value_type const, T::static_size>>;
 };
 }  // namespace zipper::storage::concepts

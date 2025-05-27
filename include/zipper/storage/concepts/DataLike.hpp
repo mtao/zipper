@@ -6,21 +6,29 @@
 
 namespace zipper::storage::concepts {
 template <typename T>
-concept DataLike = requires(T &t, const T &const_t, const T::value_type &value,
-                            index_type index) {
-    { const_t.size() } -> std::same_as<std::size_t>;
-    { const_t.coeff(index) } -> std::same_as<typename T::value_type>;
-    { t.coeff_ref(index) } -> std::same_as<typename T::value_type &>;
-    {
-        const_t.const_coeff_ref(index)
-    } -> std::same_as<const typename T::value_type &>;
-    { const_t.begin() } -> std::same_as<typename T::value_type const *>;
-    { const_t.end() } -> std::same_as<typename T::value_type const *>;
+concept DataLike = requires(T &t) {
+    // mutable iterators
+    { t.begin() } -> std::same_as<typename T::iterator_type>;
+    { t.end() } -> std::same_as<typename T::iterator_type>;
+} && requires(const T &t) {
+    // size of the data
+    { t.size() } -> std::same_as<std::size_t>;
 
-    { t.begin() } -> std::same_as<typename T::value_type *>;
-    { t.end() } -> std::same_as<typename T::value_type *>;
-    { t.cbegin() } -> std::same_as<typename T::value_type const *>;
-    { t.cend() } -> std::same_as<typename T::value_type const *>;
+    // const iterator types
+    { t.begin() } -> std::same_as<typename T::const_iterator_type>;
+    { t.end() } -> std::same_as<typename T::const_iterator_type>;
+    { t.cbegin() } -> std::same_as<typename T::const_iterator_type>;
+    { t.cend() } -> std::same_as<typename T::const_iterator_type>;
+} && requires(T &t, index_type index) {
+    // const reference access
+    { t.coeff_ref(index) } -> std::same_as<typename T::value_type &>;
+} && requires(const T &t, index_type index) {
+    // coefficient by value
+    { t.coeff(index) } -> std::same_as<typename T::value_type>;
+    // const reference access
+    {
+        t.const_coeff_ref(index)
+    } -> std::same_as<const typename T::value_type &>;
 };
 }  // namespace zipper::storage::concepts
 

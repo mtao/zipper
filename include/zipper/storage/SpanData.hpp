@@ -22,14 +22,21 @@ class SpanData {
     const auto& container() const { return m_data; }
     auto& container() { return m_data; }
 
-    using iterator_type = value_type*;
-    using const_iterator_type = value_type const*;
-    auto begin() -> value_type* { return m_data.begin(); }
-    auto end() -> value_type* { return m_data.end(); }
-    auto begin() const -> value_type const* { return m_data.begin(); }
-    auto end() const -> value_type const* { return m_data.end(); }
-    auto cbegin() const -> value_type const* { return m_data.begin(); }
-    auto cend() const -> value_type const* { return m_data.end(); }
+    // TODO: for cpp<23 iterator_type and const_iterator_type are different.
+    // feeling very lazy as this discrepency disappears with cpp23
+#if defined(__cpp_lib_ranges_as_const)
+    using iterator_type = std_span_type::iterator;
+    using const_iterator_type = std_span_type::const_iterator;
+#else
+    using iterator_type = std_span_type::iterator;
+    using const_iterator_type = iterator_type;
+#endif
+    auto begin() -> iterator_type { return m_data.begin(); }
+    auto end() -> iterator_type { return m_data.end(); }
+    auto begin() const -> const_iterator_type { return m_data.begin(); }
+    auto end() const -> const_iterator_type { return m_data.end(); }
+    auto cbegin() const -> const_iterator_type { return m_data.begin(); }
+    auto cend() const -> const_iterator_type { return m_data.end(); }
 
    private:
     std_span_type m_data;

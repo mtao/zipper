@@ -31,6 +31,8 @@ class SpanStorage
     using accessor_type = SpanData<value_type, extents_traits::static_size>;
     const accessor_type& accessor() const { return m_accessor; }
     accessor_type& accessor() { return m_accessor; }
+    const accessor_type& linear_access() const { return m_accessor; }
+    accessor_type& linear_access() { return m_accessor; }
     using ParentType::assign;
 
     SpanStorage()

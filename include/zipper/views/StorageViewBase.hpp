@@ -40,12 +40,14 @@ class StorageViewBase : public MappedViewBase<Derived_> {
     using value_accessor_type = traits::value_accessor_type;
     using mapping_type = typename layout_policy::template mapping<extents_type>;
     using span_type = extents_traits::template span_type<value_type>;
-    using mdspan_type =
-        zipper::mdspan<value_type, extents_type, layout_policy, accessor_policy>;
+    using mdspan_type = zipper::mdspan<value_type, extents_type, layout_policy,
+                                       accessor_policy>;
 
    public:
-    value_accessor_type& accessor() { return derived().accessor(); }
-    const value_accessor_type& accessor() const { return derived().accessor(); }
+    value_accessor_type& accessor() { return derived().linear_access(); }
+    const value_accessor_type& accessor() const {
+        return derived().linear_access();
+    }
     value_type* data() { return accessor().data(); }
     const value_type* data() const { return accessor().data(); }
     value_type coeff_linear(index_type i) const { return accessor().coeff(i); }
@@ -71,7 +73,9 @@ class StorageViewBase : public MappedViewBase<Derived_> {
         }
     }
 
-    auto as_std_span() -> span_type { return span_type(accessor().container()); }
+    auto as_std_span() -> span_type {
+        return span_type(accessor().container());
+    }
     auto as_std_span() const -> const span_type {
         return span_type(accessor().container());
     }
