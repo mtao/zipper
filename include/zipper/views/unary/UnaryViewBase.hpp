@@ -2,40 +2,45 @@
 #define ZIPPER_VIEWS_UNARY_UNARYVIEW_HPP
 
 #include "zipper/concepts/ViewDerived.hpp"
+#include "zipper/views/DimensionedViewBase.hpp"
 #include "zipper/views/ViewBase.hpp"
 
 namespace zipper::views::unary {
 
 namespace detail {
-template <concepts::ViewDerived Child,
-          template <typename> typename Base = ViewBase>
+template <concepts::ViewDerived Child, bool _holds_extents = false>
 struct DefaultUnaryViewTraits
     : public views::detail::DefaultViewTraits<
           typename views::detail::ViewTraits<Child>::value_type,
           typename views::detail::ViewTraits<Child>::extents_type> {
     // to pass a base type to the UnaryViewBase
+    constexpr static bool holds_extents = _holds_extents;
     template <typename Derived>
-    using base_type = Base<Derived>;
+    using base_type =
+        std::conditional_t<holds_extents, DimensionedViewBase<Derived>,
+                           ViewBase<Derived>>;
     using base_traits = views::detail::ViewTraits<Child>;
     using base_value_type = base_traits::value_type;
     constexpr static bool is_coefficient_consistent =
         base_traits::is_coefficient_consistent;
-    constexpr static bool holds_extents = false;
     constexpr static bool is_value_based = true;
     constexpr static bool is_const = false;
 };
 }  // namespace detail
 
 template <typename Derived, concepts::ViewDerived ChildType>
-class UnaryViewBase : public views::ViewBase<Derived> {
-    //: public views::detail::ViewTraits<Derived>::template base_type<Derived> {
+class UnaryViewBase
+    : public views::detail::ViewTraits<Derived>::template base_type<Derived> {
    public:
     using self_type = UnaryViewBase<Derived, ChildType>;
     using traits = zipper::views::detail::ViewTraits<Derived>;
     using extents_type = traits::extents_type;
     using value_type = traits::value_type;
+    using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
+    constexpr static bool holds_extents = traits::holds_extents;
+    constexpr static bool is_static = extents_traits::is_static;
 
-    using Base = views::ViewBase<Derived>;
+    using Base = typename traits::template base_type<Derived>;
     // using Base =
     //     views::detail::ViewTraits<Derived>::template base_type<Derived>;
     using Base::extent;
@@ -53,9 +58,19 @@ class UnaryViewBase : public views::ViewBase<Derived> {
     UnaryViewBase(UnaryViewBase&&) = default;
     UnaryViewBase& operator=(const UnaryViewBase&) = delete;
     UnaryViewBase& operator=(UnaryViewBase&&) = delete;
-    UnaryViewBase(const ChildType& b) : m_view(b) {}
+    UnaryViewBase(const ChildType& b)
+        requires(!holds_extents || is_static)
+        : m_view(b) {}
+    UnaryViewBase(const ChildType& b, const extents_type& e)
+        : Base(e), m_view(b) {}
 
-    constexpr const extents_type& extents() const { return m_view.extents(); }
+    constexpr const extents_type& extents() const {
+        if constexpr (holds_extents) {
+            return Base::extents();
+        } else {
+            return m_view.extents();
+        }
+    }
 
     auto get_value(const child_value_type& value) const -> decltype(auto)
         requires(is_value_based)

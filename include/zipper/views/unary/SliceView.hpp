@@ -7,7 +7,6 @@
 #include "zipper/detail/is_integral_constant.hpp"
 #include "zipper/detail/pack_index.hpp"
 #include "zipper/storage/PlainObjectStorage.hpp"
-#include "zipper/views/DimensionedViewBase.hpp"
 #include "zipper/views/detail/AssignHelper.hpp"
 
 namespace zipper::views {
@@ -20,7 +19,7 @@ class SliceView;
 template <concepts::ViewDerived ViewType, bool IsConst, typename... Slices>
 struct detail::ViewTraits<unary::SliceView<ViewType, IsConst, Slices...>>
     : public zipper::views::unary::detail::DefaultUnaryViewTraits<
-          ViewType, DimensionedViewBase> {
+          ViewType, true> {
     using Base = detail::ViewTraits<ViewType>;
 
     using extents_type =
@@ -125,19 +124,16 @@ class SliceView
     // this
     SliceView(const ViewType& b, const Slices&... slices)
         requires(IsConst)
-        : Base(b),
-          m_extents(
+        : Base(b,
               std::experimental::submdspan_extents(b.extents(), slices...)),
           m_slices(slices...) {}
 
     SliceView(ViewType& b, const Slices&... slices)
         requires(!IsConst && view_traits::is_writable)
-        : Base(b),
-          m_extents(
+        : Base(b,
               std::experimental::submdspan_extents(b.extents(), slices...)),
           m_slices(slices...) {}
 
-    constexpr const extents_type& extents() const { return m_extents; }
 
     template <rank_type K, typename... Args>
     index_type get_index(Args&&... a) const {
@@ -234,7 +230,6 @@ class SliceView
     }
 
    private:
-    extents_type m_extents;
     slice_storage_type m_slices;
 };
 

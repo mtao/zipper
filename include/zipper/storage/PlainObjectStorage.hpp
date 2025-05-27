@@ -7,12 +7,6 @@
 #include "zipper/views/StorageViewBase.hpp"
 
 namespace zipper::storage {
-
-// SpanStorage predeclares the defaults now?
-// template <typename ValueType, typename Extents,
-//           typename LayoutPolicy = zipper::default_layout_policy,
-//           typename AccessorPolicy =
-//           zipper::default_accessor_policy<ValueType>>
 template <typename ValueType, typename Extents, typename LayoutPolicy,
           typename AccessorPolicy>
 class PlainObjectStorage

@@ -16,7 +16,7 @@ class DiagonalView;
 template <concepts::ViewDerived ViewType, bool IsConst>
 struct detail::ViewTraits<unary::DiagonalView<ViewType, IsConst> >
     : public zipper::views::unary::detail::DefaultUnaryViewTraits<
-          ViewType, DimensionedViewBase> {
+          ViewType, true> {
     using Base = detail::ViewTraits<ViewType>;
     using value_type = Base::value_type;
     using base_extents_type = Base::extents_type;
@@ -86,6 +86,9 @@ class DiagonalView
     using view_extents_type = view_traits::extents_type;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
 
+    constexpr static bool holds_extents = traits::holds_extents;
+    static_assert(holds_extents);
+
     constexpr static std::array<rank_type, view_extents_type::rank()>
         actionable_indices = traits::actionable_indices;
 
@@ -101,13 +104,12 @@ class DiagonalView
     DiagonalView& operator=(const DiagonalView&) = delete;
     DiagonalView& operator=(DiagonalView&&) = delete;
     DiagonalView(const ViewType& b)
-        : Base(b), m_extents(traits::get_extents(b.extents())) {}
+        : Base(b, traits::get_extents(b.extents())) {}
 
     DiagonalView(ViewType& b)
         requires(!IsConst && view_traits::is_writable)
-        : Base(b), m_extents(traits::get_extents(b.extents())) {}
+        : Base(b, traits::get_extents(b.extents())) {}
 
-    constexpr const extents_type& extents() const { return m_extents; }
 
     template <rank_type K>
     index_type get_index(concepts::TupleLike auto const& a) const {
@@ -165,8 +167,6 @@ class DiagonalView
         views::detail::AssignHelper<V, self_type>::assign(view, *this);
     }
 
-   private:
-    extents_type m_extents;
 };
 template <concepts::ViewDerived ViewType>
 DiagonalView(ViewType& v) -> DiagonalView<ViewType, false>;

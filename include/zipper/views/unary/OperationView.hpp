@@ -12,7 +12,7 @@ class OperationView;
 }  // namespace unary
 template <concepts::ViewDerived Child, typename Operation>
 struct detail::ViewTraits<unary::OperationView<Child, Operation>>
-    : public zipper::views::unary::detail::DefaultUnaryViewTraits<Child> {
+    : public zipper::views::unary::detail::DefaultUnaryViewTraits<Child, false> {
     using value_type = std::decay_t<decltype(std::declval<Operation>()(
         std::declval<typename Child::value_type>()))>;
 };
@@ -24,6 +24,8 @@ class OperationView
    public:
     using self_type = OperationView<Child, Operation>;
     using traits = zipper::views::detail::ViewTraits<self_type>;
+    constexpr static bool holds_extents = traits::holds_extents;
+    static_assert(!holds_extents);
     using extents_type = traits::extents_type;
     using value_type = traits::value_type;
 

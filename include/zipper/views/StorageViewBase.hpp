@@ -13,8 +13,6 @@ namespace zipper::views {
 template <typename Derived_>
 class StorageViewBase : public MappedViewBase<Derived_> {
    public:
-    constexpr static bool IsStatic = zipper::detail::ExtentsTraits<
-        typename detail::ViewTraits<Derived_>::extents_type>::is_static;
     using Derived = Derived_;
     Derived& derived() { return static_cast<Derived&>(*this); }
     const Derived& derived() const {
@@ -26,6 +24,7 @@ class StorageViewBase : public MappedViewBase<Derived_> {
     using extents_type = traits::extents_type;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
     using value_type = traits::value_type;
+    constexpr static bool IsStatic = extents_traits::is_static;
 
     using ParentType = MappedViewBase<Derived>;
     using ParentType::extent;

@@ -32,9 +32,13 @@ class TensorSpan_
         requires(extents_traits::is_static)
         : Base(Storage(e)) {}
 
+    TensorSpan_(const std_span_type& e)
+        requires(!extents_traits::is_static && extents_type::rank() == 1)
+        : Base(Storage(e, zipper::extents(e.size()))) {}
+
     template <typename... Args>
     TensorSpan_(const std_span_type& e, Args&&... args)
-        requires((std::is_convertible_v<Args, index_type> && ...))
+        requires((std::is_convertible_v<Args, index_type> && ...) && sizeof...(args) == extents_type::rank())
         : Base(Storage(e, Extents(std::forward<Args>(args)...))) {}
 
     using Base::operator=;

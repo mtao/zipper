@@ -18,7 +18,7 @@ class AntiSliceView;
 template <concepts::ViewDerived ViewType, bool IsConst, rank_type TotalRank, rank_type... indices>
 struct detail::ViewTraits<unary::AntiSliceView<ViewType, IsConst, TotalRank, std::integer_sequence<rank_type, indices...>>>
     : public zipper::views::unary::detail::DefaultUnaryViewTraits<
-          ViewType, DimensionedViewBase> {
+          ViewType, true> {
     using Base = detail::ViewTraits<ViewType>;
 
     template <std::size_t... N>
@@ -107,34 +107,29 @@ class AntiSliceView
     AntiSliceView& operator=(const AntiSliceView&) = default;
     AntiSliceView& operator=(AntiSliceView&&) = default;
     AntiSliceView(const ViewType& b, AntiSlices&&... slices)
-        : Base(b),
-          m_extents(
+        : Base(b,
               std::experimental::submdspan_extents(b.extents(), slices...)),
           m_slices(std::forward<AntiSlices>(slices)...) {}
 
     AntiSliceView(ViewType& b, AntiSlices&&... slices)
         requires(!IsConst && view_traits::is_writable)
-        : Base(b),
-          m_extents(
+        : Base(b,
               std::experimental::submdspan_extents(b.extents(), slices...)),
           m_slices(std::forward<AntiSlices>(slices)...) {}
 
     // for some reason having zipper::full_extent makes this necessary. TODO fix
     // this
     AntiSliceView(const ViewType& b, const AntiSlices&... slices)
-        : Base(b),
-          m_extents(
+        : Base(b,
               std::experimental::submdspan_extents(b.extents(), slices...)),
           m_slices(slices...) {}
 
     AntiSliceView(ViewType& b, const AntiSlices&... slices)
         requires(!IsConst && view_traits::is_writable)
-        : Base(b),
-          m_extents(
+        : Base(b,
               std::experimental::submdspan_extents(b.extents(), slices...)),
           m_slices(slices...) {}
 
-    constexpr const extents_type& extents() const { return m_extents; }
 
     template <rank_type K, typename... Args>
     index_type get_index(Args&&... a) const {
@@ -275,7 +270,6 @@ class AntiSliceView
     }
 
    private:
-    extents_type m_extents;
     std::tuple<AntiSlices...> m_slices;
 };
 

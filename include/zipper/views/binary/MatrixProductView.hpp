@@ -66,14 +66,10 @@ class MatrixProductView : public BinaryViewBase<MatrixProductView<A, B>, A, B> {
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
 
     MatrixProductView(const A& a, const B& b)
-        requires(extents_traits::is_static)
-        : Base(a, b) {
+        : Base(a, b,
+               traits::ConvertExtentsUtil::merge(a.extents(), b.extents())) {
         assert(a.extent(1) == b.extent(0));
     }
-    MatrixProductView(const A& a, const B& b)
-        requires(!extents_traits::is_static)
-        : Base(a, b,
-               traits::ConvertExtentsUtil::merge(a.extents(), b.extents())) {}
 
     value_type coeff(index_type a, index_type b) const {
         value_type v = 0;

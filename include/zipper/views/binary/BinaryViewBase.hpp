@@ -8,7 +8,7 @@ namespace zipper::views::binary {
 
 namespace detail {
 template <concepts::ViewDerived ChildA, concepts::ViewDerived ChildB,
-          template <typename> typename Base = DimensionedViewBase>
+          bool _holds_extents = true>
 struct DefaultBinaryViewTraits : public views::detail::DefaultViewTraits<> {
     using ATraits = views::detail::ViewTraits<ChildA>;
     using BTraits = views::detail::ViewTraits<ChildB>;
@@ -22,7 +22,7 @@ struct DefaultBinaryViewTraits : public views::detail::DefaultViewTraits<> {
 
     // defaulting to first parameter
     using value_type = typename ATraits::value_type;
-    constexpr static bool holds_extents = true;
+    constexpr static bool holds_extents = _holds_extents;
     constexpr static bool is_coefficient_consistent =
         ATraits::is_coefficient_consistent &&
         BTraits::is_coefficient_consistent;
@@ -30,7 +30,9 @@ struct DefaultBinaryViewTraits : public views::detail::DefaultViewTraits<> {
 
     // to pass a base type to the BinaryViewBase
     template <typename Derived>
-    using base_type = Base<Derived>;
+    using base_type =
+        std::conditional_t<holds_extents, DimensionedViewBase<Derived>,
+                           ViewBase<Derived>>;
 };
 }  // namespace detail
 
@@ -39,6 +41,8 @@ template <typename Derived, concepts::ViewDerived ChildTypeA,
 class BinaryViewBase
     : public views::detail::ViewTraits<Derived>::template base_type<Derived> {
    public:
+    using Base =
+        views::detail::ViewTraits<Derived>::template base_type<Derived>;
     using self_type = BinaryViewBase<Derived, ChildTypeA, ChildTypeB>;
     using traits = zipper::views::detail::ViewTraits<Derived>;
     using extents_type = traits::extents_type;
@@ -64,10 +68,8 @@ class BinaryViewBase
 
     BinaryViewBase(const ChildTypeA& a, const ChildTypeB& b,
                    const extents_type& e)
-        requires(holds_extents && !is_static)
-        : m_lhs(a), m_rhs(b), m_extents(e) {}
-    using Base =
-        views::detail::ViewTraits<Derived>::template base_type<Derived>;
+        requires(holds_extents)
+        : Base(e), m_lhs(a), m_rhs(b) {}
     using Base::extent;
 
     ChildTypeA& lhs() { return m_lhs; }
@@ -76,15 +78,15 @@ class BinaryViewBase
     ChildTypeB& rhs() { return m_rhs; }
     const ChildTypeB& rhs() const { return m_rhs; }
 
-    const extents_type& extents() const
-        requires(holds_extents)
-    {
-        return m_extents;
-    }
-
     value_type get_value(const lhs_value_type& l,
                          const rhs_value_type& r) const {
         return derived().get_value(l, r);
+    }
+
+    constexpr const extents_type& extents() const
+        requires(holds_extents)
+    {
+        return Base::extents();
     }
 
     template <typename... Args>
@@ -98,8 +100,6 @@ class BinaryViewBase
    private:
     const ChildTypeA& m_lhs;
     const ChildTypeB& m_rhs;
-
-    std::conditional_t<holds_extents, extents_type, zipper::empty> m_extents;
 };
 
 }  // namespace zipper::views::binary

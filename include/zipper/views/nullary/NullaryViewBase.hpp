@@ -32,6 +32,9 @@ class NullaryViewBase
     constexpr static bool is_coefficient_consistent =
         traits::is_coefficient_consistent;
     constexpr static bool is_value_based = traits::is_value_based;
+    using Base =
+        views::detail::ViewTraits<Derived>::template base_type<Derived>;
+    using Base::extent;
 
     Derived& derived() { return static_cast<Derived&>(*this); }
     const Derived& derived() const {
@@ -44,12 +47,8 @@ class NullaryViewBase
         requires(is_static)
     = default;
 
-    NullaryViewBase(const extents_type& e) : m_extents(e) {}
-    using Base =
-        views::detail::ViewTraits<Derived>::template base_type<Derived>;
-    using Base::extent;
+    NullaryViewBase(const extents_type& e) : Base(e) {}
 
-    const extents_type& extents() const { return m_extents; }
 
     value_type get_value() const
         requires(is_value_based)
@@ -64,8 +63,6 @@ class NullaryViewBase
         return get_value();
     }
 
-   private:
-    extents_type m_extents;
 };
 
 }  // namespace zipper::views::nullary

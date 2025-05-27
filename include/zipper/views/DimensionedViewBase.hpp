@@ -7,16 +7,22 @@ template <typename Derived_>
 class DimensionedViewBase : public ViewBase<Derived_> {
    public:
     using Derived = Derived_;
+    using traits = detail::ViewTraits<Derived>;
+
+    using Base = ViewBase<Derived>;
+    using value_type = traits::value_type;
+    using extents_type = traits::extents_type;
+    using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
+    constexpr static bool IsStatic = extents_traits::is_static;
     Derived& derived() { return static_cast<Derived&>(*this); }
     const Derived& derived() const {
         return static_cast<const Derived&>(*this);
     }
-    using Base = ViewBase<Derived>;
-    using traits = detail::ViewTraits<Derived>;
-
-    using value_type = traits::value_type;
-    using extents_type = traits::extents_type;
-    using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
+    DimensionedViewBase()
+        requires(IsStatic)
+    {}
+    template <typename... Args>
+    DimensionedViewBase(const extents_type& extents) : m_extents(extents) {}
 
     const extents_type& extents() const { return m_extents; }
 

@@ -11,7 +11,6 @@
 #include "zipper/detail/extents/extents_formatter.hpp"
 #include "zipper/detail/extents/static_extents_to_array.hpp"
 #include "zipper/detail/pack_index.hpp"
-#include "zipper/views/DimensionedViewBase.hpp"
 
 namespace zipper::views {
 namespace unary {
@@ -23,7 +22,7 @@ class PartialTraceView;
 template <concepts::ViewDerived ViewType, rank_type... Indices>
 struct detail::ViewTraits<unary::PartialTraceView<ViewType, Indices...>>
     : public zipper::views::unary::detail::DefaultUnaryViewTraits<
-          ViewType, DimensionedViewBase> {
+          ViewType, true> {
     using Base = detail::ViewTraits<ViewType>;
     using index_remover =
         unary::detail::invert_integer_sequence<Base::extents_type::rank(),
@@ -53,15 +52,14 @@ class PartialTraceView
     using Base::extent;
     using Base::view;
 
-    PartialTraceView(const ViewType& b) : Base(b), m_extents(traits::index_remover::get_extents(b.extents())) {}
+    PartialTraceView(const ViewType& b) : Base(b,traits::index_remover::get_extents(b.extents())) {}
     PartialTraceView() = delete;
     PartialTraceView& operator=(const PartialTraceView& ) = delete;
     PartialTraceView& operator=(PartialTraceView&& ) = delete;
-    PartialTraceView(const PartialTraceView& o) : Base(o.view()) , m_extents(traits::index_remover::get_extents(o.extents())){ }
+    PartialTraceView(const PartialTraceView& o) : Base(o.view(),traits::index_remover::get_extents(o.extents())){ }
     //PartialTraceView(PartialTraceView&& o): PartialTraceView(o.view()) { }
     //: Base(b), m_extents(swizzler_type::swizzle_extents(b.extents())) {}
 
-    constexpr const extents_type& extents() const { return m_extents; }
 
     template <typename>
     struct slice_type_;
@@ -119,8 +117,6 @@ class PartialTraceView
         }
     }
 
-   private:
-    extents_type m_extents;
 };  // namespace unarytemplate<typenameA,typenameB>class AdditionView
 
 }  // namespace unary
