@@ -3,14 +3,14 @@
 #if !defined(ZIPPER_VIEWS_DYNAMICMAPPEDVIEWBASE_HPP)
 #define ZIPPER_VIEWS_DYNAMICMAPPEDVIEWBASE_HPP
 
-#include "DynamicViewBase.hpp"
+#include "ViewBase.hpp"
 #include "detail/ViewTraits.hpp"
 #include "zipper/detail//ExtentsTraits.hpp"
 
 namespace zipper::views {
 
 template <typename Derived_>
-class DynamicMappedViewBase : public DynamicViewBase<Derived_> {
+class DynamicMappedViewBase : public ViewBase<Derived_> {
    public:
     using Derived = Derived_;
     Derived& derived() { return static_cast<Derived&>(*this); }
@@ -29,24 +29,12 @@ class DynamicMappedViewBase : public DynamicViewBase<Derived_> {
     const extents_type& extents() const { return m_mapping.extents(); }
     const mapping_type& mapping() const { return m_mapping; }
 
-    static index_type size_from_extents(const extents_type& extents) {
-        index_type s = 1;
-        for (rank_type j = 0; j < extents.rank(); ++j) {
-            s *= extents.extent(j);
-        }
-        return s;
-    }
-    index_type size_from_extents() const {
-        return size_from_extents(extents());
-    }
-
     template <typename... Args>
     DynamicMappedViewBase(const extents_type& extents) : m_mapping(extents) {}
 
     template <concepts::ExtentsType E2>
     void resize_extents(const E2& e)
-        requires(extents_traits::template is_convertable_from<
-                 E2>())
+        requires(extents_traits::template is_convertable_from<E2>())
     {
         m_mapping = {e};
     }

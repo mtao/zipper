@@ -1,14 +1,15 @@
 #if !defined(ZIPPER_VIEWS_STATICMAPPEDVIEWBASE_HPP)
 #define ZIPPER_VIEWS_STATICMAPPEDVIEWBASE_HPP
 
-#include "StaticViewBase.hpp"
+#include "DimensionedViewBase.hpp"
 #include "detail/ViewTraits.hpp"
 #include "zipper/detail//ExtentsTraits.hpp"
 
 namespace zipper::views {
 
+// even though this is mapped it can depend
 template <typename Derived_>
-class StaticMappedViewBase : public StaticViewBase<Derived_> {
+class StaticMappedViewBase : public ViewBase<Derived_> {
    public:
     using Derived = Derived_;
     Derived& derived() { return static_cast<Derived&>(*this); }
@@ -61,7 +62,9 @@ class StaticMappedViewBase : public StaticViewBase<Derived_> {
        -> const value_type& requires(traits::is_writable) {
            index_type idx = get_index(std::forward<Indices>(indices)...);
            return derived().const_coeff_ref_linear(idx);
-       } private : constexpr static mapping_type s_mapping = {};
+       }
+
+   private : constexpr static mapping_type s_mapping = {};
 };
 
 }  // namespace zipper::views
