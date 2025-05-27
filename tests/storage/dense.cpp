@@ -8,26 +8,25 @@
 #include <zipper/storage/concepts/StaticDataLike.hpp>
 
 namespace {
-void test(zipper::storage::concepts::StorageLike auto& data, size_t N) {
+void test(zipper::storage::concepts::DataLike auto& data, size_t N) {
     static_assert(
         std::is_same_v<typename std::decay_t<decltype(data)>::value_type,
                        double>);
-
-    for (zipper::index_type j = 0; j < N; ++j) {
-        data.coeff_ref(j) = double(j);
+    for (auto& d : data) {
+        d = 1;
     }
     for (zipper::index_type j = 0; j < N; ++j) {
-        CHECK(data.coeff(j) == double(j));
-        CHECK(data.coeff_ref(j) == double(j));
-        CHECK(data.const_coeff_ref(j) == double(j));
+        CHECK(data.coeff(j) == 1);
+        CHECK(data.coeff_ref(j) == 1);
+        CHECK(data.const_coeff_ref(j) == 1);
+    }
+    for (auto& d : data) {
+        d = 0;
     }
     for (zipper::index_type j = 0; j < N; ++j) {
-        data.coeff_ref(j) = double(0);
-    }
-    for (zipper::index_type j = 0; j < N; ++j) {
-        CHECK(data.coeff(j) == 0);
-        CHECK(data.coeff_ref(j) == 0);
-        CHECK(data.const_coeff_ref(j) == 0);
+        CHECK(data.coeff(j) == double(0));
+        CHECK(data.coeff_ref(j) == double(0));
+        CHECK(data.const_coeff_ref(j) == double(0));
     }
 }
 }  // namespace
@@ -64,13 +63,13 @@ void test_dense(zipper::storage::concepts::DenseDataLike auto& data) {
 }
 
 using namespace zipper;
-TEST_CASE("static_dense_data", "[data]") {
+TEST_CASE("static_dense_data_iteration", "[data]") {
     zipper::storage::StaticDenseData<double, 5> A;
     test_static<5>(A);
     test_dense<5>(A);
 }
 
-TEST_CASE("dynamic_dense_data", "[data]") {
+TEST_CASE("dynamic_dense_data_iteration", "[data]") {
     {
         zipper::storage::DynamicDenseData<double> A(5);
         test_dense<5>(A);

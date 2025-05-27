@@ -26,14 +26,14 @@ class StaticDenseData {
     const auto& container() const { return m_data; }
     auto& container() { return m_data; }
 
-    using iterator_type = value_type*;
-    using const_iterator_type = value_type const*;
-    auto begin() -> value_type* { return m_data.begin(); }
-    auto end() -> value_type* { return m_data.end(); }
-    auto begin() const -> value_type const* { return m_data.begin(); }
-    auto end() const -> value_type const* { return m_data.end(); }
-    auto cbegin() const -> value_type const* { return m_data.begin(); }
-    auto cend() const -> value_type const* { return m_data.end(); }
+    using iterator_type = storage_type::iterator;
+    using const_iterator_type = storage_type::const_iterator;
+    auto begin() -> iterator_type { return m_data.begin(); }
+    auto end() -> iterator_type { return m_data.end(); }
+    auto begin() const -> const_iterator_type { return m_data.begin(); }
+    auto end() const -> const_iterator_type { return m_data.end(); }
+    auto cbegin() const -> const_iterator_type { return m_data.begin(); }
+    auto cend() const -> const_iterator_type { return m_data.end(); }
 
     std::span<value_type, static_size> as_std_span() { return container(); }
     std::span<const value_type, static_size> as_std_span() const {

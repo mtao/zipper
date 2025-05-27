@@ -33,7 +33,7 @@ class StorageViewBase : public MappedViewBase<Derived_> {
 
     using ParentType::ParentType;
 
-    using ParentType::mapping;
+    //using ParentType::mapping;
 
     using layout_policy = traits::layout_policy;
     using accessor_policy = traits::accessor_policy;
