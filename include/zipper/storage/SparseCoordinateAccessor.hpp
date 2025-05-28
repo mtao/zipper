@@ -71,7 +71,7 @@ ValueType& value()
     const auto& operator*() const { return *this; }
     auto& operator*() { return *this; }
     std::strong_ordering operator<=>(const auto& t) const {
-        assert(m_acc.m_sorted);
+        assert(m_acc.m_compressed);
         if constexpr (std::is_same_v<SparseCoordinateAccessor_iterator<
                                          ValueType, Extents, is_const>,
                                      std::decay_t<decltype(t)>>) {
@@ -200,7 +200,7 @@ class SparseCoordinateAccessor
                 zipper::detail::pack_index<J>(indices...));
         };
         (add(std::integral_constant<rank_type, N>{}), ...);
-        m_sorted = false;
+        m_compressed = false;
         return m_data.emplace_back(0);
     }
 
@@ -224,13 +224,25 @@ class SparseCoordinateAccessor
         return const_iterator_type{*this, data_size()};
     }
 
-    void sort() {
+    void compress() {
         std::vector o = std::ranges::views::iota(size_t(0), data_size()) |
                         std::ranges::to<std::vector>();
 
         std::ranges::sort(o.begin(), o.end(), [this](size_t a, size_t b) {
             return std::is_lt(index_lexicographic_compare(a, b));
         });
+
+        std::vector<size_t> o2;
+        o2.emplace_back(o[0]);
+        for (size_t j = 1; j < data_size(); ++j) {
+            size_t cur = o2.back();
+            if (get_multiindex(cur) == get_multiindex(o[j])) {
+                m_data[cur] += m_data[o[j]];
+            } else {
+                o2.emplace_back(o[j]);
+            }
+        }
+        o = std::move(o2);
 
         auto reorder = [&o]<typename T>(std::vector<T>& data) {
             data = std::ranges::views::transform(
@@ -242,7 +254,7 @@ class SparseCoordinateAccessor
             reorder(d);
         }
 
-        m_sorted = true;
+        m_compressed = true;
     }
     template <typename... Indices>
     auto find(Indices&&... indices) const -> const_iterator_type {
@@ -252,7 +264,7 @@ class SparseCoordinateAccessor
         assert(
             zipper::detail::extents::indices_in_range(extents(), indices...));
 #endif
-        if (m_sorted) {
+        if (m_compressed) {
             if (data_size() == 0) {
                 return end();
             }
@@ -320,7 +332,7 @@ class SparseCoordinateAccessor
    private:
     std::vector<value_type> m_data;
     std::array<std::vector<index_type>, rank()> m_indices;
-    bool m_sorted = true;
+    bool m_compressed = true;
 };
 }  // namespace zipper::storage
 
