@@ -26,6 +26,7 @@ class ViewBase {
     using traits = detail::ViewTraits<Derived>;
     using extents_type = traits::extents_type;
     using value_type = traits::value_type;
+    using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
     // view does not permute underlying value of indices, so coefficient-wise
     // operations are valid
     constexpr static bool is_coefficient_consistent =
@@ -95,6 +96,8 @@ class ViewBase {
         -> decltype(auto);
     template <concepts::ViewAccessTuple Tuple>
     auto access_tuple(const Tuple& t) -> decltype(auto);
+
+    constexpr size_t size() const { return extents_traits::size(extents()); }
 };
 
 }  // namespace zipper::views

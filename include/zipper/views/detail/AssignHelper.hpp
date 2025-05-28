@@ -1,6 +1,6 @@
-#if !defined(ZIPPER_VIEWS_DETAIL_ASSIGN_HELPER_HPP)
-#define ZIPPER_VIEWS_DETAIL_ASSIGN_HELPER_HPP
-#include "ViewTraits.hpp"
+#if !defined(ZIPPER_VIEWS_NULLARY_DETAIL_ASSIGN_HELPER_HPP)
+#define ZIPPER_VIEWS_NULLARY_DETAIL_ASSIGN_HELPER_HPP
+#include "zipper/views/detail/ViewTraits.hpp"
 #include "zipper/concepts/ViewDerived.hpp"
 #include "zipper/detail/ExtentsTraits.hpp"
 #include "zipper/detail/extents/all_extents_indices.hpp"
@@ -44,7 +44,7 @@ struct AssignHelper {
     }
 
     static void assign(const From& from, To& to) {
-        using VTraits = detail::ViewTraits<From>;
+        using VTraits = zipper::views::detail::ViewTraits<From>;
         constexpr static bool assigning_from_infinite =
             VTraits::extents_type::rank() == 0;
         constexpr static bool should_resize =

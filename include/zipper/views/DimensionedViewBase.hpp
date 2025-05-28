@@ -31,8 +31,6 @@ class DimensionedViewBase : public ViewBase<Derived_> {
         return extents_type::static_extent(i);
     }
 
-    constexpr size_t size() { return m_extents.size(); }
-
    private:
     extents_type m_extents;
 };

@@ -1,21 +1,21 @@
 #if !defined(ZIPPER_VIEWS_DETAIL_PLAINOBJECTVIEWTRAITS_HPP)
 #define ZIPPER_VIEWS_DETAIL_PLAINOBJECTVIEWTRAITS_HPP
-#include "ViewTraits.hpp"
+#include "zipper/views/detail/ViewTraits.hpp"
 #include "zipper/detail//ExtentsTraits.hpp"
 #include "zipper/types.hpp"
 
-namespace zipper::views {
+namespace zipper::views::nullary {
 
 template <typename T>
-class StorageViewBase;
+class DenseStorageViewBase;
 }
 namespace zipper::views::detail {
 template <typename T>
 concept StorageViewDerived = std::derived_from<
-    T, StorageViewBase<
+    T, nullary::DenseStorageViewBase<
            T>>;
 template <typename T>
-struct StorageViewTraits;
+struct DenseStorageViewTraits;
 //{
 //    using value_type = ...;
 //    using extents_type = ...;

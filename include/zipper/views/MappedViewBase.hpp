@@ -51,12 +51,6 @@ class MappedViewBase : public ViewBase<Derived_> {
         static_assert((std::is_integral_v<std::decay_t<Indices>> && ...));
         static_assert((!concepts::TupleLike<Indices> && ...));
 #if !defined(NDEBUG)
-        if constexpr (sizeof...(indices) == 2) {
-            spdlog::info("{} {} / {} {}", indices..., extent(0), extent(1));
-        }
-        if constexpr (sizeof...(indices) ==1 ) {
-            spdlog::info("{}  /  {}", indices..., extent(0));
-        }
         assert(
             zipper::detail::extents::indices_in_range(extents(), indices...));
 #endif

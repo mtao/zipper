@@ -1,17 +1,16 @@
-#if !defined(ZIPPER_VIEWS_OBJECTVIEWBASE_HPP)
-#define ZIPPER_VIEWS_OBJECTVIEWBASE_HPP
+#if !defined(ZIPPER_VIEWS_NULLARY_DENSESTORAGEVIEWBASE_HPP)
+#define ZIPPER_VIEWS_NULLARY_DENSESTORAGEVIEWBASE_HPP
 #include <ranges>
 
-#include "MappedViewBase.hpp"
-#include "ViewBase.hpp"
-#include "detail/AssignHelper.hpp"
-#include "detail/StorageViewTraits.hpp"
+#include "zipper/views/MappedViewBase.hpp"
+#include "zipper/views/detail/AssignHelper.hpp"
+#include "detail/DenseStorageViewTraits.hpp"
 #include "zipper/concepts/TupleLike.hpp"
 #include "zipper/concepts/ViewDerived.hpp"
 #include "zipper/detail/extents/all_extents_indices.hpp"
-namespace zipper::views {
+namespace zipper::views::nullary {
 template <typename Derived_>
-class StorageViewBase : public MappedViewBase<Derived_> {
+class DenseStorageViewBase : public MappedViewBase<Derived_> {
    public:
     using Derived = Derived_;
     Derived& derived() { return static_cast<Derived&>(*this); }
@@ -19,7 +18,7 @@ class StorageViewBase : public MappedViewBase<Derived_> {
         return static_cast<const Derived&>(*this);
     }
     using BaseType = ViewBase<Derived>;
-    using traits = detail::ViewTraits<Derived>;
+    using traits = views::detail::ViewTraits<Derived>;
 
     using extents_type = traits::extents_type;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;

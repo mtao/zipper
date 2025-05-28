@@ -4,7 +4,7 @@
 #include "SpanData.hpp"
 #include "concepts/DataLike.hpp"
 #include "zipper/detail//ExtentsTraits.hpp"
-#include "zipper/views/StorageViewBase.hpp"
+#include "zipper/views/nullary/DenseStorageViewBase.hpp"
 
 namespace zipper::storage {
 
@@ -16,10 +16,10 @@ namespace zipper::storage {
 template <concepts::DataLike DataType, typename Extents, typename LayoutPolicy,
           typename AccessorPolicy>
 class DenseAccessor
-    : public views::StorageViewBase<
+    : public views::nullary::DenseStorageViewBase<
           DenseAccessor<DataType, Extents, LayoutPolicy, AccessorPolicy>> {
    public:
-    using ParentType = views::StorageViewBase<
+    using ParentType = views::nullary::DenseStorageViewBase<
         DenseAccessor<DataType, Extents, LayoutPolicy, AccessorPolicy>>;
     using data_type = DataType;
     using value_type = DataType::value_type;

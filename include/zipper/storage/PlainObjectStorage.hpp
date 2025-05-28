@@ -4,16 +4,16 @@
 #include "PlainObjectAccessor.hpp"
 #include "SpanStorage.hpp"
 #include "zipper/detail//ExtentsTraits.hpp"
-#include "zipper/views/StorageViewBase.hpp"
+#include "zipper/views/nullary/DenseStorageViewBase.hpp"
 
 namespace zipper::storage {
 template <typename ValueType, typename Extents, typename LayoutPolicy,
           typename AccessorPolicy>
 class PlainObjectStorage
-    : public views::StorageViewBase<PlainObjectStorage<
+    : public views::nullary::DenseStorageViewBase<PlainObjectStorage<
           ValueType, Extents, LayoutPolicy, AccessorPolicy>> {
    public:
-    using ParentType = views::StorageViewBase<
+    using ParentType = views::nullary::DenseStorageViewBase<
         PlainObjectStorage<ValueType, Extents, LayoutPolicy, AccessorPolicy>>;
     using value_type = ValueType;
     using extents_type = Extents;
