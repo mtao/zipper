@@ -6,8 +6,8 @@
 #include "zipper/storage/SparseCoordinateAccessor.hpp"
 
 namespace zipper::storage::detail {
-namespace detail {}
-template <typename ValueType, typename Extents>
+template <bool ReverseIndices = false, typename ValueType = double,
+          typename Extents = dextents<0>()>
 SparseCompressedData<ValueType, Extents::rank() - 1> to_sparse_compressed_data(
     const SparseCoordinateAccessor<ValueType, Extents>& e) {
     if (!e.is_compressed()) {
@@ -24,7 +24,12 @@ SparseCompressedData<ValueType, Extents::rank() - 1> to_sparse_compressed_data(
         auto m = [&R]<rank_type... Ranks>(
                      std::integer_sequence<rank_type, Ranks...>,
                      const auto& t) -> auto& {
-            return R.insert_back(std::get<Ranks>(t)...);
+            if constexpr (ReverseIndices) {
+                return R.insert_back(
+                    std::get<Extents::rank() - 1 - Ranks>(t)...);
+            } else {
+                return R.insert_back(std::get<Ranks>(t)...);
+            }
         };
 
         for (const auto& v : e) {
