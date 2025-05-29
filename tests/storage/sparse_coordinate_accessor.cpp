@@ -10,10 +10,13 @@ TEST_CASE("sparse_coordinate_accessor", "[sparse]") {
     auto checker = [](auto& A) {
         A.emplace(3, 3) = 2;
         A.emplace(4, 3) = 3;
+        REQUIRE(!A.is_compressed());
         A.emplace(1, 3) = 4;
         A.emplace(4, 4) = 7;
         A.emplace(0, 3) = 9;
+        REQUIRE(!A.is_compressed());
         A.compress();
+        REQUIRE(A.is_compressed());
         CHECK(A.coeff(3, 2) == 0);
         CHECK(A.coeff_ref(3, 3) == 2);
         CHECK(A.coeff_ref(4, 3) == 3);
@@ -23,6 +26,7 @@ TEST_CASE("sparse_coordinate_accessor", "[sparse]") {
         CHECK(A.coeff(4, 4) == 7);
         CHECK(A.coeff(0, 3) == 9);
         A.emplace(0, 3) = 9;
+        REQUIRE(!A.is_compressed());
         A.emplace(1, 3) = 5;
         A.emplace(0, 3) = 9;
         A.compress();

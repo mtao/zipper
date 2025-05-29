@@ -51,8 +51,8 @@ struct SparseCompressedData : public SparseCompressedData<T, N - 1> {
         requires((sizeof...(Leftover) == N) &&
                  zipper::concepts::IndexPackLike<Leftover...>)
 
-    value_type& insert_back_(size_t start, size_t size, index_type index,
-                             Leftover... leftover) {
+    value_type& insert_back_(size_t /*start*/, size_t /*size*/,
+                             index_type index, Leftover... leftover) {
         // assert(start + size == this->size() + 1);
         if (m_spans.empty()) {
             m_spans.emplace_back(index, Parent::size(), 1);
@@ -95,7 +95,8 @@ struct SparseCompressedData<T, 0> {
     value_type& insert_back(index_type index) {
         return insert_back_(0, m_data.size(), index);
     }
-    value_type& insert_back_(size_t start, size_t size, index_type index) {
+    value_type& insert_back_(size_t /*start*/, size_t /*size*/,
+                             index_type index) {
         // assert(start + size == this->size() + 1);
         if (m_data.empty()) {
             return std::get<1>(m_data.emplace_back(index, 0));

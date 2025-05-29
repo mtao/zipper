@@ -144,6 +144,8 @@ class SparseCoordinateAccessor
     //     this->resize_extents(e);
     // }
 
+    bool is_compressed() const { return m_compressed; }
+
    private:
     size_t data_size() const { return m_data.size(); }
 
