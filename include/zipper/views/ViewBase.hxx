@@ -13,6 +13,7 @@ auto ViewBase<Derived>::coeff(Indices&&... indices) const -> value_type
     requires((concepts::IndexLike<std::decay_t<Indices>> && ...))
 {
     constexpr static rank_type size = sizeof...(Indices);
+    // rank 0 views act like scalar values
     static_assert(rank == 0 || size == rank);
     return derived().coeff(std::forward<Indices>(indices)...);
 }
@@ -21,6 +22,7 @@ template <typename... Indices>
 auto ViewBase<Derived>::coeff_ref(Indices&&... indices) -> value_type& requires(
     is_writable && (concepts::IndexLike<std::decay_t<Indices>> && ...)) {
     constexpr static rank_type size = sizeof...(Indices);
+    // rank 0 views act like scalar values
     static_assert(rank == 0 || size == rank);
     return derived().coeff_ref(std::forward<Indices>(indices)...);
 }
@@ -32,6 +34,7 @@ auto ViewBase<Derived>::const_coeff_ref(Indices&&... indices) const
                                   (concepts::IndexLike<std::decay_t<Indices>> &&
                                    ...)) {
         constexpr static rank_type size = sizeof...(Indices);
+        // rank 0 views act like scalar values
         static_assert(rank == 0 || size == rank);
         return derived().const_coeff_ref(std::forward<Indices>(indices)...);
     }

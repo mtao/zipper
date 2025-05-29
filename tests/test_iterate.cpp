@@ -3,7 +3,9 @@
 
 #include <catch2/catch_all.hpp>
 #include <zipper/detail/extents/all_extents_indices.hpp>
+#include <zipper/views/detail/intersect_nonzeros.hpp>
 #include <zipper/Vector.hpp>
+using namespace zipper;
 
 TEST_CASE("test_all_extents", "[storage][dense]") {
     for (const auto& ind : zipper::detail::extents::all_extents_indices(3, 4)) {
@@ -42,4 +44,33 @@ TEST_CASE("test_vector_iterate", "[vector][dense]") {
     CHECK(b(0) == 4);
     CHECK(b(1) == 9);
     CHECK(b(2) == 5);
+}
+
+TEST_CASE("test_iterate_nonzeros", "[vector][nonzeros]") {
+
+
+    std::vector<index_type> a = {0,3,4,6};
+    std::vector<index_type> b = {3,4,5};
+
+    {
+    zipper::views::detail::intersect_nonzeros innz(a,b);
+
+    static_assert(std::ranges::range<std::decay_t<decltype(a)>>);
+    static_assert(std::ranges::range<std::decay_t<decltype(b)>>);
+    static_assert(std::ranges::range<std::decay_t<decltype(innz)>>);
+
+    auto res = std::ranges::views::all(innz) | std::ranges::to<std::vector>();
+    REQUIRE(res.size() == 2);
+    CHECK(res[0] == 3);
+    CHECK(res[1] == 4);
+    }
+    {
+    zipper::views::detail::intersect_nonzeros innz(a,a);
+    auto res = std::ranges::views::all(innz) | std::ranges::to<std::vector>();
+    REQUIRE(res.size() == 4);
+    CHECK(res[0] == 0);
+    CHECK(res[1] == 3);
+    CHECK(res[2] == 4);
+    CHECK(res[3] == 6);
+    }
 }

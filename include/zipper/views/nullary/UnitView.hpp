@@ -17,6 +17,9 @@ template <typename T, index_type Extent, typename IndexType>
 struct detail::ViewTraits<nullary::UnitView<T, Extent, IndexType>>
     : public nullary::detail::DefaultNullaryViewTraits<T, Extent> {
     constexpr static bool is_value_based = false;
+
+    // returns true if a dimension is sparse, false if dense
+    consteval static bool is_sparse(rank_type n) { return true; }
 };
 
 namespace nullary {
@@ -60,6 +63,12 @@ class UnitView
         } else {
             return 0;
         }
+    }
+
+    template <rank_type R>
+        requires(R == 0)
+    constexpr std::array<index_type, 1> nonZeros(index_type) const {
+        return std::array<index_type, 1>{{m_index}};
     }
 
    private:

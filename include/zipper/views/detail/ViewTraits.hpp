@@ -1,3 +1,4 @@
+#include "zipper/concepts/IndexLike.hpp"
 #if !defined(ZIPPER_VIEWS_DETAIL_VIEW_TRAITS_HPP)
 #define ZIPPER_VIEWS_DETAIL_VIEW_TRAITS_HPP
 #include "zipper/types.hpp"
@@ -19,6 +20,9 @@ struct DefaultViewTraits {
 
     // only depends on values passed in
     constexpr static bool is_value_based = false;
+
+    // returns true if a dimension is sparse, false if dense
+    consteval static bool is_sparse(rank_type) { return false; }
 };
 //{
 //    using value_type = ...;

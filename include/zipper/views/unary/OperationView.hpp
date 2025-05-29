@@ -6,19 +6,23 @@
 namespace zipper::views {
 namespace unary {
 // TODO: operation should inherit std::unary_function<T,U>
-template <concepts::ViewDerived B, typename Operation>
+template <concepts::ViewDerived B, typename Operation,
+          bool PreservesZeros = false>
 class OperationView;
 
 }  // namespace unary
-template <concepts::ViewDerived Child, typename Operation>
-struct detail::ViewTraits<unary::OperationView<Child, Operation>>
-    : public zipper::views::unary::detail::DefaultUnaryViewTraits<Child, false> {
+template <concepts::ViewDerived Child, typename Operation, bool PreservesZeros>
+struct detail::ViewTraits<
+    unary::OperationView<Child, Operation, PreservesZeros>>
+    : public zipper::views::unary::detail::DefaultUnaryViewTraits<Child,
+                                                                  false> {
     using value_type = std::decay_t<decltype(std::declval<Operation>()(
         std::declval<typename Child::value_type>()))>;
 };
 
+// represents a coefficient-wise transformation of an underlyng view
 namespace unary {
-template <concepts::ViewDerived Child, typename Operation>
+template <concepts::ViewDerived Child, typename Operation, bool PreservesZeros>
 class OperationView
     : public UnaryViewBase<OperationView<Child, Operation>, Child> {
    public:

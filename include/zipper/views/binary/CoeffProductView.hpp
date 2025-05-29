@@ -22,6 +22,7 @@ struct detail::ViewTraits<binary::CoeffProductView<A, B>>
 };
 
 namespace binary {
+    // Per-coefficient product (i.e A(x,y,z) * B(x,y,z))
 template <concepts::ViewDerived A, concepts::ViewDerived B>
 class CoeffProductView : public BinaryViewBase<CoeffProductView<A, B>, A, B> {
    public:

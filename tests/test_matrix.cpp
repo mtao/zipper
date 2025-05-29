@@ -203,6 +203,7 @@ TEST_CASE("test_identity", "[matrix][identity]") {
     };
     zipper::Matrix<double, 3, 3> I = zipper::MatrixBase(
         zipper::views::nullary::IdentityView<double, 3, 3>{});
+
     check_identity(I);
     check_identity(zipper::MatrixBase(
         zipper::views::nullary::IdentityView<double, 3, 3>{}));
@@ -226,9 +227,20 @@ TEST_CASE("test_identity", "[matrix][identity]") {
     zipper::Matrix<double, 3, 3> IM = M * I;
     CHECK((M == MI));
     CHECK((M == IM));
+
+
+    // These last unit tests check that the identity matrix view works, but it was mostly written so i could add print statements in the matrix product to check that sparse operations are happening properly
+    
+    zipper::MatrixBase IV = zipper::views::nullary::IdentityView<double, 3, 3>{};
+    zipper::Matrix<double, 3, 3> MIV = IV * M;
+    zipper::Matrix<double, 3, 3> IVM = M * IV;
+    CHECK((M == MIV));
+    CHECK((M == IVM));
+    zipper::Matrix<double, 3, 3> IVIV = IV * IV;
+    CHECK((I == IVIV));
 }
 
-TEST_CASE("test_identity", "[matrix][vector][lift]") {
+TEST_CASE("test_identity2", "[matrix][vector][lift]") {
     zipper::Vector<double, 3> x;
     x(0) = 2;
     x(1) = 5;
