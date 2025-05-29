@@ -6,10 +6,10 @@ test('hello world', test_hello_world)
 
 test_iterate = executable('test_iterate', 'test_iterate.cpp', dependencies: [zipper_dep,catch2_with_main_dep])
 test('iterate', test_iterate)
-test_matrix = executable('test_matrix', 'test_matrix.cpp', dependencies: [zipper_dep,catch2_with_main_dep])
-test('matrix', test_matrix)
-test_tensor = executable('test_tensor', 'test_tensor.cpp', dependencies: [zipper_dep,catch2_with_main_dep])
-test('tensor', test_tensor)
+
+test_tensor = executable('test_tensor', ['test_vector.cpp','test_matrix.cpp', 'test_tensor.cpp'], dependencies: [zipper_dep,catch2_with_main_dep])
+test('tensors', test_tensor)
+
 test_extents = executable('test_extents', 'test_extents.cpp', dependencies: [zipper_dep,catch2_with_main_dep])
 test('extents', test_extents)
 

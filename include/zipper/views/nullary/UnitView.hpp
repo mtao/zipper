@@ -47,7 +47,7 @@ class UnitView
     UnitView& operator=(UnitView&&) = default;
 
     UnitView()
-        requires(extents_traits::is_static && dynamic_index)
+        requires(extents_traits::is_static && !dynamic_index)
     = default;
 
     UnitView(const index_type index)

@@ -157,14 +157,15 @@ class ZipperBase {
     View m_view;
 };
 
-UNARY_DECLARATION(ZipperBase, LogicalNot, operator!)
-UNARY_DECLARATION(ZipperBase, BitNot, operator~)
-UNARY_DECLARATION(ZipperBase, Negate, operator-)
-
-SCALAR_BINARY_DECLARATION(ZipperBase, Plus, operator+)
-SCALAR_BINARY_DECLARATION(ZipperBase, Minus, operator-)
-SCALAR_BINARY_DECLARATION(ZipperBase, Multiplies, operator*)
-SCALAR_BINARY_DECLARATION(ZipperBase, Divides, operator/)
+// TODO: figure out how to activate common declarations here rather than within each base type
+//UNARY_DECLARATION(ZipperBase, LogicalNot, operator!)
+//UNARY_DECLARATION(ZipperBase, BitNot, operator~)
+//UNARY_DECLARATION(ZipperBase, Negate, operator-)
+//
+//SCALAR_BINARY_DECLARATION(ZipperBase, Plus, operator+)
+//SCALAR_BINARY_DECLARATION(ZipperBase, Minus, operator-)
+//SCALAR_BINARY_DECLARATION(ZipperBase, Multiplies, operator*)
+//SCALAR_BINARY_DECLARATION(ZipperBase, Divides, operator/)
 // SCALAR_BINARY_DECLARATION(ZipperBase, Modulus, operator%)
 // SCALAR_BINARY_DECLARATION(ZipperBase, EqualsTo, operator==)
 // SCALAR_BINARY_DECLARATION(ZipperBase, NotEqualsTo, operator!=)
@@ -178,12 +179,12 @@ SCALAR_BINARY_DECLARATION(ZipperBase, Divides, operator/)
 // SCALAR_BINARY_DECLARATION(ZipperBase, BitOr, operator|)
 // SCALAR_BINARY_DECLARATION(ZipperBase, BitXor, operator^)
 
-BINARY_DECLARATION(ZipperBase, Plus, operator+)
-BINARY_DECLARATION(ZipperBase, Minus, operator-)
+//BINARY_DECLARATION(ZipperBase, Plus, operator+)
+//BINARY_DECLARATION(ZipperBase, Minus, operator-)
 // BINARY_DECLARATION(ZipperBase, Divides, operator/)
 // BINARY_DECLARATION(ZipperBase, Modulus, operator%)
-// BINARY_DECLARATION(ZipperBase, EqualsTo, operator==)
-// BINARY_DECLARATION(ZipperBase, NotEqualsTo, operator!=)
+//BINARY_DECLARATION(ZipperBase, EqualsTo, operator==)
+//BINARY_DECLARATION(ZipperBase, NotEqualsTo, operator!=)
 // BINARY_DECLARATION(ZipperBase, Greater, operator>)
 // BINARY_DECLARATION(ZipperBase, Less, operator<)
 // BINARY_DECLARATION(ZipperBase, GreaterEqual, operator>=)
@@ -194,15 +195,15 @@ BINARY_DECLARATION(ZipperBase, Minus, operator-)
 // BINARY_DECLARATION(ZipperBase, BitOr, operator|)
 // BINARY_DECLARATION(ZipperBase, BitXor, operator^)
 
-template <concepts::ZipperBaseDerived View1, concepts::ZipperBaseDerived View2>
-bool operator==(View1 const& lhs, View2 const& rhs) {
-    return (lhs.as_array() == rhs.as_array()).all();
-}
+//template <concepts::ZipperBaseDerived View1, concepts::ZipperBaseDerived View2>
+//bool operator==(View1 const& lhs, View2 const& rhs) {
+//    return (lhs.as_array() == rhs.as_array()).all();
+//}
 
-template <concepts::ZipperBaseDerived View1, concepts::ZipperBaseDerived View2>
-bool operator!=(View1 const& lhs, View2 const& rhs) {
-    return (lhs.as_array() != rhs.as_array()).any();
-}
+//template <concepts::ZipperBaseDerived View1, concepts::ZipperBaseDerived View2>
+//bool operator!=(View1 const& lhs, View2 const& rhs) {
+//    return (lhs.as_array() != rhs.as_array()).any();
+//}
 }  // namespace zipper
 
 #endif

@@ -4,9 +4,9 @@ from conan.tools.gnu import PkgConfigDeps
 import os
 
 __BASE_DEPS__ = [
-        "spdlog/1.14.1", 
+        "spdlog/1.15.1", 
         "range-v3/cci.20240905",  
-        "catch2/3.7.1",
+        "catch2/3.8.1",
         "mdspan/0.6.0"
         ]
 

@@ -119,7 +119,7 @@ struct invert_integer_sequence {
         constexpr auto& dyn_inds =
             zipper::detail::extents::dynamic_extents_indices_v<extents_type>;
         return extents_type(std::array<index_type, sizeof...(DN)>{
-            {o.extents(reduced_rank_to_full_indices[dyn_inds[DN]])...}});
+            {o.extent(reduced_rank_to_full_indices[dyn_inds[DN]])...}});
         // return extents_type<
         //>(
         //  );

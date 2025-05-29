@@ -3,6 +3,7 @@
 #define ZIPPER_VECTORBASE_HPP
 
 #include "ZipperBase.hpp"
+#include "as.hpp"
 #include "concepts/VectorBaseDerived.hpp"
 #include "concepts/VectorViewDerived.hpp"
 //
@@ -65,21 +66,12 @@ class VectorBase : public ZipperBase<VectorBase, View> {
         return operator=(other.view());
     }
 
-    auto as_array() const {
-        using V = views::unary::IdentityView<View>;
-        return ArrayBase<V>(V(view()));
-    }
     // auto as_col_matrix() const {
     //     return MatrixBase<views::unary::IdentityView<View>>(view());
     // }
-    auto as_tensor() const {
-        using V = views::unary::IdentityView<View>;
-        return TensorBase<V>(V(view()));
-    }
-    auto as_form() const {
-        using V = views::unary::IdentityView<View>;
-        return FormBase<V>(V(view()));
-    }
+    auto as_array() const { return zipper::as_array(*this); }
+    auto as_tensor() const { return zipper::as_tensor(*this); }
+    auto as_form() const { return zipper::as_form(*this); }
 
     template <index_type T>
     value_type norm_powered() const {
@@ -96,6 +88,10 @@ class VectorBase : public ZipperBase<VectorBase, View> {
     value_type norm_powered(value_type T) const {
         return views::reductions::CoefficientSum{
             as_array().pow(T).abs().view()}();
+    }
+
+    value_type dot(concepts::VectorBaseDerived auto const& o) const {
+        return as_form() * o;
     }
 
     template <index_type T = 2>
