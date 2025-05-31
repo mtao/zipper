@@ -94,7 +94,7 @@ class FormTensorProductView : public ViewBase<FormTensorProductView<A, B>> {
     template <typename... Args>
     value_type coeff(Args&&... args) const {
         typename traits::partial_trace_type trace(m_tensor);
-         return trace(std::forward<Args>(args)...);
+         return m_trace(std::forward<Args>(args)...);
         //return m_trace(std::forward<Args>(args)...);
     }
     const extents_type& extents() const { return m_trace.extents(); }

@@ -25,3 +25,4 @@ test('span', test_span)
 test_declare_operations = executable('test_declare_operations', 'test_declare_operations.cpp', dependencies: [zipper_dep,catch2_with_main_dep])
 
  subdir('storage')
+ subdir('views')
