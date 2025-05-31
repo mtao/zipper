@@ -77,15 +77,16 @@ class FormTensorProductView : public ViewBase<FormTensorProductView<A, B>> {
                   A::extents_type::rank() - B::extents_type::rank());
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
 
-    FormTensorProductView(const FormTensorProductView& o)
-        : FormTensorProductView(o.m_tensor.lhs(), o.m_tensor.rhs()) {}
+    //FormTensorProductView(const FormTensorProductView& o)
+    //    : m_tensor(o.m_tensor), m_trace(m_tensor) {}
+        //: FormTensorProductView(o.m_tensor.lhs(), o.m_tensor.rhs()) {}
 
-    FormTensorProductView(FormTensorProductView&& o)
-        : FormTensorProductView(o.m_tensor.lhs(), o.m_tensor.rhs()) {}
+    //FormTensorProductView(FormTensorProductView&& o)
+    //    : FormTensorProductView(o.m_tensor.lhs(), o.m_tensor.rhs()) {}
 
     FormTensorProductView() = delete;
-    // FormTensorProductView(FormTensorProductView&& o) = default;
-    // FormTensorProductView(const FormTensorProductView& o) = default;
+     FormTensorProductView(FormTensorProductView&& o) = default;
+     FormTensorProductView(const FormTensorProductView& o) = default;
     FormTensorProductView& operator=(FormTensorProductView& o) = delete;
     FormTensorProductView& operator=(FormTensorProductView&& o) = delete;
     FormTensorProductView(const A& a, const B& b)
@@ -94,7 +95,7 @@ class FormTensorProductView : public ViewBase<FormTensorProductView<A, B>> {
     template <typename... Args>
     value_type coeff(Args&&... args) const {
         typename traits::partial_trace_type trace(m_tensor);
-         return m_trace(std::forward<Args>(args)...);
+         return trace(std::forward<Args>(args)...);
         //return m_trace(std::forward<Args>(args)...);
     }
     const extents_type& extents() const { return m_trace.extents(); }

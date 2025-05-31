@@ -48,4 +48,8 @@ TEST_CASE("test_dot", "[matrix][storage][dense]") {
     CHECK(b.dot(e0) == 1);
     CHECK(b.dot(e1) == 3);
     CHECK(b.dot(e2) == 5);
+    CHECK(c.dot(e0) == 0);
+    CHECK(c.dot(e1) == 2);
+    CHECK(c.dot(e2) == 4);
+
 }

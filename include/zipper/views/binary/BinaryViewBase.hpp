@@ -72,10 +72,8 @@ class BinaryViewBase
         : Base(e), m_lhs(a), m_rhs(b) {}
     using Base::extent;
 
-    ChildTypeA& lhs() { return m_lhs; }
     const ChildTypeA& lhs() const { return m_lhs; }
 
-    ChildTypeB& rhs() { return m_rhs; }
     const ChildTypeB& rhs() const { return m_rhs; }
 
     value_type get_value(const lhs_value_type& l,

@@ -56,7 +56,9 @@ class PartialTraceView
     PartialTraceView() = delete;
     PartialTraceView& operator=(const PartialTraceView& ) = delete;
     PartialTraceView& operator=(PartialTraceView&& ) = delete;
-    PartialTraceView(const PartialTraceView& o) : Base(o.view(),traits::index_remover::get_extents(o.extents())){ }
+    PartialTraceView(PartialTraceView&& o) = default;
+    PartialTraceView(const PartialTraceView& o) = default;
+    //PartialTraceView(const PartialTraceView& o) = default;//: Base(o.view(),traits::index_remover::get_extents(o.extents())){ }
     //PartialTraceView(PartialTraceView&& o): PartialTraceView(o.view()) { }
     //: Base(b), m_extents(swizzler_type::swizzle_extents(b.extents())) {}
 

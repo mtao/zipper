@@ -39,7 +39,7 @@ class ZipperBase {
     // template <typename... Args>
     // ZipperBase(Args&&... v) : m_view(std::forward<Args>(v)...) {}
 
-    ZipperBase(View&& v) : m_view(v) {}
+    ZipperBase(View&& v) : m_view(std::move(v)) {}
     ZipperBase(const View& v) : m_view(v) {}
     Derived& operator=(concepts::ViewDerived auto const& v) {
         m_view = v;

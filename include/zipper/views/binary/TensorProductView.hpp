@@ -96,6 +96,10 @@ class TensorProductView : public BinaryViewBase<TensorProductView<A, B>, A, B> {
     using extents_type = traits::extents_type;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
 
+    TensorProductView(const TensorProductView&) = default;
+    TensorProductView(TensorProductView&&) = default;
+    TensorProductView& operator=(const TensorProductView&) = delete;
+    TensorProductView& operator=(TensorProductView&&) = delete;
     TensorProductView(const A& a, const B& b)
         requires(extents_traits::is_static)
         : Base(a, b) {}
