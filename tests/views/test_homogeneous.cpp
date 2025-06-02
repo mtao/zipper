@@ -21,11 +21,13 @@ TEST_CASE("test_homogeneous", "[vector][homogeneous]") {
     CHECK(c(1) == a(1));
     CHECK(c(2) == a(2));
     CHECK(c(3) == 1);
+    CHECK(zipper::VectorBase(c) == a.homogeneous());
     auto d = zipper::views::unary::HomogeneousView(b.view());
     CHECK(d(0) == b(0));
     CHECK(d(1) == b(1));
     CHECK(d(2) == b(2));
     CHECK(d(3) == 1);
+    CHECK(zipper::VectorBase(d) == b.homogeneous());
 }
 
 // #include <zipper/Vector.hpp>

@@ -11,8 +11,9 @@
 #include "FormBase.hpp"
 #include "MatrixBase.hpp"
 #include "TensorBase.hpp"
+#include "views/binary/CrossProductView.hpp"
 #include "views/reductions/CoefficientSum.hpp"
-#include "views/unary/IdentityView.hpp"
+#include "views/unary/HomogeneousView.hpp"
 
 namespace zipper {
 template <typename ValueType, index_type Rows>
@@ -93,6 +94,13 @@ class VectorBase : public ZipperBase<VectorBase, View> {
     value_type dot(concepts::VectorBaseDerived auto const& o) const {
         return as_form() * o;
     }
+    template <concepts::VectorBaseDerived O>
+    auto cross(O const& o) const {
+        return VectorBase<
+            views::binary::CrossProductView<View, typename O::view_type>>(
+            views::binary::CrossProductView<View, typename O::view_type>(
+                view(), o.view()));
+    }
 
     template <index_type T = 2>
     value_type norm() const {
@@ -121,6 +129,10 @@ class VectorBase : public ZipperBase<VectorBase, View> {
         *this /= norm<T>();
     }
     void normalize(value_type T) { *this /= norm(T); }
+
+    auto homogeneous() const {
+        return VectorBase<views::unary::HomogeneousView<View>>(view());
+    }
 };
 
 template <concepts::VectorViewDerived View>
