@@ -6,10 +6,11 @@
 
 namespace zipper::views {
 namespace unary {
-template <concepts::ViewDerived Child>
+enum class HomogeneousMode { Position, Vector, Affine };
+template <HomogeneousMode Mode, concepts::ViewDerived Child>
 class HomogeneousView;
 
-}
+}  // namespace unary
 namespace detail {
 template <rank_type N, index_type Size, typename>
 struct extend_extents_single_dimension;
@@ -48,8 +49,8 @@ struct extend_extents_single_dimension<N, Size, extents<Idxs...>> {
     }
 };
 }  // namespace detail
-template <concepts::ViewDerived Child>
-struct detail::ViewTraits<unary::HomogeneousView<Child>>
+template <unary::HomogeneousMode Mode, concepts::ViewDerived Child>
+struct detail::ViewTraits<unary::HomogeneousView<Mode, Child>>
     : public zipper::views::unary::detail::DefaultUnaryViewTraits<Child> {
     using ChildTraits = ViewTraits<Child>;
     using value_type = typename ChildTraits::value_type;
@@ -71,10 +72,11 @@ struct detail::ViewTraits<unary::HomogeneousView<Child>>
 };
 
 namespace unary {
-template <concepts::ViewDerived Child>
-class HomogeneousView : public UnaryViewBase<HomogeneousView<Child>, Child> {
+template <unary::HomogeneousMode Mode, concepts::ViewDerived Child>
+class HomogeneousView
+    : public UnaryViewBase<HomogeneousView<Mode, Child>, Child> {
    public:
-    using self_type = HomogeneousView<Child>;
+    using self_type = HomogeneousView<Mode, Child>;
     using traits = zipper::views::detail::ViewTraits<self_type>;
     using extents_type = traits::extents_type;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
@@ -100,7 +102,19 @@ class HomogeneousView : public UnaryViewBase<HomogeneousView<Child>, Child> {
     {
         if (index_type(zipper::detail::pack_index<0>(args...)) ==
             view().extent(0)) {
-            return 1;
+            if constexpr (Mode == HomogeneousMode::Position) {
+                return 1;
+            } else if constexpr (Mode == HomogeneousMode::Vector) {
+                return 0;
+            } else {
+                static_assert(extents_type::rank() == 2);
+                if (index_type(zipper::detail::pack_index<1>(args...)) ==
+                    view().extent(1) - 1) {
+                    return 1;
+                } else {
+                    return 0;
+                }
+            }
         } else {
             return view().coeff(args...);
         }
@@ -108,7 +122,21 @@ class HomogeneousView : public UnaryViewBase<HomogeneousView<Child>, Child> {
 };
 
 template <concepts::ViewDerived Child>
-HomogeneousView(const Child& a) -> HomogeneousView<Child>;
+auto homogeneous(const Child& a) {
+    return HomogeneousView<HomogeneousMode::Position, Child>(a);
+}
+template <concepts::ViewDerived Child>
+auto homogeneous_position(const Child& a) {
+    return HomogeneousView<HomogeneousMode::Position, Child>(a);
+}
+template <concepts::ViewDerived Child>
+auto homogeneous_vector(const Child& a) {
+    return HomogeneousView<HomogeneousMode::Vector, Child>(a);
+}
+template <concepts::ViewDerived Child>
+auto affine(const Child& a) {
+    return HomogeneousView<HomogeneousMode::Affine, Child>(a);
+}
 }  // namespace unary
 }  // namespace zipper::views
 #endif

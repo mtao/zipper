@@ -130,8 +130,10 @@ class VectorBase : public ZipperBase<VectorBase, View> {
     }
     void normalize(value_type T) { *this /= norm(T); }
 
+    template <views::unary::HomogeneousMode Mode =
+                  views::unary::HomogeneousMode::Position>
     auto homogeneous() const {
-        return VectorBase<views::unary::HomogeneousView<View>>(view());
+        return VectorBase<views::unary::HomogeneousView<Mode, View>>(view());
     }
 };
 
