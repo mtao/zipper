@@ -102,6 +102,74 @@ class VectorBase : public ZipperBase<VectorBase, View> {
                 view(), o.view()));
     }
 
+    template <index_type I>
+    auto head()
+        requires(view_type::is_writable)
+    {
+        auto S = slice(std::integral_constant<index_type, 0>{},
+                       std::integral_constant<index_type, I>{});
+        auto v = Base::slice_view(S);
+        using V = std::decay_t<decltype(v)>;
+        return VectorBase<V>(std::move(v));
+    }
+    template <index_type I>
+    auto head() const {
+        auto S = slice(std::integral_constant<index_type, 0>{},
+                       std::integral_constant<index_type, I>{});
+        auto v = Base::slice_view(S);
+        using V = std::decay_t<decltype(v)>;
+        return VectorBase<V>(std::move(v));
+    }
+    auto head(index_type N)
+        requires(view_type::is_writable)
+    {
+        auto S = slice<std::integral_constant<index_type, 0>, index_type>(
+            std::integral_constant<index_type, 0>{}, N);
+        auto v = Base::slice_view(S);
+        using V = std::decay_t<decltype(v)>;
+        return VectorBase<V>(std::move(v));
+    }
+    auto head(index_type N) const {
+        auto S = slice(std::integral_constant<index_type, 0>{}, N);
+        auto v = Base::slice_view(S);
+        using V = std::decay_t<decltype(v)>;
+        return VectorBase<V>(std::move(v));
+    }
+    // TODO: arithmetic
+    // template <index_type I>
+    // auto tail()
+    //    requires(view_type::is_writable)
+    //{
+    //    auto S = slice(std::integral_constant<index_type, 0>{},
+    //                   std::integral_constant<index_type, I>{});
+    //    auto v = Base::slice_view(S);
+    //    using V = std::decay_t<decltype(v)>;
+    //    return VectorBase<V>(std::move(v));
+    //}
+    // template <index_type I>
+    // auto tail() const {
+    //    auto S = slice(std::integral_constant<index_type, 0>{},
+    //                   std::integral_constant<index_type, I>{});
+    //    auto v = Base::slice_view(S);
+    //    using V = std::decay_t<decltype(v)>;
+    //    return VectorBase<V>(std::move(v));
+    //}
+    // auto tail(index_type N)
+    //    requires(view_type::is_writable)
+    //{
+    //    auto S = slice<std::integral_constant<index_type, 0>, index_type>(
+    //        std::integral_constant<index_type, 0>{}, N);
+    //    auto v = Base::slice_view(S);
+    //    using V = std::decay_t<decltype(v)>;
+    //    return VectorBase<V>(std::move(v));
+    //}
+    // auto tail(index_type N) const {
+    //    auto S = slice(std::integral_constant<index_type, 0>{}, N);
+    //    auto v = Base::slice_view(S);
+    //    using V = std::decay_t<decltype(v)>;
+    //    return VectorBase<V>(std::move(v));
+    //}
+
     template <index_type T = 2>
     value_type norm() const {
         const value_type v = norm_powered<T>();

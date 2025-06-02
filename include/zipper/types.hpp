@@ -51,7 +51,7 @@ inline auto slice(OffsetType start = {}, ExtentType size = {},
                                   index_type, std::decay_t<ExtentType>>;
     static_assert(concepts::IndexLike<ET>);
     using ST = std::conditional_t<std::is_integral_v<OffsetType>, index_type,
-                                  OffsetType>;
+                                  std::decay_t<StrideType>>;
     static_assert(concepts::IndexLike<ST>);
     return slice_t<OT, ET, ST>{OT(start), ET(size), ST(stride)};
 }
