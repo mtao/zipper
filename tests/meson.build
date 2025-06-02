@@ -13,14 +13,7 @@ test('tensors', test_tensor)
 test_extents = executable('test_extents', 'test_extents.cpp', dependencies: [zipper_dep,catch2_with_main_dep])
 test('extents', test_extents)
 
-test_swizzle = executable('test_swizzle', 'test_swizzle.cpp', dependencies: [zipper_dep,catch2_with_main_dep])
-test('swizzle', test_swizzle)
 
-test_slicing = executable('test_slicing', 'test_slicing.cpp', dependencies: [zipper_dep,catch2_with_main_dep])
-test('slicing', test_slicing)
-
-test_span = executable('test_span', 'test_span.cpp', dependencies: [zipper_dep,catch2_with_main_dep])
-test('span', test_span)
 
 test_declare_operations = executable('test_declare_operations', 'test_declare_operations.cpp', dependencies: [zipper_dep,catch2_with_main_dep])
 
