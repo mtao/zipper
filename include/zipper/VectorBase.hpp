@@ -11,6 +11,8 @@
 #include "FormBase.hpp"
 #include "MatrixBase.hpp"
 #include "TensorBase.hpp"
+#include "detail/constexpr_arithmetic.hpp"
+#include "detail/extents/constexpr_extent.hpp"
 #include "views/binary/CrossProductView.hpp"
 #include "views/reductions/CoefficientSum.hpp"
 #include "views/unary/HomogeneousView.hpp"
@@ -31,10 +33,12 @@ class VectorBase : public ZipperBase<VectorBase, View> {
     using extents_traits = detail::ExtentsTraits<extents_type>;
     static_assert(extents_traits::rank == 1);
     using Base = ZipperBase<VectorBase, View>;
+    static_assert(std::is_same_v<extents_type, typename Base::extents_type>);
 
     using Base::Base;
     // using Base::operator=;
     using Base::cast;
+    using Base::extents;
     using Base::swizzle;
     using Base::view;
 
@@ -135,40 +139,49 @@ class VectorBase : public ZipperBase<VectorBase, View> {
         using V = std::decay_t<decltype(v)>;
         return VectorBase<V>(std::move(v));
     }
-    // TODO: arithmetic
-    // template <index_type I>
-    // auto tail()
-    //    requires(view_type::is_writable)
-    //{
-    //    auto S = slice(std::integral_constant<index_type, 0>{},
-    //                   std::integral_constant<index_type, I>{});
-    //    auto v = Base::slice_view(S);
-    //    using V = std::decay_t<decltype(v)>;
-    //    return VectorBase<V>(std::move(v));
-    //}
-    // template <index_type I>
-    // auto tail() const {
-    //    auto S = slice(std::integral_constant<index_type, 0>{},
-    //                   std::integral_constant<index_type, I>{});
-    //    auto v = Base::slice_view(S);
-    //    using V = std::decay_t<decltype(v)>;
-    //    return VectorBase<V>(std::move(v));
-    //}
-    // auto tail(index_type N)
-    //    requires(view_type::is_writable)
-    //{
-    //    auto S = slice<std::integral_constant<index_type, 0>, index_type>(
-    //        std::integral_constant<index_type, 0>{}, N);
-    //    auto v = Base::slice_view(S);
-    //    using V = std::decay_t<decltype(v)>;
-    //    return VectorBase<V>(std::move(v));
-    //}
-    // auto tail(index_type N) const {
-    //    auto S = slice(std::integral_constant<index_type, 0>{}, N);
-    //    auto v = Base::slice_view(S);
-    //    using V = std::decay_t<decltype(v)>;
-    //    return VectorBase<V>(std::move(v));
-    //}
+
+    auto get_tail_slice(index_type I) {
+        return slice(
+            detail::minus(detail::extents::constexpr_extent<0>(extents()), I),
+            I);
+    }
+    template <index_type I>
+    auto get_tail_slice() {
+        return slice(
+            detail::minus(detail::extents::constexpr_extent<0>(extents()),
+                          std::integral_constant<index_type, I>{}),
+            std::integral_constant<index_type, I>{});
+    }
+    template <index_type I>
+    auto tail()
+        requires(view_type::is_writable)
+    {
+        auto S = get_tail_slice<I>();
+        auto v = Base::slice_view(S);
+        using V = std::decay_t<decltype(v)>;
+        return VectorBase<V>(std::move(v));
+    }
+    template <index_type I>
+    auto tail() const {
+        auto S = get_tail_slice<I>();
+        auto v = Base::slice_view(S);
+        using V = std::decay_t<decltype(v)>;
+        return VectorBase<V>(std::move(v));
+    }
+    auto tail(index_type N)
+        requires(view_type::is_writable)
+    {
+        auto S = get_tail_slice(N);
+        auto v = Base::slice_view(S);
+        using V = std::decay_t<decltype(v)>;
+        return VectorBase<V>(std::move(v));
+    }
+    auto tail(index_type N) const {
+        auto S = get_tail_slice(N);
+        auto v = Base::slice_view(S);
+        using V = std::decay_t<decltype(v)>;
+        return VectorBase<V>(std::move(v));
+    }
 
     template <index_type T = 2>
     value_type norm() const {

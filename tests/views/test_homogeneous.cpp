@@ -2,11 +2,8 @@
 
 #include <catch2/catch_all.hpp>
 #include <iostream>
-#include <zipper/MatrixBase.hpp>
-#include <zipper/Tensor.hpp>
 #include <zipper/Vector.hpp>
 #include <zipper/views/nullary/ConstantView.hpp>
-#include <zipper/views/nullary/IdentityView.hpp>
 #include <zipper/views/nullary/RandomView.hpp>
 #include <zipper/views/nullary/UnitView.hpp>
 #include <zipper/views/unary/HomogeneousView.hpp>

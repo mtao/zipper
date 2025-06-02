@@ -18,8 +18,8 @@ class SliceView;
 }
 template <concepts::ViewDerived ViewType, bool IsConst, typename... Slices>
 struct detail::ViewTraits<unary::SliceView<ViewType, IsConst, Slices...>>
-    : public zipper::views::unary::detail::DefaultUnaryViewTraits<
-          ViewType, true> {
+    : public zipper::views::unary::detail::DefaultUnaryViewTraits<ViewType,
+                                                                  true> {
     using Base = detail::ViewTraits<ViewType>;
 
     using extents_type =
@@ -124,16 +124,13 @@ class SliceView
     // this
     SliceView(const ViewType& b, const Slices&... slices)
         requires(IsConst)
-        : Base(b,
-              std::experimental::submdspan_extents(b.extents(), slices...)),
+        : Base(b, std::experimental::submdspan_extents(b.extents(), slices...)),
           m_slices(slices...) {}
 
     SliceView(ViewType& b, const Slices&... slices)
         requires(!IsConst && view_traits::is_writable)
-        : Base(b,
-              std::experimental::submdspan_extents(b.extents(), slices...)),
+        : Base(b, std::experimental::submdspan_extents(b.extents(), slices...)),
           m_slices(slices...) {}
-
 
     template <rank_type K, typename... Args>
     index_type get_index(Args&&... a) const {
@@ -156,6 +153,7 @@ class SliceView
 
             const auto& v =
                 zipper::detail::pack_index<actionable_indices[K]>(a...);
+
             return start + v * stride;
         }
     }
