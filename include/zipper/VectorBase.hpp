@@ -140,13 +140,13 @@ class VectorBase : public ZipperBase<VectorBase, View> {
         return VectorBase<V>(std::move(v));
     }
 
-    auto get_tail_slice(index_type I) {
+    auto get_tail_slice(index_type I) const {
         return slice(
             detail::minus(detail::extents::constexpr_extent<0>(extents()), I),
             I);
     }
     template <index_type I>
-    auto get_tail_slice() {
+    auto get_tail_slice() const {
         return slice(
             detail::minus(detail::extents::constexpr_extent<0>(extents()),
                           std::integral_constant<index_type, I>{}),
