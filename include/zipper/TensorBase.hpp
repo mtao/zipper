@@ -61,6 +61,9 @@ class TensorBase : public ZipperBase<TensorBase, View> {
     {
         return operator=(other.view());
     }
+    TensorBase& operator=(concepts::TensorBaseDerived auto && v) {
+        return Base::operator=(v.view());
+    }
 
     template <typename... Slices>
     auto slice() {

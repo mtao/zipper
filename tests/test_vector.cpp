@@ -53,3 +53,7 @@ TEST_CASE("test_dot", "[matrix][storage][dense]") {
     CHECK(c.dot(e2) == 4);
 
 }
+
+struct A {
+    zipper::Vector<double,3> x;
+};

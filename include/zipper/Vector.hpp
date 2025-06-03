@@ -26,6 +26,10 @@ class Vector
     using span_type = VectorSpan<ValueType, Rows>;
 
     Vector() = default;
+    Vector(const Vector& o) = default;
+    Vector& operator=(const Vector& o) = default;
+    Vector(Vector&& o) = default;
+    Vector& operator=(Vector&& o) = default;
     Vector(index_type size)
         requires(extents_traits::is_dynamic)
         : Base(zipper::extents<Rows>(size)) {}

@@ -51,6 +51,9 @@ class ArrayBase : public ZipperBase<ArrayBase, View> {
     ArrayBase& operator=(concepts::ArrayBaseDerived auto const& v) {
         return Base::operator=(v.view());
     }
+    ArrayBase& operator=(concepts::ArrayBaseDerived auto && v) {
+        return Base::operator=(v.view());
+    }
 
     template <concepts::ArrayBaseDerived Other>
     ArrayBase(const Other& other)

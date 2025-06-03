@@ -44,11 +44,28 @@ class VectorBase : public ZipperBase<VectorBase, View> {
     using Base::view;
 
     auto eval() const { return Vector(*this); }
+    template <concepts::VectorBaseDerived Other>
+    VectorBase(const Other& other)
+        requires(view_type::is_writable)
+        : VectorBase(other.view()) {}
+
     VectorBase& operator=(concepts::ViewDerived auto const& v) {
         return Base::operator=(v);
     }
-    VectorBase& operator=(concepts::VectorBaseDerived auto const& v) {
-        return operator=(v.view());
+    // VectorBase& operator=(concepts::VectorBaseDerived auto const& v) {
+    //     return operator=(v.view());
+    // }
+    template <concepts::VectorBaseDerived Other>
+    VectorBase& operator=(const Other& other)
+        requires(view_type::is_writable)
+    {
+        return operator=(other.view());
+    }
+    template <concepts::VectorBaseDerived Other>
+    VectorBase& operator=(Other&& other)
+        requires(view_type::is_writable)
+    {
+        return operator=(other.view());
     }
 
     // TODO: make vectorbase or zipperbase assignable from initializer lists
@@ -88,17 +105,6 @@ class VectorBase : public ZipperBase<VectorBase, View> {
             (*this)(j) = std::data(l)[j];
         }
         return *this;
-    }
-    template <concepts::VectorBaseDerived Other>
-    VectorBase(const Other& other)
-        requires(view_type::is_writable)
-        : VectorBase(other.view()) {}
-
-    template <concepts::VectorBaseDerived Other>
-    VectorBase& operator=(const Other& other)
-        requires(view_type::is_writable)
-    {
-        return operator=(other.view());
     }
 
     // auto as_col_matrix() const {

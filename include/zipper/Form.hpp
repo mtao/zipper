@@ -20,6 +20,10 @@ class Form_ : public FormBase<storage::PlainObjectStorage<ValueType, Extents>> {
     using Base::extent;
     using Base::extents;
 
+    Form_(const Form_& o) = default;
+    Form_(Form_&& o) = default;
+    Form_& operator=(const Form_& o) = default;
+    Form_& operator=(Form_&& o) = default;
     template <concepts::ViewDerived Other>
     Form_(const Other& other) : Base(other) {}
     template <concepts::FormBaseDerived Other>

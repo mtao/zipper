@@ -42,9 +42,23 @@ class FormBase : public ZipperBase<FormBase, View> {
     using Base::cast;
     using Base::swizzle;
     using Base::view;
+    FormBase(FormBase&&) = default;
+    FormBase(const FormBase&) = default;
 
     FormBase& operator=(concepts::FormBaseDerived auto const& v) {
         view() = v.view();
+        return *this;
+    }
+    FormBase& operator=(concepts::FormBaseDerived auto && v) {
+        view() = v.view();
+        return *this;
+    }
+    FormBase& operator=(const FormBase& v) {
+        Base::operator=(v.view());
+        return *this;
+    }
+    FormBase& operator=(FormBase&& v) {
+        Base::operator=(v.view());
         return *this;
     }
 

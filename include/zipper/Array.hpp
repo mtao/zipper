@@ -22,6 +22,10 @@ class Array_
     using Base::extent;
     using Base::extents;
 
+    Array_(const Array_& o) = default;
+    Array_(Array_&& o) = default;
+    Array_& operator=(const Array_& o) = default;
+    Array_& operator=(Array_&& o) = default;
     template <concepts::ViewDerived Other>
     Array_(const Other& other) : Base(other) {}
     template <concepts::ArrayBaseDerived Other>
@@ -32,7 +36,6 @@ class Array_
         : Base(Extents(std::forward<Args>(args)...)) {}
     template <index_type... indices>
     Array_(const zipper::extents<indices...>& e) : Base(e) {}
-    using Base::operator=;
 };
 // template <concepts::ViewDerived MB>
 // Array(const MB& o)->typename MB::array_typeA;
