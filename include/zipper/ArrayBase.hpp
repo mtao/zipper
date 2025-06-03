@@ -2,24 +2,24 @@
 #define ZIPPER_ARRAYBASE_HPP
 
 #include "ZipperBase.hpp"
-#include "zipper/types.hpp"
 #include "views/reductions/All.hpp"
 #include "views/reductions/Any.hpp"
 #include "views/reductions/CoefficientSum.hpp"
 #include "views/unary/SliceView.hpp"
+#include "zipper/types.hpp"
 //
 #include "concepts/ArrayBaseDerived.hpp"
 #include "concepts/ViewDerived.hpp"
 //
 ////
-#include "zipper/detail/declare_operations.hpp"
-#include "zipper/views/binary/ArithmeticViews.hpp"
-#include "zipper/views/unary/ScalarArithmeticViews.hpp"
+#include "detail/extents/static_extents_to_integral_sequence.hpp"
 #include "views/unary/AbsView.hpp"
 #include "views/unary/DiagonalView.hpp"
 #include "views/unary/ScalarPowerView.hpp"
 #include "views/unary/detail/operation_implementations.hpp"
-#include "detail/extents/static_extents_to_integral_sequence.hpp"
+#include "zipper/detail/declare_operations.hpp"
+#include "zipper/views/binary/ArithmeticViews.hpp"
+#include "zipper/views/unary/ScalarArithmeticViews.hpp"
 
 namespace zipper {
 
@@ -39,13 +39,19 @@ class ArrayBase : public ZipperBase<ArrayBase, View> {
     using Base::view;
 
     template <index_type... N>
-    auto eval(const std::integer_sequence<index_type,N...>&) const
+    auto eval(const std::integer_sequence<index_type, N...>&) const
         requires(std::is_same_v<extents<N...>, extents_type>)
     {
-        return Array<value_type, N...>(this->view());
+        return Array_<value_type, zipper::extents<N...>>(this->view());
     }
-    auto eval() const { return eval(detail::extents::static_extents_to_integral_sequence_t<extents_type>{}); }
+    auto eval() const {
+        return eval(detail::extents::static_extents_to_integral_sequence_t<
+                    extents_type>{});
+    }
     ArrayBase& operator=(concepts::ArrayBaseDerived auto const& v) {
+        return Base::operator=(v.view());
+    }
+    ArrayBase& operator=(concepts::ArrayBaseDerived auto && v) {
         return Base::operator=(v.view());
     }
 

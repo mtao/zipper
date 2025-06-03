@@ -1,10 +1,10 @@
-
 #if !defined(ZIPPER_VIEWS_BINARY_MATRIXVECTORPRODUCTVIEW_HPP)
 #define ZIPPER_VIEWS_BINARY_MATRIXVECTORPRODUCTVIEW_HPP
 
 #include "BinaryViewBase.hpp"
 #include "zipper/concepts/MatrixViewDerived.hpp"
 #include "zipper/concepts/VectorViewDerived.hpp"
+#include "zipper/views/detail/intersect_nonzeros.hpp"
 
 namespace zipper::views {
 namespace binary {
@@ -33,6 +33,8 @@ class MatrixVectorProductView
     using value_type = traits::value_type;
     using Base = BinaryViewBase<self_type, A, B>;
     using extents_type = typename traits::extents_type;
+    using lhs_traits = traits::ATraits;
+    using rhs_traits = traits::BTraits;
 
     using Base::Base;
     using Base::lhs;
@@ -52,8 +54,31 @@ class MatrixVectorProductView
     }
     value_type coeff(index_type a) const {
         value_type v = 0;
-        for (index_type j = 0; j < lhs().extent(1); ++j) {
-            v += lhs()(a, j) * rhs()(j);
+        constexpr bool lhs_sparse = lhs_traits::is_sparse(1);
+        constexpr bool rhs_sparse = rhs_traits::is_sparse(0);
+        if constexpr (lhs_sparse && rhs_sparse) {
+            const auto& lnnz = lhs().template nonZeros<1>(a);
+            const auto& rnnz = rhs().template nonZeros<0>(a);
+            auto nnz = views::detail::intersect_nonzeros(lnnz, rnnz);
+
+            for (const auto& j : nnz) {
+                v += lhs()(a, j) * rhs()(j);
+            }
+        } else if constexpr (lhs_sparse) {
+            const auto& lnnz = lhs().template nonZeros<1>(a);
+            for (const auto& j : lnnz) {
+                v += lhs()(a, j) * rhs()(j);
+            }
+        } else if constexpr (rhs_sparse) {
+            const auto& rnnz = rhs().template nonZeros<0>(a);
+            for (const auto& j : rnnz) {
+                v += lhs()(a, j) * rhs()(j);
+            }
+
+        } else {
+            for (index_type j = 0; j < lhs().extent(1); ++j) {
+                v += lhs()(a, j) * rhs()(j);
+            }
         }
         return v;
     }

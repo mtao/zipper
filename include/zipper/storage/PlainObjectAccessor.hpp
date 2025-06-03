@@ -13,6 +13,7 @@ class StaticValueAccessor {
 
    public:
     using value_type = ValueType;
+    using storage_type = std::array<value_type, N>;
     constexpr static auto size() -> std::size_t { return N; }
     value_type coeff(index_type i) const { return m_data[i]; }
     value_type& coeff_ref(index_type i) { return m_data[i]; }
@@ -23,8 +24,15 @@ class StaticValueAccessor {
     const auto& container() const { return m_data; }
     auto& container() { return m_data; }
 
+    using iterator_type = storage_type::iterator;
+    using const_iterator_type = storage_type::const_iterator;
+    auto begin() { return m_data.begin(); }
+    auto end() { return m_data.end(); }
+    auto begin() const { return m_data.begin(); }
+    auto end() const { return m_data.end(); }
+
    private:
-    std::array<value_type, N> m_data;
+    storage_type m_data;
 };
 template <typename ValueType>
 class DynamicValueAccessor {
@@ -32,6 +40,8 @@ class DynamicValueAccessor {
     DynamicValueAccessor() = default;
     DynamicValueAccessor(index_type index) : m_data(index) {}
     using value_type = ValueType;
+    using storage_type = std::vector<value_type>;
+
     auto size() const -> std::size_t { return m_data.size(); }
     value_type coeff(index_type i) const { return m_data[i]; }
     value_type& coeff_ref(index_type i) { return m_data[i]; }
@@ -42,15 +52,22 @@ class DynamicValueAccessor {
     const auto& container() const { return m_data; }
     auto& container() { return m_data; }
 
+    using iterator_type = storage_type::iterator;
+    using const_iterator_type = storage_type::const_iterator;
+    auto begin() { return m_data.begin(); }
+    auto end() { return m_data.end(); }
+    auto begin() const { return m_data.begin(); }
+    auto end() const { return m_data.end(); }
+
    private:
-    std::vector<value_type> m_data;
+    storage_type m_data;
 };
 
 template <typename ValueType, typename Extents>
 using PlainObjectAccessor = std::conditional_t<
     zipper::detail::ExtentsTraits<Extents>::is_static,
-    StaticValueAccessor<
-        ValueType, zipper::detail::template ExtentsTraits<Extents>::static_size>,
+    StaticValueAccessor<ValueType, zipper::detail::template ExtentsTraits<
+                                       Extents>::static_size>,
     DynamicValueAccessor<ValueType>>;
 }  // namespace zipper::storage
 #endif

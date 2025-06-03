@@ -20,7 +20,7 @@ class SwizzleView;
 template <concepts::ViewDerived ViewType, index_type... Indices>
 struct detail::ViewTraits<unary::SwizzleView<ViewType, Indices...>>
     : public zipper::views::unary::detail::DefaultUnaryViewTraits<
-          ViewType, DimensionedViewBase> {
+          ViewType, true> {
     using swizzler_type = zipper::detail::extents::ExtentsSwizzler<Indices...>;
     using Base = detail::ViewTraits<ViewType>;
     using extents_type = swizzler_type::template extents_type_swizzler_t<
@@ -54,9 +54,8 @@ class SwizzleView
     SwizzleView& operator=(const SwizzleView&) = delete;
     SwizzleView& operator=(SwizzleView&&) = delete;
     SwizzleView(const ViewType& b)
-        : Base(b), m_extents(swizzler_type::swizzle_extents(b.extents())) {}
+        : Base(b,swizzler_type::swizzle_extents(b.extents())) {}
 
-    constexpr const extents_type& extents() const { return m_extents; }
 
     template <concepts::TupleLike T, rank_type... ranks>
     auto _coeff(const T& idxs, std::integer_sequence<rank_type, ranks...>) const
@@ -108,8 +107,6 @@ class SwizzleView
         views::detail::AssignHelper<V, self_type>::assign(view, *this);
     }
 
-   private:
-    extents_type m_extents;
 };  // namespace unarytemplate<typenameA,typenameB>class AdditionView
 
 }  // namespace unary

@@ -2,6 +2,7 @@
 #define ZIPPER_FORMBASE_HPP
 
 #include "ZipperBase.hpp"
+#include "as.hpp"
 #include "concepts/FormBaseDerived.hpp"
 #include "concepts/TensorBaseDerived.hpp"
 #include "concepts/VectorBaseDerived.hpp"
@@ -22,6 +23,9 @@ class FormBase : public ZipperBase<FormBase, View> {
     using extents_type = View::extents_type;
     using extents_traits = detail::ExtentsTraits<extents_type>;
 
+    auto as_array() const { return zipper::as_array(*this); }
+    auto as_tensor() const { return zipper::as_tensor(*this); }
+    auto as_vector() const { return zipper::as_vector(*this); }
     template <index_type... N>
     auto eval(const std::integer_sequence<index_type, N...>&) const
         requires(std::is_same_v<extents<N...>, extents_type>)
@@ -38,9 +42,23 @@ class FormBase : public ZipperBase<FormBase, View> {
     using Base::cast;
     using Base::swizzle;
     using Base::view;
+    FormBase(FormBase&&) = default;
+    FormBase(const FormBase&) = default;
 
     FormBase& operator=(concepts::FormBaseDerived auto const& v) {
         view() = v.view();
+        return *this;
+    }
+    FormBase& operator=(concepts::FormBaseDerived auto && v) {
+        view() = v.view();
+        return *this;
+    }
+    FormBase& operator=(const FormBase& v) {
+        Base::operator=(v.view());
+        return *this;
+    }
+    FormBase& operator=(FormBase&& v) {
+        Base::operator=(v.view());
         return *this;
     }
 
@@ -79,6 +97,13 @@ class FormBase : public ZipperBase<FormBase, View> {
             std::forward<Slices>(slices)...);
         return FormBase<std::decay_t<decltype(v)>>(std::move(v));
     }
+
+    auto operator*() const {
+        return *this;
+        // using V = views::binary::WedgeProductView<typename View1::view_type,
+        //                                           typename View2::view_type>;
+        // return FormBase<V>(V(lhs.view(), rhs.view()));
+    }
 };
 
 template <concepts::ViewDerived View>
@@ -99,7 +124,7 @@ BINARY_DECLARATION(FormBase, Plus, operator+)
 BINARY_DECLARATION(FormBase, Minus, operator-)
 
 template <concepts::FormBaseDerived View1, concepts::FormBaseDerived View2>
-auto operator*(View1 const& lhs, View2 const& rhs) {
+auto operator^(View1 const& lhs, View2 const& rhs) {
     using V = views::binary::WedgeProductView<typename View1::view_type,
                                               typename View2::view_type>;
     return FormBase<V>(V(lhs.view(), rhs.view()));
@@ -131,5 +156,4 @@ auto operator*(View1 const& lhs, View2 const& rhs) {
 
 }  // namespace zipper
 
-#include "Form.hpp"
 #endif

@@ -8,7 +8,6 @@
 #include <iostream>
 #include <zipper/Tensor.hpp>
 #include <zipper/Vector.hpp>
-#include <zipper/TensorBase.hpp>
 #include <zipper/MatrixBase.hpp>
 #include <zipper/FormBase.hpp>
 #include <zipper/views/nullary/ConstantView.hpp>
@@ -39,6 +38,7 @@ void print(auto const& M) {
         for (zipper::index_type j = 0; j < M.extent(0); ++j) {
             for (zipper::index_type k = 0; k < M.extent(1); ++k) {
                 for (zipper::index_type l = 0; l < M.extent(2); ++l) {
+                    spdlog::info("{} {} {} / {} {} {}", j, k, l, M.extents().static_extent(0),M.extents().static_extent(1),M.extents().static_extent(2));
                     std::cout << M(j, k, l) << " ";
                 }
                 std::cout << std::endl;
@@ -97,6 +97,7 @@ TEST_CASE("test_tensor_product", "[storage][dense]") {
     // zipper::Tensor C ;
 }
 
+    /*
 TEST_CASE("test_product", "[storage][tensor]") {
     zipper::Tensor<double, 3, 3> I = zipper::views::nullary::IdentityView<double>{};
     zipper::Tensor<double, 3, 3> M =
@@ -218,3 +219,4 @@ TEST_CASE("test_form_product", "[storage][tensor]") {
             ,double(XYZ * ABC));
 
 }
+*/

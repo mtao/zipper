@@ -1,31 +1,29 @@
-#if !defined(ZIPPER_VIEWS_PLAINOBJECTVIEWBASE_HPP)
-#define ZIPPER_VIEWS_PLAINOBJECTVIEWBASE_HPP
+#if !defined(ZIPPER_VIEWS_NULLARY_DENSESTORAGEVIEWBASE_HPP)
+#define ZIPPER_VIEWS_NULLARY_DENSESTORAGEVIEWBASE_HPP
 #include <ranges>
 
-#include "MappedViewBase.hpp"
-#include "ViewBase.hpp"
-#include "detail/AssignHelper.hpp"
-#include "detail/PlainObjectViewTraits.hpp"
+#include "zipper/views/MappedViewBase.hpp"
+#include "zipper/views/detail/AssignHelper.hpp"
+#include "detail/DenseStorageViewTraits.hpp"
 #include "zipper/concepts/TupleLike.hpp"
 #include "zipper/concepts/ViewDerived.hpp"
 #include "zipper/detail/extents/all_extents_indices.hpp"
-namespace zipper::views {
+namespace zipper::views::nullary {
 template <typename Derived_>
-class PlainObjectViewBase : public MappedViewBase<Derived_> {
+class DenseStorageViewBase : public MappedViewBase<Derived_> {
    public:
-    constexpr static bool IsStatic = zipper::detail::ExtentsTraits<
-        typename detail::ViewTraits<Derived_>::extents_type>::is_static;
     using Derived = Derived_;
     Derived& derived() { return static_cast<Derived&>(*this); }
     const Derived& derived() const {
         return static_cast<const Derived&>(*this);
     }
     using BaseType = ViewBase<Derived>;
-    using traits = detail::ViewTraits<Derived>;
+    using traits = views::detail::ViewTraits<Derived>;
 
     using extents_type = traits::extents_type;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
     using value_type = traits::value_type;
+    constexpr static bool IsStatic = extents_traits::is_static;
 
     using ParentType = MappedViewBase<Derived>;
     using ParentType::extent;
@@ -33,19 +31,21 @@ class PlainObjectViewBase : public MappedViewBase<Derived_> {
 
     using ParentType::ParentType;
 
-    using ParentType::mapping;
+    //using ParentType::mapping;
 
     using layout_policy = traits::layout_policy;
     using accessor_policy = traits::accessor_policy;
     using value_accessor_type = traits::value_accessor_type;
     using mapping_type = typename layout_policy::template mapping<extents_type>;
     using span_type = extents_traits::template span_type<value_type>;
-    using mdspan_type =
-        zipper::mdspan<value_type, extents_type, layout_policy, accessor_policy>;
+    using mdspan_type = zipper::mdspan<value_type, extents_type, layout_policy,
+                                       accessor_policy>;
 
    public:
-    value_accessor_type& accessor() { return derived().accessor(); }
-    const value_accessor_type& accessor() const { return derived().accessor(); }
+    value_accessor_type& accessor() { return derived().linear_access(); }
+    const value_accessor_type& accessor() const {
+        return derived().linear_access();
+    }
     value_type* data() { return accessor().data(); }
     const value_type* data() const { return accessor().data(); }
     value_type coeff_linear(index_type i) const { return accessor().coeff(i); }
@@ -71,8 +71,10 @@ class PlainObjectViewBase : public MappedViewBase<Derived_> {
         }
     }
 
-    auto as_span() -> span_type { return span_type(accessor().container()); }
-    auto as_span() const -> const span_type {
+    auto as_std_span() -> span_type {
+        return span_type(accessor().container());
+    }
+    auto as_std_span() const -> const span_type {
         return span_type(accessor().container());
     }
 

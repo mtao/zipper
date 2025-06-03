@@ -4,6 +4,7 @@
 
 #include "BinaryViewBase.hpp"
 #include "detail/CoeffWiseTraits.hpp"
+#include "zipper/concepts/IndexPackLike.hpp"
 #include "zipper/concepts/ViewDerived.hpp"
 
 namespace zipper::views {
@@ -23,12 +24,15 @@ struct detail::ViewTraits<binary::AdditionView<A, B>>
 };
 
 namespace binary {
+// Per-coefficient product (i.e A(x,y,z) + B(x,y,z))
 template <concepts::ViewDerived A, concepts::ViewDerived B>
 class AdditionView : public BinaryViewBase<AdditionView<A, B>, A, B> {
    public:
     using self_type = AdditionView<A, B>;
     using traits = zipper::views::detail::ViewTraits<self_type>;
     using extents_type = typename traits::extents_type;
+    static_assert(A::extents_type::rank() == extents_type::rank());
+    static_assert(B::extents_type::rank() == extents_type::rank());
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
     using Base = BinaryViewBase<self_type, A, B>;
 
@@ -40,12 +44,9 @@ class AdditionView : public BinaryViewBase<AdditionView<A, B>, A, B> {
         : Base(a, b, a.extents()) {}
 
     template <typename... Args>
-    auto coeff(Args&&... idxs) const
-        requires((std::is_convertible_v<Args, index_type> && ...))
-    {
+        requires concepts::IndexPackLike<Args...>
+    auto coeff(Args&&... idxs) const {
         static_assert(sizeof...(idxs) == extents_type::rank());
-        static_assert(A::extents_type::rank() == extents_type::rank());
-        static_assert(B::extents_type::rank() == extents_type::rank());
         return lhs()(idxs...) + rhs()(idxs...);
     }
 

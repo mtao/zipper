@@ -7,7 +7,6 @@
 #include "zipper/detail/is_integral_constant.hpp"
 #include "zipper/detail/pack_index.hpp"
 #include "zipper/storage/PlainObjectStorage.hpp"
-#include "zipper/views/DimensionedViewBase.hpp"
 #include "zipper/views/detail/AssignHelper.hpp"
 
 namespace zipper::views {
@@ -19,9 +18,10 @@ class SliceView;
 }
 template <concepts::ViewDerived ViewType, bool IsConst, typename... Slices>
 struct detail::ViewTraits<unary::SliceView<ViewType, IsConst, Slices...>>
-    : public zipper::views::unary::detail::DefaultUnaryViewTraits<
-          ViewType, DimensionedViewBase> {
+    : public zipper::views::unary::detail::DefaultUnaryViewTraits<ViewType,
+                                                                  true> {
     using Base = detail::ViewTraits<ViewType>;
+
     using extents_type =
         std::decay_t<decltype(std::experimental::submdspan_extents(
             std::declval<typename Base::extents_type>(),
@@ -99,7 +99,9 @@ class SliceView
         assign(v);
         return *this;
     }
+    /*
     SliceView(const ViewType& b, Slices&&... slices)
+        requires(IsConst)
         : Base(b),
           m_extents(
               std::experimental::submdspan_extents(b.extents(), slices...)),
@@ -112,22 +114,18 @@ class SliceView
               std::experimental::submdspan_extents(b.extents(), slices...)),
           m_slices(std::forward<Slices>(slices)...) {}
 
+          */
     // for some reason having zipper::full_extent makes this necessary. TODO fix
     // this
     SliceView(const ViewType& b, const Slices&... slices)
-        : Base(b),
-          m_extents(
-              std::experimental::submdspan_extents(b.extents(), slices...)),
+        requires(IsConst)
+        : Base(b, std::experimental::submdspan_extents(b.extents(), slices...)),
           m_slices(slices...) {}
 
     SliceView(ViewType& b, const Slices&... slices)
         requires(!IsConst && view_traits::is_writable)
-        : Base(b),
-          m_extents(
-              std::experimental::submdspan_extents(b.extents(), slices...)),
+        : Base(b, std::experimental::submdspan_extents(b.extents(), slices...)),
           m_slices(slices...) {}
-
-    constexpr const extents_type& extents() const { return m_extents; }
 
     template <rank_type K, typename... Args>
     index_type get_index(Args&&... a) const {
@@ -145,12 +143,12 @@ class SliceView
                 zipper::detail::pack_index<actionable_indices[K]>(a...);
             return v;
         } else {
-            constexpr index_type start = std::experimental::detail::first_of(s);
-            constexpr index_type stride =
-                std::experimental::detail::stride_of(s);
+            const index_type start = std::experimental::detail::first_of(s);
+            const index_type stride = std::experimental::detail::stride_of(s);
 
             const auto& v =
                 zipper::detail::pack_index<actionable_indices[K]>(a...);
+
             return start + v * stride;
         }
     }
@@ -225,7 +223,6 @@ class SliceView
     }
 
    private:
-    extents_type m_extents;
     slice_storage_type m_slices;
 };
 

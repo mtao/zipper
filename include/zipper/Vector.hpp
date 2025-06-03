@@ -1,39 +1,84 @@
+#include "zipper/detail/ExtentsTraits.hpp"
 #if !defined(ZIPPER_VECTOR_HPP)
 #define ZIPPER_VECTOR_HPP
 
 #include "VectorBase.hpp"
+#include "VectorSpan.hpp"
 #include "storage/PlainObjectStorage.hpp"
 #include "zipper/types.hpp"
 namespace zipper {
 
 template <typename ValueType, index_type Rows>
-class Vector : public VectorBase<
-                   storage::PlainObjectStorage<ValueType, zipper::extents<Rows>>> {
+class Vector
+    : public VectorBase<
+          storage::PlainObjectStorage<ValueType, zipper::extents<Rows>>> {
    public:
-    using Base =
-        VectorBase<storage::PlainObjectStorage<ValueType, zipper::extents<Rows>>>;
+    using Base = VectorBase<
+        storage::PlainObjectStorage<ValueType, zipper::extents<Rows>>>;
     using Base::view;
     using view_type = Base::view_type;
     using value_type = Base::value_type;
     using extents_type = Base::extents_type;
+    using extents_traits = detail::ExtentsTraits<extents_type>;
     using Base::extent;
     using Base::extents;
 
-    template <concepts::VectorViewDerived Other>
-    Vector(const Other& other) : Base(other) {}
+    using span_type = VectorSpan<ValueType, Rows>;
+
+    Vector() = default;
+    Vector(const Vector& o) = default;
+    Vector& operator=(const Vector& o) = default;
+    Vector(Vector&& o) = default;
+    Vector& operator=(Vector&& o) = default;
+    Vector(index_type size)
+        requires(extents_traits::is_dynamic)
+        : Base(zipper::extents<Rows>(size)) {}
+
+    template <index_type R2>
+    Vector(const Vector<value_type, R2>& other) : Base(other.view()) {}
+
     template <concepts::VectorBaseDerived Other>
     Vector(const Other& other) : Base(other) {}
 
     template <concepts::ViewDerived Other>
     Vector(const Other& other) : Base(other) {}
-    template <typename... Args>
-    Vector(Args&&... args)
-        requires((std::is_convertible_v<Args, index_type> && ...))
-        : Base(zipper::extents<Rows>(std::forward<Args>(args)...)) {}
-    template <index_type... indices>
-    Vector(const zipper::extents<indices...>& e) : Base(e) {}
-    using Base::operator=;
 
+    template <typename T>
+    Vector(const std::initializer_list<T>& l)
+        requires(extents_traits::is_static)
+    {
+        assert(l.size() == extent(0));
+        std::ranges::copy(l, begin());
+    }
+    template <typename T>
+    Vector(const std::initializer_list<T>& l)
+        requires(extents_traits::is_dynamic)
+        : Base(extents_type(l.size())) {
+        std::ranges::copy(l, begin());
+    }
+    template <typename T>
+    Vector& operator=(const std::initializer_list<T>& l)
+        requires(extents_traits::is_static)
+    {
+        assert(l.size() == extent(0));
+        std::ranges::copy(l, begin());
+        return *this;
+    }
+    template <typename T>
+    Vector& operator=(const std::initializer_list<T>& l)
+        requires(extents_traits::is_dynamic)
+    {
+        view().resize(extents_type(l.size()));
+        std::ranges::copy(l, begin());
+        return *this;
+    }
+
+    auto begin() { return view().begin(); }
+    auto end() { return view().end(); }
+    auto begin() const { return view().begin(); }
+    auto end() const { return view().end(); }
+
+    using Base::operator=;
 };
 
 template <concepts::VectorViewDerived MB>

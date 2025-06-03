@@ -3,6 +3,7 @@
 #define ZIPPER_VECTORBASE_HPP
 
 #include "ZipperBase.hpp"
+#include "as.hpp"
 #include "concepts/VectorBaseDerived.hpp"
 #include "concepts/VectorViewDerived.hpp"
 //
@@ -10,8 +11,11 @@
 #include "FormBase.hpp"
 #include "MatrixBase.hpp"
 #include "TensorBase.hpp"
+#include "detail/constexpr_arithmetic.hpp"
+#include "detail/extents/constexpr_extent.hpp"
+#include "views/binary/CrossProductView.hpp"
 #include "views/reductions/CoefficientSum.hpp"
-#include "views/unary/IdentityView.hpp"
+#include "views/unary/HomogeneousView.hpp"
 
 namespace zipper {
 template <typename ValueType, index_type Rows>
@@ -29,48 +33,86 @@ class VectorBase : public ZipperBase<VectorBase, View> {
     using extents_traits = detail::ExtentsTraits<extents_type>;
     static_assert(extents_traits::rank == 1);
     using Base = ZipperBase<VectorBase, View>;
+    static_assert(std::is_same_v<extents_type, typename Base::extents_type>);
 
     using Base::Base;
     // using Base::operator=;
     using Base::cast;
+    using Base::extent;
+    using Base::extents;
     using Base::swizzle;
     using Base::view;
 
     auto eval() const { return Vector(*this); }
-    VectorBase& operator=(concepts::ViewDerived auto const& v) {
-        return Base::operator=(v);
-    }
-    VectorBase& operator=(concepts::VectorBaseDerived auto const& v) {
-        return operator=(v.view());
-    }
-
     template <concepts::VectorBaseDerived Other>
     VectorBase(const Other& other)
         requires(view_type::is_writable)
         : VectorBase(other.view()) {}
 
+    VectorBase& operator=(concepts::ViewDerived auto const& v) {
+        return Base::operator=(v);
+    }
+    // VectorBase& operator=(concepts::VectorBaseDerived auto const& v) {
+    //     return operator=(v.view());
+    // }
     template <concepts::VectorBaseDerived Other>
     VectorBase& operator=(const Other& other)
         requires(view_type::is_writable)
     {
         return operator=(other.view());
     }
-
-    auto as_array() const {
-        using V = views::unary::IdentityView<View>;
-        return ArrayBase<V>(V(view()));
+    template <concepts::VectorBaseDerived Other>
+    VectorBase& operator=(Other&& other)
+        requires(view_type::is_writable)
+    {
+        return operator=(other.view());
     }
+
+    // TODO: make vectorbase or zipperbase assignable from initializer lists
+    // template <typename T>
+    // VectorBase& operator=(const std::initializer_list<T>& l)
+    //    requires(extents_traits::is_dynamic)
+    //{
+    //    view().resize(extents_type(l.size()));
+    //    std::ranges::copy(l, begin());
+    //}
+
+    template <typename T>
+    VectorBase(const std::initializer_list<T>& l)
+        requires(extents_traits::is_dynamic)
+        : Base(extents_type(l.size())) {
+        for (index_type j = 0; j < extent(0); ++j) {
+            (*this)(j) = std::data(l)[j];
+        }
+        // std::ranges::copy(l, begin());
+    }
+    template <typename T>
+    VectorBase& operator=(const std::initializer_list<T>& l)
+        requires(extents_traits::is_static)
+    {
+        assert(l.size() == extent(0));
+        for (index_type j = 0; j < extent(0); ++j) {
+            (*this)(j) = std::data(l)[j];
+        }
+        return *this;
+    }
+    template <typename T>
+    VectorBase& operator=(const std::initializer_list<T>& l)
+        requires(extents_traits::is_dynamic)
+    {
+        view().resize(extents_type(l.size()));
+        for (index_type j = 0; j < extent(0); ++j) {
+            (*this)(j) = std::data(l)[j];
+        }
+        return *this;
+    }
+
     // auto as_col_matrix() const {
     //     return MatrixBase<views::unary::IdentityView<View>>(view());
     // }
-    auto as_tensor() const {
-        using V = views::unary::IdentityView<View>;
-        return TensorBase<V>(V(view()));
-    }
-    auto as_form() const {
-        using V = views::unary::IdentityView<View>;
-        return FormBase<V>(V(view()));
-    }
+    auto as_array() const { return zipper::as_array(*this); }
+    auto as_tensor() const { return zipper::as_tensor(*this); }
+    auto as_form() const { return zipper::as_form(*this); }
 
     template <index_type T>
     value_type norm_powered() const {
@@ -87,6 +129,94 @@ class VectorBase : public ZipperBase<VectorBase, View> {
     value_type norm_powered(value_type T) const {
         return views::reductions::CoefficientSum{
             as_array().pow(T).abs().view()}();
+    }
+
+    value_type dot(concepts::VectorBaseDerived auto const& o) const {
+        return as_form() * o;
+    }
+    template <concepts::VectorBaseDerived O>
+    auto cross(O const& o) const {
+        return VectorBase<
+            views::binary::CrossProductView<View, typename O::view_type>>(
+            views::binary::CrossProductView<View, typename O::view_type>(
+                view(), o.view()));
+    }
+
+    template <index_type I>
+    auto head()
+        requires(view_type::is_writable)
+    {
+        auto S = slice(std::integral_constant<index_type, 0>{},
+                       std::integral_constant<index_type, I>{});
+        auto v = Base::slice_view(S);
+        using V = std::decay_t<decltype(v)>;
+        return VectorBase<V>(std::move(v));
+    }
+    template <index_type I>
+    auto head() const {
+        auto S = slice(std::integral_constant<index_type, 0>{},
+                       std::integral_constant<index_type, I>{});
+        auto v = Base::slice_view(S);
+        using V = std::decay_t<decltype(v)>;
+        return VectorBase<V>(std::move(v));
+    }
+    auto head(index_type N)
+        requires(view_type::is_writable)
+    {
+        auto S = slice<std::integral_constant<index_type, 0>, index_type>(
+            std::integral_constant<index_type, 0>{}, N);
+        auto v = Base::slice_view(S);
+        using V = std::decay_t<decltype(v)>;
+        return VectorBase<V>(std::move(v));
+    }
+    auto head(index_type N) const {
+        auto S = slice(std::integral_constant<index_type, 0>{}, N);
+        auto v = Base::slice_view(S);
+        using V = std::decay_t<decltype(v)>;
+        return VectorBase<V>(std::move(v));
+    }
+
+    auto get_tail_slice(index_type I) const {
+        return slice(
+            detail::minus(detail::extents::constexpr_extent<0>(extents()), I),
+            I);
+    }
+    template <index_type I>
+    auto get_tail_slice() const {
+        return slice(
+            detail::minus(detail::extents::constexpr_extent<0>(extents()),
+                          std::integral_constant<index_type, I>{}),
+            std::integral_constant<index_type, I>{});
+    }
+    template <index_type I>
+    auto tail()
+        requires(view_type::is_writable)
+    {
+        auto S = get_tail_slice<I>();
+        auto v = Base::slice_view(S);
+        using V = std::decay_t<decltype(v)>;
+        return VectorBase<V>(std::move(v));
+    }
+    template <index_type I>
+    auto tail() const {
+        auto S = get_tail_slice<I>();
+        auto v = Base::slice_view(S);
+        using V = std::decay_t<decltype(v)>;
+        return VectorBase<V>(std::move(v));
+    }
+    auto tail(index_type N)
+        requires(view_type::is_writable)
+    {
+        auto S = get_tail_slice(N);
+        auto v = Base::slice_view(S);
+        using V = std::decay_t<decltype(v)>;
+        return VectorBase<V>(std::move(v));
+    }
+    auto tail(index_type N) const {
+        auto S = get_tail_slice(N);
+        auto v = Base::slice_view(S);
+        using V = std::decay_t<decltype(v)>;
+        return VectorBase<V>(std::move(v));
     }
 
     template <index_type T = 2>
@@ -116,6 +246,12 @@ class VectorBase : public ZipperBase<VectorBase, View> {
         *this /= norm<T>();
     }
     void normalize(value_type T) { *this /= norm(T); }
+
+    template <views::unary::HomogeneousMode Mode =
+                  views::unary::HomogeneousMode::Position>
+    auto homogeneous() const {
+        return VectorBase<views::unary::HomogeneousView<Mode, View>>(view());
+    }
 };
 
 template <concepts::VectorViewDerived View>

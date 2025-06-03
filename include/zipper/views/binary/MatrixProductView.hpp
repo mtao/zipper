@@ -4,6 +4,7 @@
 #include "BinaryViewBase.hpp"
 #include "zipper/concepts/MatrixViewDerived.hpp"
 #include "zipper/views/DimensionedViewBase.hpp"
+#include "zipper/views/detail/intersect_nonzeros.hpp"
 
 namespace zipper::views {
 namespace binary {
@@ -61,24 +62,45 @@ class MatrixProductView : public BinaryViewBase<MatrixProductView<A, B>, A, B> {
     using Base::extent;
     using Base::lhs;
     using Base::rhs;
+    using lhs_traits = traits::ATraits;
+    using rhs_traits = traits::BTraits;
 
     using extents_type = traits::extents_type;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
 
     MatrixProductView(const A& a, const B& b)
-        requires(extents_traits::is_static)
-        : Base(a, b) {
+        : Base(a, b,
+               traits::ConvertExtentsUtil::merge(a.extents(), b.extents())) {
         assert(a.extent(1) == b.extent(0));
     }
-    MatrixProductView(const A& a, const B& b)
-        requires(!extents_traits::is_static)
-        : Base(a, b,
-               traits::ConvertExtentsUtil::merge(a.extents(), b.extents())) {}
 
     value_type coeff(index_type a, index_type b) const {
         value_type v = 0;
-        for (index_type j = 0; j < lhs().extent(1); ++j) {
-            v += lhs()(a, j) * rhs()(j, b);
+        constexpr bool lhs_sparse = lhs_traits::is_sparse(1);
+        constexpr bool rhs_sparse = rhs_traits::is_sparse(0);
+        if constexpr (lhs_sparse && rhs_sparse) {
+            const auto& lnnz = lhs().template nonZeros<1>(a, b);
+            const auto& rnnz = rhs().template nonZeros<0>(a, b);
+            auto nnz = views::detail::intersect_nonzeros(lnnz, rnnz);
+
+            for (const auto& j : nnz) {
+                v += lhs()(a, j) * rhs()(j, b);
+            }
+        } else if constexpr (lhs_sparse) {
+            const auto& lnnz = lhs().template nonZeros<1>(a, b);
+            for (const auto& j : lnnz) {
+                v += lhs()(a, j) * rhs()(j, b);
+            }
+        } else if constexpr (rhs_sparse) {
+            const auto& rnnz = rhs().template nonZeros<0>(a, b);
+            for (const auto& j : rnnz) {
+                v += lhs()(a, j) * rhs()(j, b);
+            }
+
+        } else {
+            for (index_type j = 0; j < lhs().extent(1); ++j) {
+                v += lhs()(a, j) * rhs()(j, b);
+            }
         }
         return v;
     }

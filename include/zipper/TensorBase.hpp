@@ -7,6 +7,16 @@
 #include "zipper/views/binary/TensorProductView.hpp"
 
 namespace zipper {
+//    namespace detail {
+//        template <typename>
+//        struct tensor_extent_utils;
+//        template <index_type... Idxs>
+//        struct tensor_extent_utils<zipper::extents<Idxs...>> {
+//            template <typename T>
+//                using plain_object_storage = storage::PlainObjectStorage<T,
+//
+//        };
+//        }
 
 template <concepts::ViewDerived View>
 class TensorBase : public ZipperBase<TensorBase, View> {
@@ -23,7 +33,7 @@ class TensorBase : public ZipperBase<TensorBase, View> {
     auto eval(const std::integer_sequence<index_type, N...>&) const
         requires(std::is_same_v<extents<N...>, extents_type>)
     {
-        return Tensor<value_type, N...>(this->view());
+        return Tensor<value_type, extents<N...>>(this->view());
     }
     auto eval() const {
         return eval(detail::extents::static_extents_to_integral_sequence_t<
@@ -50,6 +60,9 @@ class TensorBase : public ZipperBase<TensorBase, View> {
         requires(view_type::is_writable)
     {
         return operator=(other.view());
+    }
+    TensorBase& operator=(concepts::TensorBaseDerived auto && v) {
+        return Base::operator=(v.view());
     }
 
     template <typename... Slices>
@@ -103,5 +116,4 @@ auto operator*(View1 const& lhs, View2 const& rhs) {
 }
 }  // namespace zipper
 
-#include "Tensor.hpp"
 #endif

@@ -14,7 +14,7 @@ struct extents_type<extents<Indices...>> : public std::true_type {};
 
 }  // namespace detail
 
-template <typename... T>
-concept ExtentsType = detail::extents_type<T...>::value;
+template <typename T>
+concept ExtentsType = detail::extents_type<T>::value;
 }  // namespace zipper::concepts
 #endif

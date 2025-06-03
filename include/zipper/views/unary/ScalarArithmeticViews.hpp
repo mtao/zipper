@@ -31,17 +31,20 @@ template <typename Scalar, concepts::ViewDerived View, bool ScalarOnRight>
 using ScalarMinusView =
     ScalarOperationView<View, std::minus<Scalar>, Scalar, ScalarOnRight>;
 
+// coeff-wise product preserves zero-ness
 template <typename Scalar, concepts::ViewDerived View, bool ScalarOnRight>
 using ScalarMultipliesView =
-    ScalarOperationView<View, std::multiplies<Scalar>, Scalar, ScalarOnRight>;
+    ScalarOperationView<View, std::multiplies<Scalar>, Scalar, ScalarOnRight, true>;
 
 template <typename Scalar, concepts::ViewDerived View, bool ScalarOnRight>
 using ScalarDividesView =
     ScalarOperationView<View, std::divides<Scalar>, Scalar, ScalarOnRight>;
 
+
+// modulus preserves zero if the modulus is on the right
 template <typename Scalar, concepts::ViewDerived View, bool ScalarOnRight>
 using ScalarModulusView =
-    ScalarOperationView<View, std::modulus<Scalar>, Scalar, ScalarOnRight>;
+    ScalarOperationView<View, std::modulus<Scalar>, Scalar, ScalarOnRight, ScalarOnRight>;
 
 template <typename Scalar, concepts::ViewDerived View, bool ScalarOnRight>
 using ScalarEqualsToView =
@@ -68,9 +71,10 @@ template <typename Scalar, concepts::ViewDerived View, bool ScalarOnRight>
 using ScalarLessEqualView =
     ScalarOperationView<View, std::less_equal<Scalar>, Scalar, ScalarOnRight>;
 
+// logical and preserves false
 template <typename Scalar, concepts::ViewDerived View, bool ScalarOnRight>
 using ScalarLogicalAndView =
-    ScalarOperationView<View, std::logical_and<Scalar>, Scalar, ScalarOnRight>;
+    ScalarOperationView<View, std::logical_and<Scalar>, Scalar, ScalarOnRight, true>;
 
 template <typename Scalar, concepts::ViewDerived View, bool ScalarOnRight>
 using ScalarLogicalOrView =

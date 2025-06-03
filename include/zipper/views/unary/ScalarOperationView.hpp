@@ -6,14 +6,14 @@
 namespace zipper::views {
 namespace unary {
 template <concepts::ViewDerived Child, typename Operation, typename Scalar,
-          bool ScalarOnRight = false>
+          bool ScalarOnRight = false, bool PreservesZeros=false>
 class ScalarOperationView;
 
 }
 template <concepts::ViewDerived Child, typename Operation, typename Scalar,
-          bool ScalarOnRight>
+          bool ScalarOnRight, bool PreservesZeros>
 struct detail::ViewTraits<
-    unary::ScalarOperationView<Child, Operation, Scalar, ScalarOnRight>>
+    unary::ScalarOperationView<Child, Operation, Scalar, ScalarOnRight, PreservesZeros>>
     : public zipper::views::unary::detail::DefaultUnaryViewTraits<Child> {
     using ChildTraits = ViewTraits<Child>;
     using value_type = decltype(std::declval<Operation>()(
@@ -23,13 +23,13 @@ struct detail::ViewTraits<
 
 namespace unary {
 template <concepts::ViewDerived Child, typename Operation, typename Scalar,
-          bool ScalarOnRight>
+          bool ScalarOnRight, bool PreservesZeros>
 class ScalarOperationView
     : public UnaryViewBase<
-          ScalarOperationView<Child, Operation, Scalar, ScalarOnRight>, Child> {
+          ScalarOperationView<Child, Operation, Scalar, ScalarOnRight, PreservesZeros>, Child> {
    public:
     using self_type =
-        ScalarOperationView<Child, Operation, Scalar, ScalarOnRight>;
+        ScalarOperationView<Child, Operation, Scalar, ScalarOnRight, PreservesZeros>;
     using traits = zipper::views::detail::ViewTraits<self_type>;
     using extents_type = traits::extents_type;
     using value_type = traits::value_type;

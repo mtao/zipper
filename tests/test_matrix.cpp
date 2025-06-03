@@ -34,7 +34,7 @@ void print(zipper::concepts::VectorBaseDerived auto const& M) {
    //
 TEST_CASE("test_assignment", "[matrix][storage][dense]") {
     zipper::Matrix<double, 3, std::dynamic_extent> M(3);
-    zipper::Matrix<double, 3, 5> N(3, 5);
+    zipper::Matrix<double, 3, 5> N;
     zipper::Matrix<double, std::dynamic_extent, std::dynamic_extent> O(2, 2);
     zipper::Vector<double, 3> x;
 
@@ -107,20 +107,22 @@ TEST_CASE("test_assignment", "[matrix][storage][dense]") {
 }
 
 TEST_CASE("test_matrix_eval", "[matrix][storage][dense]") {
-    zipper::Matrix<double, 3, 5> N(3, 5);
+    zipper::Matrix<double, 3, 5> N =
+        zipper::views::nullary::uniform_random_view<double>({});
 
     auto x = (N * 2).eval();
     auto v = N.as_array();
-    static_assert(std::is_same_v< std::decay_t<decltype(v)>::extents_type, decltype(N)::extents_type>);
+    static_assert(std::is_same_v<std::decay_t<decltype(v)>::extents_type,
+                                 decltype(N)::extents_type>);
     static_assert(std::is_same_v<decltype(v.extents()), decltype(N.extents())>);
     static_assert(std::decay_t<decltype(v)>::extents_type::rank() == 2);
-    auto y = N.as_array().eval();
+    // auto y = N.as_array().eval();
     print(x);
 }
 
 TEST_CASE("test_transpose", "[matrix][storage][dense]") {
     zipper::Matrix<double, 3, std::dynamic_extent> M(3);
-    zipper::Matrix<double, 3, 5> N(3, 5);
+    zipper::Matrix<double, 3, 5> N;
 
     for (int j = 0; j < 3; ++j) {
         for (int k = 0; k < 3; ++k) {
@@ -199,36 +201,46 @@ TEST_CASE("test_identity", "[matrix][identity]") {
             }
         }
     };
-    zipper::Matrix<double, 3, 3> I =
-        zipper::MatrixBase(zipper::views::nullary::IdentityView<double, 3, 3>{});
+    zipper::Matrix<double, 3, 3> I = zipper::MatrixBase(
+        zipper::views::nullary::IdentityView<double, 3, 3>{});
+
     check_identity(I);
-    check_identity(
-        zipper::MatrixBase(zipper::views::nullary::IdentityView<double, 3, 3>{}));
+    check_identity(zipper::MatrixBase(
+        zipper::views::nullary::IdentityView<double, 3, 3>{}));
+    CHECK((I == zipper::MatrixBase(zipper::views::nullary::IdentityView<
+                                   double, std::dynamic_extent, 3>{3})));
     CHECK(
         (I ==
          zipper::MatrixBase(
-             zipper::views::nullary::IdentityView<double, std::dynamic_extent, 3>{
-                 3})));
-    CHECK((I ==
-           zipper::MatrixBase(
-               zipper::views::nullary::IdentityView<double, std::dynamic_extent,
-                                                 std::dynamic_extent>{3, 3})));
+             zipper::views::nullary::IdentityView<double, std::dynamic_extent,
+                                                  std::dynamic_extent>{3, 3})));
 
     check_identity(zipper::MatrixBase(
         zipper::views::nullary::IdentityView<double, std::dynamic_extent,
-                                          std::dynamic_extent>{20, 20}));
+                                             std::dynamic_extent>{20, 20}));
 
     zipper::Matrix<double, 3, 3> M =
-        zipper::views::nullary::uniform_random_view<double>(zipper::extents<3, 3>{},
-                                                         0, 5);
+        zipper::views::nullary::uniform_random_view<double>(
+            zipper::extents<3, 3>{}, 0, 5);
 
     zipper::Matrix<double, 3, 3> MI = I * M;
     zipper::Matrix<double, 3, 3> IM = M * I;
     CHECK((M == MI));
     CHECK((M == IM));
+
+
+    // These last unit tests check that the identity matrix view works, but it was mostly written so i could add print statements in the matrix product to check that sparse operations are happening properly
+    
+    zipper::MatrixBase IV = zipper::views::nullary::IdentityView<double, 3, 3>{};
+    zipper::Matrix<double, 3, 3> MIV = IV * M;
+    zipper::Matrix<double, 3, 3> IVM = M * IV;
+    CHECK((M == MIV));
+    CHECK((M == IVM));
+    zipper::Matrix<double, 3, 3> IVIV = IV * IV;
+    CHECK((I == IVIV));
 }
 
-TEST_CASE("test_identity", "[matrix][vector][lift]") {
+TEST_CASE("test_identity2", "[matrix][vector][lift]") {
     zipper::Vector<double, 3> x;
     x(0) = 2;
     x(1) = 5;
@@ -262,9 +274,9 @@ TEST_CASE("test_identity", "[matrix][vector][lift]") {
 }
 
 TEST_CASE("test_trace", "[matrix][storage][dense]") {
-    zipper::Matrix<double, 3, 3> N(3, 5);
-    N = zipper::views::nullary::uniform_random_view<double>(zipper::extents<3, 3>{},
-                                                         -1, 1);
+    zipper::Matrix<double, 3, 3> N;
+    N = zipper::views::nullary::uniform_random_view<double>(
+        zipper::extents<3, 3>{}, -1, 1);
     N.diagonal() = zipper::views::nullary::ConstantView<double, 3>(0.0);
     CHECK(N.trace() == 0);
 
@@ -280,9 +292,9 @@ TEST_CASE("test_trace", "[matrix][storage][dense]") {
 }
 
 TEST_CASE("test_partial_trace_matrix", "[matrix][storage][dense]") {
-    zipper::Matrix<double, 3, 3> N(3, 5);
-    N = zipper::views::nullary::uniform_random_view<double>(zipper::extents<3, 3>{},
-                                                         -1, 1);
+    zipper::Matrix<double, 3, 3> N;
+    N = zipper::views::nullary::uniform_random_view<double>(
+        zipper::extents<3, 3>{}, -1, 1);
     spdlog::info("Random matrix n:");
     print(N);
     N.diagonal() = zipper::views::nullary::ConstantView<double, 3>(0.0);
@@ -291,41 +303,49 @@ TEST_CASE("test_partial_trace_matrix", "[matrix][storage][dense]") {
     N.diagonal() = zipper::views::nullary::ConstantView<double, 3>(1.0);
 
     {
-    zipper::MatrixBase empty_partial_trace =
-        zipper::views::unary::PartialTraceView<std::decay_t<decltype(N.view())>>(
-            N.view());
-    static_assert(std::decay_t<decltype(empty_partial_trace.extents())>::rank() == 2);
-    using reducer = std::decay_t<decltype(empty_partial_trace.view())>::traits::index_remover;
-    constexpr static auto f2r = reducer::full_rank_to_reduced_indices;
-    constexpr static auto r2f = reducer::reduced_rank_to_full_indices;
-    static_assert(f2r.size() == 2);
-    static_assert(r2f.size() == 2);
-    static_assert(f2r[0] == 0);
-    static_assert(f2r[1] == 1);
-    static_assert(r2f[0] == 0);
-    static_assert(f2r[1] == 1);
-    static_assert(std::decay_t<decltype(empty_partial_trace.extents())>::static_extent(0) == 3);
-    static_assert(std::decay_t<decltype(empty_partial_trace.extents())>::static_extent(1) == 3);
-    CHECK(empty_partial_trace == N);
+        zipper::MatrixBase empty_partial_trace =
+            zipper::views::unary::PartialTraceView<
+                std::decay_t<decltype(N.view())>>(N.view());
+        static_assert(
+            std::decay_t<decltype(empty_partial_trace.extents())>::rank() == 2);
+        using reducer = std::decay_t<
+            decltype(empty_partial_trace.view())>::traits::index_remover;
+        constexpr static auto f2r = reducer::full_rank_to_reduced_indices;
+        constexpr static auto r2f = reducer::reduced_rank_to_full_indices;
+        static_assert(f2r.size() == 2);
+        static_assert(r2f.size() == 2);
+        static_assert(f2r[0] == 0);
+        static_assert(f2r[1] == 1);
+        static_assert(r2f[0] == 0);
+        static_assert(f2r[1] == 1);
+        static_assert(
+            std::decay_t<
+                decltype(empty_partial_trace.extents())>::static_extent(0) ==
+            3);
+        static_assert(
+            std::decay_t<
+                decltype(empty_partial_trace.extents())>::static_extent(1) ==
+            3);
+        CHECK(empty_partial_trace == N);
     }
 
-    //zipper::VectorBase first_row_trace =
-    //    zipper::views::unary::PartialTraceView<std::decay_t<decltype(N.view())>,
-    //                                        0>(N.view());
+    // zipper::VectorBase first_row_trace =
+    //     zipper::views::unary::PartialTraceView<std::decay_t<decltype(N.view())>,
+    //                                         0>(N.view());
 
-    //spdlog::info("slice first row  of n:");
-    //print(first_row_trace);
-    //print(N.row(0));
-    //CHECK(first_row_trace == N.row(0));
+    // spdlog::info("slice first row  of n:");
+    // print(first_row_trace);
+    // print(N.row(0));
+    // CHECK(first_row_trace == N.row(0));
 
-    //zipper::VectorBase first_col_trace =
-    //    zipper::views::unary::PartialTraceView<std::decay_t<decltype(N.view())>,
-    //                                        1>(N.view());
-    //spdlog::info("slice first col of n:");
-    //print(first_col_trace);
-    //print(N.col(0));
+    // zipper::VectorBase first_col_trace =
+    //     zipper::views::unary::PartialTraceView<std::decay_t<decltype(N.view())>,
+    //                                         1>(N.view());
+    // spdlog::info("slice first col of n:");
+    // print(first_col_trace);
+    // print(N.col(0));
 
-    //CHECK(first_col_trace == N.col(0));
+    // CHECK(first_col_trace == N.col(0));
     print(N);
     CHECK(N.trace() == 3);
     N(0, 0) = 2;
@@ -370,7 +390,8 @@ TEST_CASE("test_all_extents", "[storage][dense]") {
     print(X * x);
 
     zipper::MatrixBase swizzled = zipper::views::unary::SwizzleView<
-        zipper::Matrix<double, 3, std::dynamic_extent>::view_type, 1, 0>(M.view());
+        zipper::Matrix<double, 3, std::dynamic_extent>::view_type, 1,
+0>(M.view());
 
     spdlog::info("M swizzled");
     print(swizzled);
@@ -378,7 +399,8 @@ TEST_CASE("test_all_extents", "[storage][dense]") {
     std::cout << "M.T * M" << std::endl;
     print(M.transpose() * M);
 
-    zipper::MatrixBase C2 = zipper::views::nullary::ConstantView<double, 4, 4>(2);
+    zipper::MatrixBase C2 = zipper::views::nullary::ConstantView<double, 4,
+4>(2);
 
     zipper::Matrix<double, 4, 4> M2 = C2;
     zipper::Matrix<double, std::dynamic_extent, std::dynamic_extent> M2d = C2;
@@ -446,8 +468,9 @@ TEST_CASE("test_all_extents", "[storage][dense]") {
     }
     MN.col(3) = zipper::views::nullary::normal_random_view<double>(
         zipper::extents<4>{}, -900, 1e-2);
-    slice = zipper::views::nullary::normal_random_view<double>(zipper::extents<4>{},
-                                                            -200, 1e-2);
+    slice =
+zipper::views::nullary::normal_random_view<double>(zipper::extents<4>{}, -200,
+1e-2);
 
 }
 */

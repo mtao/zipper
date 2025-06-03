@@ -3,6 +3,14 @@
 
 #include <utility>
 namespace zipper::detail {
+
+// returns the Kth value of a pack. Feature exists in cpp26
+#if defined(__cpp_pack_indexing)
+template <std::size_t K>
+constexpr auto pack_index(auto&&... args) -> decltype(auto) {
+    return args...[K];
+}
+#else
 template <std::size_t K, typename Arg0, typename... Args>
 constexpr auto pack_index(Arg0&& arg, Args&&... args) -> decltype(auto)
     requires(K <= sizeof...(Args))
@@ -14,5 +22,6 @@ constexpr auto pack_index(Arg0&& arg, Args&&... args) -> decltype(auto)
         return pack_index<K - 1>(std::forward<Args>(args)...);
     }
 }
+#endif
 }  // namespace zipper::detail
 #endif

@@ -96,10 +96,13 @@ class TensorProductView : public BinaryViewBase<TensorProductView<A, B>, A, B> {
     using extents_type = traits::extents_type;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
 
+    TensorProductView(const TensorProductView&) = default;
+    TensorProductView(TensorProductView&&) = default;
+    TensorProductView& operator=(const TensorProductView&) = delete;
+    TensorProductView& operator=(TensorProductView&&) = delete;
     TensorProductView(const A& a, const B& b)
         requires(extents_traits::is_static)
-        : Base(a, b) {
-    }
+        : Base(a, b) {}
     TensorProductView(const A& a, const B& b)
         requires(!extents_traits::is_static)
         : Base(a, b, traits::CEV::merge(a.extents(), b.extents())) {}
@@ -107,6 +110,9 @@ class TensorProductView : public BinaryViewBase<TensorProductView<A, B>, A, B> {
     template <typename... Args, rank_type... ranks>
     auto lhs_value(std::integer_sequence<rank_type, ranks...>,
                    Args&&... args) const -> decltype(auto) {
+        if constexpr (sizeof...(args) == 2) {
+            spdlog::info("{} {} / {} {}", args..., extent(0), extent(1));
+        }
         return lhs()(
             zipper::detail::pack_index<ranks>(std::forward<Args>(args)...)...);
     }
