@@ -38,6 +38,7 @@ class VectorBase : public ZipperBase<VectorBase, View> {
     using Base::Base;
     // using Base::operator=;
     using Base::cast;
+    using Base::extent;
     using Base::extents;
     using Base::swizzle;
     using Base::view;
@@ -59,6 +60,35 @@ class VectorBase : public ZipperBase<VectorBase, View> {
     //    std::ranges::copy(l, begin());
     //}
 
+    template <typename T>
+    VectorBase(const std::initializer_list<T>& l)
+        requires(extents_traits::is_dynamic)
+        : Base(extents_type(l.size())) {
+        for (index_type j = 0; j < extent(0); ++j) {
+            (*this)(j) = std::data(l)[j];
+        }
+        // std::ranges::copy(l, begin());
+    }
+    template <typename T>
+    VectorBase& operator=(const std::initializer_list<T>& l)
+        requires(extents_traits::is_static)
+    {
+        assert(l.size() == extent(0));
+        for (index_type j = 0; j < extent(0); ++j) {
+            (*this)(j) = std::data(l)[j];
+        }
+        return *this;
+    }
+    template <typename T>
+    VectorBase& operator=(const std::initializer_list<T>& l)
+        requires(extents_traits::is_dynamic)
+    {
+        view().resize(extents_type(l.size()));
+        for (index_type j = 0; j < extent(0); ++j) {
+            (*this)(j) = std::data(l)[j];
+        }
+        return *this;
+    }
     template <concepts::VectorBaseDerived Other>
     VectorBase(const Other& other)
         requires(view_type::is_writable)

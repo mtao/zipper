@@ -2,44 +2,37 @@
 #define ZIPPER_CONCEPTS_ZIPPERBASE_DERIVED_HPP
 #include <type_traits>
 
+#include "ArrayBaseDerived.hpp"
+#include "FormBaseDerived.hpp"
+#include "MatrixBaseDerived.hpp"
+#include "TensorBaseDerived.hpp"
+#include "VectorBaseDerived.hpp"
 #include "ViewDerived.hpp"
 
 namespace zipper {
 template <template <concepts::ViewDerived> typename DerivedT,
           concepts::ViewDerived View>
 class ZipperBase;
-template <concepts::ViewDerived View>
-class ArrayBase;
-template <concepts::ViewDerived View>
-class VectorBase;
-template <concepts::ViewDerived View>
-class MatrixBase;
-template <concepts::ViewDerived View>
-class FormBase;
-template <concepts::ViewDerived View>
-class TensorBase;
 }  // namespace zipper
 namespace zipper::concepts {
 namespace detail {
-template <typename>
-struct IsZIPPER : std::false_type {};
 
 template <typename>
-struct IsZipperBase : std::false_type {};
+struct IsZipperBase : public std::false_type {};
 template <template <concepts::ViewDerived> typename DerivedT,
           concepts::ViewDerived View>
 struct IsZipperBase<ZipperBase<DerivedT, View>> : std::true_type {};
 
-template <concepts::ViewDerived View>
-struct IsZipperBase<ArrayBase<View>> : std::true_type {};
-template <concepts::ViewDerived View>
-struct IsZipperBase<VectorBase<View>> : std::true_type {};
-template <concepts::ViewDerived View>
-struct IsZipperBase<MatrixBase<View>> : std::true_type {};
-template <concepts::ViewDerived View>
-struct IsZipperBase<TensorBase<View>> : std::true_type {};
-template <concepts::ViewDerived View>
-struct IsZipperBase<FormBase<View>> : std::true_type {};
+template <concepts::VectorBaseDerived View>
+struct IsZipperBase<View> : std::true_type {};
+template <concepts::ArrayBaseDerived View>
+struct IsZipperBase<View> : std::true_type {};
+template <concepts::MatrixBaseDerived View>
+struct IsZipperBase<View> : std::true_type {};
+template <concepts::TensorBaseDerived View>
+struct IsZipperBase<View> : std::true_type {};
+template <concepts::FormBaseDerived View>
+struct IsZipperBase<View> : std::true_type {};
 
 }  // namespace detail
 
