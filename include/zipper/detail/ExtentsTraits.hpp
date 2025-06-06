@@ -46,7 +46,7 @@ struct ExtentsTraits {
         }
     }
 
-    consteval bool is_dynamic_extent(rank_type i) {
+    consteval static bool is_dynamic_extent(rank_type i) {
         return extents_type::static_extent(i) == std::dynamic_extent;
     }
 
