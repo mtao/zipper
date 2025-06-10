@@ -56,6 +56,16 @@ inline auto slice(OffsetType start = {}, ExtentType size = {},
     return slice_t<OT, ET, ST>{OT(start), ET(size), ST(stride)};
 }
 
+template <index_type Offset, index_type Extent, index_type Stride = 1>
+using static_slice_t = slice_t<std::integral_constant<index_type, Offset>,
+                               std::integral_constant<index_type, Extent>,
+                               std::integral_constant<index_type, Stride>>;
+
+template <index_type Offset, index_type Extent, index_type Stride = 1>
+inline auto static_slice() {
+    return static_slice_t<Offset, Extent, Stride>{};
+}
+
 using default_layout_policy = std::experimental::layout_right;
 template <typename T>
 using default_accessor_policy = std::experimental::default_accessor<T>;

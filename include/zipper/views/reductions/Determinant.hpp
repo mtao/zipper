@@ -14,6 +14,13 @@
 
 namespace zipper::views {
 namespace reductions {
+namespace detail {
+
+template <typename T>
+T det2(const T& a, const T& b, const T& c, const T& d) {
+    return a * d - b * c;
+}
+}  // namespace detail
 
 template <concepts::ViewDerived View>
     requires(View::extents_traits::rank == 2)
@@ -62,13 +69,13 @@ class Determinant {
     }
 
     value_type det2() const {
-        return m_view(0, 0) * m_view(1, 1) - m_view(1, 0) * m_view(0, 1);
+        return detail::det2(m_view(0, 0), m_view(0, 1), m_view(1, 0), m_view(1, 1));
     }
     // borrowed from eigen determinant
     value_type det3() const {
         auto helper = [](const auto& v, index_type a, index_type b,
                          index_type c) {
-            return v(0, a) * (v(1, b) * v(2, c) - v(1, c) * v(2, b));
+            return v(0, a) * detail::det2(v(1, b), v(1, c), v(2, b), v(2, c));
         };
 
         return helper(m_view, 0, 1, 2) - helper(m_view, 1, 0, 2) +

@@ -39,6 +39,9 @@ class ConstantView
 template <typename T, index_type... Indices>
 ConstantView(const T&, const extents<Indices...>&)
     -> ConstantView<T, Indices...>;
+template <typename T>
+ConstantView(const T&)
+    -> ConstantView<T>;
 
 }  // namespace nullary
 }  // namespace zipper::views

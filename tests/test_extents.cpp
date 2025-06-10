@@ -2,11 +2,24 @@
 #include <catch2/catch_all.hpp>
 #include <zipper/detail/extents/dynamic_extents_indices.hpp>
 #include <zipper/detail/extents/swizzle_extents.hpp>
+#include <zipper/detail/extents/is_compatible.hpp>
 #include <zipper/storage/PlainObjectStorage.hpp>
 #include <zipper/types.hpp>
 #include <zipper/views/unary/detail/invert_integer_sequence.hpp>
 
 using namespace zipper;
+TEST_CASE("test_extent_compatibility", "[extents]") {
+    //detail::extents::is_compatible(extents<3,3>{}, extents<3,3>{});
+    CHECK(detail::extents::is_compatible<3,3>(extents<3,3>{}));
+    CHECK(detail::extents::is_compatible<3>(extents<3>{}));
+    CHECK(detail::extents::is_compatible<3,2>(extents<3,std::dynamic_extent>{2}));
+    CHECK(detail::extents::is_compatible<2>(extents<std::dynamic_extent>{2}));
+    CHECK_FALSE(detail::extents::is_compatible<3,3>(extents<2,3>{}));
+    CHECK_FALSE(detail::extents::is_compatible<3>(extents<4>{}));
+    CHECK_FALSE(detail::extents::is_compatible<3,2>(extents<2,std::dynamic_extent>{3}));
+    CHECK_FALSE(detail::extents::is_compatible<3,2>(extents<3,std::dynamic_extent>{3}));
+    CHECK_FALSE(detail::extents::is_compatible<2>(extents<std::dynamic_extent>{3}));
+}
 TEST_CASE("test_invert_integer_sequence", "[extents]") {
     auto to_array = []<rank_type... N>(std::integer_sequence<rank_type, N...>) {
         return std::array<rank_type, sizeof...(N)>{{N...}};

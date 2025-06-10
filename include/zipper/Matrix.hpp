@@ -45,6 +45,17 @@ class Matrix : public MatrixBase<storage::PlainObjectStorage<
         requires(extents_traits::is_dynamic)
         : Base(extents_type(rows, cols)) {}
 
+    Matrix(const extents_type& e)
+        requires(extents_traits::is_dynamic)
+        : Base(e) {}
+    Matrix(const extents_type&)
+        requires(extents_traits::is_static)
+        : Base() {}
+
+    Matrix(index_type rows, index_type cols)
+        requires(extents_traits::is_static)
+        : Base() {}
+
     template <concepts::MatrixBaseDerived Other>
     Matrix(const Other& other) : Base(other) {}
 
