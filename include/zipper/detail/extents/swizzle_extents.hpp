@@ -1,9 +1,9 @@
 #if !defined(ZIPPER_DETAIL_EXTENTS_SWIZZLE_EXTENTS_HPP)
 #define ZIPPER_DETAIL_EXTENTS_SWIZZLE_EXTENTS_HPP
 
-#include "zipper/detail/ExtentsTraits.hpp"
 #include "dynamic_extents_indices.hpp"
 #include "zipper/concepts/TupleLike.hpp"
+#include "zipper/detail/ExtentsTraits.hpp"
 #include "zipper/types.hpp"
 
 namespace zipper::detail::extents {
@@ -62,8 +62,9 @@ struct ExtentsSwizzler {
     template <index_type... Indices>
     using swizzled_extents_type =
         zipper::extents<SwizzleIndices == std::dynamic_extent
-                    ? 1
-                    : zipper::extents<Indices...>::static_extent(SwizzleIndices)...>;
+                            ? 1
+                            : zipper::extents<Indices...>::static_extent(
+                                  SwizzleIndices)...>;
 
     template <typename T>
     struct extents_type_swizzler {};
@@ -185,8 +186,9 @@ struct ExtentsSwizzler {
 };
 
 template <index_type... SwizzledIndices, index_type... Indices>
-auto swizzle_extents(const zipper::extents<Indices...>& a,
-                     std::integer_sequence<index_type, SwizzledIndices...>) {
+auto swizzle_extents(
+    const zipper::extents<Indices...>& a,
+    std::integer_sequence<index_type, SwizzledIndices...> = {}) {
     return ExtentsSwizzler<SwizzledIndices...>::swizzle_extents(a);
 }
 
@@ -196,5 +198,5 @@ auto swizzle_extents(const zipper::extents<Indices...>& a,
 //         ) {
 //     return ExtentsSwizzler<zipper::extents<Indices...>, A>::extents(a);
 // }
-}  // namespace zipper::detail
+}  // namespace zipper::detail::extents
 #endif
