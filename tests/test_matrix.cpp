@@ -293,6 +293,16 @@ TEST_CASE("test_trace", "[matrix][storage][dense]") {
     CHECK(N.trace() == 5);
     N(2, 2) = 2;
     CHECK(N.trace() == 6);
+
+    N.diagonal() = zipper::views::nullary::ConstantView(1.0);
+    print(N);
+    CHECK(N.trace() == 3);
+    N(0, 0) = 2;
+    CHECK(N.trace() == 4);
+    N(1, 1) = 2;
+    CHECK(N.trace() == 5);
+    N(2, 2) = 2;
+    CHECK(N.trace() == 6);
 }
 
 TEST_CASE("test_partial_trace_matrix", "[matrix][storage][dense]") {
