@@ -50,7 +50,7 @@ using slice_t = slice_type<OffsetType, ExtentType, StrideType>;
 
 template <typename OffsetType = static_index_t<0>,
           typename ExtentType =
-              static_index<std::dynamic_extent>,
+              static_index_t<std::dynamic_extent>,
           typename StrideType = static_index_t<1>>
 inline auto slice(OffsetType start = {}, ExtentType size = {},
                   StrideType stride = {}) {
