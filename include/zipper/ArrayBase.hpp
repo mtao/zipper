@@ -51,7 +51,7 @@ class ArrayBase : public ZipperBase<ArrayBase, View> {
     ArrayBase& operator=(concepts::ArrayBaseDerived auto const& v) {
         return Base::operator=(v.view());
     }
-    ArrayBase& operator=(concepts::ArrayBaseDerived auto && v) {
+    ArrayBase& operator=(concepts::ArrayBaseDerived auto&& v) {
         return Base::operator=(v.view());
     }
 
@@ -227,6 +227,9 @@ BINARY_DECLARATION(ArrayBase, LogicalOr, operator||)
 BINARY_DECLARATION(ArrayBase, BitAnd, operator&)
 BINARY_DECLARATION(ArrayBase, BitOr, operator|)
 BINARY_DECLARATION(ArrayBase, BitXor, operator^)
+
+BINARY_DECLARATION(ArrayBase, MinView, min)
+BINARY_DECLARATION(ArrayBase, MaxView, max)
 
 }  // namespace zipper
 
