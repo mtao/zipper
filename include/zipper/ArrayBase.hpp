@@ -228,8 +228,8 @@ BINARY_DECLARATION(ArrayBase, BitAnd, operator&)
 BINARY_DECLARATION(ArrayBase, BitOr, operator|)
 BINARY_DECLARATION(ArrayBase, BitXor, operator^)
 
-BINARY_DECLARATION(ArrayBase, MinView, min)
-BINARY_DECLARATION(ArrayBase, MaxView, max)
+BINARY_DECLARATION(ArrayBase, Min, min)
+BINARY_DECLARATION(ArrayBase, Max, max)
 
 }  // namespace zipper
 

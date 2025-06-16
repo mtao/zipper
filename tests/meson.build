@@ -10,6 +10,9 @@ test('iterate', test_iterate)
 test_tensor = executable('test_tensor', ['test_vector.cpp','test_matrix.cpp', 'test_tensor.cpp'], dependencies: [zipper_dep,catch2_with_main_dep])
 test('tensors', test_tensor)
 
+test_array = executable('test_array', ['test_array.cpp'], dependencies: [zipper_dep,catch2_with_main_dep])
+test('arrays', test_array)
+
 test_extents = executable('test_extents', 'test_extents.cpp', dependencies: [zipper_dep,catch2_with_main_dep])
 test('extents', test_extents)
 

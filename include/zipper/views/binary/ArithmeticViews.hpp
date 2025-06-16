@@ -4,7 +4,7 @@
 #include <functional>
 
 #include "OperationView.hpp"
-#include "detial/minmax.hpp"
+#include "detail/minmax.hpp"
 
 namespace zipper::views::binary {
 namespace detail {
