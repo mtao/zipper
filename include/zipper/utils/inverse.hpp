@@ -5,6 +5,7 @@
 
 #include "detail/tuple_to_array.hpp"
 #include "zipper/detail/extents/is_compatible.hpp"
+#include "zipper/detail/extents/is_cubic.hpp"
 #include "zipper/detail/extents/swizzle_extents.hpp"
 #include "zipper/views/reductions/Determinant.hpp"
 namespace zipper::utils {
@@ -65,6 +66,29 @@ auto inverse3d(const D& M) {
             return val;
         };
         // spdlog::info("Helper on {} {}", r, c);
+        return det2(v, (r + 1) % 3, (c + 1) % 3, (r + 2) % 3, (c + 2) % 3);
+    };
+    for (index_type r = 0; r < 3; ++r) {
+        for (index_type c = 0; c < 3; ++c) {
+            I(r, c) = cofactor(M, c, r) / det;
+        }
+    }
+    return I;
+}
+
+template <zipper::concepts::MatrixBaseDerived D>
+auto inverse(const D& M) {
+    zipper::detail::extents::throw_if_not_cubic(M.extents());
+    auto extents = zipper::detail::extents::swizzle_extents<1, 0>(M.extents());
+    using extents_type = std::decay_t<decltype(extents)>;
+
+    using T = typename D::value_type;
+
+    constexpr static index_type static_rows = extents_type::static_extent(0);
+    constexpr static index_type static_cols = extents_type::static_extent(1);
+    Matrix<T, static_rows, static_cols> I(extents);
+    T det = zipper::views::reductions::Determinant(M.view())();
+    auto cofactor = [](const auto& v, index_type r, index_type c) {
         return det2(v, (r + 1) % 3, (c + 1) % 3, (r + 2) % 3, (c + 2) % 3);
     };
     for (index_type r = 0; r < 3; ++r) {
