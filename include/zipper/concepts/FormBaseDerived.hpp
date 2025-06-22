@@ -11,10 +11,10 @@ namespace zipper {
 template <concepts::ViewDerived T>
 class FormBase;
 template <typename ValueType, concepts::ExtentsType Extents,
-          bool LeftMajor = false>
+          bool LeftMajor = true>
 class Form_;
 template <typename ValueType, concepts::ExtentsType Extents,
-          bool LeftMajor = false>
+          bool LeftMajor = true>
 class FormSpan_;
 }  // namespace zipper
 namespace zipper::concepts {

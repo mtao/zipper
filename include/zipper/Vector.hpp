@@ -3,7 +3,6 @@
 #define ZIPPER_VECTOR_HPP
 
 #include "VectorBase.hpp"
-#include "VectorSpan.hpp"
 #include "storage/PlainObjectStorage.hpp"
 #include "zipper/types.hpp"
 namespace zipper {
@@ -23,7 +22,8 @@ class Vector
     using Base::extent;
     using Base::extents;
 
-    using span_type = VectorSpan<ValueType, Rows>;
+    using span_type =
+        VectorBase<storage::SpanStorage<ValueType, zipper::extents<Rows>>>;
 
     Vector() = default;
     Vector(const Vector& o) = default;

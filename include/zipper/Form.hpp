@@ -2,9 +2,9 @@
 #define ZIPPER_FORM_HPP
 
 #include "FormBase.hpp"
-#include "FormSpan.hpp"
 #include "concepts/FormBaseDerived.hpp"
 #include "storage/PlainObjectStorage.hpp"
+#include "storage/SpanStorage.hpp"
 #include "zipper/types.hpp"
 namespace zipper {
 
@@ -16,7 +16,8 @@ class Form_ : public FormBase<storage::PlainObjectStorage<ValueType, Extents>> {
     using view_type = Base::view_type;
     using value_type = Base::value_type;
     using extents_type = Base::extents_type;
-    using span_type = FormSpan_<ValueType, Extents>;
+    using span_type = FormBase<storage::SpanStorage<ValueType, Extents>>;
+
     using Base::extent;
     using Base::extents;
 

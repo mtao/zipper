@@ -11,10 +11,10 @@ namespace zipper {
 template <concepts::ViewDerived T>
 class TensorBase;
 template <typename ValueType, concepts::ExtentsType Extents,
-          bool LeftMajor = false>
+          bool LeftMajor = true>
 class Tensor_;
 template <typename ValueType, concepts::ExtentsType Extents,
-          bool LeftMajor = false>
+          bool LeftMajor = true>
 class TensorSpan_;
 }  // namespace zipper
 namespace zipper::concepts {

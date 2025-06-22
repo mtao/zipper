@@ -110,6 +110,9 @@ template <concepts::ViewDerived View>
 FormBase(View&& view) -> FormBase<View>;
 template <concepts::ViewDerived View>
 FormBase(const View& view) -> FormBase<View>;
+template <class T, std::size_t Size = std::dynamic_extent>
+FormBase(const std::span<T, Size>& s)
+    -> FormBase<storage::SpanStorage<T, zipper::extents<Size>>>;
 
 UNARY_DECLARATION(FormBase, LogicalNot, operator!)
 UNARY_DECLARATION(FormBase, BitNot, operator~)

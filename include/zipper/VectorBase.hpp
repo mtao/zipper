@@ -77,15 +77,7 @@ class VectorBase : public ZipperBase<VectorBase, View> {
     //    std::ranges::copy(l, begin());
     //}
 
-    template <typename T>
-    VectorBase(const std::initializer_list<T>& l)
-        requires(extents_traits::is_dynamic)
-        : Base(extents_type(l.size())) {
-        for (index_type j = 0; j < extent(0); ++j) {
-            (*this)(j) = std::data(l)[j];
-        }
-        // std::ranges::copy(l, begin());
-    }
+
     template <typename T>
     VectorBase& operator=(const std::initializer_list<T>& l)
         requires(extents_traits::is_static)
@@ -258,6 +250,10 @@ template <concepts::VectorViewDerived View>
 VectorBase(View&& view) -> VectorBase<View>;
 template <concepts::VectorViewDerived View>
 VectorBase(const View& view) -> VectorBase<View>;
+
+template <class T, std::size_t Size = std::dynamic_extent>
+VectorBase(const std::span<T, Size>& s)
+    -> VectorBase<storage::SpanStorage<T, zipper::extents<Size>>>;
 
 UNARY_DECLARATION(VectorBase, LogicalNot, operator!)
 UNARY_DECLARATION(VectorBase, BitNot, operator~)

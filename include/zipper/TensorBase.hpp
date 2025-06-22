@@ -96,6 +96,10 @@ TensorBase(View&& view) -> TensorBase<View>;
 template <concepts::ViewDerived View>
 TensorBase(const View& view) -> TensorBase<View>;
 
+template <class T, std::size_t Size = std::dynamic_extent>
+TensorBase(const std::span<T, Size>& s)
+    -> TensorBase<storage::SpanStorage<T, zipper::extents<Size>>>;
+
 UNARY_DECLARATION(TensorBase, LogicalNot, operator!)
 UNARY_DECLARATION(TensorBase, BitNot, operator~)
 UNARY_DECLARATION(TensorBase, Negate, operator-)

@@ -36,6 +36,7 @@ class ZipperBase {
     View& view() { return m_view; }
     const extents_type& extents() const { return view().extents(); }
     constexpr index_type extent(rank_type i) const { return m_view.extent(i); }
+    static constexpr index_type static_extent(rank_type i) { return View::static_extent(i); }
     // template <typename... Args>
     // ZipperBase(Args&&... v) : m_view(std::forward<Args>(v)...) {}
 
@@ -63,6 +64,13 @@ class ZipperBase {
         : m_view(extents_traits::convert_from(other.extents())) {
         m_view.assign(other);
     }
+
+    template <typename... Args>
+    ZipperBase(Args&&... args)
+        : ZipperBase(View(std::forward<Args>(args)...)) {}
+
+
+
     template <concepts::ViewDerived Other>
     Derived& operator=(const Other& other)
         requires(view_type::is_writable &&
