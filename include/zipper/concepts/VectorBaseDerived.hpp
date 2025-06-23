@@ -22,12 +22,15 @@ template <typename>
 struct IsVectorBase : std::false_type {};
 template <typename T>
 struct IsVectorBase<VectorBase<T>> : std::true_type {};
-}  // namespace detail
 
 template <typename T>
 concept VectorBaseDerived =
     (concepts::VectorViewDerived<T> &&
      std::derived_from<T, zipper::VectorBase<T>>) ||
     detail::IsVector<T>::value || detail::IsVectorBase<T>::value;
+}  // namespace detail
+
+template <typename T>
+concept VectorBaseDerived = detail::VectorBaseDerived<std::decay_t<T>>;
 }  // namespace zipper::concepts
 #endif

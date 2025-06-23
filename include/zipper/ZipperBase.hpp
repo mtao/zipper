@@ -92,6 +92,24 @@ class ZipperBase {
         m_view.assign(other);
         return derived();
     }
+    //template <concepts::ZipperBaseDerived Other>
+    //Derived& operator=(const Other& other)
+    //    requires(view_type::is_writable &&
+    //             detail::extents::assignable_extents_v<
+    //                 typename Other::extents_type, extents_type>)
+    //{
+    //    m_view.assign(other.view());
+    //    return derived();
+    //}
+    //template <concepts::ZipperBaseDerived Other>
+    //Derived& operator=(Other&& other)
+    //    requires(view_type::is_writable &&
+    //             detail::extents::assignable_extents_v<
+    //                 typename Other::extents_type, extents_type>)
+    //{
+    //    m_view.assign(other.view());
+    //    return derived();
+    //}
 
     template <concepts::ZipperBaseDerived Other>
     Derived& operator+=(const Other& other)

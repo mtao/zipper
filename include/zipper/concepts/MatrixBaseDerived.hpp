@@ -23,12 +23,15 @@ template <typename>
 struct IsMatrixBase : std::false_type {};
 template <typename T>
 struct IsMatrixBase<MatrixBase<T>> : std::true_type {};
-}  // namespace detail
 
 template <typename T>
 concept MatrixBaseDerived =
     (concepts::MatrixViewDerived<T> &&
      std::derived_from<T, zipper::MatrixBase<T>>) ||
     detail::IsMatrix<T>::value || detail::IsMatrixBase<T>::value;
+}  // namespace detail
+
+template <typename T>
+concept MatrixBaseDerived = detail::MatrixBaseDerived<std::decay_t<T>>;
 }  // namespace zipper::concepts
 #endif
