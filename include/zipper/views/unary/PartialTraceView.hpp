@@ -1,4 +1,3 @@
-#include "zipper/views/reductions/CoefficientSum.hpp"
 #if !defined(ZIPPER_VIEWS_UNARY_PARTIALTRACEVIEW_HPP)
 #define ZIPPER_VIEWS_UNARY_PARTIALTRACEVIEW_HPP
 
@@ -11,25 +10,26 @@
 #include "zipper/detail/extents/extents_formatter.hpp"
 #include "zipper/detail/extents/static_extents_to_array.hpp"
 #include "zipper/detail/pack_index.hpp"
+#include "zipper/views/reductions/CoefficientSum.hpp"
 
 namespace zipper::views {
 namespace unary {
 template <concepts::ViewDerived ViewType, rank_type... Indices>
-requires(sizeof...(Indices) % 2 == 0)
+    requires(sizeof...(Indices) % 2 == 0)
 class PartialTraceView;
 
 }
 template <concepts::ViewDerived ViewType, rank_type... Indices>
 struct detail::ViewTraits<unary::PartialTraceView<ViewType, Indices...>>
-    : public zipper::views::unary::detail::DefaultUnaryViewTraits<
-          ViewType, true> {
+    : public zipper::views::unary::detail::DefaultUnaryViewTraits<ViewType,
+                                                                  true> {
     using Base = detail::ViewTraits<ViewType>;
     using index_remover =
         unary::detail::invert_integer_sequence<Base::extents_type::rank(),
                                                Indices...>;
     using extents_type = typename index_remover::template assign_types<
         zipper::extents, zipper::detail::extents::static_extents_to_array_v<
-                          typename ViewType::extents_type>>;
+                             typename ViewType::extents_type>>;
     using summed_extents_type = zipper::extents<Indices...>;
     using value_type = Base::value_type;
     constexpr static bool is_writable = false;
@@ -40,8 +40,8 @@ struct detail::ViewTraits<unary::PartialTraceView<ViewType, Indices...>>
 namespace unary {
 // indices are the indices being traced
 template <concepts::ViewDerived ViewType, rank_type... Indices>
-requires(sizeof...(Indices) % 2 == 0)
-class PartialTraceView 
+    requires(sizeof...(Indices) % 2 == 0)
+class PartialTraceView
     : public UnaryViewBase<PartialTraceView<ViewType, Indices...>, ViewType> {
    public:
     using self_type = PartialTraceView<ViewType, Indices...>;
@@ -52,16 +52,17 @@ class PartialTraceView
     using Base::extent;
     using Base::view;
 
-    PartialTraceView(const ViewType& b) : Base(b,traits::index_remover::get_extents(b.extents())) {}
+    PartialTraceView(const ViewType& b)
+        : Base(b, traits::index_remover::get_extents(b.extents())) {}
     PartialTraceView() = delete;
-    PartialTraceView& operator=(const PartialTraceView& ) = delete;
-    PartialTraceView& operator=(PartialTraceView&& ) = delete;
+    PartialTraceView& operator=(const PartialTraceView&) = delete;
+    PartialTraceView& operator=(PartialTraceView&&) = delete;
     PartialTraceView(PartialTraceView&& o) = default;
     PartialTraceView(const PartialTraceView& o) = default;
-    //PartialTraceView(const PartialTraceView& o) = default;//: Base(o.view(),traits::index_remover::get_extents(o.extents())){ }
-    //PartialTraceView(PartialTraceView&& o): PartialTraceView(o.view()) { }
+    // PartialTraceView(const PartialTraceView& o) = default;//:
+    // Base(o.view(),traits::index_remover::get_extents(o.extents())){ }
+    // PartialTraceView(PartialTraceView&& o): PartialTraceView(o.view()) { }
     //: Base(b), m_extents(swizzler_type::swizzle_extents(b.extents())) {}
-
 
     template <typename>
     struct slice_type_;
@@ -85,7 +86,8 @@ class PartialTraceView
             constexpr static rank_type Index =
                 traits::index_remover::full_rank_to_reduced_indices[N];
             static_assert(Index <= sizeof...(Args));
-            return zipper::detail::pack_index<Index>(std::forward<Args>(idxs)...);
+            return zipper::detail::pack_index<Index>(
+                std::forward<Args>(idxs)...);
         }
     }
 
@@ -97,7 +99,6 @@ class PartialTraceView
         const auto slice =
             slice_type(view(), get_index(std::integral_constant<rank_type, N>{},
                                          std::forward<Args>(idxs)...)...);
-
 
         DiagonalView<slice_type, true> diag(slice);
         // spdlog::info("Computing stuff! {}: {} {} {}", diag.extents(),

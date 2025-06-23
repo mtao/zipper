@@ -9,14 +9,12 @@
 namespace zipper {
 
 template <typename ValueType, index_type Rows, index_type Cols, bool RowMajor>
-class Matrix : public MatrixBase<storage::PlainObjectStorage<
-                   ValueType, zipper::extents<Rows, Cols>,
-                   std::conditional_t<RowMajor, std::experimental::layout_left,
-                                      std::experimental::layout_right>>> {
+class Matrix
+    : public MatrixBase<
+          storage::PlainObjectStorage<ValueType, zipper::extents<Rows, Cols>,
+                                      storage::matrix_layout<RowMajor>>> {
    public:
-    using layout_type =
-        std::conditional_t<RowMajor, std::experimental::layout_left,
-                           std::experimental::layout_right>;
+    using layout_type = storage::matrix_layout<RowMajor>;
     using Base = MatrixBase<storage::PlainObjectStorage<
         ValueType, zipper::extents<Rows, Cols>, layout_type>>;
 

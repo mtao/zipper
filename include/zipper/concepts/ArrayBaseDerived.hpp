@@ -13,7 +13,7 @@ namespace zipper {
 template <concepts::ViewDerived T>
 class ArrayBase;
 template <typename ValueType, concepts::ExtentsType Extents,
-          bool LeftMajor = false>
+          bool LeftMajor = true>
 class Array_;
 }  // namespace zipper
 namespace zipper::concepts {

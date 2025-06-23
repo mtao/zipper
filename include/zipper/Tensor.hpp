@@ -10,15 +10,10 @@
 namespace zipper {
 
 template <typename ValueType, concepts::ExtentsType Extents, bool LeftMajor>
-class Tensor_
-    : public TensorBase<storage::PlainObjectStorage<
-          ValueType, Extents,
-          std::conditional_t<LeftMajor, std::experimental::layout_left,
-                             std::experimental::layout_right>>> {
+class Tensor_ : public TensorBase<storage::PlainObjectStorage<
+                    ValueType, Extents, storage::tensor_layout<LeftMajor>>> {
    public:
-    using layout_type =
-        std::conditional_t<LeftMajor, std::experimental::layout_left,
-                           std::experimental::layout_right>;
+    using layout_type = storage::tensor_layout<LeftMajor>;
     using Base = TensorBase<
         storage::PlainObjectStorage<ValueType, Extents, layout_type>>;
     using Base::view;
@@ -27,7 +22,8 @@ class Tensor_
     using extents_type = Base::extents_type;
     using Base::extent;
     using Base::extents;
-    using span_type = TensorBase<storage::SpanStorage<ValueType, Extents>>;
+    using span_type =
+        TensorBase<storage::SpanStorage<ValueType, Extents, layout_type>>;
 
     template <concepts::ViewDerived Other>
     Tensor_(const Other& other) : Base(other) {}

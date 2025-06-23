@@ -11,16 +11,20 @@
 namespace zipper {
 
 template <typename ValueType, concepts::ExtentsType Extents, bool LeftMajor>
-class Array_
-    : public ArrayBase<storage::PlainObjectStorage<ValueType, Extents>> {
+class Array_ : public ArrayBase<storage::PlainObjectStorage<
+                   ValueType, Extents, storage::tensor_layout<LeftMajor>>> {
    public:
-    using Base = ArrayBase<storage::PlainObjectStorage<ValueType, Extents>>;
+    using layout_type = storage::tensor_layout<LeftMajor>;
+    using Base =
+        ArrayBase<storage::PlainObjectStorage<ValueType, Extents, layout_type>>;
     using Base::view;
     using view_type = Base::view_type;
     using value_type = Base::value_type;
     using extents_type = Base::extents_type;
     using Base::extent;
     using Base::extents;
+    using span_type =
+        ArrayBase<storage::SpanStorage<ValueType, Extents, layout_type>>;
 
     Array_(const Array_& o) = default;
     Array_(Array_&& o) = default;

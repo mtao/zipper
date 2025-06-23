@@ -9,7 +9,7 @@
 namespace zipper {
 template <concepts::ViewDerived T>
 class MatrixBase;
-template <typename T, index_type R, index_type C, bool RowMajor = false>
+template <typename T, index_type R, index_type C, bool RowMajor = true>
 class Matrix;
 }  // namespace zipper
 namespace zipper::concepts {

@@ -9,14 +9,18 @@
 namespace zipper {
 
 template <typename ValueType, concepts::ExtentsType Extents, bool LeftMajor>
-class Form_ : public FormBase<storage::PlainObjectStorage<ValueType, Extents>> {
+class Form_ : public FormBase<storage::PlainObjectStorage<
+                  ValueType, Extents, storage::tensor_layout<LeftMajor>>> {
    public:
-    using Base = FormBase<storage::PlainObjectStorage<ValueType, Extents>>;
+    using layout_type = storage::tensor_layout<LeftMajor>;
+    using Base =
+        FormBase<storage::PlainObjectStorage<ValueType, Extents, layout_type>>;
     using Base::view;
     using view_type = Base::view_type;
     using value_type = Base::value_type;
     using extents_type = Base::extents_type;
-    using span_type = FormBase<storage::SpanStorage<ValueType, Extents>>;
+    using span_type =
+        FormBase<storage::SpanStorage<ValueType, Extents, layout_type>>;
 
     using Base::extent;
     using Base::extents;
