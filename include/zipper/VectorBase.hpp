@@ -61,12 +61,12 @@ class VectorBase : public ZipperBase<VectorBase, View> {
     {
         return operator=(other.view());
     }
-    template <concepts::VectorBaseDerived Other>
-    VectorBase& operator=(Other&& other)
-        requires(view_type::is_writable)
-    {
-        return operator=(other.view());
-    }
+    //template <concepts::VectorBaseDerived Other>
+    //VectorBase& operator=(Other&& other)
+    //    requires(view_type::is_writable)
+    //{
+    //    return operator=(other.view());
+    //}
 
     // TODO: make vectorbase or zipperbase assignable from initializer lists
     // template <typename T>

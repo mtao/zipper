@@ -29,12 +29,18 @@ class Tensor_ : public TensorBase<storage::PlainObjectStorage<
     Tensor_(const Other& other) : Base(other) {}
     template <concepts::TensorBaseDerived Other>
     Tensor_(const Other& other) : Base(other) {}
-    template <typename... Args>
+    template <concepts::IndexLike... Args>
     Tensor_(Args&&... args)
-        requires((std::is_convertible_v<Args, index_type> && ...))
         : Base(Extents(std::forward<Args>(args)...)) {}
+    Tensor_() = default;
+    Tensor_(const Tensor_&) = default;
+    Tensor_(Tensor_&&) = default;
     template <index_type... indices>
     Tensor_(const zipper::extents<indices...>& e) : Base(e) {}
+    Tensor_& operator=(Tensor_&& o) {
+        view().operator=(std::move(o.view()));
+        return *this;
+    }
     using Base::operator=;
 };
 template <typename ValueType, index_type... Indxs>

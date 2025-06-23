@@ -23,22 +23,25 @@ class Form_ : public FormBase<storage::PlainObjectStorage<
         FormBase<storage::SpanStorage<ValueType, Extents, layout_type>>;
 
     using Base::extent;
+    using Base::Base;
     using Base::extents;
 
     Form_(const Form_& o) = default;
     Form_(Form_&& o) = default;
     Form_& operator=(const Form_& o) = default;
-    Form_& operator=(Form_&& o) = default;
     template <concepts::ViewDerived Other>
     Form_(const Other& other) : Base(other) {}
     template <concepts::FormBaseDerived Other>
     Form_(const Other& other) : Base(other) {}
-    template <typename... Args>
+    template <concepts::IndexLike... Args>
     Form_(Args&&... args)
-        requires((std::is_convertible_v<Args, index_type> && ...))
         : Base(Extents(std::forward<Args>(args)...)) {}
     template <index_type... indices>
     Form_(const zipper::extents<indices...>& e) : Base(e) {}
+    Form_& operator=(Form_&& o) {
+        view().operator=(std::move(o.view()));
+        return *this;
+    }
     using Base::operator=;
 };
 template <typename ValueType, index_type... Indxs>

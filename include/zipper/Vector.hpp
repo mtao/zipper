@@ -29,7 +29,12 @@ class Vector
     Vector(const Vector& o) = default;
     Vector& operator=(const Vector& o) = default;
     Vector(Vector&& o) = default;
-    Vector& operator=(Vector&& o) = default;
+    //Vector(Vector&& o):Base(std::move(o.view())) {
+    //}
+    Vector& operator=(Vector&& o) {
+        view().operator=(std::move(o.view()));
+        return *this;
+    }
     Vector(index_type size)
         requires(extents_traits::is_dynamic)
         : Base(zipper::extents<Rows>(size)) {}

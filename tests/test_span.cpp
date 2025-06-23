@@ -18,7 +18,7 @@ TEST_CASE("test_vector_span", "[vector][storage][dense][span]") {
 
     std::array<double,2> y;
     VectorBase z(y);
-    z = v;
+    z = v.view();
 
     CHECK(v(0) == 2);
     CHECK(v(1) == 3);

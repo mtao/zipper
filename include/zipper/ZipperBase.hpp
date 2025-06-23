@@ -41,7 +41,12 @@ class ZipperBase {
     // ZipperBase(Args&&... v) : m_view(std::forward<Args>(v)...) {}
 
     ZipperBase(View&& v) : m_view(std::move(v)) {}
+    ZipperBase(Derived&& v) : ZipperBase(std::move(v.view())) {}
+    ZipperBase(ZipperBase&& v) = default;
+
+    ZipperBase(const Derived& v) : ZipperBase(v.view()) {}
     ZipperBase(const View& v) : m_view(v) {}
+    ZipperBase(const ZipperBase& v) = default;
     // Derived& operator=(concepts::ViewDerived auto const& v) {
     //     m_view = v;
     //     return derived();
@@ -53,8 +58,6 @@ class ZipperBase {
         return (*this)();
     }
 
-    ZipperBase(ZipperBase&& v) = default;
-    ZipperBase(const ZipperBase& v) = default;
 
     template <concepts::ViewDerived Other>
     ZipperBase(const Other& other)
