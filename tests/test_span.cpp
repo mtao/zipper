@@ -14,4 +14,12 @@ TEST_CASE("test_vector_span", "[vector][storage][dense][span]") {
     REQUIRE(v.extent(0) == 2);
     CHECK(v(0) == 2);
     CHECK(v(1) == 3);
+
+
+    std::array<double,2> y;
+    VectorBase z(y);
+    z = v;
+
+    CHECK(v(0) == 2);
+    CHECK(v(1) == 3);
 }
