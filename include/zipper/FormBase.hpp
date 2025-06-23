@@ -30,7 +30,7 @@ class FormBase : public ZipperBase<FormBase, View> {
     auto eval(const std::integer_sequence<index_type, N...>&) const
         requires(std::is_same_v<extents<N...>, extents_type>)
     {
-        return Form<value_type, N...>(this->view());
+        return Form_<value_type, extents<N...>>(this->view());
     }
     auto eval() const {
         return eval(detail::extents::static_extents_to_integral_sequence_t<
