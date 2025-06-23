@@ -1,4 +1,3 @@
-
 #if !defined(ZIPPER_VECTORBASE_HPP)
 #define ZIPPER_VECTORBASE_HPP
 
