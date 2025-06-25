@@ -43,7 +43,8 @@ class OperationView
     using child_value_type = traits::base_value_type;
 
     value_type get_value(const child_value_type& value) const {
-        return m_op(value);
+        value_type v = m_op(value);
+        return v;
     }
 
    private:
