@@ -241,6 +241,20 @@ TEST_CASE("test_matrix_slicing", "[extents][matrix][slice]") {
     CHECK(slice4(3) == MN(3, 3));
 }
 
+TEST_CASE("test_vector_slice_assignment", "[extents][vector][slice]") {
+    zipper::Vector<double,4> x;
+
+    x(3) = 2;
+
+    x.head<3>()= zipper::views::nullary::ConstantView<double>(1);
+    CHECK(x(0) == 1);
+    CHECK(x(1) == 1);
+    CHECK(x(2) == 1);
+    CHECK(x(3) == 2);
+
+}
+
+
 TEST_CASE("test_partial_slice", "[extents][tensor][slice]") {
     spdlog::info("Manipulating MN: ");
 }
