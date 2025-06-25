@@ -1,7 +1,6 @@
 #if !defined(ZIPPER_VIEWS_UNARY_PARTIALTRACEVIEW_HPP)
 #define ZIPPER_VIEWS_UNARY_PARTIALTRACEVIEW_HPP
 
-#include <spdlog/spdlog.h>
 
 #include "DiagonalView.hpp"
 #include "UnaryViewBase.hpp"
@@ -101,9 +100,6 @@ class PartialTraceView
                                          std::forward<Args>(idxs)...)...);
 
         DiagonalView<slice_type, true> diag(slice);
-        // spdlog::info("Computing stuff! {}: {} {} {}", diag.extents(),
-        // diag(0),
-        //              diag(1), diag(2));
         return reductions::CoefficientSum(diag)();
     }
 

@@ -1,7 +1,6 @@
 #if !defined(ZIPPER_VIEWS_UNARY_PARTIALREDUCTIONVIEW_HPP)
 #define ZIPPER_VIEWS_UNARY_PARTIALREDUCTIONVIEW_HPP
 
-#include <spdlog/spdlog.h>
 
 #include "UnaryViewBase.hpp"
 #include "detail/invert_integer_sequence.hpp"
@@ -111,9 +110,6 @@ class PartialReductionView
 
         ReductionView<std::decay_t<decltype(slice)>> view(slice);
         value_type val = view();
-        if constexpr (sizeof...(Args) == 2) {
-            spdlog::warn("{} {} {}", val, idxs...);
-        }
         return val;
     }
 

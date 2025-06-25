@@ -1,6 +1,5 @@
 #if !defined(ZIPPER_VIEWS_DETAIL_INTERSECT_NONZEROS_HPP)
 #define ZIPPER_VIEWS_DETAIL_INTERSECT_NONZEROS_HPP
-#include <spdlog/spdlog.h>
 
 #include "zipper/types.hpp"
 namespace zipper::views::detail {
