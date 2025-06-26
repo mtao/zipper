@@ -52,6 +52,8 @@ TEST_CASE("test_dot", "[matrix][storage][dense]") {
     CHECK(c.dot(e1) == 2);
     CHECK(c.dot(e2) == 4);
 
+    CHECK(a.head<2>().dot(b.head<2>()) == 6);
+
 }
 
 struct A {
