@@ -5,7 +5,7 @@ import os
 
 __BASE_DEPS__ = [
         "spdlog/1.15.1", 
-        "range-v3/cci.20240905",  
+        "range-v3/0.12.0",  
         "catch2/3.8.1",
         "mdspan/0.6.0"
         ]

@@ -1,6 +1,8 @@
 #if !defined(ZIPPER_VIEWS_BINARY_FORMTENSORPRODUCTVIEW_HPP)
 #define ZIPPER_VIEWS_BINARY_FORMTENSORPRODUCTVIEW_HPP
 
+#include <spdlog/spdlog.h>
+
 #include "BinaryViewBase.hpp"
 #include "zipper/concepts/ViewDerived.hpp"
 #include "zipper/detail/pack_index.hpp"
@@ -23,23 +25,27 @@ struct form_tensor_partial_trace_type_<A, B,
     constexpr static rank_type Off =
         A::extents_type::rank() - B::extents_type::rank();
     using tensor_product_type =
-        unary::PartialTraceView<binary::TensorProductView<A, B>>;
-    using type = unary::PartialTraceView<tensor_product_type, (N + Off)...>;
+        binary::TensorProductView<A, B>;
+    using partial_trace_type = unary::PartialTraceView<tensor_product_type, (N + Off)...>;
 };
 
 template <typename A, typename B>
 struct form_tensor_partial_trace_type {
-    using type = form_tensor_partial_trace_type_<
+
+    using helper = form_tensor_partial_trace_type_<
         A, B,
         decltype(std::make_integer_sequence<
-                 rank_type, 2 * B::extents_type::rank()>{})>::type;
+                 rank_type, 2 * B::extents_type::rank()>{})>;
+    using partial_trace_type = typename helper::partial_trace_type;
+    using tensor_product_type = typename helper::tensor_product_type;
 };
 
 template <typename A, typename B>
 struct ViewTraits<binary::FormTensorProductView<A, B>>
-    : public ViewTraits<typename form_tensor_partial_trace_type<A, B>::type> {
-    using tensor_product_type = binary::TensorProductView<A, B>;
-    using partial_trace_type = form_tensor_partial_trace_type<A, B>::type;
+    : public ViewTraits<typename form_tensor_partial_trace_type<A, B>::partial_trace_type> {
+    //using tensor_product_type = binary::TensorProductView<A, B>;
+    using tensor_product_type = form_tensor_partial_trace_type<A, B>::tensor_product_type;
+    using partial_trace_type = form_tensor_partial_trace_type<A, B>::partial_trace_type;
     using tensor_product_traits = ViewTraits<tensor_product_type>;
     using partial_trace_traits = ViewTraits<partial_trace_type>;
     using extents_type = partial_trace_traits::extents_type;
@@ -77,27 +83,32 @@ class FormTensorProductView : public ViewBase<FormTensorProductView<A, B>> {
                   A::extents_type::rank() - B::extents_type::rank());
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
 
-    //FormTensorProductView(const FormTensorProductView& o)
-    //    : m_tensor(o.m_tensor), m_trace(m_tensor) {}
-        //: FormTensorProductView(o.m_tensor.lhs(), o.m_tensor.rhs()) {}
+    // FormTensorProductView(const FormTensorProductView& o)
+    //     : m_tensor(o.m_tensor), m_trace(m_tensor) {}
+    //: FormTensorProductView(o.m_tensor.lhs(), o.m_tensor.rhs()) {}
 
-    //FormTensorProductView(FormTensorProductView&& o)
-    //    : FormTensorProductView(o.m_tensor.lhs(), o.m_tensor.rhs()) {}
+    // FormTensorProductView(FormTensorProductView&& o)
+    //     : FormTensorProductView(o.m_tensor.lhs(), o.m_tensor.rhs()) {}
 
     FormTensorProductView() = delete;
-     //FormTensorProductView(FormTensorProductView&& o) = default;
-     //FormTensorProductView(const FormTensorProductView& o) = default;
-     FormTensorProductView(const FormTensorProductView& o): FormTensorProductView(o.m_tensor.lhs(),o.m_tensor.rhs()) {}
+    // FormTensorProductView(FormTensorProductView&& o) = default;
+    // FormTensorProductView(const FormTensorProductView& o) = default;
+    FormTensorProductView(const FormTensorProductView& o)
+        : FormTensorProductView(o.m_tensor.lhs(), o.m_tensor.rhs()) {}
     FormTensorProductView& operator=(FormTensorProductView& o) = delete;
     FormTensorProductView& operator=(FormTensorProductView&& o) = delete;
     FormTensorProductView(const A& a, const B& b)
-        : m_tensor(a, b), m_trace(m_tensor) {}
+        : m_tensor(a, b), m_trace(m_tensor) {
+        if constexpr (extents_type::rank() > 0) {
+            spdlog::warn("{}", m_trace.extent(1));
+        }
+        assert(&m_trace.view() == &m_tensor);
+    }
 
     template <typename... Args>
     value_type coeff(Args&&... args) const {
-        typename traits::partial_trace_type trace(m_tensor);
-         return trace(std::forward<Args>(args)...);
-        //return m_trace(std::forward<Args>(args)...);
+        return m_trace(std::forward<Args>(args)...);
+        // return m_trace(std::forward<Args>(args)...);
     }
     const extents_type& extents() const { return m_trace.extents(); }
 
