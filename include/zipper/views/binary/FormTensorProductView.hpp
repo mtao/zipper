@@ -85,8 +85,9 @@ class FormTensorProductView : public ViewBase<FormTensorProductView<A, B>> {
     //    : FormTensorProductView(o.m_tensor.lhs(), o.m_tensor.rhs()) {}
 
     FormTensorProductView() = delete;
-     FormTensorProductView(FormTensorProductView&& o) = default;
-     FormTensorProductView(const FormTensorProductView& o) = default;
+     //FormTensorProductView(FormTensorProductView&& o) = default;
+     //FormTensorProductView(const FormTensorProductView& o) = default;
+     FormTensorProductView(const FormTensorProductView& o): FormTensorProductView(o.m_tensor.lhs(),o.m_tensor.rhs()) {}
     FormTensorProductView& operator=(FormTensorProductView& o) = delete;
     FormTensorProductView& operator=(FormTensorProductView&& o) = delete;
     FormTensorProductView(const A& a, const B& b)
