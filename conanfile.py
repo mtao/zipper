@@ -14,7 +14,7 @@ __BASE_DEPS__ = [
 
 
 
-class MultiscreenManga(ConanFile):
+class Zipper(ConanFile):
     requires = __BASE_DEPS__ 
     settings = "os", "compiler", "build_type"  
     generators = "PkgConfigDeps"
