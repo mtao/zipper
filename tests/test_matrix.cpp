@@ -570,3 +570,43 @@ TEST_CASE("test_matrix_inverse", "[matrix][storage][dense]") {
         CHECK((I - myI2).as_array().norm() < 1e-5);
     }
 }
+TEST_CASE("test_matrix_transpose", "[matrix][storage][dense]") {
+    {
+        zipper::Matrix<double, 3, 3> I =
+            zipper::views::nullary::IdentityView<double, 3, 3>{};
+
+        auto I2 = zipper::utils::inverse(I);
+        CHECK(I == I2);
+    }
+    {
+        zipper::Matrix<double, 2, 2> I =
+            zipper::views::nullary::uniform_random_view<double>({});
+
+        auto I2 = I.transpose();
+        auto I3 = I.transpose().eval();
+        print(I);
+        print(I2);
+        print(I3);
+
+        CHECK(I2 == I3);
+        for (int j = 0; j < 2; ++j) {
+            for (int k = 0; k < 2; ++k) {
+                CHECK(I(j, k) == I2(k, j));
+            }
+        }
+    }
+    {
+        zipper::Matrix<double, std::dynamic_extent, std::dynamic_extent> I =
+            zipper::views::nullary::uniform_random_view<double>(
+                zipper::create_dextents(3, 3));
+
+        auto I2 = I.transpose();
+        auto I3 = I.transpose().eval();
+        CHECK(I2 == I3);
+        for (int j = 0; j < 2; ++j) {
+            for (int k = 0; k < 2; ++k) {
+                CHECK(I(j, k) == I2(k, j));
+            }
+        }
+    }
+}
