@@ -589,11 +589,12 @@ TEST_CASE("test_matrix_transpose", "[matrix][storage][dense]") {
         print(I3);
 
         CHECK(I2 == I3);
-        for (int j = 0; j < 2; ++j) {
-            for (int k = 0; k < 2; ++k) {
+        for (zipper::index_type j = 0; j < 2; ++j) {
+            for (zipper::index_type k = 0; k < 2; ++k) {
                 CHECK(I(j, k) == I2(k, j));
             }
         }
+
     }
     {
         zipper::Matrix<double, std::dynamic_extent, std::dynamic_extent> I =
@@ -603,9 +604,44 @@ TEST_CASE("test_matrix_transpose", "[matrix][storage][dense]") {
         auto I2 = I.transpose();
         auto I3 = I.transpose().eval();
         CHECK(I2 == I3);
-        for (int j = 0; j < 2; ++j) {
-            for (int k = 0; k < 2; ++k) {
+        for (zipper::index_type j = 0; j < I.extent(0); ++j) {
+            for (zipper::index_type k = 0; k < I.extent(1); ++k) {
                 CHECK(I(j, k) == I2(k, j));
+            }
+        }
+    }
+
+    {
+        zipper::Matrix<double, 5, 5> I =
+            zipper::views::nullary::uniform_random_view<double>({});
+        auto S = I.slice(zipper::static_slice<0,3>(),zipper::static_slice<0,3>());
+
+        auto I2 = S.transpose();
+        auto I3 = S.transpose().eval();
+
+        CHECK(I2 == I3);
+        for (zipper::index_type j = 0; j < S.extent(0); ++j) {
+            for (zipper::index_type k = 0; k < S.extent(1); ++k) {
+                CHECK(S(j, k) == I2(k, j));
+            }
+        }
+
+    }
+    {
+        zipper::Matrix<double, std::dynamic_extent, std::dynamic_extent> I =
+            zipper::views::nullary::uniform_random_view<double>(
+                zipper::create_dextents(5, 5));
+        auto S = I.slice(zipper::static_slice<0,3>(),zipper::static_slice<0,3>());
+
+        auto I2 = S.transpose();
+        auto I3 = S.transpose().eval();
+        print(I);
+        print(I2);
+        print(I3);
+        CHECK(I2 == I3);
+        for (zipper::index_type j = 0; j < S.extent(0); ++j) {
+            for (zipper::index_type k = 0; k < S.extent(1); ++k) {
+                CHECK(S(j, k) == I2(k, j));
             }
         }
     }
