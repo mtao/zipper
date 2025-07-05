@@ -572,29 +572,25 @@ TEST_CASE("test_matrix_inverse", "[matrix][storage][dense]") {
 }
 TEST_CASE("test_matrix_transpose", "[matrix][storage][dense]") {
     {
-        zipper::Matrix<double, 3, 3> I =
-            zipper::views::nullary::IdentityView<double, 3, 3>{};
-
-        auto I2 = zipper::utils::inverse(I);
-        CHECK(I == I2);
-    }
-    {
-        zipper::Matrix<double, 2, 2> I =
+        zipper::Matrix<double, 4, 4> I =
             zipper::views::nullary::uniform_random_view<double>({});
 
         auto I2 = I.transpose();
         auto I3 = I.transpose().eval();
-        print(I);
-        print(I2);
-        print(I3);
 
         CHECK(I2 == I3);
-        for (zipper::index_type j = 0; j < 2; ++j) {
-            for (zipper::index_type k = 0; k < 2; ++k) {
+        for (zipper::index_type j = 0; j < 4; ++j) {
+            for (zipper::index_type k = 0; k < 4; ++k) {
                 CHECK(I(j, k) == I2(k, j));
             }
         }
 
+        zipper::Vector<double, 4> V = zipper::views::nullary::uniform_random_view<double>({});
+        auto R1 = (I2 * V);
+        auto R2 = (I2 * V).eval();
+        auto R3 = (I3 * V).eval();
+        CHECK(R1 == R3);
+        CHECK(R2 == R3);
     }
     {
         zipper::Matrix<double, std::dynamic_extent, std::dynamic_extent> I =
@@ -609,12 +605,18 @@ TEST_CASE("test_matrix_transpose", "[matrix][storage][dense]") {
                 CHECK(I(j, k) == I2(k, j));
             }
         }
+        zipper::Vector<double, 3> V = zipper::views::nullary::uniform_random_view<double>({});
+        auto R1 = (I2 * V);
+        auto R2 = (I2 * V).eval();
+        auto R3 = (I3 * V).eval();
+        CHECK(R1 == R3);
+        CHECK(R2 == R3);
     }
 
     {
-        zipper::Matrix<double, 5, 5> I =
+        zipper::Matrix<double, 4, 4> I =
             zipper::views::nullary::uniform_random_view<double>({});
-        auto S = I.slice(zipper::static_slice<0,3>(),zipper::static_slice<0,3>());
+        const auto S = I.slice(zipper::static_slice<0,3>(),zipper::static_slice<0,3>());
 
         auto I2 = S.transpose();
         auto I3 = S.transpose().eval();
@@ -628,10 +630,40 @@ TEST_CASE("test_matrix_transpose", "[matrix][storage][dense]") {
 
     }
     {
+        const zipper::Matrix<double, 4, 4> I =
+            zipper::views::nullary::uniform_random_view<double>({});
+        const auto S = I.slice(zipper::static_slice<0,3>(),zipper::static_slice<0,3>());
+
+        auto I2 = S.transpose();
+        auto I3 = S.transpose().eval();
+
+        const auto& I2view = I2.view();
+        const auto& I2sliceview = I2view.view();
+        using slice_extents_type = typename std::decay_t<decltype(I2sliceview)>::extents_type;
+        static_assert(slice_extents_type::rank() == 2);
+        static_assert(slice_extents_type::static_extent(0) == 3);
+        static_assert(slice_extents_type::static_extent(1) == 3);
+
+        using swizzle_extents_type = typename std::decay_t<decltype(I2view)>::extents_type;
+        static_assert(swizzle_extents_type::rank() == 2);
+        static_assert(swizzle_extents_type::static_extent(0) == 3);
+        static_assert(swizzle_extents_type::static_extent(1) == 3);
+
+        using swizzler_type = typename std::decay_t<decltype(I2view)>::swizzler_type;
+        CHECK(std::tuple(0,1) == swizzler_type::unswizzle(1,0));
+        CHECK(I2 == I3);
+        for (zipper::index_type j = 0; j < S.extent(0); ++j) {
+            for (zipper::index_type k = 0; k < S.extent(1); ++k) {
+                CHECK(S(j, k) == I2(k, j));
+            }
+        }
+
+    }
+    {
         zipper::Matrix<double, std::dynamic_extent, std::dynamic_extent> I =
             zipper::views::nullary::uniform_random_view<double>(
                 zipper::create_dextents(5, 5));
-        auto S = I.slice(zipper::static_slice<0,3>(),zipper::static_slice<0,3>());
+        const auto S = I.slice(zipper::static_slice<0,3>(),zipper::static_slice<0,3>());
 
         auto I2 = S.transpose();
         auto I3 = S.transpose().eval();
@@ -646,3 +678,26 @@ TEST_CASE("test_matrix_transpose", "[matrix][storage][dense]") {
         }
     }
 }
+
+//zipper::views::unary::SwizzleView<
+//    zipper::views::unary::SliceView<
+//        zipper::storage::PlainObjectStorage<
+//            double, 
+//            std::experimental::extents<long unsigned int, 4, 4>
+//            , std::experimental::layout_right
+//            , std::experimental::default_accessor<double> >
+//            , true
+//            , std::experimental::strided_slice<
+//                std::integral_constant<long unsigned int, 0>
+//                , std::integral_constant<long unsigned int, 3>
+//                , std::integral_constant<long unsigned int, 1> 
+//                >
+//            , std::experimental::strided_slice<
+//                std::integral_constant<long unsigned int, 0>
+//                , std::integral_constant<long unsigned int, 3>
+//                , std::integral_constant<long unsigned int, 1>
+//                > 
+//            >
+//            , 1
+//            , 0
+//            >::_coeff(std::array<long unsigned int, 2>, std::array<long unsigned int, 2>, std::make_integer_sequence<long unsigned int, 2>) const

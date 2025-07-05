@@ -1,7 +1,6 @@
 #if !defined(ZIPPER_VIEWS_UNARY_PARTIALTRACEVIEW_HPP)
 #define ZIPPER_VIEWS_UNARY_PARTIALTRACEVIEW_HPP
 
-
 #include "DiagonalView.hpp"
 #include "UnaryViewBase.hpp"
 #include "detail/invert_integer_sequence.hpp"
@@ -68,7 +67,7 @@ class PartialTraceView
     template <rank_type... N>
     struct slice_type_<std::integer_sequence<rank_type, N...>> {
         using type =
-            SliceView<ViewType, true,
+            SliceView<const ViewType,
                       std::conditional_t<traits::index_remover::in_sequence(N),
                                          rank_type, full_extent_type>...>;
     };

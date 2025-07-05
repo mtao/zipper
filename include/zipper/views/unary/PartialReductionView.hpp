@@ -1,7 +1,6 @@
 #if !defined(ZIPPER_VIEWS_UNARY_PARTIALREDUCTIONVIEW_HPP)
 #define ZIPPER_VIEWS_UNARY_PARTIALREDUCTIONVIEW_HPP
 
-
 #include "UnaryViewBase.hpp"
 #include "detail/invert_integer_sequence.hpp"
 #include "zipper/concepts/ViewDerived.hpp"
@@ -77,7 +76,7 @@ class PartialReductionView
     template <rank_type... N>
     struct slice_type_<std::integer_sequence<rank_type, N...>> {
         using type =
-            SliceView<ViewType, true,
+            SliceView<const ViewType,
                       std::conditional_t<traits::index_remover::in_sequence(N),
                                          rank_type, full_extent_type>...>;
     };

@@ -13,16 +13,21 @@
 
 namespace zipper::views {
 namespace unary {
-template <concepts::ViewDerived ViewType, index_type... Indices>
+template <concepts::QualifiedViewDerived ViewType, index_type... Indices>
 class SwizzleView;
 
 }
-template <concepts::ViewDerived ViewType, index_type... Indices>
-struct detail::ViewTraits<unary::SwizzleView<ViewType, Indices...>>
+template <concepts::QualifiedViewDerived QualifiedViewType,
+          index_type... Indices>
+struct detail::ViewTraits<unary::SwizzleView<QualifiedViewType, Indices...>>
     : public zipper::views::unary::detail::DefaultUnaryViewTraits<
-          ViewType, true> {
+          QualifiedViewType, true> {
+    using ViewType = std::decay_t<QualifiedViewType>;
     using swizzler_type = zipper::detail::extents::ExtentsSwizzler<Indices...>;
-    using Base = detail::ViewTraits<ViewType>;
+
+    // TODO: fix this so ViewTraits are all aware of qulaifiacitons
+    using QualifiedBase = zipper::views::detail::ViewTraits<QualifiedViewType>;
+    using Base = zipper::views::detail::ViewTraits<ViewType>;
     using extents_type = swizzler_type::template extents_type_swizzler_t<
         typename Base::extents_type>;
     using value_type = Base::value_type;
@@ -32,17 +37,20 @@ struct detail::ViewTraits<unary::SwizzleView<ViewType, Indices...>>
 };
 
 namespace unary {
-template <concepts::ViewDerived ViewType, index_type... Indices>
+template <concepts::QualifiedViewDerived QualifiedViewType,
+          index_type... Indices>
 class SwizzleView
-    : public UnaryViewBase<SwizzleView<ViewType, Indices...>, ViewType> {
+    : public UnaryViewBase<SwizzleView<QualifiedViewType, Indices...>,
+                           QualifiedViewType> {
    public:
-    using self_type = SwizzleView<ViewType, Indices...>;
+    using self_type = SwizzleView<QualifiedViewType, Indices...>;
     using traits = zipper::views::detail::ViewTraits<self_type>;
+    using ViewType = traits::ViewType;
     using extents_type = traits::extents_type;
     using value_type = traits::value_type;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
     using swizzler_type = traits::swizzler_type;
-    using Base = UnaryViewBase<self_type, ViewType>;
+    using Base = UnaryViewBase<self_type, QualifiedViewType>;
     using Base::extent;
     using Base::view;
     constexpr static rank_type internal_rank = ViewType::extents_type::rank();
@@ -54,8 +62,7 @@ class SwizzleView
     SwizzleView& operator=(const SwizzleView&) = delete;
     SwizzleView& operator=(SwizzleView&&) = delete;
     SwizzleView(const ViewType& b)
-        : Base(b,swizzler_type::swizzle_extents(b.extents())) {}
-
+        : Base(b, swizzler_type::swizzle_extents(b.extents())) {}
 
     template <concepts::TupleLike T, rank_type... ranks>
     auto _coeff(const T& idxs, std::integer_sequence<rank_type, ranks...>) const
@@ -64,25 +71,31 @@ class SwizzleView
     }
     template <concepts::TupleLike T, rank_type... ranks>
     auto _coeff_ref(const T& idxs, std::integer_sequence<rank_type, ranks...>)
-        -> value_type& requires(traits::is_writable) {
-            return view().coeff_ref(std::get<ranks>(idxs)...);
-        }
+        -> value_type&
+        requires(traits::is_writable)
+    {
+        return view().coeff_ref(std::get<ranks>(idxs)...);
+    }
 
     template <concepts::TupleLike T, rank_type... ranks>
     auto _const_coeff_ref(const T& idxs,
                           std::integer_sequence<rank_type, ranks...>) const
-        -> const value_type& requires(traits::is_writable) {
-            return view().const_coeff_ref(std::get<ranks>(idxs)...);
-        }
+        -> const value_type&
+        requires(traits::is_writable)
+    {
+        return view().const_coeff_ref(std::get<ranks>(idxs)...);
+    }
 
     template <typename... Args>
+        requires(extents_type::rank() == sizeof...(Args))
     value_type coeff(Args&&... idxs) const {
-        return _coeff(swizzler_type::unswizzle(std::forward<Args>(idxs))...,
+        return _coeff(swizzler_type::unswizzle(std::forward<Args>(idxs)...),
                       std::make_integer_sequence<rank_type, internal_rank>{});
     }
     template <typename... Args>
     value_type& coeff_ref(Args&&... idxs)
-        requires(traits::is_writable)
+        requires((traits::is_writable) &&
+                 (extents_type::rank() == sizeof...(Args)))
     {
         return _coeff_ref(
             swizzler_type::unswizzle(std::forward<Args>(idxs)...),
@@ -90,8 +103,10 @@ class SwizzleView
     }
     template <typename... Args>
     const value_type& const_coeff_ref(Args&&... idxs) const
-        requires(traits::is_writable)
+        requires((traits::is_writable) &&
+                 (extents_type::rank() == sizeof...(Args)))
     {
+        static_assert(extents_type::rank() == sizeof...(Args));
         return _const_coeff_ref(
             swizzler_type::unswizzle(std::forward<Args>(idxs)...),
             std::make_integer_sequence<rank_type, internal_rank>{});

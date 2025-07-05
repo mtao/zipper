@@ -1,7 +1,6 @@
 #if !defined(ZIPPER_VIEWS_BINARY_FORMTENSORPRODUCTVIEW_HPP)
 #define ZIPPER_VIEWS_BINARY_FORMTENSORPRODUCTVIEW_HPP
 
-#include <spdlog/spdlog.h>
 
 #include "BinaryViewBase.hpp"
 #include "zipper/concepts/ViewDerived.hpp"
@@ -99,9 +98,6 @@ class FormTensorProductView : public ViewBase<FormTensorProductView<A, B>> {
     FormTensorProductView& operator=(FormTensorProductView&& o) = delete;
     FormTensorProductView(const A& a, const B& b)
         : m_tensor(a, b), m_trace(m_tensor) {
-        if constexpr (extents_type::rank() > 0) {
-            spdlog::warn("{}", m_trace.extent(1));
-        }
         assert(&m_trace.view() == &m_tensor);
     }
 

@@ -11,15 +11,16 @@
 
 namespace zipper::views {
 namespace unary {
-template <concepts::ViewDerived ViewType, bool IsConst, typename... Slices>
+template <concepts::QualifiedViewDerived ViewType, typename... Slices>
     requires(concepts::SlicePackLike<Slices...>)
 class SliceView;
 
 }
-template <concepts::ViewDerived ViewType, bool IsConst, typename... Slices>
-struct detail::ViewTraits<unary::SliceView<ViewType, IsConst, Slices...>>
-    : public zipper::views::unary::detail::DefaultUnaryViewTraits<ViewType,
-                                                                  true> {
+template <concepts::QualifiedViewDerived QualifiedViewType, typename... Slices>
+struct detail::ViewTraits<unary::SliceView<QualifiedViewType, Slices...>>
+    : public zipper::views::unary::detail::DefaultUnaryViewTraits<
+          std::decay_t<QualifiedViewType>, true> {
+    using ViewType = std::decay_t<QualifiedViewType>;
     using Base = detail::ViewTraits<ViewType>;
 
     using extents_type =
@@ -27,10 +28,10 @@ struct detail::ViewTraits<unary::SliceView<ViewType, IsConst, Slices...>>
             std::declval<typename Base::extents_type>(),
             std::declval<Slices>()...))>;
     using value_type = Base::value_type;
-    constexpr static bool is_writable = Base::is_writable && !IsConst;
+    constexpr static bool is_const = std::is_const_v<QualifiedViewType>;
+    constexpr static bool is_writable = Base::is_writable && !is_const;
     constexpr static bool is_coefficient_consistent = false;
     constexpr static bool is_value_based = false;
-    constexpr static bool is_const = IsConst;
 
     //
     template <std::size_t... Indices>
@@ -70,18 +71,23 @@ struct detail::ViewTraits<unary::SliceView<ViewType, IsConst, Slices...>>
 };
 
 namespace unary {
-template <concepts::ViewDerived ViewType, bool IsConst, typename... Slices>
+template <concepts::QualifiedViewDerived QualifiedViewType, typename... Slices>
     requires(concepts::SlicePackLike<Slices...>)
-class SliceView
-    : public UnaryViewBase<SliceView<ViewType, IsConst, Slices...>, ViewType> {
+class SliceView : public UnaryViewBase<SliceView<QualifiedViewType, Slices...>,
+                                       QualifiedViewType> {
    public:
-    using self_type = SliceView<ViewType, IsConst, Slices...>;
+    using self_type = SliceView<QualifiedViewType, Slices...>;
     using traits = zipper::views::detail::ViewTraits<self_type>;
     using extents_type = traits::extents_type;
     using value_type = traits::value_type;
-    using Base = UnaryViewBase<self_type, ViewType>;
+    using Base = UnaryViewBase<self_type, QualifiedViewType>;
     using Base::extent;
     using Base::view;
+    constexpr static bool IsConst = traits::is_const;
+    using ViewType = std::decay_t<QualifiedViewType>;
+    // TODO: fix this so ViewTraits are all aware of qulaifiacitons
+    using qualified_view_traits =
+        zipper::views::detail::ViewTraits<QualifiedViewType>;
     using view_traits = zipper::views::detail::ViewTraits<ViewType>;
     using view_extents_type = view_traits::extents_type;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
@@ -181,18 +187,25 @@ class SliceView
     template <typename... Args, rank_type... ranks>
     auto _coeff(std::integer_sequence<rank_type, ranks...>,
                 Args&&... idxs) const -> value_type {
+        // static_assert(((ranks >= sizeof...(Args)) && ...));
         return view().coeff(get_index<ranks>(idxs...)...);
     }
     template <typename... Args, rank_type... ranks>
     auto _coeff_ref(std::integer_sequence<rank_type, ranks...>, Args&&... idxs)
-        -> value_type& requires(traits::is_writable) {
-            return view().coeff_ref(get_index<ranks>(idxs...)...);
-        } template <typename... Args, rank_type... ranks>
-        auto _const_coeff_ref(std::integer_sequence<rank_type, ranks...>,
-                              Args&&... idxs) const
-        -> const value_type& requires(traits::is_writable) {
-            return view().const_coeff_ref(get_index<ranks>(idxs...)...);
-        }
+        -> value_type&
+        requires(traits::is_writable)
+    {
+        // static_assert(((ranks >= sizeof...(Args)) && ...));
+        return view().coeff_ref(get_index<ranks>(idxs...)...);
+    }
+    template <typename... Args, rank_type... ranks>
+    auto _const_coeff_ref(std::integer_sequence<rank_type, ranks...>,
+                          Args&&... idxs) const -> const value_type&
+        requires(traits::is_writable)
+    {
+        // static_assert(((ranks >= sizeof...(Args)) && ...));
+        return view().const_coeff_ref(get_index<ranks>(idxs...)...);
+    }
 
     template <typename... Args>
     value_type coeff(Args&&... idxs) const {
@@ -233,11 +246,11 @@ class SliceView
 
 template <concepts::ViewDerived ViewType, typename... Slices>
 SliceView(const ViewType& view, Slices&&...)
-    -> SliceView<ViewType, true, std::decay_t<Slices>...>;
+    -> SliceView<const ViewType, std::decay_t<Slices>...>;
 
 template <concepts::ViewDerived ViewType, typename... Slices>
 SliceView(ViewType& view, Slices&&...)
-    -> SliceView<ViewType, false, std::decay_t<Slices>...>;
+    -> SliceView<ViewType, std::decay_t<Slices>...>;
 
 }  // namespace unary
 }  // namespace zipper::views

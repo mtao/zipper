@@ -19,8 +19,9 @@ auto ViewBase<Derived>::coeff(Indices&&... indices) const -> value_type
 }
 template <typename Derived>
 template <typename... Indices>
-auto ViewBase<Derived>::coeff_ref(Indices&&... indices) -> value_type& requires(
-    is_writable && (concepts::IndexLike<std::decay_t<Indices>> && ...)) {
+auto ViewBase<Derived>::coeff_ref(Indices&&... indices) -> value_type&
+    requires(is_writable && (concepts::IndexLike<std::decay_t<Indices>> && ...))
+{
     constexpr static rank_type size = sizeof...(Indices);
     // rank 0 views act like scalar values
     static_assert(rank == 0 || size == rank);
@@ -30,14 +31,14 @@ auto ViewBase<Derived>::coeff_ref(Indices&&... indices) -> value_type& requires(
 template <typename Derived>
 template <typename... Indices>
 auto ViewBase<Derived>::const_coeff_ref(Indices&&... indices) const
-    -> const value_type& requires(is_writable &&
-                                  (concepts::IndexLike<std::decay_t<Indices>> &&
-                                   ...)) {
-        constexpr static rank_type size = sizeof...(Indices);
-        // rank 0 views act like scalar values
-        static_assert(rank == 0 || size == rank);
-        return derived().const_coeff_ref(std::forward<Indices>(indices)...);
-    }
+    -> const value_type&
+    requires(is_writable && (concepts::IndexLike<std::decay_t<Indices>> && ...))
+{
+    constexpr static rank_type size = sizeof...(Indices);
+    // rank 0 views act like scalar values
+    static_assert(rank == 0 || size == rank);
+    return derived().const_coeff_ref(std::forward<Indices>(indices)...);
+}
 
 template <typename Derived>
 template <typename... Args>
@@ -202,7 +203,7 @@ auto ViewBase<Derived>::access_tuple(const Tuple& t) -> decltype(auto) {
 }
 
 namespace unary {
-template <concepts::ViewDerived ViewType, bool IsConst, typename... Slices>
+template <concepts::QualifiedViewDerived ViewType, typename... Slices>
     requires(concepts::SlicePackLike<Slices...>)
 class SliceView;
 }
@@ -212,7 +213,7 @@ auto ViewBase<Derived>::access_slice(Slices&&... slices) const
     requires(concepts::SlicePackLike<Slices...> &&
              !concepts::IndexPackLike<Slices...>)
 {
-    return unary::SliceView<Derived, true, std::decay_t<Slices>...>(
+    return unary::SliceView<const Derived, std::decay_t<Slices>...>(
         derived(), std::forward<Slices>(slices)...);
 }
 
@@ -222,7 +223,7 @@ auto ViewBase<Derived>::access_slice(Slices&&... slices)
     requires(concepts::SlicePackLike<Slices...> &&
              !concepts::IndexPackLike<Slices...>)
 {
-    return unary::SliceView<Derived, false, std::decay_t<Slices>...>(
+    return unary::SliceView<Derived, std::decay_t<Slices>...>(
         derived(), std::forward<Slices>(slices)...);
 
     // return unary::SliceView<Derived, false, std::decay_t<Slices>...>(
