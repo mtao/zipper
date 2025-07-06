@@ -2,6 +2,7 @@
 #define ZIPPER_VIEWS_NULLARY_DENSESTORAGEVIEWBASE_HPP
 #include <ranges>
 
+#include "zipper/views/detail/ViewTraits.hpp"
 #include "zipper/views/MappedViewBase.hpp"
 #include "zipper/views/detail/AssignHelper.hpp"
 #include "detail/DenseStorageViewTraits.hpp"
