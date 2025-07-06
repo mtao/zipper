@@ -88,7 +88,7 @@ class DenseStorageViewBase : public MappedViewBase<Derived_> {
     template <concepts::ViewDerived V>
     void assign(const V& view)
         requires(extents_traits::template is_convertable_from<
-                 typename detail::ViewTraits<V>::extents_type>())
+                 typename views::detail::ViewTraits<V>::extents_type>())
     {
         detail::AssignHelper<V, Derived>::assign(view, derived());
     }
