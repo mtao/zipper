@@ -14,8 +14,13 @@ class ZipperBase;
 namespace zipper::concepts {
 namespace detail {
 
-template <typename, index_type...>
-struct ValidExtents : public std::false_type {};
+template <typename T, index_type... Shapes>
+struct ValidExtents {
+    constexpr static bool value =
+        zipper::detail::extents::detail::is_compatible<true, typename T::extents_type>(
+            std::integer_sequence<index_type, Shapes...>{},
+            std::make_integer_sequence<rank_type, T::extents_type::rank()>{});
+};
 
 template <ExtentsType Ext, index_type... Shapes>
 struct ValidExtents<Ext, Shapes...> {
@@ -25,15 +30,19 @@ struct ValidExtents<Ext, Shapes...> {
             std::make_integer_sequence<rank_type, Ext::rank()>{});
 };
 
-template <concepts::ViewDerived View, index_type... Shapes>
-struct ValidExtents<View, Shapes...>
-    : public ValidExtents<typename View::extents_type, Shapes...> {};
+/*
+template <typename T, index_type... Shapes>
+struct ValidExtents<T, Shapes...>
+    : public ValidExtents<typename T::extents_type, Shapes...> {};
+    */
 
+/*
 template <template <concepts::ViewDerived> typename DerivedT,
           concepts::ViewDerived View, index_type... Shapes>
 struct ValidExtents<ZipperBase<DerivedT, View>, Shapes...>
     : public ValidExtents<typename View::extents_type, Shapes...> {};
 
+    */
 }  // namespace detail
 
 template <typename T, index_type... Shapes>
