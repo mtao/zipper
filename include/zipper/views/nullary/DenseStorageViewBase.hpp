@@ -7,7 +7,6 @@
 #include "zipper/views/detail/AssignHelper.hpp"
 #include "detail/DenseStorageViewTraits.hpp"
 #include "zipper/concepts/TupleLike.hpp"
-#include "zipper/concepts/ViewDerived.hpp"
 #include "zipper/detail/extents/all_extents_indices.hpp"
 namespace zipper::views::nullary {
 template <typename Derived_>
@@ -90,7 +89,7 @@ class DenseStorageViewBase : public MappedViewBase<Derived_> {
         requires(extents_traits::template is_convertable_from<
                  typename views::detail::ViewTraits<V>::extents_type>())
     {
-        detail::AssignHelper<V, Derived>::assign(view, derived());
+        views::detail::AssignHelper<V, Derived>::assign(view, derived());
     }
 
     /*
