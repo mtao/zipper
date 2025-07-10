@@ -33,7 +33,7 @@ class TensorBase : public ZipperBase<TensorBase, View> {
     auto eval(const std::integer_sequence<index_type, N...>&) const
         requires(std::is_same_v<extents<N...>, extents_type>)
     {
-        return Tensor<value_type, extents<N...>>(this->view());
+        return Tensor_<value_type, extents<N...>>(this->view());
     }
     auto eval() const {
         return eval(detail::extents::static_extents_to_integral_sequence_t<
@@ -95,6 +95,10 @@ template <concepts::ViewDerived View>
 TensorBase(View&& view) -> TensorBase<View>;
 template <concepts::ViewDerived View>
 TensorBase(const View& view) -> TensorBase<View>;
+
+template <class T, std::size_t Size = std::dynamic_extent>
+TensorBase(const std::span<T, Size>& s)
+    -> TensorBase<storage::SpanStorage<T, zipper::extents<Size>>>;
 
 UNARY_DECLARATION(TensorBase, LogicalNot, operator!)
 UNARY_DECLARATION(TensorBase, BitNot, operator~)

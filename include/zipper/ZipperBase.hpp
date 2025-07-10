@@ -36,11 +36,19 @@ class ZipperBase {
     View& view() { return m_view; }
     const extents_type& extents() const { return view().extents(); }
     constexpr index_type extent(rank_type i) const { return m_view.extent(i); }
+    static constexpr index_type static_extent(rank_type i) {
+        return View::static_extent(i);
+    }
     // template <typename... Args>
     // ZipperBase(Args&&... v) : m_view(std::forward<Args>(v)...) {}
 
     ZipperBase(View&& v) : m_view(std::move(v)) {}
+    ZipperBase(Derived&& v) : ZipperBase(std::move(v.view())) {}
+    ZipperBase(ZipperBase&& v) = default;
+
+    ZipperBase(const Derived& v) : ZipperBase(v.view()) {}
     ZipperBase(const View& v) : m_view(v) {}
+    ZipperBase(const ZipperBase& v) = default;
     // Derived& operator=(concepts::ViewDerived auto const& v) {
     //     m_view = v;
     //     return derived();
@@ -52,9 +60,6 @@ class ZipperBase {
         return (*this)();
     }
 
-    ZipperBase(ZipperBase&& v) = default;
-    ZipperBase(const ZipperBase& v) = default;
-
     template <concepts::ViewDerived Other>
     ZipperBase(const Other& other)
         requires(view_type::is_writable &&
@@ -63,6 +68,11 @@ class ZipperBase {
         : m_view(extents_traits::convert_from(other.extents())) {
         m_view.assign(other);
     }
+
+    template <typename... Args>
+    ZipperBase(Args&&... args)
+        : ZipperBase(View(std::forward<Args>(args)...)) {}
+
     template <concepts::ViewDerived Other>
     Derived& operator=(const Other& other)
         requires(view_type::is_writable &&
@@ -81,6 +91,24 @@ class ZipperBase {
         m_view.assign(other);
         return derived();
     }
+    // template <concepts::ZipperBaseDerived Other>
+    // Derived& operator=(const Other& other)
+    //     requires(view_type::is_writable &&
+    //              detail::extents::assignable_extents_v<
+    //                  typename Other::extents_type, extents_type>)
+    //{
+    //     m_view.assign(other.view());
+    //     return derived();
+    // }
+    // template <concepts::ZipperBaseDerived Other>
+    // Derived& operator=(Other&& other)
+    //     requires(view_type::is_writable &&
+    //              detail::extents::assignable_extents_v<
+    //                  typename Other::extents_type, extents_type>)
+    //{
+    //     m_view.assign(other.view());
+    //     return derived();
+    // }
 
     template <concepts::ZipperBaseDerived Other>
     Derived& operator+=(const Other& other)
@@ -136,7 +164,7 @@ class ZipperBase {
     template <concepts::SliceLike... Slices>
     auto slice_view(Slices&&... slices) const {
         using view_type =
-            views::unary::SliceView<view_type, true, std::decay_t<Slices>...>;
+            views::unary::SliceView<const view_type, std::decay_t<Slices>...>;
 
         return view_type(view(), std::forward<Slices>(slices)...);
     }
@@ -144,20 +172,20 @@ class ZipperBase {
     template <concepts::SliceLike... Slices>
     auto slice_view() const {
         using view_type =
-            views::unary::SliceView<view_type, true, std::decay_t<Slices>...>;
+            views::unary::SliceView<const view_type, std::decay_t<Slices>...>;
         return view_type(view(), Slices{}...);
     }
 
     template <concepts::SliceLike... Slices>
     auto slice_view(Slices&&... slices) {
         using view_type =
-            views::unary::SliceView<view_type, false, std::decay_t<Slices>...>;
+            views::unary::SliceView<view_type, std::decay_t<Slices>...>;
         return view_type(view(), std::forward<Slices>(slices)...);
     }
     template <concepts::SliceLike... Slices>
     auto slice_view() {
         using view_type =
-            views::unary::SliceView<view_type, false, std::decay_t<Slices>...>;
+            views::unary::SliceView<view_type, std::decay_t<Slices>...>;
         return view_type(view(), Slices{}...);
     }
 

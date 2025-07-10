@@ -1,9 +1,6 @@
-
-
 #if !defined(ZIPPER_VIEWS_MAPPEDVIEWBASE_HPP)
 #define ZIPPER_VIEWS_MAPPEDVIEWBASE_HPP
 
-#include <spdlog/spdlog.h>
 
 #include "ViewBase.hpp"
 #include "detail/ViewTraits.hpp"

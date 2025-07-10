@@ -3,7 +3,6 @@
 #define ZIPPER_VECTOR_HPP
 
 #include "VectorBase.hpp"
-#include "VectorSpan.hpp"
 #include "storage/PlainObjectStorage.hpp"
 #include "zipper/types.hpp"
 namespace zipper {
@@ -23,13 +22,19 @@ class Vector
     using Base::extent;
     using Base::extents;
 
-    using span_type = VectorSpan<ValueType, Rows>;
+    using span_type =
+        VectorBase<storage::SpanStorage<ValueType, zipper::extents<Rows>>>;
 
     Vector() = default;
     Vector(const Vector& o) = default;
     Vector& operator=(const Vector& o) = default;
     Vector(Vector&& o) = default;
-    Vector& operator=(Vector&& o) = default;
+    //Vector(Vector&& o):Base(std::move(o.view())) {
+    //}
+    Vector& operator=(Vector&& o) {
+        view().operator=(std::move(o.view()));
+        return *this;
+    }
     Vector(index_type size)
         requires(extents_traits::is_dynamic)
         : Base(zipper::extents<Rows>(size)) {}

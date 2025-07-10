@@ -51,7 +51,7 @@ class ArrayBase : public ZipperBase<ArrayBase, View> {
     ArrayBase& operator=(concepts::ArrayBaseDerived auto const& v) {
         return Base::operator=(v.view());
     }
-    ArrayBase& operator=(concepts::ArrayBaseDerived auto && v) {
+    ArrayBase& operator=(concepts::ArrayBaseDerived auto&& v) {
         return Base::operator=(v.view());
     }
 
@@ -189,6 +189,9 @@ template <concepts::ViewDerived View>
 ArrayBase(View&& view) -> ArrayBase<View>;
 template <concepts::ViewDerived View>
 ArrayBase(const View& view) -> ArrayBase<View>;
+template <class T, std::size_t Size = std::dynamic_extent>
+ArrayBase(const std::span<T, Size>& s)
+    -> ArrayBase<storage::SpanStorage<T, zipper::extents<Size>>>;
 
 UNARY_DECLARATION(ArrayBase, LogicalNot, operator!)
 UNARY_DECLARATION(ArrayBase, BitNot, operator~)
@@ -227,6 +230,9 @@ BINARY_DECLARATION(ArrayBase, LogicalOr, operator||)
 BINARY_DECLARATION(ArrayBase, BitAnd, operator&)
 BINARY_DECLARATION(ArrayBase, BitOr, operator|)
 BINARY_DECLARATION(ArrayBase, BitXor, operator^)
+
+BINARY_DECLARATION(ArrayBase, Min, min)
+BINARY_DECLARATION(ArrayBase, Max, max)
 
 }  // namespace zipper
 

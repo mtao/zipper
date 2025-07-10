@@ -1,4 +1,3 @@
-
 #if !defined(ZIPPER_VECTORBASE_HPP)
 #define ZIPPER_VECTORBASE_HPP
 
@@ -49,17 +48,22 @@ class VectorBase : public ZipperBase<VectorBase, View> {
         requires(view_type::is_writable)
         : VectorBase(other.view()) {}
 
+    VectorBase(concepts::ViewDerived auto const& v) : Base(v) {}
+    VectorBase(concepts::ViewDerived auto&& v) : Base(std::move(v)) {}
+    VectorBase(const extents_type& e) : Base(e) {}
     VectorBase& operator=(concepts::ViewDerived auto const& v) {
         return Base::operator=(v);
     }
-    // VectorBase& operator=(concepts::VectorBaseDerived auto const& v) {
-    //     return operator=(v.view());
-    // }
+    template <typename... Args>
+    VectorBase(Args&&... args)
+        : VectorBase(View(std::forward<Args>(args)...)) {}
+
     template <concepts::VectorBaseDerived Other>
     VectorBase& operator=(const Other& other)
         requires(view_type::is_writable)
     {
-        return operator=(other.view());
+        view().assign(other.view());
+        return *this;
     }
     template <concepts::VectorBaseDerived Other>
     VectorBase& operator=(Other&& other)
@@ -77,15 +81,6 @@ class VectorBase : public ZipperBase<VectorBase, View> {
     //    std::ranges::copy(l, begin());
     //}
 
-    template <typename T>
-    VectorBase(const std::initializer_list<T>& l)
-        requires(extents_traits::is_dynamic)
-        : Base(extents_type(l.size())) {
-        for (index_type j = 0; j < extent(0); ++j) {
-            (*this)(j) = std::data(l)[j];
-        }
-        // std::ranges::copy(l, begin());
-    }
     template <typename T>
     VectorBase& operator=(const std::initializer_list<T>& l)
         requires(extents_traits::is_static)
@@ -258,6 +253,17 @@ template <concepts::VectorViewDerived View>
 VectorBase(View&& view) -> VectorBase<View>;
 template <concepts::VectorViewDerived View>
 VectorBase(const View& view) -> VectorBase<View>;
+
+template <class T, std::size_t Size = std::dynamic_extent>
+VectorBase(std::span<T, Size> s)
+    -> VectorBase<storage::SpanStorage<T, zipper::extents<Size>>>;
+
+template <class T, std::size_t Size = std::dynamic_extent>
+VectorBase(const std::array<T, Size>& s)
+    -> VectorBase<storage::SpanStorage<const T, zipper::extents<Size>>>;
+template <class T, std::size_t Size = std::dynamic_extent>
+VectorBase(std::array<T, Size>& s)
+    -> VectorBase<storage::SpanStorage<T, zipper::extents<Size>>>;
 
 UNARY_DECLARATION(VectorBase, LogicalNot, operator!)
 UNARY_DECLARATION(VectorBase, BitNot, operator~)

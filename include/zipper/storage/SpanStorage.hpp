@@ -2,18 +2,19 @@
 #define ZIPPER_STORAGE_SPANSTORAGE_HPP
 
 #include "SpanData.hpp"
+#include "layout_types.hpp"
 #include "zipper/detail//ExtentsTraits.hpp"
 #include "zipper/views/nullary/DenseStorageViewBase.hpp"
 
 namespace zipper::storage {
 template <typename ValueType, typename Extents,
-          typename LayoutPolicy = zipper::default_layout_policy,
-          typename AccessorPolicy = zipper::default_accessor_policy<ValueType>>
+          typename LayoutPolicy = default_layout_policy,
+          typename AccessorPolicy = default_accessor_policy<ValueType>>
 class PlainObjectStorage;
 
 template <typename ValueType, typename Extents,
-          typename LayoutPolicy = zipper::default_layout_policy,
-          typename AccessorPolicy = zipper::default_accessor_policy<ValueType>>
+          typename LayoutPolicy = default_layout_policy,
+          typename AccessorPolicy = default_accessor_policy<ValueType>>
 class SpanStorage
     : public views::nullary::DenseStorageViewBase<
           SpanStorage<ValueType, Extents, LayoutPolicy, AccessorPolicy>> {
@@ -51,6 +52,10 @@ class SpanStorage
     SpanStorage(const std_span_type& s)
         requires(IsStatic)
         : ParentType(), m_accessor(s) {}
+
+    SpanStorage(const std_span_type& s)
+        requires(!IsStatic && extents_type::rank() == 1)
+        : ParentType(extents_type(s.size())), m_accessor(s) {}
 
     template <concepts::ExtentsType E2>
     void resize(const E2& e)

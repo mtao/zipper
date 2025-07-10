@@ -3,10 +3,12 @@
 
 #include "PlainObjectAccessor.hpp"
 #include "SpanStorage.hpp"
+#include "layout_types.hpp"
 #include "zipper/detail//ExtentsTraits.hpp"
 #include "zipper/views/nullary/DenseStorageViewBase.hpp"
 
 namespace zipper::storage {
+// defaults are stored in SpanStorage
 template <typename ValueType, typename Extents, typename LayoutPolicy,
           typename AccessorPolicy>
 class PlainObjectStorage

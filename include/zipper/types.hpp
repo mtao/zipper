@@ -27,8 +27,16 @@ using full_extent_type = std::experimental::full_extent_t;
 constexpr static full_extent_type full_extent;
 
 template <index_type N>
-constexpr static std::integral_constant<index_type, N> static_index =
-    std::integral_constant<index_type, N>{};
+using static_index_t = std::integral_constant<index_type, N>;
+
+template <rank_type N>
+using static_rank_t = std::integral_constant<rank_type, N>;
+
+template <index_type N>
+constexpr static static_index_t<N> static_index = {};
+
+template <rank_type N>
+constexpr static static_rank_t<N> static_rank = {};
 
 template <typename OffsetType, typename ExtentType, typename StrideType>
 using slice_type =
@@ -37,10 +45,9 @@ using slice_type =
 template <typename OffsetType, typename ExtentType, typename StrideType>
 using slice_t = slice_type<OffsetType, ExtentType, StrideType>;
 
-template <typename OffsetType = std::integral_constant<index_type, 0>,
-          typename ExtentType =
-              std::integral_constant<index_type, std::dynamic_extent>,
-          typename StrideType = std::integral_constant<index_type, 1>>
+template <typename OffsetType = static_index_t<0>,
+          typename ExtentType = static_index_t<std::dynamic_extent>,
+          typename StrideType = static_index_t<1>>
 inline auto slice(OffsetType start = {}, ExtentType size = {},
                   StrideType stride = {}) {
     static_assert(concepts::IndexLike<OffsetType>);

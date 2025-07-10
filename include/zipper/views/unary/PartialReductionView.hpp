@@ -1,24 +1,29 @@
-#if !defined(ZIPPER_VIEWS_UNARY_PARTIALTRACEVIEW_HPP)
-#define ZIPPER_VIEWS_UNARY_PARTIALTRACEVIEW_HPP
+#if !defined(ZIPPER_VIEWS_UNARY_PARTIALREDUCTIONVIEW_HPP)
+#define ZIPPER_VIEWS_UNARY_PARTIALREDUCTIONVIEW_HPP
 
-#include "DiagonalView.hpp"
 #include "UnaryViewBase.hpp"
 #include "detail/invert_integer_sequence.hpp"
 #include "zipper/concepts/ViewDerived.hpp"
 #include "zipper/detail/extents/extents_formatter.hpp"
 #include "zipper/detail/extents/static_extents_to_array.hpp"
 #include "zipper/detail/pack_index.hpp"
+#include "zipper/views/concepts/ReductionViewLike.hpp"
 #include "zipper/views/reductions/CoefficientSum.hpp"
 
 namespace zipper::views {
 namespace unary {
-template <concepts::ViewDerived ViewType, rank_type... Indices>
-    requires(sizeof...(Indices) % 2 == 0)
-class PartialTraceView;
+template <zipper::concepts::ViewDerived ViewType,
+          template <zipper::concepts::ViewDerived> typename ReductionView,
+          rank_type... Indices>
+// requires ReductionView<ViewType>
+class PartialReductionView;
 
 }
-template <concepts::ViewDerived ViewType, rank_type... Indices>
-struct detail::ViewTraits<unary::PartialTraceView<ViewType, Indices...>>
+template <zipper::concepts::ViewDerived ViewType,
+          template <zipper::concepts::ViewDerived> typename ReductionView,
+          rank_type... Indices>
+struct detail::ViewTraits<
+    unary::PartialReductionView<ViewType, ReductionView, Indices...>>
     : public zipper::views::unary::detail::DefaultUnaryViewTraits<ViewType,
                                                                   true> {
     using Base = detail::ViewTraits<ViewType>;
@@ -28,7 +33,7 @@ struct detail::ViewTraits<unary::PartialTraceView<ViewType, Indices...>>
     using extents_type = typename index_remover::template assign_types<
         zipper::extents, zipper::detail::extents::static_extents_to_array_v<
                              typename ViewType::extents_type>>;
-    using summed_extents_type = zipper::extents<Indices...>;
+    using reduced_extents_type = zipper::extents<Indices...>;
     using value_type = Base::value_type;
     constexpr static bool is_writable = false;
     constexpr static bool is_coefficient_consistent = false;
@@ -37,12 +42,15 @@ struct detail::ViewTraits<unary::PartialTraceView<ViewType, Indices...>>
 
 namespace unary {
 // indices are the indices being traced
-template <concepts::ViewDerived ViewType, rank_type... Indices>
-    requires(sizeof...(Indices) % 2 == 0)
-class PartialTraceView
-    : public UnaryViewBase<PartialTraceView<ViewType, Indices...>, ViewType> {
+template <zipper::concepts::ViewDerived ViewType,
+          template <zipper::concepts::ViewDerived> typename ReductionView,
+          rank_type... Indices>
+// requires ReductionView<ViewType>
+class PartialReductionView
+    : public UnaryViewBase<
+          PartialReductionView<ViewType, ReductionView, Indices...>, ViewType> {
    public:
-    using self_type = PartialTraceView<ViewType, Indices...>;
+    using self_type = PartialReductionView<ViewType, ReductionView, Indices...>;
     using traits = zipper::views::detail::ViewTraits<self_type>;
     using extents_type = traits::extents_type;
     using value_type = traits::value_type;
@@ -50,16 +58,17 @@ class PartialTraceView
     using Base::extent;
     using Base::view;
 
-    PartialTraceView(const ViewType& b)
+    PartialReductionView(const ViewType& b)
         : Base(b, traits::index_remover::get_extents(b.extents())) {}
-    PartialTraceView() = delete;
-    PartialTraceView& operator=(const PartialTraceView&) = delete;
-    PartialTraceView& operator=(PartialTraceView&&) = delete;
-    PartialTraceView(PartialTraceView&& o) = default;
-    PartialTraceView(const PartialTraceView& o) = default;
-    // PartialTraceView(const PartialTraceView& o) = default;//:
+    PartialReductionView() = delete;
+    PartialReductionView& operator=(const PartialReductionView&) = delete;
+    PartialReductionView& operator=(PartialReductionView&&) = delete;
+    PartialReductionView(PartialReductionView&& o) = default;
+    PartialReductionView(const PartialReductionView& o) = default;
+    // PartialReductionView(const PartialReductionView& o) = default;//:
     // Base(o.view(),traits::index_remover::get_extents(o.extents())){ }
-    // PartialTraceView(PartialTraceView&& o): PartialTraceView(o.view()) { }
+    // PartialReductionView(PartialReductionView&& o):
+    // PartialReductionView(o.view()) { }
     //: Base(b), m_extents(swizzler_type::swizzle_extents(b.extents())) {}
 
     template <typename>
@@ -98,21 +107,18 @@ class PartialTraceView
             slice_type(view(), get_index(std::integral_constant<rank_type, N>{},
                                          std::forward<Args>(idxs)...)...);
 
-        DiagonalView<slice_type, true> diag(slice);
-        return reductions::CoefficientSum(diag)();
+        ReductionView<std::decay_t<decltype(slice)>> view(slice);
+        value_type val = view();
+        return val;
     }
 
     template <typename... Args>
     value_type coeff(Args&&... idxs) const {
         zipper::detail::extents::indices_in_range(extents(), idxs...);
-        if constexpr (sizeof...(Indices) == 0) {
-            return view().coeff(std::forward<Args>(idxs)...);
-        } else {
-            return _coeff(
-                std::make_integer_sequence<rank_type,
-                                           ViewType::extents_type::rank()>{},
-                std::forward<Args>(idxs)...);
-        }
+        return _coeff(
+            std::make_integer_sequence<rank_type,
+                                       ViewType::extents_type::rank()>{},
+            std::forward<Args>(idxs)...);
     }
 
 };  // namespace unarytemplate<typenameA,typenameB>class AdditionView

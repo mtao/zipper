@@ -1,6 +1,7 @@
 
 #include <spdlog/spdlog.h>
 
+#include <zipper/concepts/shapes.hpp>
 #include <catch2/catch_all.hpp>
 #include <iostream>
 #include <zipper/Matrix.hpp>
@@ -36,6 +37,9 @@ TEST_CASE("test_dot", "[matrix][storage][dense]") {
     Vector<double, 3> a{{0, 2, 4}};
     Vector<double, 3> b{{1, 3, 5}};
 
+    //static_assert(zipper::concepts::ValidExtents<Vector<double,3>,3>);
+    static_assert(zipper::concepts::ValidExtents<Vector<double,3>,3>);
+
     Vector c = (*a.as_form()).as_vector();
 
     VectorBase e0 = views::nullary::unit_vector<double, 3>(0);
@@ -51,6 +55,8 @@ TEST_CASE("test_dot", "[matrix][storage][dense]") {
     CHECK(c.dot(e0) == 0);
     CHECK(c.dot(e1) == 2);
     CHECK(c.dot(e2) == 4);
+
+    CHECK(a.head<2>().dot(b.head<2>()) == 6);
 
 }
 

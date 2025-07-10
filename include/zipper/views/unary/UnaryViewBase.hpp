@@ -8,11 +8,12 @@
 namespace zipper::views::unary {
 
 namespace detail {
-template <concepts::ViewDerived Child, bool _holds_extents = false>
+template <concepts::QualifiedViewDerived Child, bool _holds_extents = false>
 struct DefaultUnaryViewTraits
     : public views::detail::DefaultViewTraits<
-          typename views::detail::ViewTraits<Child>::value_type,
-          typename views::detail::ViewTraits<Child>::extents_type> {
+          typename views::detail::ViewTraits<std::decay_t<Child>>::value_type,
+          typename views::detail::ViewTraits<
+              std::decay_t<Child>>::extents_type> {
     // to pass a base type to the UnaryViewBase
     constexpr static bool holds_extents = _holds_extents;
     template <typename Derived>
@@ -24,11 +25,11 @@ struct DefaultUnaryViewTraits
     constexpr static bool is_coefficient_consistent =
         base_traits::is_coefficient_consistent;
     constexpr static bool is_value_based = true;
-    constexpr static bool is_const = false;
+    constexpr static bool is_const = std::is_const_v<Child>;
 };
 }  // namespace detail
 
-template <typename Derived, concepts::ViewDerived ChildType>
+template <typename Derived, concepts::QualifiedViewDerived ChildType>
 class UnaryViewBase
     : public views::detail::ViewTraits<Derived>::template base_type<Derived> {
    public:

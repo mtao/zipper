@@ -19,9 +19,10 @@ struct CoeffWiseTraits {
     using RHSTraits = zipper::views::detail::ViewTraits<B>;
     // static_assert(LHSTraits::value_type == RHSTraits::value_type);
     using value_type = typename LHSTraits::value_type;
-    using extents_type = typename LHSTraits::extents_type;
-    // coeffwise_extents_values<typename LHSTraits::extents_type, typename
-    // RHSTraits::extents_type>::merged_extents_type;
+    using extents_type =  // typename LHSTraits::extents_type;
+        coeffwise_extents_values<
+            typename LHSTraits::extents_type,
+            typename RHSTraits::extents_type>::merged_extents_type;
 };
 }  // namespace zipper::views::binary::detail
 #endif

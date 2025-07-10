@@ -57,14 +57,8 @@ auto inverse3d(const D& M) {
                        index_type r1, index_type c1) {
             const auto val = zipper::views::reductions::detail::det2(
                 v(r0, c0), v(r0, c1), v(r1, c0), v(r1, c1));
-            // spdlog::info("Helper det {} {} {} {} => {} {} {} {}=>  {}", r0,
-            // c0,
-            //              r1, c1,
-
-            //             v(r0, c0), v(r0, c1), v(r1, c0), v(r1, c1), val);
             return val;
         };
-        // spdlog::info("Helper on {} {}", r, c);
         return det2(v, (r + 1) % 3, (c + 1) % 3, (r + 2) % 3, (c + 2) % 3);
     };
     for (index_type r = 0; r < 3; ++r) {
@@ -85,7 +79,6 @@ auto inverse(const D& d) {
         return detail::inverse3d(d);
     }
     // TODO: implement a general inverse view perhaps?
-    spdlog::warn("Inverse called on general shape {}", d.extents());
     throw std::runtime_error("Not implemented");
 }
 }  // namespace zipper::utils

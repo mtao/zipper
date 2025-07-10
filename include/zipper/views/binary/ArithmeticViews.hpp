@@ -4,6 +4,7 @@
 #include <functional>
 
 #include "OperationView.hpp"
+#include "detail/minmax.hpp"
 
 namespace zipper::views::binary {
 namespace detail {
@@ -100,6 +101,13 @@ using BitXorView =
     OperationView<ViewA, ViewB,
                   std::bit_xor<detail::scalar_type_t<ViewA, ViewB>>>;
 
+template <concepts::ViewDerived ViewA, concepts::ViewDerived ViewB>
+using MinView = OperationView<ViewA, ViewB,
+                              detail::min<detail::scalar_type_t<ViewA, ViewB>>>;
+
+template <concepts::ViewDerived ViewA, concepts::ViewDerived ViewB>
+using MaxView = OperationView<ViewA, ViewB,
+                              detail::max<detail::scalar_type_t<ViewA, ViewB>>>;
 }  // namespace zipper::views::binary
 
 #endif

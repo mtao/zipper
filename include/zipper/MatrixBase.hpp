@@ -98,7 +98,7 @@ class MatrixBase : public ZipperBase<MatrixBase, View> {
     }
     template <typename Slice>
     auto col(Slice&& s) const {
-        return slice<full_extent_t, Slice>(full_extent, std::forward<Slice>(s));
+        return slice<full_extent_t, Slice>(full_extent_t{}, std::forward<Slice>(s));
     }
     template <typename... Slices>
     auto slice() {

@@ -2,25 +2,22 @@
 #define ZIPPER_MATRIX_HPP
 
 #include "MatrixBase.hpp"
-#include "MatrixSpan.hpp"
 #include "concepts/MatrixBaseDerived.hpp"
 #include "storage/PlainObjectStorage.hpp"
+#include "storage/SpanStorage.hpp"
 #include "zipper/types.hpp"
 namespace zipper {
 
 template <typename ValueType, index_type Rows, index_type Cols, bool RowMajor>
-class Matrix : public MatrixBase<storage::PlainObjectStorage<
-                   ValueType, zipper::extents<Rows, Cols>,
-                   std::conditional_t<RowMajor, std::experimental::layout_left,
-                                      std::experimental::layout_right>>> {
+class Matrix
+    : public MatrixBase<
+          storage::PlainObjectStorage<ValueType, zipper::extents<Rows, Cols>,
+                                      storage::matrix_layout<RowMajor>>> {
    public:
-    using layout_type =
-        std::conditional_t<RowMajor, std::experimental::layout_left,
-                           std::experimental::layout_right>;
+    using layout_type = storage::matrix_layout<RowMajor>;
     using Base = MatrixBase<storage::PlainObjectStorage<
-        ValueType, zipper::extents<Rows, Cols>, layout_type
+        ValueType, zipper::extents<Rows, Cols>, layout_type>>;
 
-        >>;
     using Base::view;
     using view_type = Base::view_type;
     using value_type = Base::value_type;
@@ -30,7 +27,9 @@ class Matrix : public MatrixBase<storage::PlainObjectStorage<
     using Base::extents;
     using Base::row;
     using extents_traits = detail::ExtentsTraits<extents_type>;
-    using span_type = MatrixSpan<ValueType, Rows, Cols, RowMajor>;
+    using span_type =
+        MatrixBase<storage::SpanStorage<ValueType, zipper::extents<Rows, Cols>,
+                                        layout_type>>;
     using Base::transpose;
 
     Matrix()

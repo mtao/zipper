@@ -53,8 +53,8 @@ class UnitView
     UnitView(const index_type index)
         requires(!dynamic_size && dynamic_index)
         : m_index(index) {}
-    UnitView(const index_type extent, IndexType index)
-        : Base(extents_type(extent)), m_index(index) {}
+    UnitView(const index_type my_extent, IndexType index)
+        : Base(extents_type(my_extent)), m_index(index) {}
 
     template <typename T_>
     value_type coeff(const T_& idx) const {
