@@ -35,8 +35,8 @@ struct tensor_coeffwise_extents_values<extents<A...>, extents<B...>> {
         using AEI = a_extents_traits::dynamic_indices_helper;
         using BEI = b_extents_traits::dynamic_indices_helper;
 
-        constexpr auto ADI = AEI::dynamic_indices;
-        constexpr auto BDI = BEI::dynamic_indices;
+        constexpr static auto ADI = AEI::get_dynamic_indices();
+        constexpr static auto BDI = BEI::get_dynamic_indices();
 
         return product_extents_type(a.extent(ADI[N])..., b.extent(BDI[M])...);
     }

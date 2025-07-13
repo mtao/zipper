@@ -1,5 +1,4 @@
-
-
+#include <numeric>
 #if !defined(ZIPPER_VIEWS_UNARY_DETAIL_INVERT_INTEGER_SEQUENCE_HPP)
 #define ZIPPER_VIEWS_UNARY_DETAIL_INVERT_INTEGER_SEQUENCE_HPP
 #include <tuple>
@@ -14,11 +13,11 @@ namespace zipper::views::unary::detail {
 // identified in Indices
 template <rank_type total_rank, rank_type... Indices>
 struct invert_integer_sequence {
-    constexpr static bool in_sequence(rank_type J) {
+    consteval static bool in_sequence(rank_type J) {
         return ((J != Indices) && ...);
     }
     template <rank_type... M>
-    constexpr static auto make_reduced_to_full(
+    consteval static auto make_reduced_to_full(
         std::integer_sequence<rank_type, M...>) {
         std::array<rank_type, total_rank - sizeof...(Indices)> R;
 
@@ -35,7 +34,7 @@ struct invert_integer_sequence {
     }
 
     template <rank_type... M>
-    constexpr static auto make_paired_indices(
+    consteval static auto make_paired_indices(
         std::integer_sequence<rank_type, M...>) {
         constexpr std::array<rank_type, sizeof...(Indices)> Inds = {{Indices...}};
         constexpr size_t size = sizeof...(Indices);
@@ -55,32 +54,33 @@ struct invert_integer_sequence {
             std::make_integer_sequence<rank_type, total_rank>{});
 
     template <rank_type... M>
-    constexpr static auto make_full_to_reduced(
+    consteval static auto make_full_to_reduced(
         std::integer_sequence<rank_type, M...>) {
-        std::array<rank_type, total_rank> R;
-        auto add = []<rank_type J>(std::integral_constant<rank_type, J>,
-                                   auto& R) {
-            R[reduced_rank_to_full_indices[J]] = J;
+        constexpr auto eval = []<rank_type J>(std::integral_constant<rank_type, J>) -> rank_type {
+            for(size_t j = 0; j < reduced_rank_to_full_indices.size(); ++j) {
+                if(reduced_rank_to_full_indices[j] == J) {
+                    return j;
+                }
+            }
+            return -1;
         };
-
-        (add(std::integral_constant<rank_type, M>{}, R), ...);
-        return R;
+        return std::array<rank_type, total_rank>{{eval(std::integral_constant<rank_type, M>{})...}};
     }
 
     constexpr static std::array<rank_type, total_rank>
         full_rank_to_reduced_indices = make_full_to_reduced(
             std::make_integer_sequence<rank_type,
-                                       total_rank - sizeof...(Indices)>{});
+                                       total_rank>{});
 
     template <rank_type... M>
-    constexpr static auto make(std::integer_sequence<rank_type, M...>) {
+    consteval static auto make(std::integer_sequence<rank_type, M...>) {
         // return std::integer_sequence<rank_type, M...>{};
         return std::integer_sequence<
             rank_type, std::get<M>(reduced_rank_to_full_indices)...>{};
         // return std::integer_sequence<rank_type, std::get<M>(R)...>{};
     }
 
-    constexpr static auto make() {
+    consteval static auto make() {
         return make(
             std::make_integer_sequence<rank_type,
                                        total_rank - sizeof...(Indices)>{});

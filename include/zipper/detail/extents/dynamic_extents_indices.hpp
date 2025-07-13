@@ -1,4 +1,3 @@
-
 #if !defined(ZIPPER_DETAIL_EXTENTS_DYNAMIC_EXTENT_INDICES_HPP)
 #define ZIPPER_DETAIL_EXTENTS_DYNAMIC_EXTENT_INDICES_HPP
 
@@ -27,6 +26,7 @@ struct DynamicExtentIndices<zipper::extents<indices...>> {
         }
         return r;
     }
+    constexpr static rank_type dynamic_rank = sizeof...(indices);
     using dynamic_indices_type = std::array<rank_type, sizeof...(indices)>;
 
     // composes the indices that belong to dynamic indices.
@@ -34,6 +34,7 @@ struct DynamicExtentIndices<zipper::extents<indices...>> {
     template <std::size_t... Indices>
     consteval static const dynamic_indices_type get_dynamic_indices(
         std::index_sequence<Indices...>) {
+        /*
         dynamic_indices_type ret;
         size_t index = 0;
         auto add = []<std::size_t J>(std::integral_constant<std::size_t, J>,
@@ -46,10 +47,27 @@ struct DynamicExtentIndices<zipper::extents<indices...>> {
           ...));
 
         return ret;
+        */
+        constexpr auto eval =
+            []<rank_type J>(std::integral_constant<rank_type, J>) -> rank_type {
+            for (rank_type j = 0; j < E::rank(); ++j) {
+                if (E::static_extent(j) == J) {
+                    return j;
+                }
+            }
+            return -1;
+        };
+        return std::array<rank_type, dynamic_rank>{
+            {eval(std::integral_constant<rank_type, Indices>{})...}};
     }
 
-    static constexpr dynamic_indices_type dynamic_indices =
-        get_dynamic_indices(std::make_integer_sequence<rank_type, E::rank()>{});
+    static consteval dynamic_indices_type get_dynamic_indices() {
+        return get_dynamic_indices(
+            std::make_integer_sequence<rank_type, E::rank()>{});
+    }
+
+    constexpr static dynamic_indices_type dynamic_indices =
+        get_dynamic_indices();
     constexpr static auto value = _eval();
 
     template <std::size_t... N>
@@ -66,12 +84,11 @@ struct DynamicExtentIndices<zipper::extents<indices...>> {
 };
 
 template <typename T>
-constexpr auto dynamic_extents_indices_v =
-    DynamicExtentIndices<T>::value;
+constexpr auto dynamic_extents_indices_v = DynamicExtentIndices<T>::value;
 template <typename T, typename U = T>
 auto dynamic_extents(const T& extents) {
     return DynamicExtentIndices<U>::run(extents);
 }
 
-}  // namespace zipper::detail
+}  // namespace zipper::detail::extents
 #endif

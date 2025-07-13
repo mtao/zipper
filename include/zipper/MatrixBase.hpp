@@ -156,6 +156,7 @@ class MatrixBase : public ZipperBase<MatrixBase, View> {
         return VectorBase<views::unary::DiagonalView<view_type, false>>(view());
     }
 
+
     template <rank_type... ranks>
     auto swizzle() const {
         return Base::template swizzle<MatrixBase, ranks...>();
