@@ -2,7 +2,13 @@
 #if !defined(ZIPPER_CONCEPTS_TUPLETYPE_HPP)
 #define ZIPPER_CONCEPTS_TUPLETYPE_HPP
 #include <tuple>
+#pragma GCC diagnostic push
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-literal-operator"
+#endif
 #include <range/v3/utility/common_tuple.hpp>
+#pragma GCC diagnostic pop
+
 
 namespace zipper::concepts {
 namespace detail {

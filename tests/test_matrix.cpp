@@ -650,7 +650,9 @@ TEST_CASE("test_matrix_transpose", "[matrix][storage][dense]") {
         static_assert(swizzle_extents_type::static_extent(1) == 3);
 
         using swizzler_type = typename std::decay_t<decltype(I2view)>::swizzler_type;
-        CHECK(std::tuple(0,1) == swizzler_type::unswizzle(1,0));
+        auto s = swizzler_type::unswizzle(1,0);
+        CHECK(std::get<0>(s) == 0);
+        CHECK(std::get<1>(s) == 1);
         CHECK(I2 == I3);
         for (zipper::index_type j = 0; j < S.extent(0); ++j) {
             for (zipper::index_type k = 0; k < S.extent(1); ++k) {

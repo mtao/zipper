@@ -45,14 +45,17 @@ TEST_CASE("test_storage", "[storage][dense]") {
         fmt::print("\n");
     }
 
-    zipper::views::binary::PlusView av(a, b);
+    // TODO: deduction guides should remove templating but clang is unhappy
+    zipper::views::binary::PlusView<decltype(a),decltype(b)> av(a, b);
 
     for (zipper::index_type j = 0; j < av.extent(0); ++j) {
         for (zipper::index_type k = 0; k < av.extent(1); ++k) {
             spdlog::warn("{} {} {}", j, k, av(j, k));
         }
     }
-    zipper::views::binary::MultipliesView pv(a, a);
+
+    // TODO: deduction guides should remove templating but clang is unhappy
+    zipper::views::binary::MultipliesView<decltype(a),decltype(a)> pv(a, a);
 
     for (zipper::index_type j = 0; j < pv.extent(0); ++j) {
         for (zipper::index_type k = 0; k < pv.extent(1); ++k) {

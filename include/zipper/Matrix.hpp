@@ -51,9 +51,16 @@ class Matrix
         requires(extents_traits::is_static)
         : Base() {}
 
+#if defined(NDEBUG)
+    Matrix(index_type , index_type )
+#else
     Matrix(index_type rows, index_type cols)
+#endif
         requires(extents_traits::is_static)
-        : Base() {}
+        : Base() {
+            assert(rows == extent(0));
+            assert(cols == extent(1));
+        }
 
     template <concepts::MatrixBaseDerived Other>
     Matrix(const Other& other) : Base(other) {}

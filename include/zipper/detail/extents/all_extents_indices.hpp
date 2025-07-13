@@ -1,11 +1,18 @@
 #if !defined(ZIPPER_DETAIL_EXTENTS_ALL_EXTENT_INDICES_HPP)
 #define ZIPPER_DETAIL_EXTENTS_ALL_EXTENT_INDICES_HPP
 
+// compressed_tuple is in use but deprecated, not sure how to stop it
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-literal-operator"
+#endif
 #include <range/v3/algorithm/copy.hpp>
 #include <range/v3/range/conversion.hpp>
 #include <range/v3/view/cartesian_product.hpp>
 #include <range/v3/view/iota.hpp>
 #include <range/v3/view/transform.hpp>
+#pragma GCC diagnostic pop
 
 #include "zipper/types.hpp"
 

@@ -8,7 +8,7 @@
 
 namespace zipper::views::binary {
 namespace detail {
-template <concepts::ViewDerived ViewA, concepts::ViewDerived ViewB>
+template <concepts::QualifiedViewDerived ViewA, concepts::QualifiedViewDerived ViewB>
 struct scalar_type {
     using ATraits = views::detail::ViewTraits<ViewA>;
     using BTraits = views::detail::ViewTraits<ViewB>;
