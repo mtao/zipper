@@ -19,7 +19,7 @@ struct detail::ViewTraits<nullary::UnitView<T, Extent, IndexType>>
     constexpr static bool is_value_based = false;
 
     // returns true if a dimension is sparse, false if dense
-    consteval static bool is_sparse(rank_type n) { return true; }
+    consteval static bool is_sparse(rank_type) { return true; }
 };
 
 namespace nullary {
