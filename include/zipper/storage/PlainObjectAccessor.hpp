@@ -12,6 +12,7 @@ class StaticValueAccessor {
         N_, 1);  // if we have empty extents we have a scalar
 
    public:
+    StaticValueAccessor() = default;
     using value_type = ValueType;
     using storage_type = std::array<value_type, N>;
     constexpr static auto size() -> std::size_t { return N; }
@@ -32,7 +33,8 @@ class StaticValueAccessor {
     auto end() const { return m_data.end(); }
 
    private:
-    storage_type m_data;
+    // default assigning an empty array makes sure it's initialized / removes a gcc warning
+    storage_type m_data = {};
 };
 template <typename ValueType>
 class DynamicValueAccessor {
