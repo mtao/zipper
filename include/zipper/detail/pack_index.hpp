@@ -5,9 +5,11 @@
 namespace zipper::detail {
 
 // returns the Kth value of a pack. Feature exists in cpp26
-#if defined(__cpp_pack_indexing) && !defined(__clang__)
+#if defined(__cpp_pack_indexing)
 template <std::size_t K>
-constexpr auto pack_index(auto&&... args) -> decltype(auto) {
+    // For some reason clang cannot handle forwarding 
+//constexpr auto pack_index(auto&&... args) -> decltype(auto) {
+constexpr auto pack_index(auto... args) -> decltype(auto) {
     return args...[K];
 }
 #else
