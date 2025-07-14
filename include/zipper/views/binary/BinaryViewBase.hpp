@@ -91,9 +91,8 @@ class BinaryViewBase
     value_type coeff(Args&&... args) const
         requires(is_value_based)
     {
-        value_type v = get_value(m_lhs(std::forward<Args>(args)...),
-                         m_rhs(std::forward<Args>(args)...));
-        return v;
+        return value_type(get_value(m_lhs(std::forward<Args>(args)...),
+                                    m_rhs(std::forward<Args>(args)...)));
     }
 
    private:
