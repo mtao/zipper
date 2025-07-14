@@ -2,6 +2,8 @@
 #define ZIPPER_DETAIL_EXTENTS_EXTENTS_FORMATTER_HPP
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wtautological-compare"
+#pragma GCC diagnostic ignored "-Winline"
+#pragma GCC diagnostic ignored "-Wpadded"
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 #pragma GCC diagnostic pop

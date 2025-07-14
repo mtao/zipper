@@ -1,8 +1,6 @@
 #if !defined(ZIPPER_DETAIL_EXTENTS_IS_COMPATIBLE_HPP)
 #define ZIPPER_DETAIL_EXTENTS_IS_COMPATIBLE_HPP
 #include "zipper/types.hpp"
-//
-#include <fmt/ranges.h>
 
 #include "zipper/concepts/ExtentsType.hpp"
 #include "zipper/detail/ExtentsTraits.hpp"

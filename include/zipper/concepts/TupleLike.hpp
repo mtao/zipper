@@ -6,6 +6,7 @@
 #if defined(__clang__)
 #pragma GCC diagnostic ignored "-Wdeprecated-literal-operator"
 #endif
+#pragma GCC diagnostic ignored "-Wold-style-cast"
 #include <range/v3/utility/common_tuple.hpp>
 #pragma GCC diagnostic pop
 

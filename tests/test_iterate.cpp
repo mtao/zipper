@@ -1,7 +1,7 @@
 
 #include <spdlog/spdlog.h>
 
-#include <catch2/catch_all.hpp>
+#include "catch_include.hpp"
 #include <zipper/detail/extents/all_extents_indices.hpp>
 #include <zipper/views/detail/intersect_nonzeros.hpp>
 #include <zipper/Vector.hpp>

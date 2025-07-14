@@ -42,27 +42,22 @@ struct detail::ViewTraits<unary::SliceView<QualifiedViewType, Slices...>>
         constexpr size_t Rank = sizeof...(Indices);
         std::array<rank_type, Rank> ret;
         using tuple_type = std::tuple<Slices...>;
-        size_t index = 0;
-        auto add = []<std::size_t J>(std::integral_constant<std::size_t, J>,
-                                     auto& ret, size_t& index) {
-            if (concepts::SliceLike<std::tuple_element_t<J, tuple_type>> &&
-                !concepts::IndexLike<std::tuple_element_t<J, tuple_type>>) {
-                ret[J] = index++;
-            } else {
-                ret[J] = std::dynamic_extent;
-            }
+        constexpr auto eval = []<rank_type J>(std::integral_constant<rank_type, J>) -> rank_type {
+                if (concepts::SliceLike<std::tuple_element_t<J, tuple_type>> &&
+                        !concepts::IndexLike<std::tuple_element_t<J, tuple_type>>) {
+                    return 0;
+                } else {
+                    return std::dynamic_extent;
+                }
         };
-        // auto add = []<std::size_t J>(std::integral_constant<std::size_t, J>,
-        //                              auto& ret, size_t& index) {
-        //     if (zipper::detail::is_integral_constant_v<
-        //             std::tuple_element_t<J, tuple_type>>) {
-        //         ret[J] = index++;
-        //     }
-        // };
-        ((add(std::integral_constant<std::size_t, Indices>{}, ret, index),
-          ...));
-
-        return ret;
+        std::array<rank_type, sizeof...(Indices)> r{{eval(std::integral_constant<size_t, Indices>{})...}};
+        rank_type index = 0;
+        for(auto& v: r) {
+            if(v == 0) {
+                v = index++;
+            }
+        }
+        return r;
     }
 
     constexpr static std::array<rank_type, Base::extents_type::rank()>
@@ -226,13 +221,13 @@ class SliceView : public UnaryViewBase<SliceView<QualifiedViewType, Slices...>,
     }
 
     template <concepts::ViewDerived V>
-    void assign(const V& view)
+    void assign(const V& v)
         requires(
             traits::is_writable &&
             extents_traits::template is_convertable_from<
                 typename zipper::views::detail::ViewTraits<V>::extents_type>())
     {
-        views::detail::AssignHelper<V, self_type>::assign(view, *this);
+        views::detail::AssignHelper<V, self_type>::assign(v, *this);
     }
 
    private:

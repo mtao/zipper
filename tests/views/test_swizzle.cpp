@@ -1,6 +1,6 @@
 
 
-#include <catch2/catch_all.hpp>
+#include "../catch_include.hpp"
 #include <zipper/views/unary/SwizzleView.hpp>
 // #include <zipper/Vector.hpp>
 

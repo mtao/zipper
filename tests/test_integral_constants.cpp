@@ -1,6 +1,6 @@
 
 
-#include <catch2/catch_all.hpp>
+#include "catch_include.hpp"
 #include <zipper/detail/constexpr_arithmetic.hpp>
 
 using namespace zipper;

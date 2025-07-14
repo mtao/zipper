@@ -1,5 +1,5 @@
 
-#include <catch2/catch_all.hpp>
+#include "../catch_include.hpp"
 #include <zipper/storage/DenseAccessor.hpp>
 #include <zipper/storage/DynamicDenseData.hpp>
 #include <zipper/storage/StaticDenseData.hpp>

@@ -2,7 +2,7 @@
 #include <spdlog/spdlog.h>
 
 #include <zipper/concepts/shapes.hpp>
-#include <catch2/catch_all.hpp>
+#include "catch_include.hpp"
 #include <iostream>
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>

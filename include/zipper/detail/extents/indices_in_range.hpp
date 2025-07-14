@@ -14,7 +14,7 @@ namespace zipper::detail::extents {
 
 template <concepts::ExtentsType Extents, typename... Indices, rank_type... N>
     requires(concepts::IndexPackLike<Indices...>)
-bool indices_in_range(std::integer_sequence<rank_type, N...>, const Extents& e,
+bool indices_in_range(std::integer_sequence<rank_type, N...>, const Extents& extents,
                       const Indices&... i) {
     auto check = []<rank_type J, typename T>(
                      std::integral_constant<rank_type, J>, const Extents& e,
@@ -49,7 +49,7 @@ bool indices_in_range(std::integer_sequence<rank_type, N...>, const Extents& e,
         }
     };
 
-    return (check(std::integral_constant<rank_type, N>{}, e, i) && ...);
+    return (check(std::integral_constant<rank_type, N>{}, extents, i) && ...);
 }
 
 template <concepts::ExtentsType Extents, typename... Indices>

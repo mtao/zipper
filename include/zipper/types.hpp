@@ -1,7 +1,12 @@
 #if !defined(ZIPPER_DETAIL_TYPES_HPP)
 #define ZIPPER_DETAIL_TYPES_HPP
 #include <cstddef>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma GCC diagnostic ignored "-Wextra-semi"
+#pragma GCC diagnostic ignored "-Wpadded"
 #include <experimental/mdspan>
+#pragma GCC diagnostic pop
 
 #include "concepts/IndexLike.hpp"
 

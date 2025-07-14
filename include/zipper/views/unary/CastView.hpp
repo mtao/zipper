@@ -7,7 +7,7 @@ namespace zipper::views::unary {
 namespace detail {
 template <typename A, typename B>
 struct cast {
-    constexpr auto operator()(const A& a) const { return static_cast<B>(a); };
+    constexpr auto operator()(const A& a) const { return static_cast<B>(a); }
 };
 }  // namespace detail
 

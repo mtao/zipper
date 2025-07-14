@@ -1,8 +1,8 @@
 
 
-#include <spdlog/spdlog.h>
 
-#include <catch2/catch_all.hpp>
+#include "fmt_include.hpp"
+#include "catch_include.hpp"
 #include <iostream>
 #include <zipper/Matrix.hpp>
 #include <zipper/Tensor.hpp>
@@ -13,11 +13,11 @@
 
 
 struct A {
-    zipper::Array<double,3> u;
-    zipper::Vector<double,3> x;
-    zipper::Matrix<double,3,3> y;
-    zipper::Tensor<double,3,3> z;
-    zipper::Form<double,3,3> w;
+    zipper::Array<double,3> u = {};
+    zipper::Vector<double,3> x = {};
+    zipper::Matrix<double,3,3> y = {};
+    zipper::Tensor<double,3,3> z = {};
+    zipper::Form<double,3,3> w = {};
 };
 TEST_CASE("test_vector_struct", "[matrix][storage][dense]") {
 

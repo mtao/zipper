@@ -80,7 +80,10 @@ class ZipperBase {
                      typename Other::extents_type, extents_type>)
     {
         m_view.assign(other);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Weffc++"
         return derived();
+#pragma GCC diagnostic pop
     }
     template <concepts::ViewDerived Other>
     Derived& operator=(Other&& other)
@@ -89,7 +92,10 @@ class ZipperBase {
                      typename Other::extents_type, extents_type>)
     {
         m_view.assign(other);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Weffc++"
         return derived();
+#pragma GCC diagnostic pop
     }
     // template <concepts::ZipperBaseDerived Other>
     // Derived& operator=(const Other& other)
@@ -115,22 +121,38 @@ class ZipperBase {
         requires(view_type::is_writable)
     {
         *this = *this + other;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Weffc++"
+        return derived();
+#pragma GCC diagnostic pop
     }
     template <concepts::ZipperBaseDerived Other>
     Derived& operator-=(const Other& other)
         requires(view_type::is_writable)
     {
-        return *this = *this - other;
+        *this = *this - other;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Weffc++"
+        return derived();
+#pragma GCC diagnostic pop
     }
     Derived& operator*=(const value_type& other)
         requires(view_type::is_writable)
     {
-        return *this = other * *this;
+        *this = other * *this;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Weffc++"
+        return derived();
+#pragma GCC diagnostic pop
     }
     Derived& operator/=(const value_type& other)
         requires(view_type::is_writable)
     {
-        return *this = *this / other;
+        *this = *this / other;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Weffc++"
+        return derived();
+#pragma GCC diagnostic pop
     }
 
     template <template <typename> typename BaseType = DerivedT,

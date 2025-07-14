@@ -153,13 +153,13 @@ class DiagonalView
     }
 
     template <concepts::ViewDerived V>
-    void assign(const V& view)
+    void assign(const V& v)
         requires(
             traits::is_writable &&
             extents_traits::template is_convertable_from<
                 typename zipper::views::detail::ViewTraits<V>::extents_type>())
     {
-        views::detail::AssignHelper<V, self_type>::assign(view, *this);
+        views::detail::AssignHelper<V, self_type>::assign(v, *this);
     }
 
 };

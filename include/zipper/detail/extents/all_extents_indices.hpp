@@ -4,8 +4,17 @@
 // compressed_tuple is in use but deprecated, not sure how to stop it
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma GCC diagnostic ignored "-Wpadded"
+
+#pragma GCC diagnostic ignored "-Wunused-const-variable"
+#pragma GCC diagnostic ignored "-Weffc++"
 #if defined(__clang__)
 #pragma GCC diagnostic ignored "-Wdeprecated-literal-operator"
+#else
+#pragma GCC diagnostic ignored "-Wnoexcept"
+#pragma GCC diagnostic ignored "-Wuseless-cast"
+#pragma GCC diagnostic ignored "-Wmultiple-inheritance"
 #endif
 #include <range/v3/algorithm/copy.hpp>
 #include <range/v3/range/conversion.hpp>

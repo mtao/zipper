@@ -79,17 +79,17 @@ class DenseStorageViewBase : public MappedViewBase<Derived_> {
     }
 
     template <typename E2>
-    void resize(const E2& extents) {
-        return derived().resize(extents);
+    void resize(const E2& e) {
+        return derived().resize(e);
     }
 
    public:
     template <concepts::ViewDerived V>
-    void assign(const V& view)
+    void assign(const V& v)
         requires(extents_traits::template is_convertable_from<
                  typename views::detail::ViewTraits<V>::extents_type>())
     {
-        views::detail::AssignHelper<V, Derived>::assign(view, derived());
+        views::detail::AssignHelper<V, Derived>::assign(v, derived());
     }
 
     /*

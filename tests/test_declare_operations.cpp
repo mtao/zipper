@@ -1,4 +1,4 @@
-#include <catch2/catch_all.hpp>
+#include "catch_include.hpp"
 
 #include "zipper/detail/declare_operations.hpp"
 #include "zipper/views/binary/ArithmeticViews.hpp"

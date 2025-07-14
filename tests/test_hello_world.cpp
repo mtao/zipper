@@ -1,6 +1,6 @@
 #include <spdlog/spdlog.h>
 
-#include <catch2/catch_all.hpp>
+#include "catch_include.hpp"
 #include <zipper/storage/PlainObjectStorage.hpp>
 #include <zipper/views/binary/ArithmeticViews.hpp>
 #include <zipper/views/unary/ScalarArithmeticViews.hpp>

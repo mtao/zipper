@@ -1,4 +1,4 @@
-#include <catch2/catch_all.hpp>
+#include "../catch_include.hpp"
 #include <zipper/storage/SparseCoordinateAccessor.hpp>
 #include <zipper/storage/detail/SparseCompressedData.hpp>
 #include <zipper/storage/detail/to_sparse_compressed_data.hpp>

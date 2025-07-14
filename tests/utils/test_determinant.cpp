@@ -1,4 +1,4 @@
-#include <catch2/catch_all.hpp>
+#include "../catch_include.hpp"
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
 #include <zipper/utils/determinant.hpp>

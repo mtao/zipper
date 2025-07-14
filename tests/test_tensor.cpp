@@ -3,7 +3,7 @@
 #include <zipper/views/unary/PartialTraceView.hpp>
 #include <spdlog/spdlog.h>
 
-#include <catch2/catch_all.hpp>
+#include "catch_include.hpp"
 #include <zipper/views/nullary/UnitView.hpp>
 #include <iostream>
 #include <zipper/Tensor.hpp>

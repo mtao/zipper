@@ -8,6 +8,13 @@
 #include "detail/CoeffWiseTraits.hpp"
 #include "zipper/concepts/ViewDerived.hpp"
 
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winline"
+#pragma GCC diagnostic ignored "-Wpadded"
+#include <fmt/format.h>
+#pragma GCC diagnostic pop
+
 namespace zipper::views {
 namespace binary {
 template <concepts::ViewDerived A, concepts::ViewDerived B, typename Operation>
