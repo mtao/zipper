@@ -1,9 +1,10 @@
 
-#include "../catch_include.hpp"
 #include <zipper/storage/DenseAccessor.hpp>
 #include <zipper/storage/DynamicDenseData.hpp>
 #include <zipper/storage/StaticDenseData.hpp>
 #include <zipper/storage/concepts/AccessorLike.hpp>
+
+#include "../catch_include.hpp"
 
 using namespace zipper;
 namespace {
@@ -19,7 +20,7 @@ void test(zipper::storage::concepts::AccessorLike auto& data) {
 
     for (index_type i = 0; i < data.extent(0); ++i) {
         for (index_type j = 0; j < data.extent(1); ++j) {
-            int index = i * 10 + j;
+            index_type index = i * 10 + j;
             CHECK(data.coeff_ref(i, j) == index);
             CHECK(data.const_coeff_ref(i, j) == index);
             CHECK(data.coeff(i, j) == index);
@@ -32,7 +33,7 @@ void test(zipper::storage::concepts::AccessorLike auto& data) {
     }
     for (index_type i = 0; i < data.extent(0); ++i) {
         for (index_type j = 0; j < data.extent(1); ++j) {
-            int index = j * 10 + i;
+            index_type index = j * 10 + i;
             CHECK(data.coeff_ref(i, j) == index);
             CHECK(data.const_coeff_ref(i, j) == index);
             CHECK(data.coeff(i, j) == index);
@@ -41,9 +42,9 @@ void test(zipper::storage::concepts::AccessorLike auto& data) {
 }
 }  // namespace
 TEST_CASE("static_dense_accessor", "[data]") {
-    zipper::storage::DenseAccessor<zipper::storage::StaticDenseData<int, 30>,
-                                   extents<5, 6>, zipper::default_layout_policy,
-                                   zipper::default_accessor_policy<int>>
+    zipper::storage::DenseAccessor<
+        zipper::storage::StaticDenseData<index_type, 30>, extents<5, 6>,
+        zipper::default_layout_policy, zipper::default_accessor_policy<int>>
         A;
     test(A);
     auto B = A.as_span();
@@ -52,9 +53,9 @@ TEST_CASE("static_dense_accessor", "[data]") {
     // test_dense<5>(A);
 }
 TEST_CASE("dynamic_dense_accessor", "[data]") {
-    zipper::storage::DenseAccessor<zipper::storage::DynamicDenseData<int>,
-                                   dextents<2>, zipper::default_layout_policy,
-                                   zipper::default_accessor_policy<int>>
+    zipper::storage::DenseAccessor<
+        zipper::storage::DynamicDenseData<index_type>, dextents<2>,
+        zipper::default_layout_policy, zipper::default_accessor_policy<int>>
         A(extents(5, 6));
     test(A);
     auto B = A.as_span();

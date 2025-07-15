@@ -1,8 +1,21 @@
 #if !defined(ZIPPER_STORAGE_SPARSEACCESSOR_HPP)
 #define ZIPPER_STORAGE_SPARSEACCESSOR_HPP
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtautological-compare"
+#pragma GCC diagnostic ignored "-Winline"
+#pragma GCC diagnostic ignored "-Wpadded"
+#pragma GCC diagnostic ignored "-Wswitch-enum"
+#pragma GCC diagnostic ignored "-Wswitch-default"
+#pragma GCC diagnostic ignored "-Wctor-dtor-privacy"
+#pragma GCC diagnostic ignored "-Weffc++"
+#if !defined(__clang__)
+#pragma GCC diagnostic ignored "-Wmultiple-inheritance"
+#pragma GCC diagnostic ignored "-Wabi-tag"
+#endif
 #include <fmt/format.h>
 #include <fmt/ranges.h>
+#pragma GCC diagnostic pop
 
 #include <ranges>
 #include <vector>
@@ -131,9 +144,9 @@ class SparseCoordinateAccessor
         default;
     SparseCoordinateAccessor& operator=(SparseCoordinateAccessor&&) = default;
 
-    SparseCoordinateAccessor(const extents_type& extents)
+    SparseCoordinateAccessor(const extents_type& extents_)
         requires(!IsStatic)
-        : ParentType(extents) {}
+        : ParentType(extents_) {}
 
     // template <zipper::concepts::ExtentsType E2>
     // void resize(const E2& e)
@@ -248,7 +261,7 @@ class SparseCoordinateAccessor
 
         auto reorder = [&o]<typename T>(std::vector<T>& data) {
             data = std::ranges::views::transform(
-                       o, [&data](size_t j) { return data[j]; }) |
+                       o, [&data](size_t j) noexcept { return data[j]; }) |
                    std::ranges::to<std::vector<T>>();
         };
         reorder(m_data);
@@ -332,8 +345,8 @@ class SparseCoordinateAccessor
     }
 
    private:
-    std::vector<value_type> m_data;
-    std::array<std::vector<index_type>, rank()> m_indices;
+    std::vector<value_type> m_data = {};
+    std::array<std::vector<index_type>, rank()> m_indices = {};
     bool m_compressed = true;
 };
 }  // namespace zipper::storage

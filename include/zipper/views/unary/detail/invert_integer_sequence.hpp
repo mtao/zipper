@@ -23,9 +23,9 @@ struct invert_integer_sequence {
 
         size_t index = 0;
         auto add = []<rank_type J>(std::integral_constant<rank_type, J>,
-                                   auto& R, auto& index) {
+                                   auto& R_, auto& index_) {
             if (in_sequence(J)) {
-                R[index++] = J;
+                R_[index_++] = J;
             }
         };
 

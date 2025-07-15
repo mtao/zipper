@@ -46,10 +46,10 @@ class DenseAccessor
     DenseAccessor& operator=(const DenseAccessor&) = default;
     DenseAccessor& operator=(DenseAccessor&&) = default;
 
-    DenseAccessor(const extents_type& extents)
+    DenseAccessor(const extents_type& extents_)
         requires(!IsStatic)
-        : ParentType(extents), m_data(extents_traits::size(extents)) {
-        assert(m_data.size() == extents_traits::size(extents));
+        : ParentType(extents_), m_data(extents_traits::size(extents_)) {
+        assert(m_data.size() == extents_traits::size(extents_));
     }
     DenseAccessor(data_type&& data)
         requires(IsStatic)
@@ -57,14 +57,14 @@ class DenseAccessor
         static_assert(extents_traits::static_size == data_type::static_size);
     }
 
-    DenseAccessor(data_type data, const extents_type& extents)
+    DenseAccessor(data_type data, const extents_type& extents_)
         requires(!IsStatic)
-        : ParentType(extents), m_data(std::move(data)) {
-        assert(m_data.size() == extents_traits::size(extents));
+        : ParentType(extents_), m_data(std::move(data)) {
+        assert(m_data.size() == extents_traits::size(extents_));
     }
-    DenseAccessor(data_type data, const extents_type& extents)
+    DenseAccessor(data_type data, const extents_type& extents_)
         requires(IsStatic)
-        : ParentType(extents), m_data(std::move(data)) {
+        : ParentType(extents_), m_data(std::move(data)) {
         static_assert(extents_traits::static_size == data_type::static_size);
     }
 

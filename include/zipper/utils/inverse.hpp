@@ -52,14 +52,14 @@ auto inverse3d(const D& M) {
     // 1/det ( d -b )
     //       ( -c a )
     T det = zipper::views::reductions::Determinant(M.view())();
-    auto cofactor = [](const auto& v, index_type r, index_type c) {
+    auto cofactor = [](const auto& v_, index_type r, index_type c) {
         auto det2 = [](const auto& v, index_type r0, index_type c0,
                        index_type r1, index_type c1) {
             const auto val = zipper::views::reductions::detail::det2(
                 v(r0, c0), v(r0, c1), v(r1, c0), v(r1, c1));
             return val;
         };
-        return det2(v, (r + 1) % 3, (c + 1) % 3, (r + 2) % 3, (c + 2) % 3);
+        return det2(v_, (r + 1) % 3, (c + 1) % 3, (r + 2) % 3, (c + 2) % 3);
     };
     for (index_type r = 0; r < 3; ++r) {
         for (index_type c = 0; c < 3; ++c) {

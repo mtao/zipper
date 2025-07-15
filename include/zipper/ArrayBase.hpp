@@ -208,8 +208,12 @@ SCALAR_BINARY_DECLARATION(ArrayBase, Greater, operator>)
 SCALAR_BINARY_DECLARATION(ArrayBase, Less, operator<)
 SCALAR_BINARY_DECLARATION(ArrayBase, GreaterEqual, operator>=)
 SCALAR_BINARY_DECLARATION(ArrayBase, LessEqual, operator<=)
+    // GCC notes that these operators don't allow short circuiting, but that's ok for our views
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Weffc++"
 SCALAR_BINARY_DECLARATION(ArrayBase, LogicalAnd, operator&&)
 SCALAR_BINARY_DECLARATION(ArrayBase, LogicalOr, operator||)
+#pragma GCC diagnostic pop
 SCALAR_BINARY_DECLARATION(ArrayBase, BitAnd, operator&)
 SCALAR_BINARY_DECLARATION(ArrayBase, BitOr, operator|)
 SCALAR_BINARY_DECLARATION(ArrayBase, BitXor, operator^)
@@ -225,8 +229,13 @@ BINARY_DECLARATION(ArrayBase, Greater, operator>)
 BINARY_DECLARATION(ArrayBase, Less, operator<)
 BINARY_DECLARATION(ArrayBase, GreaterEqual, operator>=)
 BINARY_DECLARATION(ArrayBase, LessEqual, operator<=)
+
+    // GCC notes that these operators don't allow short circuiting, but that's ok for our views
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Weffc++"
 BINARY_DECLARATION(ArrayBase, LogicalAnd, operator&&)
 BINARY_DECLARATION(ArrayBase, LogicalOr, operator||)
+#pragma GCC diagnostic pop
 BINARY_DECLARATION(ArrayBase, BitAnd, operator&)
 BINARY_DECLARATION(ArrayBase, BitOr, operator|)
 BINARY_DECLARATION(ArrayBase, BitXor, operator^)

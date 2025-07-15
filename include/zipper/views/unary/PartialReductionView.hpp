@@ -107,8 +107,8 @@ class PartialReductionView
             slice_type(view(), get_index(std::integral_constant<rank_type, N>{},
                                          std::forward<Args>(idxs)...)...);
 
-        ReductionView<std::decay_t<decltype(slice)>> view(slice);
-        value_type val = view();
+        ReductionView<std::decay_t<decltype(slice)>> v(slice);
+        value_type val = v();
         return val;
     }
 

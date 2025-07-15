@@ -17,16 +17,16 @@ struct intersect_nonzeros {
         using difference_type = int64_t;
 
         iterator_() = default;
-        iterator_(const intersect_nonzeros& base)
-            : base(&base), a_it(base.a.begin()), b_it(base.b.begin()) {
+        iterator_(const intersect_nonzeros& base_)
+            : base(&base_), a_it(base_.a.begin()), b_it(base_.b.begin()) {
             // make sure the iterators initialize in the right state
             if (*a_it != *b_it) {
                 operator++();
             }
         }
 
-        iterator_(const intersect_nonzeros& base, int)
-            : base(&base), a_it(base.a.end()), b_it(base.b.end()) {}
+        iterator_(const intersect_nonzeros& base_, int)
+            : base(&base_), a_it(base_.a.end()), b_it(base_.b.end()) {}
         iterator_(const iterator_&) = default;
         iterator_(iterator_&&) = default;
         iterator_& operator=(const iterator_& o) = default;

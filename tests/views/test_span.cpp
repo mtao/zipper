@@ -1,5 +1,4 @@
-#include <spdlog/spdlog.h>
-
+#include "../fmt_include.hpp"
 #include "../catch_include.hpp"
 #include <zipper/Form.hpp>
 #include <zipper/Matrix.hpp>

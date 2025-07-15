@@ -1,11 +1,12 @@
-#include <spdlog/spdlog.h>
 
-#include "catch_include.hpp"
 #include <zipper/storage/PlainObjectStorage.hpp>
 #include <zipper/views/binary/ArithmeticViews.hpp>
-#include <zipper/views/unary/ScalarArithmeticViews.hpp>
 #include <zipper/views/binary/MatrixProductView.hpp>
 #include <zipper/views/unary/CastView.hpp>
+#include <zipper/views/unary/ScalarArithmeticViews.hpp>
+
+#include "catch_include.hpp"
+#include "fmt_include.hpp"
 
 TEST_CASE("test_storage", "[storage][dense]") {
     zipper::storage::PlainObjectStorage<double, zipper::extents<4, 4>> a;
@@ -15,16 +16,19 @@ TEST_CASE("test_storage", "[storage][dense]") {
         double, zipper::extents<4, std::experimental::dynamic_extent>>
         b(zipper::extents<4, std::experimental::dynamic_extent>{4});
 
-    spdlog::info("A size: {} {} {}", a.accessor().container().size(),
-                 decltype(a)::extents_traits::static_size,
-                 zipper::detail::ExtentsTraits<zipper::extents<4, 4>>::static_size);
+    spdlog::info(
+        "A size: {} {} {}", a.accessor().container().size(),
+        decltype(a)::extents_traits::static_size,
+        zipper::detail::ExtentsTraits<zipper::extents<4, 4>>::static_size);
     auto bs = b.as_std_span();
 
-    int j = 0;
-    for (auto& v : bs) {
-        v = j++;
+    {
+        int j = 0;
+        for (auto& v : bs) {
+            v = j++;
+        }
+        fmt::print("{}\n", fmt::join(bs, ","));
     }
-    fmt::print("{}\n", fmt::join(bs, ","));
 
     for (zipper::index_type j = 0; j < a.extent(0); ++j) {
         for (zipper::index_type k = 0; k < a.extent(1); ++k) {
@@ -35,7 +39,8 @@ TEST_CASE("test_storage", "[storage][dense]") {
     }
     fmt::print("{}\n", fmt::join(as, ","));
 
-    zipper::views::unary::ScalarMultipliesView<double, decltype(a), false> spv(2.0, a);
+    zipper::views::unary::ScalarMultipliesView<double, decltype(a), false> spv(
+        2.0, a);
     // zipper::views::binary::AdditionView av(a,b);
 
     for (zipper::index_type j = 0; j < spv.extent(0); ++j) {
@@ -46,7 +51,7 @@ TEST_CASE("test_storage", "[storage][dense]") {
     }
 
     // TODO: deduction guides should remove templating but clang is unhappy
-    zipper::views::binary::PlusView<decltype(a),decltype(b)> av(a, b);
+    zipper::views::binary::PlusView<decltype(a), decltype(b)> av(a, b);
 
     for (zipper::index_type j = 0; j < av.extent(0); ++j) {
         for (zipper::index_type k = 0; k < av.extent(1); ++k) {
@@ -55,7 +60,7 @@ TEST_CASE("test_storage", "[storage][dense]") {
     }
 
     // TODO: deduction guides should remove templating but clang is unhappy
-    zipper::views::binary::MultipliesView<decltype(a),decltype(a)> pv(a, a);
+    zipper::views::binary::MultipliesView<decltype(a), decltype(a)> pv(a, a);
 
     for (zipper::index_type j = 0; j < pv.extent(0); ++j) {
         for (zipper::index_type k = 0; k < pv.extent(1); ++k) {

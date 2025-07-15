@@ -1,6 +1,6 @@
 
-#include <spdlog/spdlog.h>
 
+#include "fmt_include.hpp"
 #include "catch_include.hpp"
 #include <zipper/detail/extents/all_extents_indices.hpp>
 #include <zipper/views/detail/intersect_nonzeros.hpp>

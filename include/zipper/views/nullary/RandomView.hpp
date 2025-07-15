@@ -98,8 +98,8 @@ class RandomView
     value_type get_value() const { return m_distribution(m_generator); }
 
    private:
-    mutable Distribution m_distribution;
-    mutable Generator m_generator;
+    mutable Distribution m_distribution = {};
+    mutable Generator m_generator = {};
 };
 template <typename Distribution, typename Generator, index_type... Indices>
 RandomView(const Distribution&, const Generator&, const extents<Indices...>&)

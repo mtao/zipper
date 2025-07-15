@@ -1,5 +1,3 @@
-
-
 #include <zipper/concepts/shapes.hpp>
 #include "catch_include.hpp"
 #include <iostream>

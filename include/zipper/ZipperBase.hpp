@@ -19,7 +19,8 @@ template <template <concepts::ViewDerived> typename DerivedT,
           concepts::ViewDerived View>
 class ZipperBase {
    public:
-    ZipperBase() = default;
+    ZipperBase() 
+       requires(std::is_default_constructible_v<View>): m_view() {}
     using Derived = DerivedT<View>;
     const Derived& derived() const {
         return static_cast<const Derived&>(*this);

@@ -38,7 +38,7 @@ class SpanStorage
 
     SpanStorage()
         requires(IsStatic)
-        : ParentType() {}
+        : ParentType(), m_accessor() {}
 
     SpanStorage(const SpanStorage&) = default;
     SpanStorage(SpanStorage&&) = default;

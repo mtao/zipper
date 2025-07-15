@@ -13,7 +13,7 @@ struct SparseCompressedData : public SparseCompressedData<T, N - 1> {
     using Parent = SparseCompressedData<T, N - 1>;
 
     using value_type = T;
-    std::vector<std::tuple<index_type, size_t, size_t>> m_spans;
+    std::vector<std::tuple<index_type, size_t, size_t>> m_spans = {};
 
     template <typename... Leftover>
         requires((sizeof...(Leftover) == N) &&
@@ -75,7 +75,7 @@ struct SparseCompressedData : public SparseCompressedData<T, N - 1> {
 template <typename T>
 struct SparseCompressedData<T, 0> {
     using value_type = T;
-    std::vector<std::pair<index_type, T>> m_data;
+    std::vector<std::pair<index_type, T>> m_data = {};
 
     value_type coeff_(size_t start, size_t size, index_type index) const {
         auto sp = std::span(m_data).subspan(start, size);

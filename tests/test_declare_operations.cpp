@@ -47,8 +47,11 @@ SCALAR_BINARY_DECLARATION(TestBase, Greater, operator>)
 SCALAR_BINARY_DECLARATION(TestBase, Less, operator<)
 SCALAR_BINARY_DECLARATION(TestBase, GreaterEqual, operator>=)
 SCALAR_BINARY_DECLARATION(TestBase, LessEqual, operator<=)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Weffc++"
 SCALAR_BINARY_DECLARATION(TestBase, LogicalAnd, operator&&)
 SCALAR_BINARY_DECLARATION(TestBase, LogicalOr, operator||)
+#pragma GCC diagnostic pop
 SCALAR_BINARY_DECLARATION(TestBase, BitAnd, operator&)
 SCALAR_BINARY_DECLARATION(TestBase, BitOr, operator|)
 SCALAR_BINARY_DECLARATION(TestBase, BitXor, operator^)
@@ -64,8 +67,11 @@ BINARY_DECLARATION(TestBase, Greater, operator>)
 BINARY_DECLARATION(TestBase, Less, operator<)
 BINARY_DECLARATION(TestBase, GreaterEqual, operator>=)
 BINARY_DECLARATION(TestBase, LessEqual, operator<=)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Weffc++"
 BINARY_DECLARATION(TestBase, LogicalAnd, operator&&)
 BINARY_DECLARATION(TestBase, LogicalOr, operator||)
+#pragma GCC diagnostic pop
 BINARY_DECLARATION(TestBase, BitAnd, operator&)
 BINARY_DECLARATION(TestBase, BitOr, operator|)
 BINARY_DECLARATION(TestBase, BitXor, operator^)
