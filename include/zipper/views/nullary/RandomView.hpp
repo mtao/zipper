@@ -85,7 +85,7 @@ class RandomView
     RandomView& operator=(RandomView&&) = default;
     template <typename... Args>
     RandomView(const Distribution& d = {},
-               const Generator& g = {std::random_device{}()}, Args&&... args)
+               const Generator& g = Generator{std::random_device{}()}, Args&&... args)
         : Base(std::forward<Args>(args)...),
           m_distribution(d),
           m_generator(g) {}

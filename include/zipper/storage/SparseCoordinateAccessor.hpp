@@ -7,6 +7,7 @@
 #pragma GCC diagnostic ignored "-Wpadded"
 #pragma GCC diagnostic ignored "-Wswitch-enum"
 #pragma GCC diagnostic ignored "-Wswitch-default"
+#pragma GCC diagnostic ignored "-Wstrict-overflow"
 #pragma GCC diagnostic ignored "-Wctor-dtor-privacy"
 #pragma GCC diagnostic ignored "-Weffc++"
 #if !defined(__clang__)
@@ -134,6 +135,7 @@ class SparseCoordinateAccessor
     using ParentType::extents;
     using ParentType::size;
 
+    ~SparseCoordinateAccessor();
     SparseCoordinateAccessor()
         requires(IsStatic)
         : ParentType() {}
@@ -349,6 +351,8 @@ class SparseCoordinateAccessor
     std::array<std::vector<index_type>, rank()> m_indices = {};
     bool m_compressed = true;
 };
+template <typename ValueType, typename Extents>
+SparseCoordinateAccessor<ValueType, Extents>::~SparseCoordinateAccessor() {}
 }  // namespace zipper::storage
 
 namespace zipper::views {
@@ -365,6 +369,7 @@ struct detail::ViewTraits<
     constexpr static bool is_writable = true;
     constexpr static bool is_coefficient_consistent = true;
 };
+
 }  // namespace zipper::views
 
 namespace std {

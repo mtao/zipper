@@ -12,14 +12,21 @@ template <typename T, rank_type N>
 struct SparseCompressedData : public SparseCompressedData<T, N - 1> {
     using Parent = SparseCompressedData<T, N - 1>;
 
+    SparseCompressedData() = default;
+    SparseCompressedData(SparseCompressedData&& ) = default;
+    SparseCompressedData& operator=(SparseCompressedData&& ) = default;
+    SparseCompressedData(const SparseCompressedData& ) = default;
+    SparseCompressedData& operator=(const SparseCompressedData& ) = default;
+    ~SparseCompressedData();
     using value_type = T;
     std::vector<std::tuple<index_type, size_t, size_t>> m_spans = {};
 
     template <typename... Leftover>
         requires((sizeof...(Leftover) == N) &&
                  zipper::concepts::IndexPackLike<Leftover...>)
-    value_type coeff_(size_t start, size_t size, index_type index,
-                      Leftover... leftover) const {
+    value_type __attribute__((pure)) coeff_(size_t start, size_t size,
+                                            index_type index,
+                                            Leftover... leftover) const {
         auto spans = std::span(m_spans).subspan(start, size);
 
         auto it =
@@ -37,7 +44,8 @@ struct SparseCompressedData : public SparseCompressedData<T, N - 1> {
     template <typename... Leftover>
         requires((sizeof...(Leftover) == N) &&
                  zipper::concepts::IndexPackLike<Leftover...>)
-    value_type coeff(index_type index, Leftover... leftover) const {
+    value_type __attribute__((pure)) coeff(index_type index,
+                                           Leftover... leftover) const {
         return coeff_(0, m_spans.size(), index, leftover...);
     }
 
@@ -77,7 +85,15 @@ struct SparseCompressedData<T, 0> {
     using value_type = T;
     std::vector<std::pair<index_type, T>> m_data = {};
 
-    value_type coeff_(size_t start, size_t size, index_type index) const {
+    SparseCompressedData() = default;
+    SparseCompressedData(SparseCompressedData&& ) = default;
+    SparseCompressedData& operator=(SparseCompressedData&& ) = default;
+    SparseCompressedData(const SparseCompressedData& ) = default;
+    SparseCompressedData& operator=(const SparseCompressedData& ) = default;
+    ~SparseCompressedData();
+
+    value_type __attribute__((pure)) coeff_(size_t start, size_t size,
+                                            index_type index) const {
         auto sp = std::span(m_data).subspan(start, size);
         auto it = std::lower_bound(sp.begin(), sp.end(), index,
                                    [](const std::pair<index_type, T>& a,
@@ -89,7 +105,7 @@ struct SparseCompressedData<T, 0> {
         }
     }
     size_t size() const { return m_data.size(); }
-    value_type coeff(index_type index) const {
+    value_type __attribute__((pure)) coeff(index_type index) const {
         return coeff_(0, m_data.size(), index);
     }
     value_type& insert_back(index_type index) {
@@ -111,6 +127,12 @@ struct SparseCompressedData<T, 0> {
         }
     }
 };
+
+template <typename T, rank_type N>
+    requires(N >= 0)
+SparseCompressedData<T, N>::~SparseCompressedData() {}
+template <typename T>
+SparseCompressedData<T, 0>::~SparseCompressedData() {}
 }  // namespace zipper::storage::detail
 
 #endif

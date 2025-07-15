@@ -7,6 +7,10 @@
 #pragma GCC diagnostic ignored "-Wpadded"
 #pragma GCC diagnostic ignored "-Weffc++"
 #pragma GCC diagnostic ignored "-Wextra-semi"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wunsafe-buffer-usage"
+#else
+#endif
 #include <experimental/mdspan>
 #pragma GCC diagnostic pop
 

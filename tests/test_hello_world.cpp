@@ -1,3 +1,7 @@
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-overflow"
+#include "catch_include.hpp"
+#include "fmt_include.hpp"
 
 #include <zipper/storage/PlainObjectStorage.hpp>
 #include <zipper/views/binary/ArithmeticViews.hpp>
@@ -5,8 +9,6 @@
 #include <zipper/views/unary/CastView.hpp>
 #include <zipper/views/unary/ScalarArithmeticViews.hpp>
 
-#include "catch_include.hpp"
-#include "fmt_include.hpp"
 
 TEST_CASE("test_storage", "[storage][dense]") {
     zipper::storage::PlainObjectStorage<double, zipper::extents<4, 4>> a;
@@ -27,7 +29,11 @@ TEST_CASE("test_storage", "[storage][dense]") {
         for (auto& v : bs) {
             v = j++;
         }
-        fmt::print("{}\n", fmt::join(bs, ","));
+        // this warning seems more an issue with fmt and print than me
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-overflow"
+        fmt::print("{}\n", bs);
+#pragma GCC diagnostic pop
     }
 
     for (zipper::index_type j = 0; j < a.extent(0); ++j) {
@@ -37,7 +43,11 @@ TEST_CASE("test_storage", "[storage][dense]") {
             a(j, k) = b(j, k);
         }
     }
-    fmt::print("{}\n", fmt::join(as, ","));
+        // this warning seems more an issue with fmt and print than me
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-overflow"
+    fmt::print("{}\n", as);
+#pragma GCC diagnostic pop
 
     zipper::views::unary::ScalarMultipliesView<double, decltype(a), false> spv(
         2.0, a);
@@ -95,3 +105,5 @@ TEST_CASE("test_storage", "[storage][dense]") {
         fmt::print("\n");
     }
 }
+
+#pragma GCC diagnostic pop

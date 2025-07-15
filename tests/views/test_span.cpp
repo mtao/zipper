@@ -1,5 +1,3 @@
-#include "../fmt_include.hpp"
-#include "../catch_include.hpp"
 #include <zipper/Form.hpp>
 #include <zipper/Matrix.hpp>
 #include <zipper/Tensor.hpp>
@@ -9,6 +7,9 @@
 #include <zipper/views/nullary/RandomView.hpp>
 #include <zipper/views/unary/PartialTraceView.hpp>
 #include <zipper/views/unary/SwizzleView.hpp>
+
+#include "../catch_include.hpp"
+#include "../fmt_include.hpp"
 
 TEST_CASE("test_span_construction", "[vector][storage][dense]") {
     {
@@ -81,13 +82,13 @@ TEST_CASE("test_span_construction", "[vector][storage][dense]") {
 
         using et = zipper::extents<4, 5>;
         zipper::Matrix<double, 4, 5, false>::span_type M(
-            std::span<double, 20>(data.data(), data.data() + 20));
+            std::span<double, 20>(data.data(), 20));
         zipper::Tensor_<double, et, false>::span_type T(
-            std::span<double, 20>(data.data(), data.data() + 20));
+            std::span<double, 20>(data.data(), 20));
         zipper::Form_<double, et, false>::span_type F(
-            std::span<double, 20>(data.data(), data.data() + 20));
+            std::span<double, 20>(data.data(), 20));
         zipper::Array_<double, et, false>::span_type A(
-            std::span<double, 20>(data.data(), data.data() + 20));
+            std::span<double, 20>(data.data(), 20));
         for (size_t j = 0; j < 4; ++j) {
             for (size_t k = 0; k < 5; ++k) {
                 CHECK(&data[j + k * 4] == &M(j, k));
@@ -103,13 +104,13 @@ TEST_CASE("test_span_construction", "[vector][storage][dense]") {
 
         using et = zipper::extents<4, 5>;
         zipper::Matrix<double, 4, 5, true>::span_type M(
-            std::span<double, 20>(data.data(), data.data() + 20));
+            std::span<double, 20>(data.data(), 20));
         zipper::Tensor_<double, et, true>::span_type T(
-            std::span<double, 20>(data.data(), data.data() + 20));
+            std::span<double, 20>(data.data(), 20));
         zipper::Form_<double, et, true>::span_type F(
-            std::span<double, 20>(data.data(), data.data() + 20));
+            std::span<double, 20>(data.data(), 20));
         zipper::Array_<double, et, true>::span_type A(
-            std::span<double, 20>(data.data(), data.data() + 20));
+            std::span<double, 20>(data.data(), 20));
         auto fv = F.view();
         auto tv = T.view();
         auto mv = M.view();
