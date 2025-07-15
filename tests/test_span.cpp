@@ -1,6 +1,4 @@
 
-#include <spdlog/spdlog.h>
-
 #include "catch_include.hpp"
 #include <iostream>
 #include <span>

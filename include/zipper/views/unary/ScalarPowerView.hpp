@@ -12,7 +12,7 @@ template <typename T>
 struct pow {
     constexpr auto operator()(const T& a, const T& b) const {
         return std::pow<T>(a, b);
-    };
+    }
 };
 }  // namespace detail
 

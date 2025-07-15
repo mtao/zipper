@@ -185,30 +185,30 @@ class ZipperBase {
     // so we will just return the view and let base class return things
     template <concepts::SliceLike... Slices>
     auto slice_view(Slices&&... slices) const {
-        using view_type =
+        using my_view_type =
             views::unary::SliceView<const view_type, std::decay_t<Slices>...>;
 
-        return view_type(view(), std::forward<Slices>(slices)...);
+        return my_view_type(view(), std::forward<Slices>(slices)...);
     }
 
     template <concepts::SliceLike... Slices>
     auto slice_view() const {
-        using view_type =
+        using my_view_type =
             views::unary::SliceView<const view_type, std::decay_t<Slices>...>;
-        return view_type(view(), Slices{}...);
+        return my_view_type(view(), Slices{}...);
     }
 
     template <concepts::SliceLike... Slices>
     auto slice_view(Slices&&... slices) {
-        using view_type =
+        using my_view_type =
             views::unary::SliceView<view_type, std::decay_t<Slices>...>;
-        return view_type(view(), std::forward<Slices>(slices)...);
+        return my_view_type(view(), std::forward<Slices>(slices)...);
     }
     template <concepts::SliceLike... Slices>
     auto slice_view() {
-        using view_type =
+        using my_view_type =
             views::unary::SliceView<view_type, std::decay_t<Slices>...>;
-        return view_type(view(), Slices{}...);
+        return my_view_type(view(), Slices{}...);
     }
 
    public:

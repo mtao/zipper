@@ -31,7 +31,7 @@ struct intersect_nonzeros {
         iterator_(iterator_&&) = default;
         iterator_& operator=(const iterator_& o) = default;
         iterator_& operator=(iterator_&& o) = default;
-        iterator_& operator++(int) {
+        iterator_ operator++(int) {
             iterator_ r = *this;
             ++(*this);
             return r;
@@ -69,7 +69,7 @@ struct intersect_nonzeros {
     };
     using iterator = iterator_;
     using const_iterator = iterator_;
-    intersect_nonzeros(const A& a, const B& b) : a(a), b(b) {}
+    intersect_nonzeros(const A& a_, const B& b_) : a(a_), b(b_) {}
     intersect_nonzeros(const intersect_nonzeros&) = default;
     intersect_nonzeros(intersect_nonzeros&&) = default;
 

@@ -1,8 +1,8 @@
 
 
 #include <zipper/views/unary/PartialTraceView.hpp>
-#include <spdlog/spdlog.h>
 
+#include "fmt_include.hpp"
 #include "catch_include.hpp"
 #include <zipper/views/nullary/UnitView.hpp>
 #include <iostream>

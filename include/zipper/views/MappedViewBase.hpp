@@ -30,7 +30,7 @@ class MappedViewBase : public ViewBase<Derived_> {
     const mapping_type& mapping() const { return m_mapping; }
 
     MappedViewBase()
-        requires(IsStatic)
+        requires(IsStatic): m_mapping()
     {}
     template <typename... Args>
     MappedViewBase(const extents_type& extents) : m_mapping(extents) {}

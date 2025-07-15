@@ -5,6 +5,8 @@
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #pragma GCC diagnostic ignored "-Wextra-semi"
 #pragma GCC diagnostic ignored "-Wpadded"
+#pragma GCC diagnostic ignored "-Weffc++"
+#pragma GCC diagnostic ignored "-Wextra-semi"
 #include <experimental/mdspan>
 #pragma GCC diagnostic pop
 
@@ -29,7 +31,6 @@ auto create_dextents(const Args&... args) {
 
 using full_extent_t = std::experimental::full_extent_t;
 using full_extent_type = std::experimental::full_extent_t;
-constexpr static full_extent_type full_extent;
 
 template <index_type N>
 using static_index_t = std::integral_constant<index_type, N>;

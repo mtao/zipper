@@ -79,7 +79,7 @@ class PartialTraceView
     template <typename... Args, rank_type N>
     auto get_index(std::integral_constant<rank_type, N>, Args&&... idxs) const {
         if constexpr (((N == Indices) || ...)) {
-            return zipper::full_extent;
+            return zipper::full_extent_t{};
         } else {
             constexpr static rank_type Index =
                 traits::index_remover::full_rank_to_reduced_indices[N];

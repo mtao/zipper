@@ -101,7 +101,7 @@ class DenseAccessor
     auto end() const { return m_data.end(); }
 
    private:
-    data_type m_data;
+    data_type m_data = {};
 };
 }  // namespace zipper::storage
 

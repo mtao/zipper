@@ -1,6 +1,6 @@
 #if !defined(ZIPPER_VIEWS_VIEWBASE_HPP)
 #define ZIPPER_VIEWS_VIEWBASE_HPP
-#include <experimental/mdspan>
+#include "zipper/types.hpp"
 #include <type_traits>
 
 #include "detail/ViewTraits.hpp"

@@ -12,6 +12,10 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winline"
 #pragma GCC diagnostic ignored "-Wpadded"
+#pragma GCC diagnostic ignored "-Wswitch-enum"
+#if !defined(__clang__)
+#pragma GCC diagnostic ignored "-Wabi-tag"
+#endif
 #include <fmt/format.h>
 #pragma GCC diagnostic pop
 

@@ -40,7 +40,6 @@ struct detail::ViewTraits<unary::SliceView<QualifiedViewType, Slices...>>
         requires(sizeof...(Indices) == Base::extents_type::rank())
     {
         constexpr size_t Rank = sizeof...(Indices);
-        std::array<rank_type, Rank> ret;
         using tuple_type = std::tuple<Slices...>;
         constexpr auto eval = []<rank_type J>(std::integral_constant<rank_type, J>) -> rank_type {
                 if (concepts::SliceLike<std::tuple_element_t<J, tuple_type>> &&
@@ -50,7 +49,7 @@ struct detail::ViewTraits<unary::SliceView<QualifiedViewType, Slices...>>
                     return std::dynamic_extent;
                 }
         };
-        std::array<rank_type, sizeof...(Indices)> r{{eval(std::integral_constant<size_t, Indices>{})...}};
+        std::array<rank_type, Rank> r{{eval(std::integral_constant<size_t, Indices>{})...}};
         rank_type index = 0;
         for(auto& v: r) {
             if(v == 0) {

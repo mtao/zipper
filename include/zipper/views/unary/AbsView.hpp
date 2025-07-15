@@ -6,7 +6,7 @@ namespace zipper::views::unary {
 namespace detail {
 template <typename A>
 struct abs {
-    constexpr A operator()(const A& a) const { return std::abs(a); };
+    constexpr A operator()(const A& a) const { return std::abs(a); }
 };
 }  // namespace detail
 

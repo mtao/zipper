@@ -93,7 +93,10 @@ class UnaryViewBase
     }
 
    private:
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpadded"
     const ChildType& m_view;
+#pragma GCC diagnostic pop
 };
 
 }  // namespace zipper::views::unary

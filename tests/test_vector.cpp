@@ -1,5 +1,4 @@
 
-#include <spdlog/spdlog.h>
 
 #include <zipper/concepts/shapes.hpp>
 #include "catch_include.hpp"

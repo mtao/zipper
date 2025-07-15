@@ -1,7 +1,7 @@
 
-#include <spdlog/spdlog.h>
 
 #include "../catch_include.hpp"
+#include "../fmt_include.hpp"
 #include <iostream>
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
@@ -138,12 +138,12 @@ TEST_CASE("test_matrix_slicing", "[extents][matrix][slice]") {
          MN.as_array()));
 
     CHECK((MN.slice<zipper::full_extent_t, zipper::full_extent_t>() == MN));
-    CHECK((MN.slice(zipper::full_extent, zipper::full_extent) == MN));
+    CHECK((MN.slice(zipper::full_extent_t{}, zipper::full_extent_t{}) == MN));
 
     // zipper::slice(zipper::index_type(1));
     {
         auto S =
-            MN.slice(zipper::slice(1, MN.extent(0) - 1), zipper::full_extent);
+            MN.slice(zipper::slice(1, MN.extent(0) - 1), zipper::full_extent_t{});
 
         REQUIRE(S.extent(0) == MN.extent(0) - 1);
         REQUIRE(S.extent(1) == MN.extent(1));
@@ -227,7 +227,7 @@ TEST_CASE("test_matrix_slicing", "[extents][matrix][slice]") {
     CHECK(slice2(2) == 100 * NN(1, 2));
     CHECK(slice2(3) == 100 * NN(1, 3));
     NN = MN;
-    auto slice3 = MN(2, zipper::full_extent);
+    auto slice3 = MN(2, zipper::full_extent_t{});
     slice3 = 50 * slice2;
     CHECK(slice3(0) == 50 * NN(1, 0));
     CHECK(slice3(1) == 50 * NN(1, 1));

@@ -1,6 +1,6 @@
-#include <spdlog/spdlog.h>
 
-#include <catch2/catch_all.hpp>
+#include "../../catch_include.hpp"
+#include "../../fmt_include.hpp"
 #include <iostream>
 #include <zipper/Matrix.hpp>
 #include <zipper/Tensor.hpp>

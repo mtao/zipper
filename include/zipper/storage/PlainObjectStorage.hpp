@@ -35,7 +35,7 @@ class PlainObjectStorage
 
     PlainObjectStorage()
         requires(IsStatic)
-        : ParentType() {}
+        : ParentType(), m_accessor() {}
 
     PlainObjectStorage(const PlainObjectStorage&) = default;
     PlainObjectStorage(PlainObjectStorage&&) = default;
@@ -47,7 +47,7 @@ class PlainObjectStorage
         : ParentType(extents), m_accessor(extents_traits::size(extents)) {}
     PlainObjectStorage(const extents_type& extents)
         requires(IsStatic)
-        : ParentType(extents) {}
+        : ParentType(extents), m_accessor() {}
 
     span_type as_span() {
         if constexpr (IsStatic) {

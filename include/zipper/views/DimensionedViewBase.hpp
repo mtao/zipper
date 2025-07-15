@@ -19,7 +19,7 @@ class DimensionedViewBase : public ViewBase<Derived_> {
         return static_cast<const Derived&>(*this);
     }
     DimensionedViewBase()
-        requires(IsStatic)
+        requires(IsStatic): m_extents({})
     {}
     template <typename... Args>
     DimensionedViewBase(const extents_type& extents) : m_extents(extents) {}
