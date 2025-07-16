@@ -4,6 +4,7 @@
 #include "zipper/views/binary/ArithmeticViews.hpp"
 #include "zipper/views/nullary/ConstantView.hpp"
 #include "zipper/views/unary/ScalarArithmeticViews.hpp"
+#include "zipper/views/reductions/All.hpp"
 
 namespace zipper {
 template <concepts::ViewDerived View>
@@ -85,8 +86,8 @@ TEST_CASE("TestOpMacros", "[macros]") {
     zipper::TestBase<zipper::views::nullary::ConstantView<double, 5>> B(4);
     zipper::TestBase<zipper::views::nullary::ConstantView<bool, 5>> C(true);
 
-    !(4.0 < A);
-    A* B;
-    (A > 4.0) == C;
-    (A < 4.0) == C;
+    CHECK(zipper::views::reductions::All(((A * B) == 20).view())());
+    CHECK(zipper::views::reductions::All(((A > 4.0) == C).view())());
+    CHECK(zipper::views::reductions::All(((A < 4.0) == C).view())());
+    CHECK(zipper::views::reductions::All((!(A < 4.0) != C).view())());
 }
