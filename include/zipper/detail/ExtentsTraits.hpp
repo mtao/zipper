@@ -1,7 +1,7 @@
 #if !defined(ZIPPER_STORAGE_DETAIL_STORAGE_TRAITS_HPP)
 #define ZIPPER_STORAGE_DETAIL_STORAGE_TRAITS_HPP
 
-#include "extents/convert_extents.hpp"
+#include "zipper/utils/extents/convert_extents.hpp"
 #include "extents/dynamic_extents_indices.hpp"
 #include "zipper/types.hpp"
 
@@ -56,17 +56,17 @@ struct ExtentsTraits {
         if constexpr (sizeof...(Indices) == 0 && is_static) {
             return {};
         } else {
-            return extents::convert_extents<Extents>(o);
+            return utils::extents::convert_extents<Extents>(o);
         }
     }
 
     template <concepts::ExtentsType Ext>
     constexpr static bool is_convertable_from() {
-        return extents::assignable_extents_v<Ext, extents_type>;
+        return utils::extents::assignable_extents_v<Ext, extents_type>;
     }
     template <concepts::ExtentsType Ext>
     constexpr static bool is_convertable_from(const Ext& o) {
-        return extents::assignable_extents<Ext, extents_type>::value_runtime(o);
+        return utils::extents::assignable_extents<Ext, extents_type>::value_runtime(o);
     }
 
     template <concepts::ExtentsType Ext>

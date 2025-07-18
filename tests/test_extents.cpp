@@ -2,7 +2,7 @@
 #include "catch_include.hpp"
 #include <zipper/concepts/shapes.hpp>
 #include <zipper/detail/extents/dynamic_extents_indices.hpp>
-#include <zipper/detail/extents/is_compatible.hpp>
+#include <zipper/utils/extents/is_compatible.hpp>
 #include <zipper/detail/extents/swizzle_extents.hpp>
 #include <zipper/storage/PlainObjectStorage.hpp>
 #include <zipper/types.hpp>
@@ -10,20 +10,20 @@
 
 using namespace zipper;
 TEST_CASE("test_extent_compatibility", "[extents]") {
-    // detail::extents::is_compatible(extents<3,3>{}, extents<3,3>{});
-    CHECK(detail::extents::is_compatible<3, 3>(extents<3, 3>{}));
-    CHECK(detail::extents::is_compatible<3>(extents<3>{}));
-    CHECK(detail::extents::is_compatible<3, 2>(
+    // utils::extents::is_compatible(extents<3,3>{}, extents<3,3>{});
+    CHECK(utils::extents::is_compatible<3, 3>(extents<3, 3>{}));
+    CHECK(utils::extents::is_compatible<3>(extents<3>{}));
+    CHECK(utils::extents::is_compatible<3, 2>(
         extents<3, std::dynamic_extent>{2}));
-    CHECK(detail::extents::is_compatible<2>(extents<std::dynamic_extent>{2}));
-    CHECK_FALSE(detail::extents::is_compatible<3, 3>(extents<2, 3>{}));
-    CHECK_FALSE(detail::extents::is_compatible<3>(extents<4>{}));
-    CHECK_FALSE(detail::extents::is_compatible<3, 2>(
+    CHECK(utils::extents::is_compatible<2>(extents<std::dynamic_extent>{2}));
+    CHECK_FALSE(utils::extents::is_compatible<3, 3>(extents<2, 3>{}));
+    CHECK_FALSE(utils::extents::is_compatible<3>(extents<4>{}));
+    CHECK_FALSE(utils::extents::is_compatible<3, 2>(
         extents<2, std::dynamic_extent>{3}));
-    CHECK_FALSE(detail::extents::is_compatible<3, 2>(
+    CHECK_FALSE(utils::extents::is_compatible<3, 2>(
         extents<3, std::dynamic_extent>{3}));
     CHECK_FALSE(
-        detail::extents::is_compatible<2>(extents<std::dynamic_extent>{3}));
+        utils::extents::is_compatible<2>(extents<std::dynamic_extent>{3}));
 
     CHECK(zipper::concepts::ValidExtents<extents<3, 3>, 3, 3>);
     CHECK(

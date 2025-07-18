@@ -1,10 +1,10 @@
-#if !defined(ZIPPER_DETAIL_EXTENTS_CONVERT_EXTENTS_HPP)
-#define ZIPPER_DETAIL_EXTENTS_CONVERT_EXTENTS_HPP
+#if !defined(ZIPPER_UTILS_EXTENTS_CONVERT_EXTENTS_HPP)
+#define ZIPPER_UTILS_EXTENTS_CONVERT_EXTENTS_HPP
 
 #include "assignable_extents.hpp"
 #include "zipper/types.hpp"
 
-namespace zipper::detail::extents {
+namespace zipper::utils::extents {
 
 template <typename, typename>
 struct ConvertExtents {};
@@ -48,5 +48,5 @@ A convert_extents(const zipper::extents<ToIndices...>& a) {
 //         ) {
 //     return ConvertExtents<extents<ToIndices...>, A>::run(a);
 // }
-}  // namespace zipper::detail::extents
+}  // namespace zipper::utils::extents
 #endif

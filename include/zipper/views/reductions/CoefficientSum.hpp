@@ -2,7 +2,7 @@
 #define ZIPPER_VIEWS_COEFFICIENTSUM_HPP
 
 #include "zipper/concepts/ViewDerived.hpp"
-#include "zipper/detail/extents/all_extents_indices.hpp"
+#include "zipper/utils/extents/all_extents_indices.hpp"
 #include "zipper/views/detail/ViewTraits.hpp"
 
 namespace zipper::views {
@@ -27,7 +27,7 @@ class CoefficientSum {
     value_type operator()() const {
         value_type v = 0.0;
         for (const auto& i :
-             zipper::detail::extents::all_extents_indices(m_view.extents())) {
+             zipper::utils::extents::all_extents_indices(m_view.extents())) {
             v += m_view(i);
         }
         return v;

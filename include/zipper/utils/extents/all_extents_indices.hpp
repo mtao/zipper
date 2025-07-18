@@ -1,5 +1,5 @@
-#if !defined(ZIPPER_DETAIL_EXTENTS_ALL_EXTENT_INDICES_HPP)
-#define ZIPPER_DETAIL_EXTENTS_ALL_EXTENT_INDICES_HPP
+#if !defined(ZIPPER_UTILS_EXTENTS_ALL_EXTENT_INDICES_HPP)
+#define ZIPPER_UTILS_EXTENTS_ALL_EXTENT_INDICES_HPP
 
 // compressed_tuple is in use but deprecated, not sure how to stop it
 #pragma GCC diagnostic push
@@ -25,7 +25,7 @@
 
 #include "zipper/types.hpp"
 
-namespace zipper::detail::extents {
+namespace zipper::utils::extents {
 
 template <index_type... SIndices, index_type... Indices>
 auto all_extents_indices(const zipper::extents<SIndices...>& extents,
@@ -52,5 +52,5 @@ template <typename... Args>
 auto all_extents_indices(Args... indices) {
     return all_extents_indices(dextents<sizeof...(Args)>{indices...});
 }
-}  // namespace zipper::detail::extents
+}  // namespace zipper::utils::extents
 #endif

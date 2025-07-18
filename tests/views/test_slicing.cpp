@@ -148,7 +148,7 @@ TEST_CASE("test_matrix_slicing", "[extents][matrix][slice]") {
         REQUIRE(S.extent(0) == MN.extent(0) - 1);
         REQUIRE(S.extent(1) == MN.extent(1));
         for (const auto& [a, b] :
-             zipper::detail::extents::all_extents_indices(S.extents())) {
+             zipper::utils::extents::all_extents_indices(S.extents())) {
             static_assert(std::is_integral_v<std::decay_t<decltype(a)>>);
             static_assert(std::is_integral_v<std::decay_t<decltype(b)>>);
             CHECK(S(a, b) == MN(a + 1, b));

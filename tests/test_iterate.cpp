@@ -2,13 +2,13 @@
 
 #include "fmt_include.hpp"
 #include "catch_include.hpp"
-#include <zipper/detail/extents/all_extents_indices.hpp>
+#include <zipper/utils/extents/all_extents_indices.hpp>
 #include <zipper/views/detail/intersect_nonzeros.hpp>
 #include <zipper/Vector.hpp>
 using namespace zipper;
 
 TEST_CASE("test_all_extents", "[storage][dense]") {
-    for (const auto& ind : zipper::detail::extents::all_extents_indices(3, 4)) {
+    for (const auto& ind : zipper::utils::extents::all_extents_indices(3, 4)) {
         // auto v = ind | ranges::views::transform([](auto i) { return 2 * i;
         // });
 

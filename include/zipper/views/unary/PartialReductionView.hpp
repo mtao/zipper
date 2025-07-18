@@ -4,7 +4,7 @@
 #include "UnaryViewBase.hpp"
 #include "detail/invert_integer_sequence.hpp"
 #include "zipper/concepts/ViewDerived.hpp"
-#include "zipper/detail/extents/extents_formatter.hpp"
+#include "zipper/utils/extents/extents_formatter.hpp"
 #include "zipper/detail/extents/static_extents_to_array.hpp"
 #include "zipper/detail/pack_index.hpp"
 #include "zipper/views/concepts/ReductionViewLike.hpp"
@@ -114,7 +114,7 @@ class PartialReductionView
 
     template <typename... Args>
     value_type coeff(Args&&... idxs) const {
-        zipper::detail::extents::indices_in_range(extents(), idxs...);
+        zipper::utils::extents::indices_in_range(extents(), idxs...);
         return _coeff(
             std::make_integer_sequence<rank_type,
                                        ViewType::extents_type::rank()>{},

@@ -4,8 +4,8 @@
 
 #include "zipper/concepts/TupleLike.hpp"
 #include "zipper/concepts/ViewDerived.hpp"
-#include "zipper/detail/extents/all_extents_indices.hpp"
-#include "zipper/detail/extents/convert_extents.hpp"
+#include "zipper/utils/extents/all_extents_indices.hpp"
+#include "zipper/utils/extents/convert_extents.hpp"
 #include "zipper/detail/pack_index.hpp"
 #include "zipper/views/detail/ViewTraits.hpp"
 
@@ -33,7 +33,7 @@ struct folded_extents<extents<N...>> {
                          : base_extents_type::static_extent(M))...>;
 
         extents_type get_extents(const base_extents_type& e) {
-            return zipper::detail::extents::convert_extents<base_extents_type,
+            return zipper::utils::extents::convert_extents<base_extents_type,
                                                          M...>(e);
         }
     };
@@ -79,7 +79,7 @@ class Contraction {
     value_type operator()() const {
         value_type v = 0.0;
         for (const auto& i :
-             zipper::detail::extents::all_extents_indices(m_extents)) {
+             zipper::utils::extents::all_extents_indices(m_extents)) {
             v += coeff_(
                 i,
                 std::make_integer_sequence<rank_type, extents_type::rank()>{});

@@ -49,7 +49,7 @@ class MappedViewBase : public ViewBase<Derived_> {
         static_assert((!concepts::TupleLike<Indices> && ...));
 #if !defined(NDEBUG)
         assert(
-            zipper::detail::extents::indices_in_range(extents(), indices...));
+            zipper::utils::extents::indices_in_range(extents(), indices...));
 #endif
         index_type r = mapping()(std::forward<Indices>(indices)...);
         return r;

@@ -2,7 +2,7 @@
 #define ZIPPER_VIEWS_ANY_HPP
 
 #include "zipper/concepts/ViewDerived.hpp"
-#include "zipper/detail/extents/all_extents_indices.hpp"
+#include "zipper/utils/extents/all_extents_indices.hpp"
 #include "zipper/views/detail/ViewTraits.hpp"
 
 namespace zipper::views {
@@ -26,7 +26,7 @@ class Any {
 
     value_type operator()() const {
         for (const auto& i :
-             zipper::detail::extents::all_extents_indices(m_view.extents())) {
+             zipper::utils::extents::all_extents_indices(m_view.extents())) {
             if (value_type(m_view(i))) {
                 return true;
             }

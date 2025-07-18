@@ -7,8 +7,8 @@
 #include "detail/swap_parity.hpp"
 #include "zipper/concepts/TupleLike.hpp"
 #include "zipper/concepts/ViewDerived.hpp"
-#include "zipper/detail/extents/all_extents_indices.hpp"
-#include "zipper/detail/extents/convert_extents.hpp"
+#include "zipper/utils/extents/all_extents_indices.hpp"
+#include "zipper/utils/extents/convert_extents.hpp"
 #include "zipper/detail/pack_index.hpp"
 #include "zipper/views/detail/ViewTraits.hpp"
 

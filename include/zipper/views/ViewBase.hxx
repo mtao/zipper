@@ -2,7 +2,7 @@
 #define ZIPPER_VIEWS_VIEWBASE_HXX
 
 #include "ViewBase.hpp"
-#include "zipper/detail/extents/indices_in_range.hpp"
+#include "zipper/utils/extents/indices_in_range.hpp"
 #include "zipper/detail/tuple_size.hpp"
 
 namespace zipper::views {
@@ -141,7 +141,7 @@ auto ViewBase<Derived>::access_index_pack(Args&&... idxs) const
     requires(concepts::SlicePackLike<Args...>)
 {
 #if !defined(NDEBUG)
-    zipper::detail::extents::indices_in_range(extents(), idxs...);
+    zipper::utils::extents::indices_in_range(extents(), idxs...);
 #endif
     if constexpr (is_writable) {
         return const_coeff_ref(std::forward<Args>(idxs)...);
@@ -170,7 +170,7 @@ auto ViewBase<Derived>::access_index_pack(Args&&... idxs) -> decltype(auto)
     requires(concepts::SlicePackLike<Args...>)
 {
 #if !defined(NDEBUG)
-    zipper::detail::extents::indices_in_range(extents(), idxs...);
+    zipper::utils::extents::indices_in_range(extents(), idxs...);
 #endif
     return coeff_ref(std::forward<Args>(idxs)...);
 }

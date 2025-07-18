@@ -5,7 +5,7 @@
 
 #include "UnaryViewBase.hpp"
 #include "zipper/concepts/ViewDerived.hpp"
-#include "zipper/detail/extents/all_extents_indices.hpp"
+#include "zipper/utils/extents/all_extents_indices.hpp"
 #include "zipper/detail/extents/swizzle_extents.hpp"
 #include "zipper/storage/PlainObjectStorage.hpp"
 #include "zipper/views/DimensionedViewBase.hpp"

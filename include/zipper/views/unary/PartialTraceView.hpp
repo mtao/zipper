@@ -5,7 +5,7 @@
 #include "UnaryViewBase.hpp"
 #include "detail/invert_integer_sequence.hpp"
 #include "zipper/concepts/ViewDerived.hpp"
-#include "zipper/detail/extents/extents_formatter.hpp"
+#include "zipper/utils/extents/extents_formatter.hpp"
 #include "zipper/detail/extents/static_extents_to_array.hpp"
 #include "zipper/detail/pack_index.hpp"
 #include "zipper/views/reductions/CoefficientSum.hpp"
@@ -104,7 +104,7 @@ class PartialTraceView
 
     template <typename... Args>
     value_type coeff(Args&&... idxs) const {
-        zipper::detail::extents::indices_in_range(extents(), idxs...);
+        zipper::utils::extents::indices_in_range(extents(), idxs...);
         if constexpr (sizeof...(Indices) == 0) {
             return view().coeff(std::forward<Args>(idxs)...);
         } else {

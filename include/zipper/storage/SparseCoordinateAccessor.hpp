@@ -279,7 +279,7 @@ class SparseCoordinateAccessor
         static_assert((!concepts::TupleLike<Indices> && ...));
 #if !defined(NDEBUG)
         assert(
-            zipper::detail::extents::indices_in_range(extents(), indices...));
+            zipper::utils::extents::indices_in_range(extents(), indices...));
 #endif
         if (m_compressed) {
             if (data_size() == 0) {

@@ -4,7 +4,7 @@
 #define ZIPPER_VIEWS_BINARY_OPERATIONVIEW_HPP
 
 #include "BinaryViewBase.hpp"
-#include "zipper/detail/extents/extents_formatter.hpp"
+#include "zipper/utils/extents/extents_formatter.hpp"
 #include "detail/CoeffWiseTraits.hpp"
 #include "zipper/concepts/ViewDerived.hpp"
 

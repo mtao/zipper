@@ -18,7 +18,7 @@ auto _minCoeff(const D& d) {
     using AT = std::array<index_type, rank>;
     AT arr;
     for (const auto& i :
-         zipper::detail::extents::all_extents_indices(d.extents())) {
+         zipper::utils::extents::all_extents_indices(d.extents())) {
         T v = d(i);
         if (v < min) {
             min = v;

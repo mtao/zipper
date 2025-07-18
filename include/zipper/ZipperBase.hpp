@@ -64,7 +64,7 @@ class ZipperBase {
     template <concepts::ViewDerived Other>
     ZipperBase(const Other& other)
         requires(view_type::is_writable &&
-                 detail::extents::assignable_extents_v<
+                 zipper::utils::extents::assignable_extents_v<
                      typename Other::extents_type, extents_type>)
         : m_view(extents_traits::convert_from(other.extents())) {
         m_view.assign(other);
@@ -77,7 +77,7 @@ class ZipperBase {
     template <concepts::ViewDerived Other>
     Derived& operator=(const Other& other)
         requires(view_type::is_writable &&
-                 detail::extents::assignable_extents_v<
+                 zipper::utils::extents::assignable_extents_v<
                      typename Other::extents_type, extents_type>)
     {
         m_view.assign(other);
@@ -89,7 +89,7 @@ class ZipperBase {
     template <concepts::ViewDerived Other>
     Derived& operator=(Other&& other)
         requires(view_type::is_writable &&
-                 detail::extents::assignable_extents_v<
+                 zipper::utils::extents::assignable_extents_v<
                      typename Other::extents_type, extents_type>)
     {
         m_view.assign(other);
@@ -98,24 +98,6 @@ class ZipperBase {
         return derived();
 #pragma GCC diagnostic pop
     }
-    // template <concepts::ZipperBaseDerived Other>
-    // Derived& operator=(const Other& other)
-    //     requires(view_type::is_writable &&
-    //              detail::extents::assignable_extents_v<
-    //                  typename Other::extents_type, extents_type>)
-    //{
-    //     m_view.assign(other.view());
-    //     return derived();
-    // }
-    // template <concepts::ZipperBaseDerived Other>
-    // Derived& operator=(Other&& other)
-    //     requires(view_type::is_writable &&
-    //              detail::extents::assignable_extents_v<
-    //                  typename Other::extents_type, extents_type>)
-    //{
-    //     m_view.assign(other.view());
-    //     return derived();
-    // }
 
     template <concepts::ZipperBaseDerived Other>
     Derived& operator+=(const Other& other)

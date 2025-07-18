@@ -4,7 +4,7 @@
 #include <zipper/concepts/MatrixBaseDerived.hpp>
 
 #include "detail/tuple_to_array.hpp"
-#include "zipper/detail/extents/is_compatible.hpp"
+#include "zipper/utils/extents/is_compatible.hpp"
 #include "zipper/detail/extents/swizzle_extents.hpp"
 #include "zipper/views/reductions/Determinant.hpp"
 namespace zipper::utils {
@@ -12,7 +12,7 @@ namespace zipper::utils {
 namespace detail {
 template <zipper::concepts::MatrixBaseDerived D>
 auto inverse2d(const D& M) {
-    zipper::detail::extents::throw_if_not_compatible<2, 2>(M.extents());
+    zipper::utils::extents::throw_if_not_compatible<2, 2>(M.extents());
     auto extents = zipper::detail::extents::swizzle_extents<1, 0>(M.extents());
     using extents_type = std::decay_t<decltype(extents)>;
 
@@ -38,7 +38,7 @@ auto inverse2d(const D& M) {
 }
 template <zipper::concepts::MatrixBaseDerived D>
 auto inverse3d(const D& M) {
-    zipper::detail::extents::throw_if_not_compatible<3, 3>(M.extents());
+    zipper::utils::extents::throw_if_not_compatible<3, 3>(M.extents());
     auto extents = zipper::detail::extents::swizzle_extents<1, 0>(M.extents());
     using extents_type = std::decay_t<decltype(extents)>;
 
@@ -73,9 +73,9 @@ auto inverse3d(const D& M) {
 template <zipper::concepts::MatrixBaseDerived D>
 auto inverse(const D& d) {
     const auto& extents = d.extents();
-    if (zipper::detail::extents::is_compatible<2, 2>(extents)) {
+    if (zipper::utils::extents::is_compatible<2, 2>(extents)) {
         return detail::inverse2d(d);
-    } else if (zipper::detail::extents::is_compatible<3, 3>(extents)) {
+    } else if (zipper::utils::extents::is_compatible<3, 3>(extents)) {
         return detail::inverse3d(d);
     }
     // TODO: implement a general inverse view perhaps?

@@ -1,7 +1,7 @@
 #
 
-#if !defined(ZIPPER_DETAIL_EXTENTS_INDICES_IN_RANGE_HPP)
-#define ZIPPER_DETAIL_EXTENTS_INDICES_IN_RANGE_HPP
+#if !defined(ZIPPER_UTILS_EXTENTS_INDICES_IN_RANGE_HPP)
+#define ZIPPER_UTILS_EXTENTS_INDICES_IN_RANGE_HPP
 
 #include "zipper/concepts/ExtentsType.hpp"
 #include "zipper/concepts/IndexPackLike.hpp"
@@ -10,7 +10,7 @@
 #include "zipper/concepts/ViewAccessPack.hpp"
 #include "zipper/types.hpp"
 
-namespace zipper::detail::extents {
+namespace zipper::utils::extents {
 
 template <concepts::ExtentsType Extents, typename... Indices, rank_type... N>
     requires(concepts::IndexPackLike<Indices...>)
@@ -63,5 +63,5 @@ bool indices_in_range(const Extents& e, const Indices&... i) {
             std::make_integer_sequence<rank_type, Extents::rank()>{}, e, i...);
     }
 }
-}  // namespace zipper::detail::extents
+}  // namespace zipper::utils::extents
 #endif

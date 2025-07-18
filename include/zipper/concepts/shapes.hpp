@@ -4,7 +4,7 @@
 
 #include "ExtentsType.hpp"
 #include "ZipperBaseDerived.hpp"
-#include "zipper/detail/extents/is_compatible.hpp"
+#include "zipper/utils/extents/is_compatible.hpp"
 
 namespace zipper {
 template <template <concepts::ViewDerived> typename DerivedT,
@@ -17,7 +17,7 @@ namespace detail {
 template <typename T, index_type... Shapes>
 struct ValidExtents {
     constexpr static bool value =
-        zipper::detail::extents::detail::is_compatible<true, typename T::extents_type>(
+        zipper::utils::extents::detail::is_compatible<true, typename T::extents_type>(
             std::integer_sequence<index_type, Shapes...>{},
             std::make_integer_sequence<rank_type, T::extents_type::rank()>{});
 };
@@ -25,7 +25,7 @@ struct ValidExtents {
 template <ExtentsType Ext, index_type... Shapes>
 struct ValidExtents<Ext, Shapes...> {
     constexpr static bool value =
-        zipper::detail::extents::detail::is_compatible<true, Ext>(
+        zipper::utils::extents::detail::is_compatible<true, Ext>(
             std::integer_sequence<index_type, Shapes...>{},
             std::make_integer_sequence<rank_type, Ext::rank()>{});
 };

@@ -1,13 +1,13 @@
 
-#if !defined(ZIPPER_DETAIL_EXTENTS_IS_CUBIC_HPP)
-#define ZIPPER_DETAIL_EXTENTS_IS_CUBIC_HPP
+#if !defined(ZIPPER_UTILS_EXTENTS_IS_CUBIC_HPP)
+#define ZIPPER_UTILS_EXTENTS_IS_CUBIC_HPP
 #include "zipper/types.hpp"
 
 #include "zipper/concepts/ExtentsType.hpp"
 #include "zipper/detail/ExtentsTraits.hpp"
 #include "zipper/detail/pack_index.hpp"
 
-namespace zipper::detail::extents {
+namespace zipper::utils::extents {
 namespace detail {
 template <zipper::concepts::ExtentsType Ext, rank_type... N>
 constexpr index_type max_dim(std::integer_sequence<rank_type, N...>) {
@@ -92,6 +92,6 @@ constexpr void throw_if_not_cubic(const Ext& ext) {
         }
     }
 }
-}  // namespace zipper::detail::extents
+}  // namespace zipper::utils::extents
 
 #endif

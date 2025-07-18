@@ -7,7 +7,7 @@
 #include "zipper/views/detail/AssignHelper.hpp"
 #include "detail/DenseStorageViewTraits.hpp"
 #include "zipper/concepts/TupleLike.hpp"
-#include "zipper/detail/extents/all_extents_indices.hpp"
+#include "zipper/utils/extents/all_extents_indices.hpp"
 namespace zipper::views::nullary {
 template <typename Derived_>
 class DenseStorageViewBase : public MappedViewBase<Derived_> {

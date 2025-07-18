@@ -241,7 +241,7 @@ class AntiSliceView
     template <concepts::ViewDerived V>
     void assign_direct(const V& view) {
         assert(extents() == view.extents());
-        for (const auto& i : zipper::detail::extents::all_extents_indices(extents())) {
+        for (const auto& i : zipper::utils::extents::all_extents_indices(extents())) {
             (*this)(i) = view(i);
         }
     }

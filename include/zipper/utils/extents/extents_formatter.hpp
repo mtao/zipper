@@ -1,5 +1,5 @@
-#if !defined(ZIPPER_DETAIL_EXTENTS_EXTENTS_FORMATTER_HPP)
-#define ZIPPER_DETAIL_EXTENTS_EXTENTS_FORMATTER_HPP
+#if !defined(ZIPPER_UTILS_EXTENTS_EXTENTS_FORMATTER_HPP)
+#define ZIPPER_UTILS_EXTENTS_EXTENTS_FORMATTER_HPP
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wtautological-compare"
 #pragma GCC diagnostic ignored "-Winline"

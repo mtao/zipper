@@ -117,7 +117,7 @@ struct SparseCompressedData<T, 0> {
         if (m_data.empty()) {
             return std::get<1>(m_data.emplace_back(index, 0));
         } else {
-            auto sp = std::span(m_data);  //.subspan(start, size);
+            //auto sp = std::span(m_data);  //.subspan(start, size);
             // if (std::get<0>(sp.back()) < index) {
             return std::get<1>(m_data.emplace_back(index, 0));
             //} else {

@@ -1,8 +1,8 @@
-#if !defined(ZIPPER_VIEWS_DETAIL_ASSIGNABLE_EXTENTS_HPP)
-#define ZIPPER_VIEWS_DETAIL_ASSIGNABLE_EXTENTS_HPP
+#if !defined(ZIPPER_VIEWS_UTILS_ASSIGNABLE_EXTENTS_HPP)
+#define ZIPPER_VIEWS_UTILS_ASSIGNABLE_EXTENTS_HPP
 #include "zipper/concepts/ExtentsType.hpp"
 #include "zipper/types.hpp"
-namespace zipper::detail::extents {
+namespace zipper::utils::extents {
 
 // assigns the first parameter into the second parameter
 template <typename, typename>

@@ -3,7 +3,7 @@
 #include "zipper/views/detail/ViewTraits.hpp"
 #include "zipper/concepts/ViewDerived.hpp"
 #include "zipper/detail/ExtentsTraits.hpp"
-#include "zipper/detail/extents/all_extents_indices.hpp"
+#include "zipper/utils/extents/all_extents_indices.hpp"
 namespace zipper::storage {
 template <typename ValueType, typename Extents, typename LayoutPolicy,
           typename AccessorPolicy>
@@ -37,7 +37,7 @@ struct AssignHelper {
             to() = from();
         } else {
             for (const auto& i :
-                 zipper::detail::extents::all_extents_indices(to.extents())) {
+                 zipper::utils::extents::all_extents_indices(to.extents())) {
                 to(i) = from(i);
             }
         }

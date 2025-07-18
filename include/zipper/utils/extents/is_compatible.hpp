@@ -1,12 +1,12 @@
-#if !defined(ZIPPER_DETAIL_EXTENTS_IS_COMPATIBLE_HPP)
-#define ZIPPER_DETAIL_EXTENTS_IS_COMPATIBLE_HPP
+#if !defined(ZIPPER_UTILS_EXTENTS_IS_COMPATIBLE_HPP)
+#define ZIPPER_UTILS_EXTENTS_IS_COMPATIBLE_HPP
 #include "zipper/types.hpp"
 
 #include "zipper/concepts/ExtentsType.hpp"
 #include "zipper/detail/ExtentsTraits.hpp"
 #include "zipper/detail/pack_index.hpp"
 
-namespace zipper::detail::extents {
+namespace zipper::utils::extents {
 namespace detail {
 template <bool AllowDynamic, rank_type N, zipper::concepts::ExtentsType Ext,
           index_type... Sizes>
@@ -108,6 +108,6 @@ constexpr void throw_if_not_compatible(const Ext& ext) {
         }
     }
 }
-}  // namespace zipper::detail::extents
+}  // namespace zipper::utils::extents
 
 #endif
