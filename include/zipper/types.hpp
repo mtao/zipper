@@ -23,6 +23,9 @@ using rank_type = std::size_t;
 template <index_type... Extents>
 using extents = std::experimental::extents<index_type, Extents...>;
 
+template <int64_t... Extents>
+using signed_extents = std::experimental::extents<int64_t, Extents...>;
+
 // fully dynamic extents
 template <rank_type N>
 using dextents = std::experimental::dextents<index_type, N>;
