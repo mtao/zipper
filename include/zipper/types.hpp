@@ -11,7 +11,11 @@
 #pragma GCC diagnostic ignored "-Wunsafe-buffer-usage"
 #else
 #endif
+#if defined(__cpp_lib_mdspan)
+#include <mdspan>
+#else
 #include <experimental/mdspan>
+#endif
 #pragma GCC diagnostic pop
 
 #include "concepts/IndexLike.hpp"
@@ -21,10 +25,12 @@ struct empty {};
 using index_type = std::size_t;
 using rank_type = std::size_t;
 template <index_type... Extents>
+#if defined(__cpp_lib_mdspan)
+using extents = std::extents<index_type, Extents...>;
+#else
 using extents = std::experimental::extents<index_type, Extents...>;
+#endif
 
-template <int64_t... Extents>
-using signed_extents = std::experimental::extents<int64_t, Extents...>;
 
 // fully dynamic extents
 template <rank_type N>

@@ -86,8 +86,8 @@ TEST_CASE("TestOpMacros", "[macros]") {
     zipper::TestBase<zipper::views::nullary::ConstantView<double, 5>> B(4);
     zipper::TestBase<zipper::views::nullary::ConstantView<bool, 5>> C(true);
 
-    CHECK(zipper::views::reductions::All(((A * B) == 20).view())());
+    CHECK(zipper::views::reductions::All(((A * B) == 20.0).view())());
     CHECK(zipper::views::reductions::All(((A > 4.0) == C).view())());
     CHECK(zipper::views::reductions::All(((A < 4.0) == C).view())());
-    CHECK(zipper::views::reductions::All((!(A < 4.0) != C).view())());
+    CHECK(zipper::views::reductions::All((!((A < 4.0) != C)).view())());
 }
