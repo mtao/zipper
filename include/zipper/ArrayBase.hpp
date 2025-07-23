@@ -4,6 +4,7 @@
 #include "ZipperBase.hpp"
 #include "views/reductions/All.hpp"
 #include "views/reductions/Any.hpp"
+#include "views/reductions/CoefficientProduct.hpp"
 #include "views/reductions/CoefficientSum.hpp"
 #include "views/unary/SliceView.hpp"
 #include "zipper/types.hpp"
@@ -107,19 +108,25 @@ class ArrayBase : public ZipperBase<ArrayBase, View> {
         return ArrayBase<views::unary::AbsView<view_type>>(view());
     }
 
+    value_type sum() const {
+        return views::reductions::CoefficientSum{view()}();
+    }
+
+    value_type product() const {
+        return views::reductions::CoefficientProduct{view()}();
+    }
+
     template <index_type T>
     value_type norm_powered() const {
         if constexpr (T == 1) {
-            return views::reductions::CoefficientSum{abs().view()}();
+            return abs().sum();
         } else if constexpr (T == 2) {
-            return views::reductions::CoefficientSum{(*this * *this).view()}();
+            return (*this * *this).sum();
         } else {
-            return views::reductions::CoefficientSum{pow(T).abs().view()}();
+            return pow(T).abs().sum();
         }
     }
-    value_type norm_powered(value_type T) const {
-        return views::reductions::CoefficientSum{pow(T).abs().view()}();
-    }
+    value_type norm_powered(value_type T) const { return pow(T).abs().sum(); }
 
     template <index_type T = 2>
     value_type norm() const {
@@ -208,7 +215,8 @@ SCALAR_BINARY_DECLARATION(ArrayBase, Greater, operator>)
 SCALAR_BINARY_DECLARATION(ArrayBase, Less, operator<)
 SCALAR_BINARY_DECLARATION(ArrayBase, GreaterEqual, operator>=)
 SCALAR_BINARY_DECLARATION(ArrayBase, LessEqual, operator<=)
-    // GCC notes that these operators don't allow short circuiting, but that's ok for our views
+// GCC notes that these operators don't allow short circuiting, but that's ok
+// for our views
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Weffc++"
 SCALAR_BINARY_DECLARATION(ArrayBase, LogicalAnd, operator&&)
@@ -230,7 +238,8 @@ BINARY_DECLARATION(ArrayBase, Less, operator<)
 BINARY_DECLARATION(ArrayBase, GreaterEqual, operator>=)
 BINARY_DECLARATION(ArrayBase, LessEqual, operator<=)
 
-    // GCC notes that these operators don't allow short circuiting, but that's ok for our views
+// GCC notes that these operators don't allow short circuiting, but that's ok
+// for our views
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Weffc++"
 BINARY_DECLARATION(ArrayBase, LogicalAnd, operator&&)
