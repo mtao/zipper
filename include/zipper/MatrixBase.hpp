@@ -268,16 +268,20 @@ class MatrixBase : public ZipperBase<MatrixBase, View> {
     }
 
     auto rowwise() {
-        return detail::PartialReductionDispatcher<VectorBase,view_type, 0>(view());
-    }
-    auto colwise() {
+        // we're reducing the first cols
         return detail::PartialReductionDispatcher<VectorBase,view_type, 1>(view());
     }
+    auto colwise() {
+        // we're reducing the first rows
+        return detail::PartialReductionDispatcher<VectorBase,view_type, 0>(view());
+    }
     auto rowwise() const {
-        return detail::PartialReductionDispatcher<VectorBase,const view_type, 0>(view());
+        // we're reducing the first cols
+        return detail::PartialReductionDispatcher<VectorBase,const view_type, 1>(view());
     }
     auto colwise() const {
-        return detail::PartialReductionDispatcher<VectorBase,const view_type, 1>(view());
+        // we're reducing the first rows
+        return detail::PartialReductionDispatcher<VectorBase,const view_type, 0>(view());
     }
 };
 
