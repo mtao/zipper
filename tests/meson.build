@@ -27,3 +27,4 @@ test_declare_operations = executable('test_declare_operations', 'test_declare_op
  subdir('storage')
  subdir('views')
  subdir('utils')
+ subdir('detail')
