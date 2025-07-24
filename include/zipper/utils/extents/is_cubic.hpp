@@ -1,11 +1,10 @@
 
 #if !defined(ZIPPER_UTILS_EXTENTS_IS_CUBIC_HPP)
 #define ZIPPER_UTILS_EXTENTS_IS_CUBIC_HPP
-#include "zipper/types.hpp"
-
 #include "zipper/concepts/ExtentsType.hpp"
 #include "zipper/detail/ExtentsTraits.hpp"
 #include "zipper/detail/pack_index.hpp"
+#include "zipper/types.hpp"
 
 namespace zipper::utils::extents {
 namespace detail {
@@ -39,7 +38,9 @@ bool is_cubic(const Ext& ext, std::integer_sequence<rank_type, N...> n) {
 template <zipper::concepts::ExtentsType Ext, rank_type... N>
 constexpr bool is_cubic(std::integer_sequence<rank_type, N...> n) {
     constexpr static index_type max = max_dim<Ext>(n);
-    return ((Ext::static_extent(N) == max) && ...);
+    return ((Ext::static_extent(N) == std::dynamic_extent ||
+             Ext::static_extent(N) == max) &&
+            ...);
 }
 
 }  // namespace detail
@@ -57,7 +58,6 @@ constexpr bool is_cubic(std::integer_sequence<rank_type, N...> n) {
         }
 */
 template <zipper::concepts::ExtentsType Ext>
-    requires(Ext::rank_dynamic() == 0)
 constexpr bool is_cubic() {
     return detail::is_cubic<Ext>(
         std::make_integer_sequence<rank_type, Ext::rank()>{});
