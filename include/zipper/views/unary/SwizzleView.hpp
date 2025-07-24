@@ -34,7 +34,6 @@ struct detail::ViewTraits<unary::SwizzleView<QualifiedViewType, Indices...>>
     constexpr static bool is_writable = Base::is_writable;
     constexpr static bool is_coefficient_consistent = false;
     constexpr static bool is_value_based = false;
-    constexpr static bool is_resizable = false;
 };
 
 namespace unary {

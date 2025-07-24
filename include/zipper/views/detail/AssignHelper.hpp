@@ -53,7 +53,8 @@ struct AssignHelper {
         if constexpr (FromTraits::is_coefficient_consistent) {
             if constexpr (should_resize) {
                 to.resize(from.extents());
-            } else if constexpr (to_extents_traits::is_dynamic) {
+            } else if constexpr (to_extents_traits::is_dynamic &&
+                                 !assigning_from_infinite) {
                 assert(to.extents() == from.extents());
             }
 
