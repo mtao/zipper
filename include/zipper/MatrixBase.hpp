@@ -40,6 +40,8 @@ class MatrixBase : public ZipperBase<MatrixBase, View> {
     using Base::cast;
     using Base::swizzle;
     using Base::view;
+    using Base::extents;
+    using Base::extent;
 
     auto eval() const { return Matrix(*this); }
 
@@ -66,8 +68,8 @@ class MatrixBase : public ZipperBase<MatrixBase, View> {
     value_type trace() const { return views::reductions::Trace(view())(); }
 
    public:
-    constexpr index_type rows() const { return extents().extent(0); }
-    constexpr index_type cols() const { return extents().extent(1); }
+    constexpr index_type rows() const { return extent(0); }
+    constexpr index_type cols() const { return extent(1); }
 
     template <typename Slice>
     auto row() {
