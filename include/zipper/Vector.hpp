@@ -29,8 +29,8 @@ class Vector
     Vector(const Vector& o) = default;
     Vector& operator=(const Vector& o) = default;
     Vector(Vector&& o) = default;
-    //Vector(Vector&& o):Base(std::move(o.view())) {
-    //}
+    // Vector(Vector&& o):Base(std::move(o.view())) {
+    // }
     Vector& operator=(Vector&& o) {
         view().operator=(std::move(o.view()));
         return *this;
@@ -38,6 +38,16 @@ class Vector
     Vector(index_type size)
         requires(extents_traits::is_dynamic)
         : Base(zipper::extents<Rows>(size)) {}
+
+#if defined(NDEBUG)
+    Vector(index_type)
+#else
+    Vector(index_type rows)
+#endif
+        requires(extents_traits::is_static)
+        : Base() {
+        assert(rows == extent(0));
+    }
 
     template <index_type R2>
     Vector(const Vector<value_type, R2>& other) : Base(other.view()) {}

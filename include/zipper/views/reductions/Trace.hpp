@@ -9,7 +9,7 @@
 namespace zipper::views {
 namespace reductions {
 
-template <concepts::ViewDerived View>
+template <zipper::concepts::ViewDerived View>
 class Trace {
    public:
     using self_type = Trace<View>;
@@ -31,7 +31,7 @@ class Trace {
     const View& m_view;
 };
 
-template <concepts::ViewDerived View>
+template <zipper::concepts::ViewDerived View>
 Trace(const View&) -> Trace<View>;
 
 }  // namespace reductions

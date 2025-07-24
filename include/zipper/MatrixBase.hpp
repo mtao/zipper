@@ -1,3 +1,4 @@
+#include "zipper/concepts/IndexLike.hpp"
 #if !defined(ZIPPER_MATRIXBASE_HPP)
 #define ZIPPER_MATRIXBASE_HPP
 
@@ -12,8 +13,9 @@
 #include "views/reductions/Trace.hpp"
 // #include "views/reductions/Determinant.hpp"
 #include "ArrayBase.hpp"
-#include "zipper/detail/constexpr_arithmetic.hpp"
 #include "views/unary/IdentityView.hpp"
+#include "zipper/detail/constexpr_arithmetic.hpp"
+#include "zipper/detail/extents/get_extent.hpp"
 
 namespace zipper {
 template <concepts::ViewDerived View>
@@ -102,7 +104,8 @@ class MatrixBase : public ZipperBase<MatrixBase, View> {
     }
     template <typename Slice>
     auto col(Slice&& s) const {
-        return slice<full_extent_t, Slice>(full_extent_t{}, std::forward<Slice>(s));
+        return slice<full_extent_t, Slice>(full_extent_t{},
+                                           std::forward<Slice>(s));
     }
     template <typename... Slices>
     auto slice() {
@@ -160,99 +163,106 @@ class MatrixBase : public ZipperBase<MatrixBase, View> {
         return VectorBase<views::unary::DiagonalView<view_type, false>>(view());
     }
 
-
     template <rank_type... ranks>
     auto swizzle() const {
         return Base::template swizzle<MatrixBase, ranks...>();
     }
-    auto transpose() const { return Base::template swizzle<MatrixBase, 1, 0>(); }
-
+    auto transpose() const {
+        return Base::template swizzle<MatrixBase, 1, 0>();
+    }
 
     template <concepts::SliceLike Slice>
-    auto row_slice(const Slice& s= {}) {
+    auto row_slice(const Slice& s = {}) {
         return slice(s, full_extent_t{});
     }
     template <concepts::SliceLike Slice>
-    auto row_slice(const Slice& s= {}) const {
+    auto row_slice(const Slice& s = {}) const {
         return slice(s, full_extent_t{});
     }
     template <concepts::SliceLike Slice>
-    auto col_slice(const Slice& s= {}) {
-        return slice(full_extent_t{},s);
+    auto col_slice(const Slice& s = {}) {
+        return slice(full_extent_t{}, s);
     }
     template <concepts::SliceLike Slice>
-    auto col_slice(const Slice& s= {}) const {
-        return slice( full_extent_t{},s);
+    auto col_slice(const Slice& s = {}) const {
+        return slice(full_extent_t{}, s);
     }
 
     // meh names for alignment with eigen
     template <concepts::IndexLike Index>
     auto topRows(const Index& s) {
-        return row_slice(zipper::slice({},s));
+        return row_slice(zipper::slice({}, s));
     }
     template <concepts::IndexLike Index>
     auto topRows(const Index& s) const {
-        return row_slice(zipper::slice({},s));
+        return row_slice(zipper::slice({}, s));
     }
     template <concepts::IndexLike Index>
     auto leftCols(const Index& s) {
-        return col_slice(zipper::slice({},s));
+        return col_slice(zipper::slice({}, s));
     }
     template <concepts::IndexLike Index>
     auto leftCols(const Index& s) const {
-        return col_slice(zipper::slice({},s));
+        return col_slice(zipper::slice({}, s));
     }
 
     template <concepts::IndexLike Index>
     auto bottomRows(const Index& s) {
-        return row_slice(zipper::slice({},s));
+        return row_slice(zipper::slice({}, s));
     }
     template <concepts::IndexLike Index>
     auto bottomRows(const Index& s) const {
-        return row_slice(zipper::slice({},s));
+        return row_slice(zipper::slice({}, s));
     }
     template <concepts::IndexLike Index>
     auto rightCols(const Index& s) {
-        return col_slice(zipper::slice({},s));
+        return col_slice(zipper::slice({}, s));
     }
     template <concepts::IndexLike Index>
     auto rightCols(const Index& s) const {
-        return col_slice(zipper::slice({},s));
+        return col_slice(zipper::slice({}, s));
     }
     template <index_type Size>
     auto topRows() {
-        return row_slice(zipper::slice({},static_index<Size>{}));
+        return row_slice(zipper::slice({}, static_index_t<Size>{}));
     }
     template <index_type Size>
     auto topRows() const {
-        return row_slice(zipper::slice({},static_index<Size>{}));
+        return row_slice(zipper::slice({}, static_index_t<Size>{}));
     }
     template <index_type Size>
     auto leftCols() {
-        return col_slice(zipper::slice({},static_index<Size>{}));
+        return col_slice(zipper::slice({}, static_index_t<Size>{}));
     }
     template <index_type Size>
     auto leftCols() const {
-        return col_slice(zipper::slice({},static_index<Size>{}));
+        return col_slice(zipper::slice({}, static_index_t<Size>{}));
     }
 
     template <index_type Size>
     auto bottomRows() {
-        return row_slice(zipper::slice({},static_index<Size>{}));
+        detail::ConstexprArithmetic size(static_index_t<Size>{});
+        auto t = size + detail::extents::get_extent<0>(extents());
+        return row_slice(zipper::slice({}, t.value()));
     }
     template <index_type Size>
     auto bottomRows() const {
-        return row_slice(zipper::slice({},static_index<Size>{}));
+        detail::ConstexprArithmetic size(static_index_t<Size>{});
+        auto t = size + detail::extents::get_extent<0>(extents());
+        return row_slice(zipper::slice({}, t.value()));
     }
     template <index_type Size>
     auto rightCols() {
-        return col_slice(zipper::slice({},static_index<Size>{}));
+        detail::ConstexprArithmetic size(static_index_t<Size>{});
+        auto t = size + detail::extents::get_extent<0>(extents());
+        return col_slice(zipper::slice({}, t.value()));
     }
     template <index_type Size>
     auto rightCols() const {
-        return col_slice(zipper::slice({},static_index<Size>{}));
+        detail::ConstexprArithmetic size(static_index_t<Size>{});
+        auto t = size + detail::extents::get_extent<0>(extents());
+        return col_slice(zipper::slice({}, t.value()));
     }
-
 };
 
 template <concepts::MatrixViewDerived View>

@@ -46,11 +46,11 @@ class IdentityView
     IdentityView(const extents_type& e) : Base(e) {}
     template <typename... Args>
     IdentityView(Args&&... args)
-        requires(concepts::IndexPackLike<Args...>)
+        requires(zipper::concepts::IndexPackLike<Args...>)
         : IdentityView(extents_type(std::forward<Args>(args)...)) {}
 
     template <std::size_t... N>
-    constexpr static bool _indicesAllSame(concepts::TupleLike auto const& t,
+    constexpr static bool _indicesAllSame(zipper::concepts::TupleLike auto const& t,
                                           std::index_sequence<N...>) {
         return ((std::get<N>(t) ==
                  std::get<zipper::detail::pack_index<0>(N...)>(t)) &&
@@ -59,7 +59,7 @@ class IdentityView
     }
 
     template <rank_type R, typename... Args>
-        requires(concepts::IndexPackLike<Args...> && R < extents_traits::rank &&
+        requires(zipper::concepts::IndexPackLike<Args...> && R < extents_traits::rank &&
                  sizeof...(Args) == extents_traits::rank)
     constexpr std::vector<index_type> nonZeros(Args&&... args) const {
         if (_indicesAllSame(
@@ -79,7 +79,7 @@ class IdentityView
         }
     }
 
-    constexpr static bool indicesAllSame(concepts::TupleLike auto const& t) {
+    constexpr static bool indicesAllSame(zipper::concepts::TupleLike auto const& t) {
         return _indicesAllSame(
             t, std::make_index_sequence<
                    std::tuple_size_v<std::decay_t<decltype(t)>>>{});
@@ -88,7 +88,7 @@ class IdentityView
     template <typename... Args>
     value_type coeff(Args&&... idxs) const {
         if constexpr (sizeof...(Args) == 1 &&
-                      (concepts::TupleLike<Args> && ...)) {
+                      (zipper::concepts::TupleLike<Args> && ...)) {
             return indicesAllSame(std::forward<Args>(idxs)...) ? 1 : 0;
         } else {
             return indicesAllSame(std::make_tuple(idxs...)) ? 1 : 0;

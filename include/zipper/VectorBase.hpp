@@ -111,15 +111,7 @@ class VectorBase : public ZipperBase<VectorBase, View> {
 
     template <index_type T>
     value_type norm_powered() const {
-        if constexpr (T == 1) {
-            return views::reductions::CoefficientSum{as_array().abs().view()}();
-        } else if constexpr (T == 2) {
-            auto arr = as_array();
-            return views::reductions::CoefficientSum{(arr * arr).view()}();
-        } else {
-            return views::reductions::CoefficientSum{
-                as_array().pow(T).abs().view()}();
-        }
+        return views::reductions::LpNormPowered<T, view_type>(view())();
     }
     value_type norm_powered(value_type T) const {
         return views::reductions::CoefficientSum{
@@ -216,15 +208,7 @@ class VectorBase : public ZipperBase<VectorBase, View> {
 
     template <index_type T = 2>
     value_type norm() const {
-        const value_type v = norm_powered<T>();
-        if constexpr (T == 1) {
-            return v;
-        } else if constexpr (T == 2) {
-            return std::sqrt(v);
-        } else {
-            const value_type p = value_type(1.0) / T;
-            return std::pow<value_type>(v, p);
-        }
+        return views::reductions::LpNorm<T, view_type>(view())();
     }
     value_type norm(value_type T) const {
         value_type p = value_type(1.0) / T;

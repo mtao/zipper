@@ -10,7 +10,7 @@ template <typename ValueType, typename Extents, typename LayoutPolicy,
 class PlainObjectStorage;
 }
 namespace zipper::views::detail {
-template <concepts::ViewDerived From, concepts::ViewDerived To>
+template <zipper::concepts::ViewDerived From, zipper::concepts::ViewDerived To>
 struct AssignHelper {
     using to_extents_type = typename To::extents_type;
     using from_extents_type = typename To::extents_type;

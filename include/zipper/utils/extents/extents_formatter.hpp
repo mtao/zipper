@@ -31,6 +31,6 @@ std::string format_as(const extents<index_type, Extents...>& foo) {
         "extents({})",
         fmt::join(f(std::make_index_sequence<sizeof...(Extents)>{}), ","));
 }
-};  // namespace std::experimental
+}  // namespace std::experimental
 
 #endif

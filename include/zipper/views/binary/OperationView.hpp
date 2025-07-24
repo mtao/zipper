@@ -21,7 +21,7 @@
 
 namespace zipper::views {
 namespace binary {
-template <concepts::ViewDerived A, concepts::ViewDerived B, typename Operation>
+template <zipper::concepts::ViewDerived A, zipper::concepts::ViewDerived B, typename Operation>
 class OperationView;
 
 }
@@ -39,7 +39,7 @@ struct detail::ViewTraits<binary::OperationView<A, B, Operation>>
 };
 
 namespace binary {
-template <concepts::ViewDerived A, concepts::ViewDerived B, typename Operation>
+template <zipper::concepts::ViewDerived A, zipper::concepts::ViewDerived B, typename Operation>
 class OperationView
     : public BinaryViewBase<OperationView<A, B, Operation>, A, B> {
    public:
@@ -97,7 +97,7 @@ class OperationView
    private:
     Operation m_op;
 };
-template <concepts::ViewDerived A, concepts::ViewDerived B, typename Operation>
+template <zipper::concepts::ViewDerived A, zipper::concepts::ViewDerived B, typename Operation>
 OperationView(const A& a, const B& b, const Operation& op)
     -> OperationView<A, B, Operation>;
 

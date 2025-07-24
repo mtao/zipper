@@ -6,6 +6,8 @@
 #include "views/reductions/Any.hpp"
 #include "views/reductions/CoefficientProduct.hpp"
 #include "views/reductions/CoefficientSum.hpp"
+#include "views/reductions/LpNorm.hpp"
+#include "views/reductions/LpNormPowered.hpp"
 #include "views/unary/SliceView.hpp"
 #include "zipper/types.hpp"
 //
@@ -118,27 +120,13 @@ class ArrayBase : public ZipperBase<ArrayBase, View> {
 
     template <index_type T>
     value_type norm_powered() const {
-        if constexpr (T == 1) {
-            return abs().sum();
-        } else if constexpr (T == 2) {
-            return (*this * *this).sum();
-        } else {
-            return pow(T).abs().sum();
-        }
+        return views::reductions::LpNormPowered<T, view_type>(view())();
     }
     value_type norm_powered(value_type T) const { return pow(T).abs().sum(); }
 
     template <index_type T = 2>
     value_type norm() const {
-        const value_type v = norm_powered<T>();
-        if constexpr (T == 1) {
-            return v;
-        } else if constexpr (T == 2) {
-            return std::sqrt(v);
-        } else {
-            const value_type p = value_type(1.0) / T;
-            return std::pow<value_type>(v, p);
-        }
+        return views::reductions::LpNorm<T, view_type>(view())();
     }
     value_type norm(value_type T) const {
         value_type p = value_type(1.0) / T;

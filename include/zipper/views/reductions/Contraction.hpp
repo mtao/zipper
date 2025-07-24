@@ -51,7 +51,7 @@ struct folded_extents<extents<N...>> {
 
 }  // namespace detail
 
-template <concepts::ViewDerived View>
+template <zipper::concepts::ViewDerived View>
 class Contraction {
    public:
     using self_type = Contraction<View>;
@@ -92,7 +92,7 @@ class Contraction {
     extents_type m_extents;
 };  // namespace unarytemplate<typenameA,typenameB>class AdditionView
 
-template <concepts::ViewDerived View>
+template <zipper::concepts::ViewDerived View>
 Contraction(const View&) -> Contraction<View>;
 
 }  // namespace reductions

@@ -64,12 +64,12 @@ class SwizzleView
     SwizzleView(const ViewType& b)
         : Base(b, swizzler_type::swizzle_extents(b.extents())) {}
 
-    template <concepts::TupleLike T, rank_type... ranks>
+    template <zipper::concepts::TupleLike T, rank_type... ranks>
     auto _coeff(const T& idxs, std::integer_sequence<rank_type, ranks...>) const
         -> value_type {
         return view().coeff(std::get<ranks>(idxs)...);
     }
-    template <concepts::TupleLike T, rank_type... ranks>
+    template <zipper::concepts::TupleLike T, rank_type... ranks>
     auto _coeff_ref(const T& idxs, std::integer_sequence<rank_type, ranks...>)
         -> value_type&
         requires(traits::is_writable)
@@ -77,7 +77,7 @@ class SwizzleView
         return view().coeff_ref(std::get<ranks>(idxs)...);
     }
 
-    template <concepts::TupleLike T, rank_type... ranks>
+    template <zipper::concepts::TupleLike T, rank_type... ranks>
     auto _const_coeff_ref(const T& idxs,
                           std::integer_sequence<rank_type, ranks...>) const
         -> const value_type&
@@ -112,7 +112,7 @@ class SwizzleView
             std::make_integer_sequence<rank_type, internal_rank>{});
     }
 
-    template <concepts::ViewDerived V>
+    template <zipper::concepts::ViewDerived V>
     void assign(const V& v)
         requires(
             traits::is_writable &&

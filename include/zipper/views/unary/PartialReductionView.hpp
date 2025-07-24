@@ -4,24 +4,24 @@
 #include "UnaryViewBase.hpp"
 #include "detail/invert_integer_sequence.hpp"
 #include "zipper/concepts/ViewDerived.hpp"
-#include "zipper/utils/extents/extents_formatter.hpp"
 #include "zipper/detail/extents/static_extents_to_array.hpp"
 #include "zipper/detail/pack_index.hpp"
+#include "zipper/utils/extents/extents_formatter.hpp"
 #include "zipper/views/concepts/ReductionViewLike.hpp"
 #include "zipper/views/reductions/CoefficientSum.hpp"
 
 namespace zipper::views {
 namespace unary {
 template <zipper::concepts::ViewDerived ViewType,
-          template <zipper::concepts::ViewDerived> typename ReductionView,
-          rank_type... Indices>
+          // template <zipper::concepts::ViewDerived> typename ReductionView,
+          template <typename> typename ReductionView, rank_type... Indices>
 // requires ReductionView<ViewType>
 class PartialReductionView;
 
 }
 template <zipper::concepts::ViewDerived ViewType,
-          template <zipper::concepts::ViewDerived> typename ReductionView,
-          rank_type... Indices>
+          // template <zipper::concepts::ViewDerived> typename ReductionView,
+          template <typename> typename ReductionView, rank_type... Indices>
 struct detail::ViewTraits<
     unary::PartialReductionView<ViewType, ReductionView, Indices...>>
     : public zipper::views::unary::detail::DefaultUnaryViewTraits<ViewType,
@@ -43,8 +43,8 @@ struct detail::ViewTraits<
 namespace unary {
 // indices are the indices being traced
 template <zipper::concepts::ViewDerived ViewType,
-          template <zipper::concepts::ViewDerived> typename ReductionView,
-          rank_type... Indices>
+          // template <zipper::concepts::ViewDerived> typename ReductionView,
+          template <typename> typename ReductionView, rank_type... Indices>
 // requires ReductionView<ViewType>
 class PartialReductionView
     : public UnaryViewBase<

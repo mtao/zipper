@@ -5,12 +5,12 @@
 
 namespace zipper::views {
 namespace unary {
-template <concepts::ViewDerived Child, typename Operation, typename Scalar,
+template <zipper::concepts::ViewDerived Child, typename Operation, typename Scalar,
           bool ScalarOnRight = false, bool PreservesZeros=false>
 class ScalarOperationView;
 
 }
-template <concepts::ViewDerived Child, typename Operation, typename Scalar,
+template <zipper::concepts::ViewDerived Child, typename Operation, typename Scalar,
           bool ScalarOnRight, bool PreservesZeros>
 struct detail::ViewTraits<
     unary::ScalarOperationView<Child, Operation, Scalar, ScalarOnRight, PreservesZeros>>
@@ -22,7 +22,7 @@ struct detail::ViewTraits<
 };
 
 namespace unary {
-template <concepts::ViewDerived Child, typename Operation, typename Scalar,
+template <zipper::concepts::ViewDerived Child, typename Operation, typename Scalar,
           bool ScalarOnRight, bool PreservesZeros>
 class ScalarOperationView
     : public UnaryViewBase<
@@ -59,10 +59,10 @@ class ScalarOperationView
     Scalar m_scalar;
 };
 
-template <concepts::ViewDerived Child, typename Operation, typename Scalar>
+template <zipper::concepts::ViewDerived Child, typename Operation, typename Scalar>
 ScalarOperationView(const Child& a, const Scalar& b, const Operation& op)
     -> ScalarOperationView<Child, Scalar, Operation, true>;
-template <concepts::ViewDerived Child, typename Operation, typename Scalar>
+template <zipper::concepts::ViewDerived Child, typename Operation, typename Scalar>
 ScalarOperationView(const Scalar& a, const Child& b, const Operation& op)
     -> ScalarOperationView<Child, Scalar, Operation, false>;
 }  // namespace unary

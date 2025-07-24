@@ -11,11 +11,11 @@
 namespace zipper::views {
 namespace unary {
     // the opposite of a slice (we can add indices)
-template <concepts::ViewDerived ViewType, bool IsConst, rank_type TotalRank, typename IndexSequence>
+template <zipper::concepts::ViewDerived ViewType, bool IsConst, rank_type TotalRank, typename IndexSequence>
 class AntiSliceView;
 
 }
-template <concepts::ViewDerived ViewType, bool IsConst, rank_type TotalRank, rank_type... indices>
+template <zipper::concepts::ViewDerived ViewType, bool IsConst, rank_type TotalRank, rank_type... indices>
 struct detail::ViewTraits<unary::AntiSliceView<ViewType, IsConst, TotalRank, std::integer_sequence<rank_type, indices...>>>
     : public zipper::views::unary::detail::DefaultUnaryViewTraits<
           ViewType, true> {
@@ -78,7 +78,7 @@ struct detail::ViewTraits<unary::AntiSliceView<ViewType, IsConst, TotalRank, std
 };
 
 namespace unary {
-template <concepts::ViewDerived ViewType, bool IsConst, typename... AntiSlices>
+template <zipper::concepts::ViewDerived ViewType, bool IsConst, typename... AntiSlices>
     requires(concepts::AntiSlicePackLike<AntiSlices...>)
 class AntiSliceView
     : public UnaryViewBase<AntiSliceView<ViewType, IsConst, AntiSlices...>, ViewType> {
@@ -188,25 +188,25 @@ class AntiSliceView
     }
 
     /*
-    template <concepts::TupleLike T, rank_type... ranks>
+    template <zipper::concepts::TupleLike T, rank_type... ranks>
     auto _const_coeff_ref(const T& idxs,
                           std::integer_sequence<rank_type, ranks...>) const
         -> const value_type& requires(traits::is_writable) {
             return view().const_coeff_ref(get_index<ranks>(idxs)...);
         }
 
-    template <concepts::TupleLike T, rank_type... ranks>
+    template <zipper::concepts::TupleLike T, rank_type... ranks>
     auto _coeff(const T& idxs, std::integer_sequence<rank_type, ranks...>) const
         -> value_type {
         return view().coeff(get_index<ranks>(idxs)...);
     }
-    template <concepts::TupleLike T, rank_type... ranks>
+    template <zipper::concepts::TupleLike T, rank_type... ranks>
     auto _coeff_ref(const T& idxs, std::integer_sequence<rank_type, ranks...>)
         -> value_type& requires(traits::is_writable) {
             return view().coeff_ref(get_index<ranks>(idxs)...);
         }
 
-    template <concepts::TupleLike T, rank_type... ranks>
+    template <zipper::concepts::TupleLike T, rank_type... ranks>
     auto _const_coeff_ref(const T& idxs,
                           std::integer_sequence<rank_type, ranks...>) const
         -> const value_type& requires(traits::is_writable) {
@@ -238,7 +238,7 @@ class AntiSliceView
     }
 
    private:
-    template <concepts::ViewDerived V>
+    template <zipper::concepts::ViewDerived V>
     void assign_direct(const V& view) {
         assert(extents() == view.extents());
         for (const auto& i : zipper::utils::extents::all_extents_indices(extents())) {
@@ -247,7 +247,7 @@ class AntiSliceView
     }
 
    public:
-    template <concepts::ViewDerived V>
+    template <zipper::concepts::ViewDerived V>
     void assign(const V& view)
         requires(zipper::views::detail::assignable_extents<
                  typename views::detail::ViewTraits<V>::extents_type,
@@ -273,11 +273,11 @@ class AntiSliceView
     std::tuple<AntiSlices...> m_slices;
 };
 
-template <concepts::ViewDerived ViewType, typename... AntiSlices>
+template <zipper::concepts::ViewDerived ViewType, typename... AntiSlices>
 AntiSliceView(const ViewType& view, AntiSlices&&...)
     -> AntiSliceView<ViewType, true, std::decay_t<AntiSlices>...>;
 
-template <concepts::ViewDerived ViewType, typename... AntiSlices>
+template <zipper::concepts::ViewDerived ViewType, typename... AntiSlices>
 AntiSliceView(ViewType& view, AntiSlices&&...)
     -> AntiSliceView<ViewType, false, std::decay_t<AntiSlices>...>;
 

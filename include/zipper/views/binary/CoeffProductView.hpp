@@ -10,7 +10,7 @@
 
 namespace zipper::views {
 namespace binary {
-template <concepts::ViewDerived A, concepts::ViewDerived B>
+template <zipper::concepts::ViewDerived A, zipper::concepts::ViewDerived B>
 class CoeffProductView;
 
 }
@@ -23,7 +23,7 @@ struct detail::ViewTraits<binary::CoeffProductView<A, B>>
 
 namespace binary {
     // Per-coefficient product (i.e A(x,y,z) * B(x,y,z))
-template <concepts::ViewDerived A, concepts::ViewDerived B>
+template <zipper::concepts::ViewDerived A, zipper::concepts::ViewDerived B>
 class CoeffProductView : public BinaryViewBase<CoeffProductView<A, B>, A, B> {
    public:
     using self_type = CoeffProductView<A, B>;
@@ -48,7 +48,7 @@ class CoeffProductView : public BinaryViewBase<CoeffProductView<A, B>, A, B> {
 
 };  // namespace binarytemplate<typenameA,typenameB>class CoeffProductView
 
-template <concepts::ViewDerived A, concepts::ViewDerived B>
+template <zipper::concepts::ViewDerived A, zipper::concepts::ViewDerived B>
 CoeffProductView(const A& a, const B& b) -> CoeffProductView<A, B>;
 }  // namespace binary
 }  // namespace zipper::views

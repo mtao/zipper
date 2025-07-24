@@ -9,11 +9,11 @@
 
 namespace zipper::views {
 namespace unary {
-template <concepts::ViewDerived ViewType, bool IsConst>
+template <zipper::concepts::ViewDerived ViewType, bool IsConst>
 class DiagonalView;
 
 }
-template <concepts::ViewDerived ViewType, bool IsConst>
+template <zipper::concepts::ViewDerived ViewType, bool IsConst>
 struct detail::ViewTraits<unary::DiagonalView<ViewType, IsConst> >
     : public zipper::views::unary::detail::DefaultUnaryViewTraits<
           ViewType, true> {
@@ -71,7 +71,7 @@ struct detail::ViewTraits<unary::DiagonalView<ViewType, IsConst> >
 };
 
 namespace unary {
-template <concepts::ViewDerived ViewType, bool IsConst>
+template <zipper::concepts::ViewDerived ViewType, bool IsConst>
 class DiagonalView
     : public UnaryViewBase<DiagonalView<ViewType, IsConst>, ViewType> {
    public:
@@ -111,18 +111,18 @@ class DiagonalView
         return std::get<0>(a);
     }
 
-    template <concepts::TupleLike T, rank_type... ranks>
+    template <zipper::concepts::TupleLike T, rank_type... ranks>
     auto _coeff(const T& idxs, std::integer_sequence<rank_type, ranks...>) const
         -> value_type {
         return view().coeff(get_index<ranks>(idxs)...);
     }
-    template <concepts::TupleLike T, rank_type... ranks>
+    template <zipper::concepts::TupleLike T, rank_type... ranks>
     auto _coeff_ref(const T& idxs, std::integer_sequence<rank_type, ranks...>)
         -> value_type& requires(traits::is_writable) {
             return view().coeff_ref(get_index<ranks>(idxs)...);
         }
 
-    template <concepts::TupleLike T, rank_type... ranks>
+    template <zipper::concepts::TupleLike T, rank_type... ranks>
     auto _const_coeff_ref(const T& idxs,
                           std::integer_sequence<rank_type, ranks...>) const
         -> const value_type& requires(traits::is_writable) {
@@ -152,7 +152,7 @@ class DiagonalView
             std::make_integer_sequence<rank_type, view_extents_type::rank()>{});
     }
 
-    template <concepts::ViewDerived V>
+    template <zipper::concepts::ViewDerived V>
     void assign(const V& v)
         requires(
             traits::is_writable &&
@@ -163,10 +163,10 @@ class DiagonalView
     }
 
 };
-template <concepts::ViewDerived ViewType>
+template <zipper::concepts::ViewDerived ViewType>
 DiagonalView(ViewType& v) -> DiagonalView<ViewType, false>;
 
-template <concepts::ViewDerived ViewType>
+template <zipper::concepts::ViewDerived ViewType>
 DiagonalView(const ViewType& v) -> DiagonalView<ViewType, true>;
 
 }  // namespace unary

@@ -8,7 +8,7 @@ struct ViewType {
     using type = T::view_type;
 };
 
-template <concepts::ViewDerived T>
+template <zipper::concepts::ViewDerived T>
 struct ViewType<T> {
     using type = T;
 };
