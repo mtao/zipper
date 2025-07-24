@@ -62,6 +62,9 @@ class MatrixBase : public ZipperBase<MatrixBase, View> {
     value_type trace() const { return views::reductions::Trace(view())(); }
 
    public:
+    constexpr index_type rows() const { return extents().extent(0); }
+    constexpr index_type cols() const { return extents().extent(1); }
+
     template <typename Slice>
     auto row() {
         return slice<Slice, full_extent_t>();
