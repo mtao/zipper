@@ -98,7 +98,7 @@ class PartialTraceView
             slice_type(view(), get_index(std::integral_constant<rank_type, N>{},
                                          std::forward<Args>(idxs)...)...);
 
-        DiagonalView<slice_type, true> diag(slice);
+        DiagonalView<const slice_type> diag(slice);
         return reductions::CoefficientSum(diag)();
     }
 

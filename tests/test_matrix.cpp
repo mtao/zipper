@@ -311,6 +311,19 @@ TEST_CASE("test_partial_trace_matrix", "[matrix][storage][dense]") {
         zipper::extents<3, 3>{}, -1, 1);
     spdlog::info("Random matrix n:");
     print(N);
+
+    {
+        auto colnorm = N.colwise().norm();
+        auto rownorm = N.rowwise().norm();
+        for(zipper::index_type j = 0; j < N.extent(0); ++j) {
+            CHECK(N.row(j).norm() == colnorm(j));
+        }
+        for(zipper::index_type j = 0; j < N.extent(1); ++j) {
+            CHECK(N.col(j).norm() == rownorm(j));
+        }
+    }
+
+
     N.diagonal() = zipper::views::nullary::ConstantView<double, 3>(0.0);
     CHECK(N.trace() == 0);
 

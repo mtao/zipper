@@ -9,22 +9,22 @@
 
 namespace zipper::views {
 namespace unary {
-template <zipper::concepts::ViewDerived ViewType, bool IsConst>
+template <zipper::concepts::QualifiedViewDerived ViewType>
 class DiagonalView;
 
 }
-template <zipper::concepts::ViewDerived ViewType, bool IsConst>
-struct detail::ViewTraits<unary::DiagonalView<ViewType, IsConst> >
+template <zipper::concepts::QualifiedViewDerived ViewType>
+struct detail::ViewTraits<unary::DiagonalView<ViewType> >
     : public zipper::views::unary::detail::DefaultUnaryViewTraits<
-          ViewType, true> {
-    using Base = detail::ViewTraits<ViewType>;
+          std::decay_t<ViewType>, true> {//TODO: make this deceay less necessary
+    using Base = detail::ViewTraits<std::decay_t<ViewType>>;
     using value_type = Base::value_type;
     using base_extents_type = Base::extents_type;
     using base_extents_traits = zipper::detail::ExtentsTraits<base_extents_type>;
-    constexpr static bool is_writable = Base::is_writable && !IsConst;
+    constexpr static bool is_const = std::is_const_v<ViewType>;
     constexpr static bool is_coefficient_consistent = false;
     constexpr static bool is_value_based = false;
-    constexpr static bool is_const = IsConst;
+    constexpr static bool is_writable = Base::is_writable && !is_const;
 
     //
     template <std::size_t... Indices>
@@ -71,18 +71,18 @@ struct detail::ViewTraits<unary::DiagonalView<ViewType, IsConst> >
 };
 
 namespace unary {
-template <zipper::concepts::ViewDerived ViewType, bool IsConst>
+template <zipper::concepts::QualifiedViewDerived ViewType>
 class DiagonalView
-    : public UnaryViewBase<DiagonalView<ViewType, IsConst>, ViewType> {
+    : public UnaryViewBase<DiagonalView<ViewType>, ViewType> {
    public:
-    using self_type = DiagonalView<ViewType, IsConst>;
+    using self_type = DiagonalView<ViewType>;
     using traits = zipper::views::detail::ViewTraits<self_type>;
     using extents_type = traits::extents_type;
     using value_type = traits::value_type;
     using Base = UnaryViewBase<self_type, ViewType>;
     using Base::extent;
     using Base::view;
-    using view_traits = zipper::views::detail::ViewTraits<ViewType>;
+    using view_traits = traits::Base;
     using view_extents_type = view_traits::extents_type;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
 
@@ -98,11 +98,8 @@ class DiagonalView
 
     DiagonalView& operator=(const DiagonalView&) = delete;
     DiagonalView& operator=(DiagonalView&&) = delete;
-    DiagonalView(const ViewType& b)
-        : Base(b, traits::get_extents(b.extents())) {}
 
     DiagonalView(ViewType& b)
-        requires(!IsConst && view_traits::is_writable)
         : Base(b, traits::get_extents(b.extents())) {}
 
 
@@ -163,11 +160,9 @@ class DiagonalView
     }
 
 };
-template <zipper::concepts::ViewDerived ViewType>
-DiagonalView(ViewType& v) -> DiagonalView<ViewType, false>;
 
-template <zipper::concepts::ViewDerived ViewType>
-DiagonalView(const ViewType& v) -> DiagonalView<ViewType, true>;
+template <zipper::concepts::QualifiedViewDerived ViewType>
+DiagonalView(const ViewType& v) -> DiagonalView<ViewType>;
 
 }  // namespace unary
 }  // namespace zipper::views

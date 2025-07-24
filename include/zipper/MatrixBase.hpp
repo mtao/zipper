@@ -16,6 +16,7 @@
 #include "views/unary/IdentityView.hpp"
 #include "zipper/detail/constexpr_arithmetic.hpp"
 #include "zipper/detail/extents/get_extent.hpp"
+#include "zipper/detail/PartialReductionDispatcher.hpp"
 
 namespace zipper {
 template <concepts::ViewDerived View>
@@ -157,10 +158,10 @@ class MatrixBase : public ZipperBase<MatrixBase, View> {
     }
 
     auto diagonal() const {
-        return VectorBase<views::unary::DiagonalView<view_type, true>>(view());
+        return VectorBase<views::unary::DiagonalView<const view_type>>(view());
     }
     auto diagonal() {
-        return VectorBase<views::unary::DiagonalView<view_type, false>>(view());
+        return VectorBase<views::unary::DiagonalView<view_type>>(view());
     }
 
     template <rank_type... ranks>
@@ -262,6 +263,19 @@ class MatrixBase : public ZipperBase<MatrixBase, View> {
         detail::ConstexprArithmetic size(static_index_t<Size>{});
         auto t = size + detail::extents::get_extent<0>(extents());
         return col_slice(zipper::slice({}, t.value()));
+    }
+
+    auto rowwise() {
+        return detail::PartialReductionDispatcher<VectorBase,view_type, 0>(view());
+    }
+    auto colwise() {
+        return detail::PartialReductionDispatcher<VectorBase,view_type, 1>(view());
+    }
+    auto rowwise() const {
+        return detail::PartialReductionDispatcher<VectorBase,const view_type, 0>(view());
+    }
+    auto colwise() const {
+        return detail::PartialReductionDispatcher<VectorBase,const view_type, 1>(view());
     }
 };
 

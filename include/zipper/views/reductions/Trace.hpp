@@ -24,7 +24,7 @@ class Trace {
     Trace(const Trace& v) = default;
 
     value_type operator()() const {
-        return reductions::CoefficientSum(unary::DiagonalView(m_view))();
+        return reductions::CoefficientSum(unary::DiagonalView<const view_type>(m_view))();
     }
 
    private:
