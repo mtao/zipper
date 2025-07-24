@@ -41,18 +41,20 @@ struct detail::ViewTraits<unary::SliceView<QualifiedViewType, Slices...>>
     {
         constexpr size_t Rank = sizeof...(Indices);
         using tuple_type = std::tuple<Slices...>;
-        constexpr auto eval = []<rank_type J>(std::integral_constant<rank_type, J>) -> rank_type {
-                if (concepts::SliceLike<std::tuple_element_t<J, tuple_type>> &&
-                        !concepts::IndexLike<std::tuple_element_t<J, tuple_type>>) {
-                    return 0;
-                } else {
-                    return std::dynamic_extent;
-                }
+        constexpr auto eval =
+            []<rank_type J>(std::integral_constant<rank_type, J>) -> rank_type {
+            if (concepts::SliceLike<std::tuple_element_t<J, tuple_type>> &&
+                !concepts::IndexLike<std::tuple_element_t<J, tuple_type>>) {
+                return 0;
+            } else {
+                return std::dynamic_extent;
+            }
         };
-        std::array<rank_type, Rank> r{{eval(std::integral_constant<size_t, Indices>{})...}};
+        std::array<rank_type, Rank> r{
+            {eval(std::integral_constant<size_t, Indices>{})...}};
         rank_type index = 0;
-        for(auto& v: r) {
-            if(v == 0) {
+        for (auto& v : r) {
+            if (v == 0) {
                 v = index++;
             }
         }
@@ -90,7 +92,6 @@ class SliceView : public UnaryViewBase<SliceView<QualifiedViewType, Slices...>,
 
     constexpr static std::array<rank_type, view_extents_type::rank()>
         actionable_indices = traits::actionable_indices;
-
 
     SliceView(const SliceView&) = default;
     SliceView(SliceView&&) = default;

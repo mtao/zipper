@@ -122,10 +122,14 @@ TEST_CASE("test_matrix_slicing", "[extents][matrix][slice]") {
     spdlog::info("Manipulating MN: ");
     zipper::MatrixBase RN(zipper::views::nullary::normal_random_view<double>(
         zipper::extents<4, 4>{}, 0, 20));
+
     zipper::Matrix MN = RN;
+    zipper::Matrix<double,std::dynamic_extent,std::dynamic_extent> MND = MN;
     auto full_slice = MN.slice<zipper::full_extent_t, zipper::full_extent_t>();
+    auto full_sliceD = MND.slice<zipper::full_extent_t, zipper::full_extent_t>();
 
     REQUIRE(MN.extents() == full_slice.extents());
+    REQUIRE(full_sliceD.extents() == full_slice.extents());
     spdlog::info("MN");
     print(MN);
     spdlog::info("full slice");
@@ -139,23 +143,33 @@ TEST_CASE("test_matrix_slicing", "[extents][matrix][slice]") {
 
     CHECK((MN.slice<zipper::full_extent_t, zipper::full_extent_t>() == MN));
     CHECK((MN.slice(zipper::full_extent_t{}, zipper::full_extent_t{}) == MN));
+    CHECK((MND.slice<zipper::full_extent_t, zipper::full_extent_t>() == MN));
+    CHECK((MND.slice(zipper::full_extent_t{}, zipper::full_extent_t{}) == MN));
 
     // zipper::slice(zipper::index_type(1));
     {
         auto S =
             MN.slice(zipper::slice(1, MN.extent(0) - 1), zipper::full_extent_t{});
 
+        auto SD =
+            MND.slice(zipper::slice(1, MND.extent(0) - 1), zipper::full_extent_t{});
+
         REQUIRE(S.extent(0) == MN.extent(0) - 1);
         REQUIRE(S.extent(1) == MN.extent(1));
+
+        REQUIRE(SD.extents() == S.extents()) ;
         for (const auto& [a, b] :
              zipper::utils::extents::all_extents_indices(S.extents())) {
             static_assert(std::is_integral_v<std::decay_t<decltype(a)>>);
             static_assert(std::is_integral_v<std::decay_t<decltype(b)>>);
             CHECK(S(a, b) == MN(a + 1, b));
+            CHECK(SD(a, b) == S(a,b));
         }
     }
 
     auto slice = MN.slice<std::integral_constant<zipper::index_type, 1>,
+                          zipper::full_extent_t>();
+    auto sliceD = MND.slice<std::integral_constant<zipper::index_type, 1>,
                           zipper::full_extent_t>();
     REQUIRE(slice.extent(0) == 4);
     REQUIRE(slice.extents().rank() == 1);
@@ -168,23 +182,49 @@ TEST_CASE("test_matrix_slicing", "[extents][matrix][slice]") {
     slice(2) = 104000;
     slice(3) = 100003;
 
+    REQUIRE(sliceD.extent(0) == 4);
+    REQUIRE(sliceD.extents().rank() == 1);
+    CHECK(sliceD(0) == MND(1, 0));
+    CHECK(sliceD(1) == MND(1, 1));
+    CHECK(sliceD(2) == MND(1, 2));
+    CHECK(sliceD(3) == MND(1, 3));
+    sliceD(0) = 2.0;
+    sliceD(1) = 100000;
+    sliceD(2) = 104000;
+    sliceD(3) = 100003;
+
     CHECK(2.0 == MN(1, 0));
     CHECK(100000 == MN(1, 1));
     CHECK(104000 == MN(1, 2));
     CHECK(100003 == MN(1, 3));
+    CHECK(2.0 == MND(1, 0));
+    CHECK(100000 == MND(1, 1));
+    CHECK(104000 == MND(1, 2));
+    CHECK(100003 == MND(1, 3));
 
     slice = zipper::views::nullary::ConstantView<double>(3.4);
+    sliceD = zipper::views::nullary::ConstantView<double>(3.4);
     CHECK(3.4 == MN(1, 0));
     CHECK(3.4 == MN(1, 1));
     CHECK(3.4 == MN(1, 2));
     CHECK(3.4 == MN(1, 3));
+    CHECK(3.4 == MND(1, 0));
+    CHECK(3.4 == MND(1, 1));
+    CHECK(3.4 == MND(1, 2));
+    CHECK(3.4 == MND(1, 3));
 
     MN.row<std::integral_constant<zipper::index_type, 2>>() = slice;
+    MND.row<std::integral_constant<zipper::index_type, 2>>() = slice;
 
     CHECK(3.4 == MN(2, 0));
     CHECK(3.4 == MN(2, 1));
     CHECK(3.4 == MN(2, 2));
     CHECK(3.4 == MN(2, 3));
+
+    CHECK(3.4 == MND(2, 0));
+    CHECK(3.4 == MND(2, 1));
+    CHECK(3.4 == MND(2, 2));
+    CHECK(3.4 == MND(2, 3));
     MN.col<std::integral_constant<zipper::index_type, 2>>() = slice;
 
     CHECK(3.4 == MN(0, 2));

@@ -5,9 +5,9 @@
 
 #include "UnaryViewBase.hpp"
 #include "zipper/concepts/ViewDerived.hpp"
-#include "zipper/utils/extents/all_extents_indices.hpp"
 #include "zipper/detail/extents/swizzle_extents.hpp"
 #include "zipper/storage/PlainObjectStorage.hpp"
+#include "zipper/utils/extents/all_extents_indices.hpp"
 #include "zipper/views/DimensionedViewBase.hpp"
 #include "zipper/views/detail/AssignHelper.hpp"
 
@@ -34,6 +34,7 @@ struct detail::ViewTraits<unary::SwizzleView<QualifiedViewType, Indices...>>
     constexpr static bool is_writable = Base::is_writable;
     constexpr static bool is_coefficient_consistent = false;
     constexpr static bool is_value_based = false;
+    constexpr static bool is_resizable = false;
 };
 
 namespace unary {
