@@ -5,6 +5,7 @@
 #include "concepts/ZipperBaseDerived.hpp"
 #include "views/unary/CastView.hpp"
 #include "views/unary/DiagonalView.hpp"
+#include "views/unary/RepeatView.hpp"
 #include "views/unary/SliceView.hpp"
 #include "views/unary/SwizzleView.hpp"
 #include "views/unary/detail/operation_implementations.hpp"
@@ -169,6 +170,22 @@ class ZipperBase {
 
     {
         return view()(std::forward<Args>(idxs)...);
+    }
+
+    // pads left with dummy dimensions
+    template <rank_type Count = 1,
+              template <typename> typename BaseType = DerivedT>
+    auto repeat_left() const {
+        using V = views::unary::RepeatView<views::unary::RepeatMode::Left,
+                                           Count, view_type>;
+        return BaseType<V>(V(view()));
+    }
+    template <rank_type Count = 1,
+              template <typename> typename BaseType = DerivedT>
+    auto repeat_right() const {
+        using V = views::unary::RepeatView<views::unary::RepeatMode::Right,
+                                           Count, view_type>;
+        return BaseType<V>(V(view()));
     }
 
    protected:

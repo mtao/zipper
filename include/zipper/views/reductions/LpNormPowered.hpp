@@ -66,7 +66,7 @@ struct lp_norm_powered_holder {
 
 template <index_type P, zipper::concepts::ViewDerived View>
 using LpNormPowered =
-    typename detail::lp_norm_powered_holder<P>::LpNormPowered<View>;
+    typename detail::lp_norm_powered_holder<P>::template LpNormPowered<View>;
 
 template <zipper::concepts::ViewDerived View>
 using L2NormPowered =

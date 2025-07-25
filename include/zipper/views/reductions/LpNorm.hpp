@@ -49,7 +49,7 @@ struct lp_norm_holder {
 }  // namespace detail
 
 template <index_type P, zipper::concepts::ViewDerived View>
-using LpNorm = typename detail::lp_norm_holder<P>::LpNorm<View>;
+using LpNorm = typename detail::template lp_norm_holder<P>::template LpNorm<View>;
 
 template <zipper::concepts::ViewDerived View>
 using L2Norm = typename detail::lp_norm_holder<2>::LpNorm<View>;

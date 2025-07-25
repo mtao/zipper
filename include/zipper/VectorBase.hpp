@@ -207,6 +207,7 @@ class VectorBase : public ZipperBase<VectorBase, View> {
         return VectorBase<V>(std::move(v));
     }
 
+
     template <index_type T = 2>
     value_type norm() const {
         return views::reductions::LpNorm<T, view_type>(view())();
