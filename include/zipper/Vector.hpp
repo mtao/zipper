@@ -24,6 +24,8 @@ class Vector
 
     using span_type =
         VectorBase<storage::SpanStorage<ValueType, zipper::extents<Rows>>>;
+    using const_span_type =
+        VectorBase<storage::SpanStorage<const ValueType, zipper::extents<Rows>>>;
 
     Vector() = default;
     Vector(const Vector& o) = default;

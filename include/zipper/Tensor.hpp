@@ -24,6 +24,8 @@ class Tensor_ : public TensorBase<storage::PlainObjectStorage<
     using Base::extents;
     using span_type =
         TensorBase<storage::SpanStorage<ValueType, Extents, layout_type>>;
+    using const_span_type =
+        TensorBase<storage::SpanStorage<const ValueType, Extents, layout_type>>;
 
     template <concepts::ViewDerived Other>
     Tensor_(const Other& other) : Base(other) {}
