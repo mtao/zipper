@@ -389,6 +389,131 @@ TEST_CASE("test_partial_trace_matrix", "[matrix][storage][dense]") {
     N(2, 2) = 2;
     CHECK(N.trace() == 6);
 }
+
+TEST_CASE("test_blocks", "[matrix][storage][dense]") {
+    zipper::Matrix<zipper::index_type, 3, 6> C;
+    zipper::Matrix<zipper::index_type, std::dynamic_extent, std::dynamic_extent>
+        R(3, 6);
+
+    {
+        for (zipper::index_type j = 0; j < 3; ++j) {
+            for (zipper::index_type k = 0; k < 6; ++k) {
+                C(j, k) = j;
+                R(j, k) = j;
+            }
+        }
+        auto CR = C.topRows(2);
+        auto CC = C.topRows(zipper::static_index_t<2>{});
+        auto RR = R.topRows(2);
+        auto RC = R.topRows(zipper::static_index_t<2>{});
+        static_assert(CC.static_extent(0) == 2);
+        static_assert(CR.static_extent(0) == std::dynamic_extent);
+        static_assert(RC.static_extent(0) == 2);
+        static_assert(RR.static_extent(0) == std::dynamic_extent);
+        REQUIRE(CR.extents() == zipper::create_dextents(2, 6));
+        REQUIRE(CR.extents() == CC.extents());
+        REQUIRE(CR.extents() == CC.extents());
+        REQUIRE(RR.extents() == CC.extents());
+        REQUIRE(RR.extents() == CC.extents());
+        for (zipper::index_type j = 0; j < 2; ++j) {
+            for (zipper::index_type k = 0; k < 6; ++k) {
+                CHECK(CC(j, k) == j);
+                CHECK(CR(j, k) == j);
+                CHECK(RC(j, k) == j);
+                CHECK(RR(j, k) == j);
+            }
+        }
+    }
+
+    {
+        for (zipper::index_type j = 0; j < 3; ++j) {
+            for (zipper::index_type k = 0; k < 6; ++k) {
+                C(j, k) = k;
+                R(j, k) = k;
+            }
+        }
+        auto CR = C.leftCols(5);
+        auto CC = C.leftCols(zipper::static_index_t<5>{});
+        auto RR = R.leftCols(5);
+        auto RC = R.leftCols(zipper::static_index_t<5>{});
+        static_assert(CC.static_extent(1) == 5);
+        static_assert(CR.static_extent(1) == std::dynamic_extent);
+        static_assert(RC.static_extent(1) == 5);
+        static_assert(RR.static_extent(1) == std::dynamic_extent);
+        REQUIRE(CR.extents() == zipper::create_dextents(3, 5));
+        REQUIRE(CR.extents() == CC.extents());
+        REQUIRE(CR.extents() == CC.extents());
+        REQUIRE(RR.extents() == CC.extents());
+        REQUIRE(RR.extents() == CC.extents());
+        for (zipper::index_type j = 0; j < 3; ++j) {
+            for (zipper::index_type k = 0; k < 5; ++k) {
+                CHECK(CC(j, k) == k);
+                CHECK(CR(j, k) == k);
+                CHECK(RC(j, k) == k);
+                CHECK(RR(j, k) == k);
+            }
+        }
+    }
+    {
+        for (zipper::index_type j = 0; j < 3; ++j) {
+            for (zipper::index_type k = 0; k < 6; ++k) {
+                C(j, k) = j;
+                R(j, k) = j;
+            }
+        }
+        auto CR = C.bottomRows(2);
+        auto CC = C.bottomRows(zipper::static_index_t<2>{});
+        auto RR = R.bottomRows(2);
+        auto RC = R.bottomRows(zipper::static_index_t<2>{});
+        static_assert(CC.static_extent(0) == 2);
+        static_assert(CR.static_extent(0) == std::dynamic_extent);
+        static_assert(RC.static_extent(0) == std::dynamic_extent);
+        static_assert(RR.static_extent(0) == std::dynamic_extent);
+        REQUIRE(CR.extents() == zipper::create_dextents(2, 6));
+        REQUIRE(CR.extents() == CC.extents());
+        REQUIRE(CR.extents() == CC.extents());
+        REQUIRE(RR.extents() == CC.extents());
+        REQUIRE(RR.extents() == CC.extents());
+        for (zipper::index_type j = 0; j < 2; ++j) {
+            for (zipper::index_type k = 0; k < 6; ++k) {
+                CHECK(CC(j, k) == j + 1);
+                CHECK(CR(j, k) == j + 1);
+                CHECK(RC(j, k) == j + 1);
+                CHECK(RR(j, k) == j + 1);
+            }
+        }
+    }
+
+    {
+        for (zipper::index_type j = 0; j < 3; ++j) {
+            for (zipper::index_type k = 0; k < 6; ++k) {
+                C(j, k) = k;
+                R(j, k) = k;
+            }
+        }
+        auto CR = C.rightCols(5);
+        auto CC = C.rightCols(zipper::static_index_t<5>{});
+        auto RR = R.rightCols(5);
+        auto RC = R.rightCols(zipper::static_index_t<5>{});
+        static_assert(CC.static_extent(1) == 5);
+        static_assert(CR.static_extent(1) == std::dynamic_extent);
+        static_assert(RC.static_extent(1) == std::dynamic_extent);
+        static_assert(RR.static_extent(1) == std::dynamic_extent);
+        REQUIRE(CR.extents() == zipper::create_dextents(3, 5));
+        REQUIRE(CR.extents() == CC.extents());
+        REQUIRE(CR.extents() == CC.extents());
+        REQUIRE(RR.extents() == CC.extents());
+        REQUIRE(RR.extents() == CC.extents());
+        for (zipper::index_type j = 0; j < 3; ++j) {
+            for (zipper::index_type k = 0; k < 5; ++k) {
+                CHECK(CC(j, k) == k + 1);
+                CHECK(CR(j, k) == k + 1);
+                CHECK(RC(j, k) == k + 1);
+                CHECK(RR(j, k) == k + 1);
+            }
+        }
+    }
+}
 /*
 TEST_CASE("test_all_extents", "[storage][dense]") {
 

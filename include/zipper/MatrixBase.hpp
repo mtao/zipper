@@ -14,9 +14,9 @@
 // #include "views/reductions/Determinant.hpp"
 #include "ArrayBase.hpp"
 #include "views/unary/IdentityView.hpp"
+#include "zipper/detail/PartialReductionDispatcher.hpp"
 #include "zipper/detail/constexpr_arithmetic.hpp"
 #include "zipper/detail/extents/get_extent.hpp"
-#include "zipper/detail/PartialReductionDispatcher.hpp"
 
 namespace zipper {
 template <concepts::ViewDerived View>
@@ -38,10 +38,10 @@ class MatrixBase : public ZipperBase<MatrixBase, View> {
     using Base::Base;
     // using Base::operator=;
     using Base::cast;
+    using Base::extent;
+    using Base::extents;
     using Base::swizzle;
     using Base::view;
-    using Base::extents;
-    using Base::extent;
 
     auto eval() const { return Matrix(*this); }
 
@@ -211,19 +211,27 @@ class MatrixBase : public ZipperBase<MatrixBase, View> {
 
     template <concepts::IndexLike Index>
     auto bottomRows(const Index& s) {
-        return row_slice(zipper::slice({}, s));
+        auto end = detail::extents::get_extent<0>(extents());
+        detail::ConstexprArithmetic size(s);
+        return row_slice(zipper::slice((end - size).value(), s));
     }
     template <concepts::IndexLike Index>
     auto bottomRows(const Index& s) const {
-        return row_slice(zipper::slice({}, s));
+        auto end = detail::extents::get_extent<0>(extents());
+        detail::ConstexprArithmetic size(s);
+        return row_slice(zipper::slice((end - size).value(), s));
     }
     template <concepts::IndexLike Index>
     auto rightCols(const Index& s) {
-        return col_slice(zipper::slice({}, s));
+        auto end = detail::extents::get_extent<1>(extents());
+        detail::ConstexprArithmetic size(s);
+        return col_slice(zipper::slice((end - size).value(), s));
     }
     template <concepts::IndexLike Index>
     auto rightCols(const Index& s) const {
-        return col_slice(zipper::slice({}, s));
+        auto end = detail::extents::get_extent<1>(extents());
+        detail::ConstexprArithmetic size(s);
+        return col_slice(zipper::slice((end - size).value(), s));
     }
     template <index_type Size>
     auto topRows() {
@@ -245,43 +253,47 @@ class MatrixBase : public ZipperBase<MatrixBase, View> {
     template <index_type Size>
     auto bottomRows() {
         detail::ConstexprArithmetic size(static_index_t<Size>{});
-        auto t = size + detail::extents::get_extent<0>(extents());
+        auto t = size - detail::extents::get_extent<0>(extents());
         return row_slice(zipper::slice({}, t.value()));
     }
     template <index_type Size>
     auto bottomRows() const {
         detail::ConstexprArithmetic size(static_index_t<Size>{});
-        auto t = size + detail::extents::get_extent<0>(extents());
+        auto t = size - detail::extents::get_extent<0>(extents());
         return row_slice(zipper::slice({}, t.value()));
     }
     template <index_type Size>
     auto rightCols() {
         detail::ConstexprArithmetic size(static_index_t<Size>{});
-        auto t = size + detail::extents::get_extent<0>(extents());
+        auto t = size - detail::extents::get_extent<1>(extents());
         return col_slice(zipper::slice({}, t.value()));
     }
     template <index_type Size>
     auto rightCols() const {
         detail::ConstexprArithmetic size(static_index_t<Size>{});
-        auto t = size + detail::extents::get_extent<0>(extents());
+        auto t = size - detail::extents::get_extent<1>(extents());
         return col_slice(zipper::slice({}, t.value()));
     }
 
     auto rowwise() {
         // we're reducing the first cols
-        return detail::PartialReductionDispatcher<VectorBase,view_type, 1>(view());
+        return detail::PartialReductionDispatcher<VectorBase, view_type, 1>(
+            view());
     }
     auto colwise() {
         // we're reducing the first rows
-        return detail::PartialReductionDispatcher<VectorBase,view_type, 0>(view());
+        return detail::PartialReductionDispatcher<VectorBase, view_type, 0>(
+            view());
     }
     auto rowwise() const {
         // we're reducing the first cols
-        return detail::PartialReductionDispatcher<VectorBase,const view_type, 1>(view());
+        return detail::PartialReductionDispatcher<VectorBase, const view_type,
+                                                  1>(view());
     }
     auto colwise() const {
         // we're reducing the first rows
-        return detail::PartialReductionDispatcher<VectorBase,const view_type, 0>(view());
+        return detail::PartialReductionDispatcher<VectorBase, const view_type,
+                                                  0>(view());
     }
 };
 
