@@ -207,6 +207,14 @@ class VectorBase : public ZipperBase<VectorBase, View> {
         return VectorBase<V>(std::move(v));
     }
 
+    // implements ones * this.transpose()
+    auto repeat_left() const {
+        return Base::template repeat_left<MatrixBase, 1>();
+    }
+    // implements  this * ones.transpose()
+    auto repeat_right() const {
+        return Base::template repeat_right<MatrixBase, 1>();
+    }
 
     template <index_type T = 2>
     value_type norm() const {
