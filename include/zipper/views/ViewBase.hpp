@@ -39,10 +39,10 @@ class ViewBase {
     constexpr index_type extent(rank_type i) const {
         return extents().extent(i);
     }
-    static constexpr index_type static_extent(rank_type i) {
+    static consteval index_type static_extent(rank_type i) {
         return extents_type::static_extent(i);
     }
-    const extents_type& extents() const { return derived().extents(); }
+    constexpr auto extents() const -> const extents_type&{ return derived().extents(); }
 
    public:
     template <typename... Indices>

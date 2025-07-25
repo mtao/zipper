@@ -76,7 +76,7 @@ auto make_norm(const ViewType& a, std::integral_constant<int, index>) {
 }
 }  // namespace
 
-TEST_CASE("test_partial_sum", "[matrix][storage][dense]") {
+TEST_CASE("test_partial_sum", "[views][unary]") {
     {
         using IType = views::nullary::IdentityView<double, 3, 3>;
         IType i;

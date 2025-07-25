@@ -14,7 +14,7 @@ class RandomView;
 
 template <typename T, typename Generator = std::default_random_engine,
           index_type... Indices>
-auto uniform_random_view(const extents<Indices...>& extents, const T& min = 0,
+auto uniform_random_view(const extents<Indices...>& extents = {}, const T& min = 0,
                          const T& max = 1,
                          const Generator& g = Generator{
                              std::random_device{}()}) {
@@ -32,7 +32,7 @@ auto uniform_random_view(const extents<Indices...>& extents, const T& min = 0,
 
 template <typename T, typename Generator = std::default_random_engine,
           index_type... Indices>
-auto normal_random_view(const extents<Indices...>& extents, const T& mean = 0,
+auto normal_random_view(const extents<Indices...>& extents = {}, const T& mean = 0,
                         const T& stddev = 1,
                         const Generator& g = Generator{
                             std::random_device{}()}) {

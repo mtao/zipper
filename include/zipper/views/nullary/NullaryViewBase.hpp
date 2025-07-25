@@ -41,28 +41,26 @@ class NullaryViewBase
         return static_cast<const Derived&>(*this);
     }
 
-    NullaryViewBase(const NullaryViewBase&) = default;
-    NullaryViewBase(NullaryViewBase&&) = default;
-    NullaryViewBase()
+    constexpr NullaryViewBase(const NullaryViewBase&) = default;
+    constexpr NullaryViewBase(NullaryViewBase&&) = default;
+    constexpr NullaryViewBase()
         requires(is_static)
     = default;
 
-    NullaryViewBase(const extents_type& e) : Base(e) {}
+    constexpr NullaryViewBase(const extents_type& e) : Base(e) {}
 
-
-    value_type get_value() const
+    constexpr value_type get_value() const
         requires(is_value_based)
     {
         return derived().get_value();
     }
 
     template <typename... Args>
-    value_type coeff(Args&&...) const
+    constexpr value_type coeff(Args&&...) const
         requires(is_value_based)
     {
         return get_value();
     }
-
 };
 
 }  // namespace zipper::views::nullary

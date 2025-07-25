@@ -10,7 +10,6 @@ namespace binary {
 template <zipper::concepts::ViewDerived A, zipper::concepts::ViewDerived B>
 class TensorProductView;
 
-}
 namespace detail {
 
 template <typename A, typename B>
@@ -51,6 +50,7 @@ struct tensor_coeffwise_extents_values<extents<A...>, extents<B...>> {
 };
 
 }  // namespace detail
+}  // namespace binary
 template <typename A, typename B>
 struct detail::ViewTraits<binary::TensorProductView<A, B>>
     : public binary::detail::DefaultBinaryViewTraits<A, B>
@@ -61,9 +61,8 @@ struct detail::ViewTraits<binary::TensorProductView<A, B>>
     constexpr static rank_type lhs_rank = ATraits::extents_type::rank();
     using BTraits = views::detail::ViewTraits<B>;
     constexpr static rank_type rhs_rank = BTraits::extents_type::rank();
-    using CEV =
-        detail::tensor_coeffwise_extents_values<typename ATraits::extents_type,
-                                                typename BTraits::extents_type>;
+    using CEV = binary::detail::tensor_coeffwise_extents_values<
+        typename ATraits::extents_type, typename BTraits::extents_type>;
 
     static_assert(std::is_same_v<typename CEV::a_extents_type,
                                  typename ATraits::extents_type>);
