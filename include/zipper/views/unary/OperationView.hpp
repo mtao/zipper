@@ -2,16 +2,27 @@
 #define ZIPPER_VIEWS_UNARY_OPERATIONVIEW_HPP
 
 #include "UnaryViewBase.hpp"
+#include "concepts/ScalarOperation.hpp"
 
 namespace zipper::views {
 namespace unary {
 // TODO: operation should inherit std::unary_function<T,U>
-template <zipper::concepts::ViewDerived B, typename Operation,
+template <zipper::concepts::ViewDerived B, 
+         //
+         //concepts::ScalarOperation<typename B::value_type> Operation,
+         typename Operation,
+         //
           bool PreservesZeros = false>
+         //concepts::ScalarOperation<typename Child::value_type>
 class OperationView;
 
 }  // namespace unary
-template <zipper::concepts::ViewDerived Child, typename Operation, bool PreservesZeros>
+template <zipper::concepts::ViewDerived Child, 
+         //
+         //unary::concepts::ScalarOperation<typename Child::value_type> Operation,
+         typename Operation,
+         //
+         bool PreservesZeros>
 struct detail::ViewTraits<
     unary::OperationView<Child, Operation, PreservesZeros>>
     : public zipper::views::unary::detail::DefaultUnaryViewTraits<Child,
@@ -22,7 +33,17 @@ struct detail::ViewTraits<
 
 // represents a coefficient-wise transformation of an underlyng view
 namespace unary {
-template <zipper::concepts::ViewDerived Child, typename Operation, bool PreservesZeros>
+
+
+
+
+template <zipper::concepts::ViewDerived Child, 
+         //concepts::ScalarOperation<typename Child::value_type> Operation,
+         typename Operation,
+         //
+         bool PreservesZeros>
+
+         //requires(concepts::ScalarOperation<Child::value_type,Operation>)
 class OperationView
     : public UnaryViewBase<OperationView<Child, Operation>, Child> {
    public:

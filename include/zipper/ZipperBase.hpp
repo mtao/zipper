@@ -19,8 +19,9 @@ template <template <concepts::ViewDerived> typename DerivedT,
           concepts::ViewDerived View>
 class ZipperBase {
    public:
-    ZipperBase() 
-       requires(std::is_default_constructible_v<View>): m_view() {}
+    ZipperBase()
+        requires(std::is_default_constructible_v<View>)
+        : m_view() {}
     using Derived = DerivedT<View>;
     const Derived& derived() const {
         return static_cast<const Derived&>(*this);
@@ -136,6 +137,13 @@ class ZipperBase {
 #pragma GCC diagnostic ignored "-Weffc++"
         return derived();
 #pragma GCC diagnostic pop
+    }
+
+    template <typename OpType>
+        requires(views::unary::concepts::ScalarOperation<value_type, OpType>)
+    auto unary_expr(const OpType& op) const {
+        using V = views::unary::OperationView<View, OpType>;
+        return DerivedT<V>(V(view(), op));
     }
 
     template <template <typename> typename BaseType = DerivedT,

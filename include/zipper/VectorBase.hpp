@@ -1,3 +1,4 @@
+#include "zipper/views/unary/concepts/ScalarOperation.hpp"
 #if !defined(ZIPPER_VECTORBASE_HPP)
 #define ZIPPER_VECTORBASE_HPP
 

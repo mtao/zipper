@@ -104,7 +104,7 @@ class DiagonalView
 
 
     template <rank_type K>
-    index_type get_index(concepts::TupleLike auto const& a) const {
+    index_type get_index(zipper::concepts::TupleLike auto const& a) const {
         return std::get<0>(a);
     }
 

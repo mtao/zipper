@@ -13,11 +13,11 @@
 
 namespace zipper::views {
 namespace unary {
-template <concepts::QualifiedViewDerived ViewType, index_type... Indices>
+template <zipper::concepts::QualifiedViewDerived ViewType, index_type... Indices>
 class SwizzleView;
 
 }
-template <concepts::QualifiedViewDerived QualifiedViewType,
+template <zipper::concepts::QualifiedViewDerived QualifiedViewType,
           index_type... Indices>
 struct detail::ViewTraits<unary::SwizzleView<QualifiedViewType, Indices...>>
     : public zipper::views::unary::detail::DefaultUnaryViewTraits<
@@ -37,7 +37,7 @@ struct detail::ViewTraits<unary::SwizzleView<QualifiedViewType, Indices...>>
 };
 
 namespace unary {
-template <concepts::QualifiedViewDerived QualifiedViewType,
+template <zipper::concepts::QualifiedViewDerived QualifiedViewType,
           index_type... Indices>
 class SwizzleView
     : public UnaryViewBase<SwizzleView<QualifiedViewType, Indices...>,
