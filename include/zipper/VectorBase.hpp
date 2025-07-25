@@ -209,11 +209,11 @@ class VectorBase : public ZipperBase<VectorBase, View> {
 
     // implements ones * this.transpose()
     auto repeat_left() const {
-        return Base::template repeat_left<MatrixBase, 1>();
+        return Base::template repeat_left<1,MatrixBase>();
     }
     // implements  this * ones.transpose()
     auto repeat_right() const {
-        return Base::template repeat_right<MatrixBase, 1>();
+        return Base::template repeat_right<1,MatrixBase>();
     }
 
     template <index_type T = 2>
