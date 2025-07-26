@@ -253,6 +253,10 @@ VectorBase(std::span<T, Size> s)
     -> VectorBase<storage::SpanStorage<T, zipper::extents<Size>>>;
 
 template <class T, std::size_t Size = std::dynamic_extent>
+VectorBase(std::span<const T, Size> s)
+    -> VectorBase<storage::SpanStorage<const T, zipper::extents<Size>>>;
+
+template <class T, std::size_t Size = std::dynamic_extent>
 VectorBase(const std::array<T, Size>& s)
     -> VectorBase<storage::SpanStorage<const T, zipper::extents<Size>>>;
 template <class T, std::size_t Size = std::dynamic_extent>

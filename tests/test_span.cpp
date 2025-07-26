@@ -9,6 +9,10 @@ using namespace zipper;
 TEST_CASE("test_vector_span", "[vector][storage][dense][span]") {
     std::vector<int> vec = {2, 3};
     VectorBase v = std::span<int, 2>(vec);
+    VectorBase v_const = std::span<const int, 2>(vec);
+
+    auto c = v_const.eval();
+    CHECK((c == v_const));
 
     static_assert(v.static_extent(0) == 2);
     REQUIRE(v.extent(0) == 2);

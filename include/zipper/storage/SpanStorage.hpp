@@ -19,17 +19,18 @@ class SpanStorage
     : public views::nullary::DenseStorageViewBase<
           SpanStorage<ValueType, Extents, LayoutPolicy, AccessorPolicy>> {
    public:
-    using ParentType = views::nullary::DenseStorageViewBase<
-        SpanStorage<ValueType, Extents, LayoutPolicy, AccessorPolicy>>;
-    using value_type = ValueType;
+    using self_type = SpanStorage<ValueType, Extents, LayoutPolicy, AccessorPolicy>;
+    using ParentType = views::nullary::DenseStorageViewBase<self_type>;
+    using traits = views::detail::ViewTraits<self_type>;
+    using value_type = typename traits::value_type;
     using extents_type = Extents;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
 
-    using std_span_type = std::span<value_type, extents_traits::static_size>;
+    using std_span_type = std::span<ValueType, extents_traits::static_size>;
     constexpr static bool IsStatic =
         zipper::detail::ExtentsTraits<extents_type>::is_static;
 
-    using accessor_type = SpanData<value_type, extents_traits::static_size>;
+    using accessor_type = SpanData<ValueType, extents_traits::static_size>;
     const accessor_type& accessor() const { return m_accessor; }
     accessor_type& accessor() { return m_accessor; }
     const accessor_type& linear_access() const { return m_accessor; }
@@ -83,7 +84,8 @@ struct detail::ViewTraits<zipper::storage::SpanStorage<
   views::StorageViewBase<zipper::storage::SpanStorage<
       ValueType, Extents, LayoutPolicy, AccessorPolicy>> */
 {
-    using value_type = ValueType;
+    using value_type = std::remove_const_t<ValueType>;
+    bool is_const = std::is_const_v<ValueType>;
     using extents_type = Extents;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
     using value_accessor_type =

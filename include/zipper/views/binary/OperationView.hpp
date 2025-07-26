@@ -61,7 +61,8 @@ class OperationView
             return true;
         } else if constexpr(a_extents_type::rank() == b_extents_type::rank() ) { 
             for(rank_type j = 0; j < a_extents_type::rank(); ++j) {
-                if(a.extent(j) != b.extent(j)) {
+                // dynamic extent are infinite dimensions cases
+                if(a.extent(j) != b.extent(j) && a.extent(j) != std::dynamic_extent && b.extent(j) != std::dynamic_extent) {
                     return false;
                 }
             }

@@ -185,7 +185,10 @@ ArrayBase(View&& view) -> ArrayBase<View>;
 template <concepts::ViewDerived View>
 ArrayBase(const View& view) -> ArrayBase<View>;
 template <class T, std::size_t Size = std::dynamic_extent>
-ArrayBase(const std::span<T, Size>& s)
+ArrayBase(std::span<T, Size> s)
+    -> ArrayBase<storage::SpanStorage<T, zipper::extents<Size>>>;
+template <class T, std::size_t Size = std::dynamic_extent>
+ArrayBase(std::span<const T, Size> s)
     -> ArrayBase<storage::SpanStorage<T, zipper::extents<Size>>>;
 
 UNARY_DECLARATION(ArrayBase, LogicalNot, operator!)
