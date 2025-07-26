@@ -1,8 +1,5 @@
 
 
-
-#include "fmt_include.hpp"
-#include "catch_include.hpp"
 #include <iostream>
 #include <zipper/ArrayBase.hpp>
 #include <zipper/Matrix.hpp>
@@ -14,6 +11,9 @@
 #include <zipper/views/nullary/RandomView.hpp>
 #include <zipper/views/unary/PartialTraceView.hpp>
 #include <zipper/views/unary/SwizzleView.hpp>
+
+#include "catch_include.hpp"
+#include "fmt_include.hpp"
 // #include <zipper/Vector.hpp>
 
 namespace {
@@ -305,12 +305,32 @@ TEST_CASE("test_trace", "[matrix][storage][dense]") {
     CHECK(N.trace() == 6);
 }
 
+TEST_CASE("test_rowwise_colwise_matrix", "[matrix][storage][dense]") {
+    zipper::Matrix<double, 3, 5> N;
+    N = zipper::views::nullary::uniform_random_view<double>(
+        zipper::extents<3, 5>{}, -1, 1);
+    spdlog::info("Random matrix n:");
+    print(N);
+
+    {
+        auto colnorm = N.colwise().norm();
+        auto rownorm = N.rowwise().norm();
+        for (zipper::index_type j = 0; j < N.extent(1); ++j) {
+            CHECK(N.col(j).norm() == colnorm(j));
+        }
+        for (zipper::index_type j = 0; j < N.extent(0); ++j) {
+            CHECK(N.row(j).norm() == rownorm(j));
+        }
+    }
+}
+
 TEST_CASE("test_partial_trace_matrix", "[matrix][storage][dense]") {
     zipper::Matrix<double, 3, 3> N;
     N = zipper::views::nullary::uniform_random_view<double>(
         zipper::extents<3, 3>{}, -1, 1);
     spdlog::info("Random matrix n:");
     print(N);
+
     N.diagonal() = zipper::views::nullary::ConstantView<double, 3>(0.0);
     CHECK(N.trace() == 0);
 
@@ -368,6 +388,131 @@ TEST_CASE("test_partial_trace_matrix", "[matrix][storage][dense]") {
     CHECK(N.trace() == 5);
     N(2, 2) = 2;
     CHECK(N.trace() == 6);
+}
+
+TEST_CASE("test_blocks", "[matrix][storage][dense]") {
+    zipper::Matrix<zipper::index_type, 3, 6> C;
+    zipper::Matrix<zipper::index_type, std::dynamic_extent, std::dynamic_extent>
+        R(3, 6);
+
+    {
+        for (zipper::index_type j = 0; j < 3; ++j) {
+            for (zipper::index_type k = 0; k < 6; ++k) {
+                C(j, k) = j;
+                R(j, k) = j;
+            }
+        }
+        auto CR = C.topRows(2);
+        auto CC = C.topRows(zipper::static_index_t<2>{});
+        auto RR = R.topRows(2);
+        auto RC = R.topRows(zipper::static_index_t<2>{});
+        static_assert(CC.static_extent(0) == 2);
+        static_assert(CR.static_extent(0) == std::dynamic_extent);
+        static_assert(RC.static_extent(0) == 2);
+        static_assert(RR.static_extent(0) == std::dynamic_extent);
+        REQUIRE(CR.extents() == zipper::create_dextents(2, 6));
+        REQUIRE(CR.extents() == CC.extents());
+        REQUIRE(CR.extents() == CC.extents());
+        REQUIRE(RR.extents() == CC.extents());
+        REQUIRE(RR.extents() == CC.extents());
+        for (zipper::index_type j = 0; j < 2; ++j) {
+            for (zipper::index_type k = 0; k < 6; ++k) {
+                CHECK(CC(j, k) == j);
+                CHECK(CR(j, k) == j);
+                CHECK(RC(j, k) == j);
+                CHECK(RR(j, k) == j);
+            }
+        }
+    }
+
+    {
+        for (zipper::index_type j = 0; j < 3; ++j) {
+            for (zipper::index_type k = 0; k < 6; ++k) {
+                C(j, k) = k;
+                R(j, k) = k;
+            }
+        }
+        auto CR = C.leftCols(5);
+        auto CC = C.leftCols(zipper::static_index_t<5>{});
+        auto RR = R.leftCols(5);
+        auto RC = R.leftCols(zipper::static_index_t<5>{});
+        static_assert(CC.static_extent(1) == 5);
+        static_assert(CR.static_extent(1) == std::dynamic_extent);
+        static_assert(RC.static_extent(1) == 5);
+        static_assert(RR.static_extent(1) == std::dynamic_extent);
+        REQUIRE(CR.extents() == zipper::create_dextents(3, 5));
+        REQUIRE(CR.extents() == CC.extents());
+        REQUIRE(CR.extents() == CC.extents());
+        REQUIRE(RR.extents() == CC.extents());
+        REQUIRE(RR.extents() == CC.extents());
+        for (zipper::index_type j = 0; j < 3; ++j) {
+            for (zipper::index_type k = 0; k < 5; ++k) {
+                CHECK(CC(j, k) == k);
+                CHECK(CR(j, k) == k);
+                CHECK(RC(j, k) == k);
+                CHECK(RR(j, k) == k);
+            }
+        }
+    }
+    {
+        for (zipper::index_type j = 0; j < 3; ++j) {
+            for (zipper::index_type k = 0; k < 6; ++k) {
+                C(j, k) = j;
+                R(j, k) = j;
+            }
+        }
+        auto CR = C.bottomRows(2);
+        auto CC = C.bottomRows(zipper::static_index_t<2>{});
+        auto RR = R.bottomRows(2);
+        auto RC = R.bottomRows(zipper::static_index_t<2>{});
+        static_assert(CC.static_extent(0) == 2);
+        static_assert(CR.static_extent(0) == std::dynamic_extent);
+        static_assert(RC.static_extent(0) == std::dynamic_extent);
+        static_assert(RR.static_extent(0) == std::dynamic_extent);
+        REQUIRE(CR.extents() == zipper::create_dextents(2, 6));
+        REQUIRE(CR.extents() == CC.extents());
+        REQUIRE(CR.extents() == CC.extents());
+        REQUIRE(RR.extents() == CC.extents());
+        REQUIRE(RR.extents() == CC.extents());
+        for (zipper::index_type j = 0; j < 2; ++j) {
+            for (zipper::index_type k = 0; k < 6; ++k) {
+                CHECK(CC(j, k) == j + 1);
+                CHECK(CR(j, k) == j + 1);
+                CHECK(RC(j, k) == j + 1);
+                CHECK(RR(j, k) == j + 1);
+            }
+        }
+    }
+
+    {
+        for (zipper::index_type j = 0; j < 3; ++j) {
+            for (zipper::index_type k = 0; k < 6; ++k) {
+                C(j, k) = k;
+                R(j, k) = k;
+            }
+        }
+        auto CR = C.rightCols(5);
+        auto CC = C.rightCols(zipper::static_index_t<5>{});
+        auto RR = R.rightCols(5);
+        auto RC = R.rightCols(zipper::static_index_t<5>{});
+        static_assert(CC.static_extent(1) == 5);
+        static_assert(CR.static_extent(1) == std::dynamic_extent);
+        static_assert(RC.static_extent(1) == std::dynamic_extent);
+        static_assert(RR.static_extent(1) == std::dynamic_extent);
+        REQUIRE(CR.extents() == zipper::create_dextents(3, 5));
+        REQUIRE(CR.extents() == CC.extents());
+        REQUIRE(CR.extents() == CC.extents());
+        REQUIRE(RR.extents() == CC.extents());
+        REQUIRE(RR.extents() == CC.extents());
+        for (zipper::index_type j = 0; j < 3; ++j) {
+            for (zipper::index_type k = 0; k < 5; ++k) {
+                CHECK(CC(j, k) == k + 1);
+                CHECK(CR(j, k) == k + 1);
+                CHECK(RC(j, k) == k + 1);
+                CHECK(RR(j, k) == k + 1);
+            }
+        }
+    }
 }
 /*
 TEST_CASE("test_all_extents", "[storage][dense]") {
@@ -585,7 +730,8 @@ TEST_CASE("test_matrix_transpose", "[matrix][storage][dense]") {
             }
         }
 
-        zipper::Vector<double, 4> V = zipper::views::nullary::uniform_random_view<double>({});
+        zipper::Vector<double, 4> V =
+            zipper::views::nullary::uniform_random_view<double>({});
         auto R1 = (I2 * V);
         auto R2 = (I2 * V).eval();
         auto R3 = (I3 * V).eval();
@@ -605,7 +751,8 @@ TEST_CASE("test_matrix_transpose", "[matrix][storage][dense]") {
                 CHECK(I(j, k) == I2(k, j));
             }
         }
-        zipper::Vector<double, 3> V = zipper::views::nullary::uniform_random_view<double>({});
+        zipper::Vector<double, 3> V =
+            zipper::views::nullary::uniform_random_view<double>({});
         auto R1 = (I2 * V);
         auto R2 = (I2 * V).eval();
         auto R3 = (I3 * V).eval();
@@ -616,7 +763,8 @@ TEST_CASE("test_matrix_transpose", "[matrix][storage][dense]") {
     {
         zipper::Matrix<double, 4, 4> I =
             zipper::views::nullary::uniform_random_view<double>({});
-        const auto S = I.slice(zipper::static_slice<0,3>(),zipper::static_slice<0,3>());
+        const auto S =
+            I.slice(zipper::static_slice<0, 3>(), zipper::static_slice<0, 3>());
 
         auto I2 = S.transpose();
         auto I3 = S.transpose().eval();
@@ -627,30 +775,33 @@ TEST_CASE("test_matrix_transpose", "[matrix][storage][dense]") {
                 CHECK(S(j, k) == I2(k, j));
             }
         }
-
     }
     {
         const zipper::Matrix<double, 4, 4> I =
             zipper::views::nullary::uniform_random_view<double>({});
-        const auto S = I.slice(zipper::static_slice<0,3>(),zipper::static_slice<0,3>());
+        const auto S =
+            I.slice(zipper::static_slice<0, 3>(), zipper::static_slice<0, 3>());
 
         auto I2 = S.transpose();
         auto I3 = S.transpose().eval();
 
         const auto& I2view = I2.view();
         const auto& I2sliceview = I2view.view();
-        using slice_extents_type = typename std::decay_t<decltype(I2sliceview)>::extents_type;
+        using slice_extents_type =
+            typename std::decay_t<decltype(I2sliceview)>::extents_type;
         static_assert(slice_extents_type::rank() == 2);
         static_assert(slice_extents_type::static_extent(0) == 3);
         static_assert(slice_extents_type::static_extent(1) == 3);
 
-        using swizzle_extents_type = typename std::decay_t<decltype(I2view)>::extents_type;
+        using swizzle_extents_type =
+            typename std::decay_t<decltype(I2view)>::extents_type;
         static_assert(swizzle_extents_type::rank() == 2);
         static_assert(swizzle_extents_type::static_extent(0) == 3);
         static_assert(swizzle_extents_type::static_extent(1) == 3);
 
-        using swizzler_type = typename std::decay_t<decltype(I2view)>::swizzler_type;
-        auto s = swizzler_type::unswizzle(1,0);
+        using swizzler_type =
+            typename std::decay_t<decltype(I2view)>::swizzler_type;
+        auto s = swizzler_type::unswizzle(1, 0);
         CHECK(std::get<0>(s) == 0);
         CHECK(std::get<1>(s) == 1);
         CHECK(I2 == I3);
@@ -659,13 +810,13 @@ TEST_CASE("test_matrix_transpose", "[matrix][storage][dense]") {
                 CHECK(S(j, k) == I2(k, j));
             }
         }
-
     }
     {
         zipper::Matrix<double, std::dynamic_extent, std::dynamic_extent> I =
             zipper::views::nullary::uniform_random_view<double>(
                 zipper::create_dextents(5, 5));
-        const auto S = I.slice(zipper::static_slice<0,3>(),zipper::static_slice<0,3>());
+        const auto S =
+            I.slice(zipper::static_slice<0, 3>(), zipper::static_slice<0, 3>());
 
         auto I2 = S.transpose();
         auto I3 = S.transpose().eval();
@@ -681,25 +832,27 @@ TEST_CASE("test_matrix_transpose", "[matrix][storage][dense]") {
     }
 }
 
-//zipper::views::unary::SwizzleView<
-//    zipper::views::unary::SliceView<
-//        zipper::storage::PlainObjectStorage<
-//            double, 
-//            std::experimental::extents<long unsigned int, 4, 4>
-//            , std::experimental::layout_right
-//            , std::experimental::default_accessor<double> >
-//            , true
-//            , std::experimental::strided_slice<
-//                std::integral_constant<long unsigned int, 0>
-//                , std::integral_constant<long unsigned int, 3>
-//                , std::integral_constant<long unsigned int, 1> 
-//                >
-//            , std::experimental::strided_slice<
-//                std::integral_constant<long unsigned int, 0>
-//                , std::integral_constant<long unsigned int, 3>
-//                , std::integral_constant<long unsigned int, 1>
-//                > 
-//            >
-//            , 1
-//            , 0
-//            >::_coeff(std::array<long unsigned int, 2>, std::array<long unsigned int, 2>, std::make_integer_sequence<long unsigned int, 2>) const
+// zipper::views::unary::SwizzleView<
+//     zipper::views::unary::SliceView<
+//         zipper::storage::PlainObjectStorage<
+//             double,
+//             std::experimental::extents<long unsigned int, 4, 4>
+//             , std::experimental::layout_right
+//             , std::experimental::default_accessor<double> >
+//             , true
+//             , std::experimental::strided_slice<
+//                 std::integral_constant<long unsigned int, 0>
+//                 , std::integral_constant<long unsigned int, 3>
+//                 , std::integral_constant<long unsigned int, 1>
+//                 >
+//             , std::experimental::strided_slice<
+//                 std::integral_constant<long unsigned int, 0>
+//                 , std::integral_constant<long unsigned int, 3>
+//                 , std::integral_constant<long unsigned int, 1>
+//                 >
+//             >
+//             , 1
+//             , 0
+//             >::_coeff(std::array<long unsigned int, 2>, std::array<long
+//             unsigned int, 2>, std::make_integer_sequence<long unsigned int,
+//             2>) const

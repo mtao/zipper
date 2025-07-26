@@ -7,7 +7,7 @@
 
 namespace zipper::views {
 namespace binary {
-template <concepts::ViewDerived A, concepts::ViewDerived B>
+template <zipper::concepts::ViewDerived A, zipper::concepts::ViewDerived B>
 class WedgeProductView;
 
 }
@@ -76,7 +76,7 @@ struct detail::ViewTraits<binary::WedgeProductView<A, B>>
 };
 
 namespace binary {
-template <concepts::ViewDerived A, concepts::ViewDerived B>
+template <zipper::concepts::ViewDerived A, zipper::concepts::ViewDerived B>
 class WedgeProductView : public BinaryViewBase<WedgeProductView<A, B>, A, B> {
    public:
     using self_type = WedgeProductView<A, B>;
@@ -134,7 +134,7 @@ class WedgeProductView : public BinaryViewBase<WedgeProductView<A, B>, A, B> {
 
 };  // namespace binarytemplate<typenameA,typenameB>class WedgeProductView
 
-template <concepts::ViewDerived A, concepts::ViewDerived B>
+template <zipper::concepts::ViewDerived A, zipper::concepts::ViewDerived B>
 WedgeProductView(const A& a, const B& b) -> WedgeProductView<A, B>;
 }  // namespace binary
 }  // namespace zipper::views

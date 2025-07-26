@@ -5,6 +5,7 @@
 #include "concepts/ZipperBaseDerived.hpp"
 #include "views/unary/CastView.hpp"
 #include "views/unary/DiagonalView.hpp"
+#include "views/unary/RepeatView.hpp"
 #include "views/unary/SliceView.hpp"
 #include "views/unary/SwizzleView.hpp"
 #include "views/unary/detail/operation_implementations.hpp"
@@ -19,8 +20,9 @@ template <template <concepts::ViewDerived> typename DerivedT,
           concepts::ViewDerived View>
 class ZipperBase {
    public:
-    ZipperBase() 
-       requires(std::is_default_constructible_v<View>): m_view() {}
+    ZipperBase()
+        requires(std::is_default_constructible_v<View>)
+        : m_view() {}
     using Derived = DerivedT<View>;
     const Derived& derived() const {
         return static_cast<const Derived&>(*this);
@@ -138,6 +140,13 @@ class ZipperBase {
 #pragma GCC diagnostic pop
     }
 
+    template <typename OpType>
+        requires(views::unary::concepts::ScalarOperation<value_type, OpType>)
+    auto unary_expr(const OpType& op) const {
+        using V = views::unary::OperationView<View, OpType>;
+        return DerivedT<V>(V(view(), op));
+    }
+
     template <template <typename> typename BaseType = DerivedT,
               rank_type... ranks>
     auto swizzle() const {
@@ -161,6 +170,22 @@ class ZipperBase {
 
     {
         return view()(std::forward<Args>(idxs)...);
+    }
+
+    // pads left with dummy dimensions
+    template <rank_type Count = 1,
+              template <typename> typename BaseType = DerivedT>
+    auto repeat_left() const {
+        using V = views::unary::RepeatView<views::unary::RepeatMode::Left,
+                                           Count, view_type>;
+        return BaseType<V>(V(view()));
+    }
+    template <rank_type Count = 1,
+              template <typename> typename BaseType = DerivedT>
+    auto repeat_right() const {
+        using V = views::unary::RepeatView<views::unary::RepeatMode::Right,
+                                           Count, view_type>;
+        return BaseType<V>(V(view()));
     }
 
    protected:

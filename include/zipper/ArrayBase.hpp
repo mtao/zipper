@@ -4,7 +4,10 @@
 #include "ZipperBase.hpp"
 #include "views/reductions/All.hpp"
 #include "views/reductions/Any.hpp"
+#include "views/reductions/CoefficientProduct.hpp"
 #include "views/reductions/CoefficientSum.hpp"
+#include "views/reductions/LpNorm.hpp"
+#include "views/reductions/LpNormPowered.hpp"
 #include "views/unary/SliceView.hpp"
 #include "zipper/types.hpp"
 //
@@ -107,31 +110,23 @@ class ArrayBase : public ZipperBase<ArrayBase, View> {
         return ArrayBase<views::unary::AbsView<view_type>>(view());
     }
 
+    value_type sum() const {
+        return views::reductions::CoefficientSum{view()}();
+    }
+
+    value_type product() const {
+        return views::reductions::CoefficientProduct{view()}();
+    }
+
     template <index_type T>
     value_type norm_powered() const {
-        if constexpr (T == 1) {
-            return views::reductions::CoefficientSum{abs().view()}();
-        } else if constexpr (T == 2) {
-            return views::reductions::CoefficientSum{(*this * *this).view()}();
-        } else {
-            return views::reductions::CoefficientSum{pow(T).abs().view()}();
-        }
+        return views::reductions::LpNormPowered<T, view_type>(view())();
     }
-    value_type norm_powered(value_type T) const {
-        return views::reductions::CoefficientSum{pow(T).abs().view()}();
-    }
+    value_type norm_powered(value_type T) const { return pow(T).abs().sum(); }
 
     template <index_type T = 2>
     value_type norm() const {
-        const value_type v = norm_powered<T>();
-        if constexpr (T == 1) {
-            return v;
-        } else if constexpr (T == 2) {
-            return std::sqrt(v);
-        } else {
-            const value_type p = value_type(1.0) / T;
-            return std::pow<value_type>(v, p);
-        }
+        return views::reductions::LpNorm<T, view_type>(view())();
     }
     value_type norm(value_type T) const {
         value_type p = value_type(1.0) / T;
@@ -208,7 +203,8 @@ SCALAR_BINARY_DECLARATION(ArrayBase, Greater, operator>)
 SCALAR_BINARY_DECLARATION(ArrayBase, Less, operator<)
 SCALAR_BINARY_DECLARATION(ArrayBase, GreaterEqual, operator>=)
 SCALAR_BINARY_DECLARATION(ArrayBase, LessEqual, operator<=)
-    // GCC notes that these operators don't allow short circuiting, but that's ok for our views
+// GCC notes that these operators don't allow short circuiting, but that's ok
+// for our views
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Weffc++"
 SCALAR_BINARY_DECLARATION(ArrayBase, LogicalAnd, operator&&)
@@ -230,7 +226,8 @@ BINARY_DECLARATION(ArrayBase, Less, operator<)
 BINARY_DECLARATION(ArrayBase, GreaterEqual, operator>=)
 BINARY_DECLARATION(ArrayBase, LessEqual, operator<=)
 
-    // GCC notes that these operators don't allow short circuiting, but that's ok for our views
+// GCC notes that these operators don't allow short circuiting, but that's ok
+// for our views
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Weffc++"
 BINARY_DECLARATION(ArrayBase, LogicalAnd, operator&&)

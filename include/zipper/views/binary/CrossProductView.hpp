@@ -10,7 +10,7 @@
 
 namespace zipper::views {
 namespace binary {
-template <concepts::VectorViewDerived A, concepts::VectorViewDerived B>
+template <zipper::concepts::VectorViewDerived A, zipper::concepts::VectorViewDerived B>
 class CrossProductView;
 
 }
@@ -31,7 +31,7 @@ struct detail::ViewTraits<binary::CrossProductView<A, B>>
 };
 
 namespace binary {
-template <concepts::VectorViewDerived A, concepts::VectorViewDerived B>
+template <zipper::concepts::VectorViewDerived A, zipper::concepts::VectorViewDerived B>
 class CrossProductView : public BinaryViewBase<CrossProductView<A, B>, A, B> {
    public:
     using self_type = CrossProductView<A, B>;
@@ -67,7 +67,7 @@ class CrossProductView : public BinaryViewBase<CrossProductView<A, B>, A, B> {
     }
 };
 
-template <concepts::VectorViewDerived A, concepts::VectorViewDerived B>
+template <zipper::concepts::VectorViewDerived A, zipper::concepts::VectorViewDerived B>
 CrossProductView(const A& a, const B& b) -> CrossProductView<A, B>;
 }  // namespace binary
 }  // namespace zipper::views

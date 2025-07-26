@@ -31,7 +31,6 @@ using extents = std::extents<index_type, Extents...>;
 using extents = std::experimental::extents<index_type, Extents...>;
 #endif
 
-
 // fully dynamic extents
 template <rank_type N>
 using dextents = std::experimental::dextents<index_type, N>;
@@ -45,17 +44,24 @@ auto create_dextents(const Args&... args) {
 using full_extent_t = std::experimental::full_extent_t;
 using full_extent_type = std::experimental::full_extent_t;
 
+template <typename T, T v>
+struct constant {
+    constexpr static T value = v;
+    constexpr operator T() const { return value; }
+    constexpr auto operator*() const -> T { return value; }
+};
+
 template <index_type N>
 using static_index_t = std::integral_constant<index_type, N>;
 
 template <rank_type N>
 using static_rank_t = std::integral_constant<rank_type, N>;
 
-template <index_type N>
-constexpr static static_index_t<N> static_index = {};
-
-template <rank_type N>
-constexpr static static_rank_t<N> static_rank = {};
+// template <index_type N>
+// constexpr static static_index_t<N> static_index = {};
+//
+// template <rank_type N>
+// constexpr static static_rank_t<N> static_rank = {};
 
 template <typename OffsetType, typename ExtentType, typename StrideType>
 using slice_type =

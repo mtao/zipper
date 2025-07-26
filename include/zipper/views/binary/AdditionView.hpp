@@ -9,7 +9,7 @@
 
 namespace zipper::views {
 namespace binary {
-template <concepts::ViewDerived A, concepts::ViewDerived B>
+template <zipper::concepts::ViewDerived A, zipper::concepts::ViewDerived B>
 class AdditionView;
 
 }
@@ -25,7 +25,7 @@ struct detail::ViewTraits<binary::AdditionView<A, B>>
 
 namespace binary {
 // Per-coefficient product (i.e A(x,y,z) + B(x,y,z))
-template <concepts::ViewDerived A, concepts::ViewDerived B>
+template <zipper::concepts::ViewDerived A, zipper::concepts::ViewDerived B>
 class AdditionView : public BinaryViewBase<AdditionView<A, B>, A, B> {
    public:
     using self_type = AdditionView<A, B>;
@@ -52,7 +52,7 @@ class AdditionView : public BinaryViewBase<AdditionView<A, B>, A, B> {
 
 };  // namespace binarytemplate<typenameA,typenameB>class AdditionView
 
-template <concepts::ViewDerived A, concepts::ViewDerived B>
+template <zipper::concepts::ViewDerived A, zipper::concepts::ViewDerived B>
 AdditionView(const A& a, const B& b) -> AdditionView<A, B>;
 }  // namespace binary
 }  // namespace zipper::views

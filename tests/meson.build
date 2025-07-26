@@ -22,8 +22,9 @@ test('extents', test_extents)
 
 
 
-test_declare_operations = executable('test_declare_operations', 'test_declare_operations.cpp', dependencies: [zipper_test_dep])
+test_declare_operations = executable('test_declare_operations', ['test_expressions.cpp','test_declare_operations.cpp'], dependencies: [zipper_test_dep])
 
  subdir('storage')
  subdir('views')
  subdir('utils')
+ subdir('detail')

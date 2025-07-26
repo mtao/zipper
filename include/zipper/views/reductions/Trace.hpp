@@ -9,7 +9,7 @@
 namespace zipper::views {
 namespace reductions {
 
-template <concepts::ViewDerived View>
+template <zipper::concepts::ViewDerived View>
 class Trace {
    public:
     using self_type = Trace<View>;
@@ -24,14 +24,14 @@ class Trace {
     Trace(const Trace& v) = default;
 
     value_type operator()() const {
-        return reductions::CoefficientSum(unary::DiagonalView(m_view))();
+        return reductions::CoefficientSum(unary::DiagonalView<const view_type>(m_view))();
     }
 
    private:
     const View& m_view;
 };
 
-template <concepts::ViewDerived View>
+template <zipper::concepts::ViewDerived View>
 Trace(const View&) -> Trace<View>;
 
 }  // namespace reductions

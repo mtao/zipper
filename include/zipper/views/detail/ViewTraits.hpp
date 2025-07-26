@@ -15,6 +15,8 @@ struct DefaultViewTraits {
     using extents_type = Extents;
 
     constexpr static bool is_writable = false;
+
+    constexpr static bool is_resizable = false;
     // guarantees that V(j) = f(...) cannot depend on V(k) for j != k)
     constexpr static bool is_coefficient_consistent = false;
 

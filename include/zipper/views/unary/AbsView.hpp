@@ -10,7 +10,7 @@ struct abs {
 };
 }  // namespace detail
 
-template <concepts::ViewDerived Child>
+template <zipper::concepts::ViewDerived Child>
 using AbsView = OperationView<
     Child,
     detail::abs<typename zipper::views::detail::ViewTraits<Child>::value_type>>;

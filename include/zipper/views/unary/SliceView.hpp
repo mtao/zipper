@@ -11,12 +11,12 @@
 
 namespace zipper::views {
 namespace unary {
-template <concepts::QualifiedViewDerived ViewType, typename... Slices>
-    requires(concepts::SlicePackLike<Slices...>)
+template <zipper::concepts::QualifiedViewDerived ViewType, typename... Slices>
+    requires(zipper::concepts::SlicePackLike<Slices...>)
 class SliceView;
 
 }
-template <concepts::QualifiedViewDerived QualifiedViewType, typename... Slices>
+template <zipper::concepts::QualifiedViewDerived QualifiedViewType, typename... Slices>
 struct detail::ViewTraits<unary::SliceView<QualifiedViewType, Slices...>>
     : public zipper::views::unary::detail::DefaultUnaryViewTraits<
           std::decay_t<QualifiedViewType>, true> {
@@ -41,18 +41,20 @@ struct detail::ViewTraits<unary::SliceView<QualifiedViewType, Slices...>>
     {
         constexpr size_t Rank = sizeof...(Indices);
         using tuple_type = std::tuple<Slices...>;
-        constexpr auto eval = []<rank_type J>(std::integral_constant<rank_type, J>) -> rank_type {
-                if (concepts::SliceLike<std::tuple_element_t<J, tuple_type>> &&
-                        !concepts::IndexLike<std::tuple_element_t<J, tuple_type>>) {
-                    return 0;
-                } else {
-                    return std::dynamic_extent;
-                }
+        constexpr auto eval =
+            []<rank_type J>(std::integral_constant<rank_type, J>) -> rank_type {
+            if (zipper::concepts::SliceLike<std::tuple_element_t<J, tuple_type>> &&
+                !zipper::concepts::IndexLike<std::tuple_element_t<J, tuple_type>>) {
+                return 0;
+            } else {
+                return std::dynamic_extent;
+            }
         };
-        std::array<rank_type, Rank> r{{eval(std::integral_constant<size_t, Indices>{})...}};
+        std::array<rank_type, Rank> r{
+            {eval(std::integral_constant<size_t, Indices>{})...}};
         rank_type index = 0;
-        for(auto& v: r) {
-            if(v == 0) {
+        for (auto& v : r) {
+            if (v == 0) {
                 v = index++;
             }
         }
@@ -65,8 +67,8 @@ struct detail::ViewTraits<unary::SliceView<QualifiedViewType, Slices...>>
 };
 
 namespace unary {
-template <concepts::QualifiedViewDerived QualifiedViewType, typename... Slices>
-    requires(concepts::SlicePackLike<Slices...>)
+template <zipper::concepts::QualifiedViewDerived QualifiedViewType, typename... Slices>
+    requires(zipper::concepts::SlicePackLike<Slices...>)
 class SliceView : public UnaryViewBase<SliceView<QualifiedViewType, Slices...>,
                                        QualifiedViewType> {
    public:
@@ -91,11 +93,10 @@ class SliceView : public UnaryViewBase<SliceView<QualifiedViewType, Slices...>,
     constexpr static std::array<rank_type, view_extents_type::rank()>
         actionable_indices = traits::actionable_indices;
 
-
     SliceView(const SliceView&) = default;
     SliceView(SliceView&&) = default;
 
-    SliceView& operator=(concepts::ViewDerived auto const& v) {
+    SliceView& operator=(zipper::concepts::ViewDerived auto const& v) {
         assign(v);
         return *this;
     }
@@ -219,7 +220,7 @@ class SliceView : public UnaryViewBase<SliceView<QualifiedViewType, Slices...>,
             std::forward<Args>(idxs)...);
     }
 
-    template <concepts::ViewDerived V>
+    template <zipper::concepts::ViewDerived V>
     void assign(const V& v)
         requires(
             traits::is_writable &&
@@ -233,11 +234,11 @@ class SliceView : public UnaryViewBase<SliceView<QualifiedViewType, Slices...>,
     slice_storage_type m_slices;
 };
 
-template <concepts::ViewDerived ViewType, typename... Slices>
+template <zipper::concepts::ViewDerived ViewType, typename... Slices>
 SliceView(const ViewType& view, Slices&&...)
     -> SliceView<const ViewType, std::decay_t<Slices>...>;
 
-template <concepts::ViewDerived ViewType, typename... Slices>
+template <zipper::concepts::ViewDerived ViewType, typename... Slices>
 SliceView(ViewType& view, Slices&&...)
     -> SliceView<ViewType, std::decay_t<Slices>...>;
 

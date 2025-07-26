@@ -12,13 +12,13 @@ struct cast {
 }  // namespace detail
 
 // converts an underlying view to a new type
-template <typename A, concepts::ViewDerived Child>
+template <typename A, zipper::concepts::ViewDerived Child>
 using CastView = OperationView<
     Child, detail::cast<
                typename zipper::views::detail::ViewTraits<Child>::value_type, A>, true>;
 
 // converts b into a view of type A
-template <typename A, concepts::ViewDerived B>
+template <typename A, zipper::concepts::ViewDerived B>
 auto cast(const B& b) {
     return CastView<A, B>(b);
 }

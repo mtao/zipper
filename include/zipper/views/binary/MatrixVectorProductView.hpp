@@ -8,7 +8,7 @@
 
 namespace zipper::views {
 namespace binary {
-template <concepts::MatrixViewDerived A, concepts::VectorViewDerived B>
+template <zipper::concepts::MatrixViewDerived A, zipper::concepts::VectorViewDerived B>
 class MatrixVectorProductView;
 
 }
@@ -23,7 +23,7 @@ struct detail::ViewTraits<binary::MatrixVectorProductView<A, B>>
 };
 
 namespace binary {
-template <concepts::MatrixViewDerived A, concepts::VectorViewDerived B>
+template <zipper::concepts::MatrixViewDerived A, zipper::concepts::VectorViewDerived B>
 class MatrixVectorProductView
     : public BinaryViewBase<MatrixVectorProductView<A, B>, A, B> {
    public:
@@ -84,7 +84,7 @@ class MatrixVectorProductView
     }
 };
 
-template <concepts::MatrixViewDerived A, concepts::MatrixViewDerived B>
+template <zipper::concepts::MatrixViewDerived A, zipper::concepts::MatrixViewDerived B>
 MatrixVectorProductView(const A& a, const B& b)
     -> MatrixVectorProductView<A, B>;
 }  // namespace binary

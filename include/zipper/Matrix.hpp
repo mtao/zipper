@@ -30,6 +30,9 @@ class Matrix
     using span_type =
         MatrixBase<storage::SpanStorage<ValueType, zipper::extents<Rows, Cols>,
                                         layout_type>>;
+    using const_span_type =
+        MatrixBase<storage::SpanStorage<const ValueType, zipper::extents<Rows, Cols>,
+                                        layout_type>>;
     using Base::transpose;
 
     Matrix()

@@ -7,7 +7,7 @@
 namespace zipper::views {
 namespace unary {
 enum class HomogeneousMode { Position, Vector, Affine };
-template <HomogeneousMode Mode, concepts::ViewDerived Child>
+template <HomogeneousMode Mode,zipper::concepts::ViewDerived Child>
 class HomogeneousView;
 
 }  // namespace unary
@@ -49,7 +49,7 @@ struct extend_extents_single_dimension<N, Size, extents<Idxs...>> {
     }
 };
 }  // namespace detail
-template <unary::HomogeneousMode Mode, concepts::ViewDerived Child>
+template <unary::HomogeneousMode Mode,zipper::concepts::ViewDerived Child>
 struct detail::ViewTraits<unary::HomogeneousView<Mode, Child>>
     : public zipper::views::unary::detail::DefaultUnaryViewTraits<Child> {
     using ChildTraits = ViewTraits<Child>;
@@ -72,7 +72,7 @@ struct detail::ViewTraits<unary::HomogeneousView<Mode, Child>>
 };
 
 namespace unary {
-template <unary::HomogeneousMode Mode, concepts::ViewDerived Child>
+template <unary::HomogeneousMode Mode,zipper::concepts::ViewDerived Child>
 class HomogeneousView
     : public UnaryViewBase<HomogeneousView<Mode, Child>, Child> {
    public:
@@ -121,19 +121,19 @@ class HomogeneousView
     }
 };
 
-template <concepts::ViewDerived Child>
+template <zipper::concepts::ViewDerived Child>
 auto homogeneous(const Child& a) {
     return HomogeneousView<HomogeneousMode::Position, Child>(a);
 }
-template <concepts::ViewDerived Child>
+template <zipper::concepts::ViewDerived Child>
 auto homogeneous_position(const Child& a) {
     return HomogeneousView<HomogeneousMode::Position, Child>(a);
 }
-template <concepts::ViewDerived Child>
+template <zipper::concepts::ViewDerived Child>
 auto homogeneous_vector(const Child& a) {
     return HomogeneousView<HomogeneousMode::Vector, Child>(a);
 }
-template <concepts::ViewDerived Child>
+template <zipper::concepts::ViewDerived Child>
 auto affine(const Child& a) {
     return HomogeneousView<HomogeneousMode::Affine, Child>(a);
 }

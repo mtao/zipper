@@ -7,8 +7,8 @@
 namespace zipper::views::binary {
 
 namespace detail {
-template <concepts::ViewDerived ChildA, concepts::ViewDerived ChildB,
-          bool _holds_extents = true>
+template <zipper::concepts::ViewDerived ChildA,
+          zipper::concepts::ViewDerived ChildB, bool _holds_extents = true>
 struct DefaultBinaryViewTraits : public views::detail::DefaultViewTraits<> {
     using ATraits = views::detail::ViewTraits<ChildA>;
     using BTraits = views::detail::ViewTraits<ChildB>;
@@ -36,7 +36,7 @@ struct DefaultBinaryViewTraits : public views::detail::DefaultViewTraits<> {
 };
 }  // namespace detail
 
-template <typename Derived, concepts::ViewDerived ChildTypeA,
+template <typename Derived, zipper::concepts::ViewDerived ChildTypeA,
           concepts::ViewDerived ChildTypeB>
 class BinaryViewBase
     : public views::detail::ViewTraits<Derived>::template base_type<Derived> {

@@ -22,7 +22,7 @@ T det2(const T& a, const T& b, const T& c, const T& d) {
 }
 }  // namespace detail
 
-template <concepts::ViewDerived View>
+template <zipper::concepts::ViewDerived View>
     requires(View::extents_traits::rank == 2)
 class Determinant {
    public:
@@ -113,7 +113,7 @@ class Determinant {
     const View& m_view;
 };  // namespace unarytemplate<typenameA,typenameB>class AdditionView
 
-template <concepts::ViewDerived View>
+template <zipper::concepts::ViewDerived View>
 Determinant(const View&) -> Determinant<View>;
 
 }  // namespace reductions

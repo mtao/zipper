@@ -8,7 +8,7 @@
 namespace zipper::views {
 namespace reductions {
 
-template <concepts::ViewDerived View>
+template <zipper::concepts::ViewDerived View>
 class CoefficientSum {
    public:
     using self_type = CoefficientSum<View>;
@@ -37,7 +37,7 @@ class CoefficientSum {
     const View& m_view;
 };  // namespace unarytemplate<typenameA,typenameB>class AdditionView
 
-template <concepts::ViewDerived View>
+template <zipper::concepts::ViewDerived View>
 CoefficientSum(const View&) -> CoefficientSum<View>;
 
 }  // namespace reductions

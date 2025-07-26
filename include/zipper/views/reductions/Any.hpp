@@ -8,7 +8,7 @@
 namespace zipper::views {
 namespace reductions {
 
-template <concepts::ViewDerived View>
+template <zipper::concepts::ViewDerived View>
 class Any {
    public:
     using self_type = Any<View>;
@@ -38,7 +38,7 @@ class Any {
     const View& m_view;
 };  // namespace unarytemplate<typenameA,typenameB>class AdditionView
 
-template <concepts::ViewDerived View>
+template <zipper::concepts::ViewDerived View>
 Any(const View&) -> Any<View>;
 
 }  // namespace reductions

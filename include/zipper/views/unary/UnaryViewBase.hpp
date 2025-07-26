@@ -8,7 +8,8 @@
 namespace zipper::views::unary {
 
 namespace detail {
-template <concepts::QualifiedViewDerived Child, bool _holds_extents = false>
+template <zipper::concepts::QualifiedViewDerived Child,
+          bool _holds_extents = false>
 struct DefaultUnaryViewTraits
     : public views::detail::DefaultViewTraits<
           typename views::detail::ViewTraits<std::decay_t<Child>>::value_type,
@@ -29,7 +30,7 @@ struct DefaultUnaryViewTraits
 };
 }  // namespace detail
 
-template <typename Derived, concepts::QualifiedViewDerived ChildType>
+template <typename Derived, zipper::concepts::QualifiedViewDerived ChildType>
 class UnaryViewBase
     : public views::detail::ViewTraits<Derived>::template base_type<Derived> {
    public:

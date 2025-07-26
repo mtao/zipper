@@ -26,9 +26,8 @@ class ConstantView
     using value_type = traits::value_type;
     using Base = NullaryViewBase<ConstantView<T, Indices...>, T, Indices...>;
 
-    template <typename... Args>
-    ConstantView(const value_type& v, Args&&... args)
-        : Base(std::forward<Args>(args)...), m_value(v) {}
+    ConstantView(const value_type& v, const extents_type& e = {})
+        : Base(e), m_value(v) {}
 
     value_type get_value() const { return m_value; }
 
@@ -40,8 +39,7 @@ template <typename T, index_type... Indices>
 ConstantView(const T&, const extents<Indices...>&)
     -> ConstantView<T, Indices...>;
 template <typename T>
-ConstantView(const T&)
-    -> ConstantView<T>;
+ConstantView(const T&) -> ConstantView<T>;
 
 }  // namespace nullary
 }  // namespace zipper::views

@@ -21,6 +21,8 @@ class Form_ : public FormBase<storage::PlainObjectStorage<
     using extents_type = Base::extents_type;
     using span_type =
         FormBase<storage::SpanStorage<ValueType, Extents, layout_type>>;
+    using const_span_type =
+        FormBase<storage::SpanStorage<const ValueType, Extents, layout_type>>;
 
     using Base::extent;
     using Base::Base;

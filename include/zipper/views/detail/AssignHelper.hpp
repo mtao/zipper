@@ -1,16 +1,16 @@
 #if !defined(ZIPPER_VIEWS_NULLARY_DETAIL_ASSIGN_HELPER_HPP)
 #define ZIPPER_VIEWS_NULLARY_DETAIL_ASSIGN_HELPER_HPP
-#include "zipper/views/detail/ViewTraits.hpp"
 #include "zipper/concepts/ViewDerived.hpp"
 #include "zipper/detail/ExtentsTraits.hpp"
 #include "zipper/utils/extents/all_extents_indices.hpp"
+#include "zipper/views/detail/ViewTraits.hpp"
 namespace zipper::storage {
 template <typename ValueType, typename Extents, typename LayoutPolicy,
           typename AccessorPolicy>
 class PlainObjectStorage;
 }
 namespace zipper::views::detail {
-template <concepts::ViewDerived From, concepts::ViewDerived To>
+template <zipper::concepts::ViewDerived From, zipper::concepts::ViewDerived To>
 struct AssignHelper {
     using to_extents_type = typename To::extents_type;
     using from_extents_type = typename To::extents_type;
@@ -44,15 +44,20 @@ struct AssignHelper {
     }
 
     static void assign(const From& from, To& to) {
-        using VTraits = zipper::views::detail::ViewTraits<From>;
+        using FromTraits = zipper::views::detail::ViewTraits<From>;
+        using ToTraits = zipper::views::detail::ViewTraits<To>;
         constexpr static bool assigning_from_infinite =
-            VTraits::extents_type::rank() == 0;
+            FromTraits::extents_type::rank() == 0;
         constexpr static bool should_resize =
-            !assigning_from_infinite && to_extents_traits::is_dynamic;
-        if constexpr (VTraits::is_coefficient_consistent) {
+            !assigning_from_infinite && ToTraits::is_resizable;
+        if constexpr (FromTraits::is_coefficient_consistent) {
             if constexpr (should_resize) {
                 to.resize(from.extents());
+            } else if constexpr (to_extents_traits::is_dynamic &&
+                                 !assigning_from_infinite) {
+                assert(to.extents() == from.extents());
             }
+
             assign_direct(from, to);
         } else {
             using POS =

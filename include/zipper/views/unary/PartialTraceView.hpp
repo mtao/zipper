@@ -12,12 +12,12 @@
 
 namespace zipper::views {
 namespace unary {
-template <concepts::ViewDerived ViewType, rank_type... Indices>
+template <zipper::concepts::ViewDerived ViewType, rank_type... Indices>
     requires(sizeof...(Indices) % 2 == 0)
 class PartialTraceView;
 
 }
-template <concepts::ViewDerived ViewType, rank_type... Indices>
+template <zipper::concepts::ViewDerived ViewType, rank_type... Indices>
 struct detail::ViewTraits<unary::PartialTraceView<ViewType, Indices...>>
     : public zipper::views::unary::detail::DefaultUnaryViewTraits<ViewType,
                                                                   true> {
@@ -37,7 +37,7 @@ struct detail::ViewTraits<unary::PartialTraceView<ViewType, Indices...>>
 
 namespace unary {
 // indices are the indices being traced
-template <concepts::ViewDerived ViewType, rank_type... Indices>
+template <zipper::concepts::ViewDerived ViewType, rank_type... Indices>
     requires(sizeof...(Indices) % 2 == 0)
 class PartialTraceView
     : public UnaryViewBase<PartialTraceView<ViewType, Indices...>, ViewType> {
@@ -98,7 +98,7 @@ class PartialTraceView
             slice_type(view(), get_index(std::integral_constant<rank_type, N>{},
                                          std::forward<Args>(idxs)...)...);
 
-        DiagonalView<slice_type, true> diag(slice);
+        DiagonalView<const slice_type> diag(slice);
         return reductions::CoefficientSum(diag)();
     }
 
