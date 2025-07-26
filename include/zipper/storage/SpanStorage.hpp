@@ -85,7 +85,7 @@ struct detail::ViewTraits<zipper::storage::SpanStorage<
       ValueType, Extents, LayoutPolicy, AccessorPolicy>> */
 {
     using value_type = std::remove_const_t<ValueType>;
-    bool is_const = std::is_const_v<ValueType>;
+    constexpr static bool is_const = std::is_const_v<ValueType>;
     using extents_type = Extents;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
     using value_accessor_type =
@@ -93,7 +93,7 @@ struct detail::ViewTraits<zipper::storage::SpanStorage<
     using layout_policy = LayoutPolicy;
     using accessor_policy = AccessorPolicy;
     using mapping_type = typename layout_policy::template mapping<extents_type>;
-    constexpr static bool is_writable = true;
+    constexpr static bool is_writable = is_const;
     constexpr static bool is_coefficient_consistent = true;
 };
 }  // namespace zipper::views
