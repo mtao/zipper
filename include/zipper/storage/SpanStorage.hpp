@@ -93,7 +93,7 @@ struct detail::ViewTraits<zipper::storage::SpanStorage<
     using layout_policy = LayoutPolicy;
     using accessor_policy = AccessorPolicy;
     using mapping_type = typename layout_policy::template mapping<extents_type>;
-    constexpr static bool is_writable = is_const;
+    constexpr static bool is_writable = !is_const;
     constexpr static bool is_coefficient_consistent = true;
 };
 }  // namespace zipper::views
