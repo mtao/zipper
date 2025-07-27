@@ -16,7 +16,7 @@ struct pow {
 };
 }  // namespace detail
 
-template <zipper::concepts::ViewDerived B, typename A>
+template <zipper::concepts::QualifiedViewDerived B, typename A>
 using ScalarPowerView = ScalarOperationView<B, detail::pow<A>, A, true>;
 
 }  // namespace zipper::views::unary

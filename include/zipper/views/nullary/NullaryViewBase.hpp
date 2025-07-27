@@ -11,6 +11,7 @@ struct DefaultNullaryViewTraits
     : public views::detail::DefaultViewTraits<T, extents<Indices...>> {
     constexpr static bool is_coefficient_consistent = true;
     constexpr static bool is_value_based = true;
+    constexpr static bool is_writable = false;
 
     // to pass a base type to the NullaryViewBase
     template <typename Derived>

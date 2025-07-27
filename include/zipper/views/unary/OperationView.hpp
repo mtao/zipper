@@ -58,7 +58,7 @@ class OperationView
     using Base::extent;
     using Base::view;
 
-    OperationView(const Child& v, const Operation& op = {})
+    OperationView(Child& v, const Operation& op = {})
         : Base(v), m_op(op) {}
 
     using child_value_type = traits::base_value_type;

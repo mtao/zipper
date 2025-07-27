@@ -37,6 +37,6 @@ struct IsZipperBase<View> : std::true_type {};
 }  // namespace detail
 
 template <typename T>
-concept ZipperBaseDerived = detail::IsZipperBase<T>::value;
+concept ZipperBaseDerived = detail::IsZipperBase<std::decay_t<T>>::value;
 }  // namespace zipper::concepts
 #endif

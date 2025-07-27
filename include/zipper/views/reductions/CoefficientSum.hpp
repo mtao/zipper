@@ -8,16 +8,17 @@
 namespace zipper::views {
 namespace reductions {
 
-template <zipper::concepts::ViewDerived View>
+template <zipper::concepts::QualifiedViewDerived View>
 class CoefficientSum {
    public:
     using self_type = CoefficientSum<View>;
     using view_type = View;
-    using view_traits = zipper::views::detail::ViewTraits<view_type>;
-    using value_type = typename View::value_type;
+    using view_traits =
+        zipper::views::detail::ViewTraits<std::decay_t<view_type>>;
+    using value_type = typename view_traits::value_type;
 
+    CoefficientSum(View& v) : m_view(v) {}
     CoefficientSum(View&& v) : m_view(v) {}
-    CoefficientSum(const View& v) : m_view(v) {}
 
     CoefficientSum(CoefficientSum&& v) = default;
     CoefficientSum(const CoefficientSum& v) = default;

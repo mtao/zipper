@@ -13,7 +13,7 @@ class StaticValueAccessor {
 
    public:
     StaticValueAccessor() = default;
-    using value_type = ValueType;
+    using value_type = std::remove_const_t<ValueType>;
     using storage_type = std::array<value_type, N>;
     constexpr static auto size() -> std::size_t { return N; }
     value_type coeff(index_type i) const { return m_data[i]; }
@@ -41,7 +41,7 @@ class DynamicValueAccessor {
    public:
     DynamicValueAccessor() = default;
     DynamicValueAccessor(index_type index) : m_data(index) {}
-    using value_type = ValueType;
+    using value_type = std::remove_const_t<ValueType>;
     using storage_type = std::vector<value_type>;
 
     auto size() const -> std::size_t { return m_data.size(); }

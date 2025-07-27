@@ -10,10 +10,10 @@ struct abs {
 };
 }  // namespace detail
 
-template <zipper::concepts::ViewDerived Child>
-using AbsView = OperationView<
-    Child,
-    detail::abs<typename zipper::views::detail::ViewTraits<Child>::value_type>>;
+template <zipper::concepts::QualifiedViewDerived Child>
+using AbsView =
+    OperationView<Child, detail::abs<typename zipper::views::detail::ViewTraits<
+                             std::decay_t<Child>>::value_type>>;
 
 }  // namespace zipper::views::unary
 #endif

@@ -9,22 +9,24 @@
 namespace zipper::views {
 namespace reductions {
 
-template <zipper::concepts::ViewDerived View>
+template <zipper::concepts::QualifiedViewDerived View>
 class Trace {
    public:
     using self_type = Trace<View>;
     using view_type = View;
-    using view_traits = zipper::views::detail::ViewTraits<view_type>;
-    using value_type = typename View::value_type;
+    using view_traits =
+        zipper::views::detail::ViewTraits<std::decay_t<view_type>>;
+    using value_type = typename view_traits::value_type;
 
+    Trace(View& v) : m_view(v) {}
     Trace(View&& v) : m_view(v) {}
-    Trace(const View& v) : m_view(v) {}
 
     Trace(Trace&& v) = default;
     Trace(const Trace& v) = default;
 
     value_type operator()() const {
-        return reductions::CoefficientSum(unary::DiagonalView<const view_type>(m_view))();
+        return reductions::CoefficientSum(
+            unary::DiagonalView<const view_type>(m_view))();
     }
 
    private:

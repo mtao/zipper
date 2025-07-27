@@ -164,7 +164,7 @@ TEST_CASE("test_partial_sum", "[views][unary]") {
         const auto& v = D.view();
 
         auto pr = views::unary::PartialReductionView<
-            std::decay_t<decltype(v)>, views::reductions::Trace, 1, 2>(v);
+            decltype(v), views::reductions::Trace, 1, 2>(v);
 
         spdlog::info("Partial reduction");
         print2(pr);

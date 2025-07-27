@@ -13,19 +13,19 @@ class PartialReductionViewDispatcher {
     PartialReductionViewDispatcher(ViewType& v) : m_view(v) {}
     auto sum() const {
         return views::unary::PartialReductionView<
-            std::decay_t<ViewType>, views::reductions::CoefficientSum,
+            ViewType, views::reductions::CoefficientSum,
             Indices...>(m_view);
     }
     template <index_type P = 2>
     auto norm() const {
         using holder = views::reductions::detail::lp_norm_holder<P>;
-        return holder::template reduction_view<std::decay_t<ViewType>,
+        return holder::template reduction_view<ViewType,
                                                Indices...>(m_view);
     }
     template <index_type P = 2>
     auto norm_powered() const {
         using holder = views::reductions::detail::lp_norm_powered_holder<P>;
-        return holder::template reduction_view<std::decay_t<ViewType>,
+        return holder::template reduction_view<ViewType,
                                                Indices...>(m_view);
     }
 

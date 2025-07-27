@@ -16,13 +16,14 @@ class DiagonalView;
 template <zipper::concepts::QualifiedViewDerived ViewType>
 struct detail::ViewTraits<unary::DiagonalView<ViewType> >
     : public zipper::views::unary::detail::DefaultUnaryViewTraits<
-          std::decay_t<ViewType>, true> {//TODO: make this deceay less necessary
-    using Base = detail::ViewTraits<ViewType>;
+          ViewType, true> {//TODO: make this deceay less necessary
+    using Base = detail::ViewTraits<std::decay_t<ViewType>>;
     using value_type = Base::value_type;
     using base_extents_type = Base::extents_type;
     using base_extents_traits = zipper::detail::ExtentsTraits<base_extents_type>;
     constexpr static bool is_coefficient_consistent = false;
     constexpr static bool is_value_based = false;
+
 
     //
     template <std::size_t... Indices>

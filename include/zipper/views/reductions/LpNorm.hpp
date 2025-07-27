@@ -10,16 +10,17 @@ namespace reductions {
 namespace detail {
 template <index_type P>
 struct lp_norm_holder {
-    template <zipper::concepts::ViewDerived View>
+    template <zipper::concepts::QualifiedViewDerived View>
     class LpNorm {
        public:
         using self_type = LpNorm<View>;
         using view_type = View;
-        using view_traits = zipper::views::detail::ViewTraits<view_type>;
-        using value_type = typename View::value_type;
+        using view_traits =
+            zipper::views::detail::ViewTraits<std::decay_t<view_type>>;
+        using value_type = typename view_traits::value_type;
 
+        LpNorm(View& v) : m_view(v) {}
         LpNorm(View&& v) : m_view(v) {}
-        LpNorm(const View& v) : m_view(v) {}
 
         LpNorm(LpNorm&& v) = default;
         LpNorm(const LpNorm& v) = default;
@@ -38,22 +39,23 @@ struct lp_norm_holder {
        private:
         const View& m_view;
     };
-    template <zipper::concepts::ViewDerived ViewType,
+    template <zipper::concepts::QualifiedViewDerived ViewType,
 
               rank_type... Indices>
-    static auto reduction_view(const ViewType& view) {
-        return views::unary::PartialReductionView<std::decay_t<ViewType>,
-                                                  LpNorm, Indices...>(view);
+    static auto reduction_view(ViewType& view) {
+        return views::unary::PartialReductionView<ViewType, LpNorm, Indices...>(
+            view);
     }
 };
 }  // namespace detail
 
-template <index_type P, zipper::concepts::ViewDerived View>
-using LpNorm = typename detail::template lp_norm_holder<P>::template LpNorm<View>;
+template <index_type P, zipper::concepts::QualifiedViewDerived View>
+using LpNorm =
+    typename detail::template lp_norm_holder<P>::template LpNorm<View>;
 
-template <zipper::concepts::ViewDerived View>
+template <zipper::concepts::QualifiedViewDerived View>
 using L2Norm = typename detail::lp_norm_holder<2>::LpNorm<View>;
-template <zipper::concepts::ViewDerived View>
+template <zipper::concepts::QualifiedViewDerived View>
 using L1Norm = typename detail::lp_norm_holder<1>::LpNorm<View>;
 
 }  // namespace reductions

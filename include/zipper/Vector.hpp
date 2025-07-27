@@ -100,10 +100,10 @@ class Vector
 
 template <concepts::VectorViewDerived MB>
 Vector(const MB& o)
-    -> Vector<typename MB::value_type, MB::extents_type::static_extent(0)>;
+    -> Vector<std::decay_t<typename MB::value_type>, MB::extents_type::static_extent(0)>;
 template <concepts::VectorBaseDerived MB>
 Vector(const MB& o)
-    -> Vector<typename MB::value_type, MB::extents_type::static_extent(0)>;
+    -> Vector<std::decay_t<typename MB::value_type>, MB::extents_type::static_extent(0)>;
 }  // namespace zipper
 
 namespace zipper::views {

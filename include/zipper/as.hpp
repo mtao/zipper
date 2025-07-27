@@ -7,35 +7,35 @@
 
 namespace zipper {
 template <concepts::ZipperBaseDerived ZipperDerived>
-auto as_array(const ZipperDerived& v) {
+auto as_array(ZipperDerived& v) {
     using View = ZipperDerived::view_type;
     // make it non-owning
     using V = views::unary::IdentityView<View>;
     return ArrayBase(V(v.view()));
 }
 template <concepts::ZipperBaseDerived ZipperDerived>
-auto as_tensor(const ZipperDerived& v) {
+auto as_tensor(ZipperDerived& v) {
     using View = ZipperDerived::view_type;
     // make it non-owning
     using V = views::unary::IdentityView<View>;
     return TensorBase(V(v.view()));
 }
 template <concepts::ZipperBaseDerived ZipperDerived>
-auto as_matrix(const ZipperDerived& v) {
+auto as_matrix(ZipperDerived& v) {
     using View = ZipperDerived::view_type;
     // make it non-owning
     using V = views::unary::IdentityView<View>;
     return MatrixBase(V(v.view()));
 }
 template <concepts::ZipperBaseDerived ZipperDerived>
-auto as_vector(const ZipperDerived& v) {
+auto as_vector(ZipperDerived& v) {
     using View = ZipperDerived::view_type;
     // make it non-owning
     using V = views::unary::IdentityView<View>;
     return VectorBase(V(v.view()));
 }
 template <concepts::ZipperBaseDerived ZipperDerived>
-auto as_form(const ZipperDerived& v) {
+auto as_form(ZipperDerived& v) {
     using View = ZipperDerived::view_type;
     // make it non-owning
     using V = views::unary::IdentityView<View>;

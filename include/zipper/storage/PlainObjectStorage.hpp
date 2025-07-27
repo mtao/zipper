@@ -17,6 +17,7 @@ class PlainObjectStorage
    public:
     using ParentType = views::nullary::DenseStorageViewBase<
         PlainObjectStorage<ValueType, Extents, LayoutPolicy, AccessorPolicy>>;
+
     using value_type = ValueType;
     using extents_type = Extents;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;

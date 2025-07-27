@@ -137,12 +137,12 @@ class Matrix
 };
 template <concepts::MatrixViewDerived MB>
 Matrix(const MB& o)
-    -> Matrix<typename MB::value_type, MB::extents_type::static_extent(0),
+    -> Matrix<std::decay_t<typename MB::value_type>, MB::extents_type::static_extent(0),
               MB::extents_type::static_extent(1)>;
 
 template <concepts::MatrixBaseDerived MB>
 Matrix(const MB& o)
-    -> Matrix<typename MB::value_type, MB::extents_type::static_extent(0),
+    -> Matrix<std::decay_t<typename MB::value_type>, MB::extents_type::static_extent(0),
               MB::extents_type::static_extent(1)>;
 
 }  // namespace zipper

@@ -22,7 +22,7 @@ struct DefaultUnaryViewTraits
     using base_type =
         std::conditional_t<holds_extents, DimensionedViewBase<Derived>,
                            ViewBase<Derived>>;
-    using base_traits = views::detail::ViewTraits<Child>;
+    using base_traits = views::detail::ViewTraits<std::decay_t<Child>>;
     using base_value_type = base_traits::value_type;
     constexpr static bool is_coefficient_consistent =
         base_traits::is_coefficient_consistent;
@@ -49,6 +49,8 @@ class UnaryViewBase
     using Base::extent;
     constexpr static bool is_value_based = traits::is_value_based;
     constexpr static bool is_const = traits::is_const;
+    constexpr static bool is_writable = traits::is_writable;
+    using child_type = std::conditional_t<is_writable, ChildType, const ChildType>;
 
     Derived& derived() { return static_cast<Derived&>(*this); }
     const Derived& derived() const {
@@ -61,10 +63,10 @@ class UnaryViewBase
     UnaryViewBase(UnaryViewBase&&) = default;
     UnaryViewBase& operator=(const UnaryViewBase&) = delete;
     UnaryViewBase& operator=(UnaryViewBase&&) = delete;
-    UnaryViewBase(const ChildType& b)
+    UnaryViewBase(child_type& b)
         requires(!holds_extents || is_static)
         : m_view(b) {}
-    UnaryViewBase(const ChildType& b, const extents_type& e)
+    UnaryViewBase(child_type& b, const extents_type& e)
         : Base(e), m_view(b) {}
 
     constexpr const extents_type& extents() const {
@@ -81,12 +83,11 @@ class UnaryViewBase
         return derived().get_value(value);
     }
 
-    ChildType& view()
-        requires(!is_const)
+    child_type& view()
     {
-        return const_cast<ChildType&>(m_view);
+        return m_view;
     }
-    const ChildType& view() const { return m_view; }
+    const child_type& view() const { return m_view; }
     template <typename... Args>
     value_type coeff(Args&&... args) const
         requires(is_value_based)
@@ -97,7 +98,7 @@ class UnaryViewBase
    private:
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpadded"
-    ChildType& m_view;
+    child_type& m_view;
 #pragma GCC diagnostic pop
 };
 

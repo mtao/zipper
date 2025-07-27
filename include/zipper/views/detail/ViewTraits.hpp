@@ -11,10 +11,10 @@ struct ViewTraits;
 // can overwrite them
 template <typename ValueType = void, typename Extents = zipper::dextents<0>>
 struct DefaultViewTraits {
-    using value_type = ValueType;
+    using value_type = std::remove_const_t<ValueType>;
     using extents_type = Extents;
 
-    constexpr static bool is_writable = false;
+    constexpr static bool is_writable = std::is_const_v<ValueType>;
 
     constexpr static bool is_resizable = false;
     // guarantees that V(j) = f(...) cannot depend on V(k) for j != k)

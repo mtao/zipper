@@ -19,9 +19,9 @@ class SliceView;
 template <zipper::concepts::QualifiedViewDerived QualifiedViewType, typename... Slices>
 struct detail::ViewTraits<unary::SliceView<QualifiedViewType, Slices...>>
     : public zipper::views::unary::detail::DefaultUnaryViewTraits<
-          std::decay_t<QualifiedViewType>, true> {
+          QualifiedViewType, true> {
     using ViewType = std::decay_t<QualifiedViewType>;
-    using Base = detail::ViewTraits<QualifiedViewType>;
+    using Base = detail::ViewTraits<ViewType>;
 
     using extents_type =
         std::decay_t<decltype(std::experimental::submdspan_extents(
@@ -79,9 +79,6 @@ class SliceView : public UnaryViewBase<SliceView<QualifiedViewType, Slices...>,
     using Base::view;
     constexpr static bool IsConst = traits::is_const;
     using ViewType = std::decay_t<QualifiedViewType>;
-    // TODO: fix this so ViewTraits are all aware of qulaifiacitons
-    using qualified_view_traits =
-        zipper::views::detail::ViewTraits<QualifiedViewType>;
     using view_traits = zipper::views::detail::ViewTraits<ViewType>;
     using view_extents_type = view_traits::extents_type;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
@@ -98,37 +95,16 @@ class SliceView : public UnaryViewBase<SliceView<QualifiedViewType, Slices...>,
         assign(v);
         return *this;
     }
-    /*
-    SliceView(const ViewType& b, Slices&&... slices)
-        requires(IsConst)
-        : Base(b),
-          m_extents(
-              std::experimental::submdspan_extents(b.extents(), slices...)),
-          m_slices(std::forward<Slices>(slices)...) {}
-
-    SliceView(ViewType& b, Slices&&... slices)
-        requires(!IsConst && view_traits::is_writable)
-        : Base(b),
-          m_extents(
-              std::experimental::submdspan_extents(b.extents(), slices...)),
-          m_slices(std::forward<Slices>(slices)...) {}
-
-          */
     // for some reason having zipper::full_extent makes this necessary. TODO fix
     // this
-    SliceView(const ViewType& b, const Slices&... slices)
-        requires(IsConst)
+    SliceView(QualifiedViewType& b, const Slices&... slices)
         : Base(b, std::experimental::submdspan_extents(b.extents(), slices...)),
           m_slices(slices...) {}
 
-    SliceView(ViewType& b, const Slices&... slices)
-        requires(!IsConst && view_traits::is_writable)
-        : Base(b, std::experimental::submdspan_extents(b.extents(), slices...)),
-          m_slices(slices...) {}
 
     template <rank_type K, typename... Args>
     index_type get_index(Args&&... a) const {
-        // const auto& s = std::get<K>(m_slices);
+        //static_assert(K < sizeof...(Args));
         const auto& s = std::get<K>(m_slices);
 
         if constexpr (zipper::detail::is_integral_constant_v<
@@ -151,26 +127,6 @@ class SliceView : public UnaryViewBase<SliceView<QualifiedViewType, Slices...>,
             return start + v * stride;
         }
     }
-    /*
-    template <rank_type K>
-    index_type get_index(concepts::TupleLike auto const& a) const {
-        // const auto& s = std::get<K>(m_slices);
-        const auto& s = std::get<K>(m_slices);
-        if constexpr (zipper::detail::is_integral_constant_v<
-                          std::decay_t<decltype(s)>>) {
-            return s;
-        } else if constexpr (std::is_integral_v<std::decay_t<decltype(s)>>) {
-            return s;
-        } else {
-            constexpr index_type start = std::experimental::detail::first_of(s);
-            constexpr index_type stride =
-                std::experimental::detail::stride_of(s);
-
-            const auto& v = std::get<actionable_indices[K]>(a);
-            return start + v * stride;
-        }
-    }
-    */
 
     template <typename... Args, rank_type... ranks>
     auto _coeff(std::integer_sequence<rank_type, ranks...>,

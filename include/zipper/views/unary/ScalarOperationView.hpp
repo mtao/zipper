@@ -15,7 +15,7 @@ template <zipper::concepts::QualifiedViewDerived Child, typename Operation, type
 struct detail::ViewTraits<
     unary::ScalarOperationView<Child, Operation, Scalar, ScalarOnRight, PreservesZeros>>
     : public zipper::views::unary::detail::DefaultUnaryViewTraits<Child> {
-    using ChildTraits = ViewTraits<Child>;
+    using ChildTraits = ViewTraits<std::decay_t<Child>>;
     using value_type = decltype(std::declval<Operation>()(
         std::declval<typename ChildTraits::value_type>(),
         std::declval<Scalar>()));
@@ -37,10 +37,10 @@ class ScalarOperationView
     using Base = UnaryViewBase<self_type, Child>;
     using Base::view;
 
-    ScalarOperationView(const Child& a, const Scalar& b, const Operation& op = {})
+    ScalarOperationView(Child& a, const Scalar& b, const Operation& op = {})
         requires(ScalarOnRight)
         : Base(a), m_op(op), m_scalar(b) {}
-    ScalarOperationView(const Scalar& a, const Child& b, const Operation& op = {})
+    ScalarOperationView(const Scalar& a, Child& b, const Operation& op = {})
         requires(!ScalarOnRight)
         : Base(b), m_op(op), m_scalar(a) {}
 
