@@ -17,6 +17,7 @@ struct DefaultUnaryViewTraits
               std::decay_t<Child>>::extents_type> {
     // to pass a base type to the UnaryViewBase
     constexpr static bool holds_extents = _holds_extents;
+    constexpr static bool is_const = std::is_const_v<Child>;
     template <typename Derived>
     using base_type =
         std::conditional_t<holds_extents, DimensionedViewBase<Derived>,
@@ -26,7 +27,7 @@ struct DefaultUnaryViewTraits
     constexpr static bool is_coefficient_consistent =
         base_traits::is_coefficient_consistent;
     constexpr static bool is_value_based = true;
-    constexpr static bool is_const = std::is_const_v<Child>;
+    constexpr static bool is_writable = base_traits::is_writable && !is_const;
 };
 }  // namespace detail
 
@@ -96,7 +97,7 @@ class UnaryViewBase
    private:
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpadded"
-    const ChildType& m_view;
+    ChildType& m_view;
 #pragma GCC diagnostic pop
 };
 

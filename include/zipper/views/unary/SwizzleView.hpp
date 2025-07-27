@@ -31,7 +31,6 @@ struct detail::ViewTraits<unary::SwizzleView<QualifiedViewType, Indices...>>
     using extents_type = swizzler_type::template extents_type_swizzler_t<
         typename Base::extents_type>;
     using value_type = Base::value_type;
-    constexpr static bool is_writable = Base::is_writable;
     constexpr static bool is_coefficient_consistent = false;
     constexpr static bool is_value_based = false;
 };

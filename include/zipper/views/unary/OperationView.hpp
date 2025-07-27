@@ -7,7 +7,7 @@
 namespace zipper::views {
 namespace unary {
 // TODO: operation should inherit std::unary_function<T,U>
-template <zipper::concepts::ViewDerived B, 
+template <zipper::concepts::QualifiedViewDerived B, 
          //
          //concepts::ScalarOperation<typename B::value_type> Operation,
          typename Operation,
@@ -17,7 +17,7 @@ template <zipper::concepts::ViewDerived B,
 class OperationView;
 
 }  // namespace unary
-template <zipper::concepts::ViewDerived Child, 
+template <zipper::concepts::QualifiedViewDerived Child, 
          //
          //unary::concepts::ScalarOperation<typename Child::value_type> Operation,
          typename Operation,
@@ -37,7 +37,7 @@ namespace unary {
 
 
 
-template <zipper::concepts::ViewDerived Child, 
+template <zipper::concepts::QualifiedViewDerived Child, 
          //concepts::ScalarOperation<typename Child::value_type> Operation,
          typename Operation,
          //

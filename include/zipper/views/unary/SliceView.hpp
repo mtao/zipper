@@ -21,15 +21,13 @@ struct detail::ViewTraits<unary::SliceView<QualifiedViewType, Slices...>>
     : public zipper::views::unary::detail::DefaultUnaryViewTraits<
           std::decay_t<QualifiedViewType>, true> {
     using ViewType = std::decay_t<QualifiedViewType>;
-    using Base = detail::ViewTraits<ViewType>;
+    using Base = detail::ViewTraits<QualifiedViewType>;
 
     using extents_type =
         std::decay_t<decltype(std::experimental::submdspan_extents(
             std::declval<typename Base::extents_type>(),
             std::declval<Slices>()...))>;
     using value_type = Base::value_type;
-    constexpr static bool is_const = std::is_const_v<QualifiedViewType>;
-    constexpr static bool is_writable = Base::is_writable && !is_const;
     constexpr static bool is_coefficient_consistent = false;
     constexpr static bool is_value_based = false;
 

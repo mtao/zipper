@@ -12,7 +12,7 @@ namespace zipper::concepts {
 
 template <typename T, zipper::rank_type rank>
 concept TensorViewDerived =
-    ViewDerived<T> &&
+    QualifiedViewDerived<T> &&
     views::detail::ViewTraits<T>::extents_type::rank() == rank;
 }  // namespace zipper::concepts
 #endif
