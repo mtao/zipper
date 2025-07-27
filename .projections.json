@@ -1,0 +1,8 @@
+{
+    "include/zipper/*.hxx": {
+        "alternate": "include/zipper/{}.hpp"
+    },
+    "include/zipper/*.hpp": {
+        "alternate": "src/{}.hxx"
+    }
+}
