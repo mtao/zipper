@@ -130,6 +130,55 @@ class VectorBase : public ZipperBase<VectorBase, View> {
                 view(), o.view()));
     }
 
+    template <index_type Start, index_type Size>
+    auto segment()
+        requires(view_type::is_writable)
+    {
+        auto S = slice(std::integral_constant<index_type, Start>{},
+                       std::integral_constant<index_type, Size>{});
+        auto v = Base::slice_view(S);
+        using V = std::decay_t<decltype(v)>;
+        return VectorBase<V>(std::move(v));
+    }
+    template <index_type Start, index_type Size>
+    auto segment() const {
+        auto S = slice(std::integral_constant<index_type, Start>{},
+                       std::integral_constant<index_type, Size>{});
+        auto v = Base::slice_view(S);
+        using V = std::decay_t<decltype(v)>;
+        return VectorBase<V>(std::move(v));
+    }
+    template <index_type Size>
+    auto segment(index_type start)
+        requires(view_type::is_writable)
+    {
+        auto S = slice(start, std::integral_constant<index_type, Size>{});
+        auto v = Base::slice_view(S);
+        using V = std::decay_t<decltype(v)>;
+        return VectorBase<V>(std::move(v));
+    }
+    template <index_type Size>
+    auto segment(index_type start) const {
+        auto S = slice(std::integral_constant<index_type, 0>{}, Size);
+        auto v = Base::slice_view(S);
+        using V = std::decay_t<decltype(v)>;
+        return VectorBase<V>(std::move(v));
+    }
+    auto segment(index_type start, index_type size)
+        requires(view_type::is_writable)
+    {
+        auto S = slice(start, size);
+        auto v = Base::slice_view(S);
+        using V = std::decay_t<decltype(v)>;
+        return VectorBase<V>(std::move(v));
+    }
+    auto segment(index_type start, index_type size) const {
+        auto S = slice(start, size);
+        auto v = Base::slice_view(S);
+        using V = std::decay_t<decltype(v)>;
+        return VectorBase<V>(std::move(v));
+    }
+
     template <index_type I>
     auto head()
         requires(view_type::is_writable)
@@ -209,11 +258,11 @@ class VectorBase : public ZipperBase<VectorBase, View> {
 
     // implements ones * this.transpose()
     auto repeat_left() const {
-        return Base::template repeat_left<1,MatrixBase>();
+        return Base::template repeat_left<1, MatrixBase>();
     }
     // implements  this * ones.transpose()
     auto repeat_right() const {
-        return Base::template repeat_right<1,MatrixBase>();
+        return Base::template repeat_right<1, MatrixBase>();
     }
 
     template <index_type T = 2>
