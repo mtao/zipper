@@ -46,10 +46,44 @@ template <concepts::ZipperBaseDerived ZipperDerived>
 auto as_form(ZipperDerived& v) {
     using View = ZipperDerived::view_type;
 
-    constexpr static bool is_const = ZipperDerived::view_type::traits::is_writable || std::is_const_v<ZipperDerived>;
-    using ViewC = std::conditional_t< is_const, const View, View>;
     // make it non-owning
-    using V = views::unary::IdentityView<ViewC>;
+    using V = views::unary::IdentityView<const View>;
+    return FormBase(V(v.view()));
+}
+template <concepts::ZipperBaseDerived ZipperDerived>
+auto as_array(const ZipperDerived& v) {
+    using View = ZipperDerived::view_type;
+    // make it non-owning
+    using V = views::unary::IdentityView<const View>;
+    return ArrayBase(V(v.view()));
+}
+template <concepts::ZipperBaseDerived ZipperDerived>
+auto as_tensor(const ZipperDerived& v) {
+    using View = ZipperDerived::view_type;
+    // make it non-owning
+    using V = views::unary::IdentityView<const View>;
+    return TensorBase(V(v.view()));
+}
+template <concepts::ZipperBaseDerived ZipperDerived>
+auto as_matrix(const ZipperDerived& v) {
+    using View = ZipperDerived::view_type;
+    // make it non-owning
+    using V = views::unary::IdentityView<const View>;
+    return MatrixBase(V(v.view()));
+}
+template <concepts::ZipperBaseDerived ZipperDerived>
+auto as_vector(const ZipperDerived& v) {
+    using View = ZipperDerived::view_type;
+    // make it non-owning
+    using V = views::unary::IdentityView<const View>;
+    return VectorBase(V(v.view()));
+}
+template <concepts::ZipperBaseDerived ZipperDerived>
+auto as_form(const ZipperDerived& v) {
+    using View = ZipperDerived::view_type;
+
+    // make it non-owning
+    using V = views::unary::IdentityView<const View>;
     return FormBase(V(v.view()));
 }
 
