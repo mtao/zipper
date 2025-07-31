@@ -6,7 +6,7 @@
 #include "VectorViewDerived.hpp"
 
 namespace zipper {
-template <concepts::ViewDerived T>
+template <concepts::QualifiedViewDerived T>
 class VectorBase;
 template <typename T, index_type R>
 class Vector;

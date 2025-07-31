@@ -30,11 +30,11 @@ class Trace {
     }
 
    private:
-    const View& m_view;
+    View& m_view;
 };
 
-template <zipper::concepts::ViewDerived View>
-Trace(const View&) -> Trace<View>;
+template <zipper::concepts::QualifiedViewDerived View>
+Trace(View&) -> Trace<View>;
 
 }  // namespace reductions
 }  // namespace zipper::views

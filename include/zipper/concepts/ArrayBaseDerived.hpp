@@ -10,7 +10,7 @@
 #include "zipper/types.hpp"
 
 namespace zipper {
-template <concepts::ViewDerived T>
+template <concepts::QualifiedViewDerived T>
 class ArrayBase;
 template <typename ValueType, concepts::ExtentsType Extents,
           bool LeftMajor = true>
@@ -31,7 +31,7 @@ struct IsArrayBase<ArrayBase<T>> : std::true_type {};
 
 template <typename T>
 concept ArrayBaseDerived =
-    (concepts::ViewDerived<T> && std::derived_from<T, zipper::ArrayBase<T>>) ||
+    (concepts::QualifiedViewDerived<T> && std::derived_from<T, zipper::ArrayBase<T>>) ||
     detail::IsArray<T>::value || detail::IsArrayBase<T>::value;
 }  // namespace zipper::concepts
 #endif

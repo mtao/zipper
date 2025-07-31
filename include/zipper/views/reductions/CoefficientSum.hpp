@@ -38,8 +38,8 @@ class CoefficientSum {
     const View& m_view;
 };  // namespace unarytemplate<typenameA,typenameB>class AdditionView
 
-template <zipper::concepts::ViewDerived View>
-CoefficientSum(const View&) -> CoefficientSum<View>;
+template <zipper::concepts::QualifiedViewDerived View>
+CoefficientSum(View&) -> CoefficientSum<View>;
 
 }  // namespace reductions
 }  // namespace zipper::views

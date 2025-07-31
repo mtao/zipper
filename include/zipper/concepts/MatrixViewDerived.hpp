@@ -6,6 +6,6 @@
 namespace zipper::concepts {
 
 template <typename T>
-concept MatrixViewDerived = TensorViewDerived<T, 2>;
+concept MatrixViewDerived = TensorViewDerived<std::decay_t<T>, 2>;
 }  // namespace zipper::concepts
 #endif

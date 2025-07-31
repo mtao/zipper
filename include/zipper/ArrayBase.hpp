@@ -26,7 +26,7 @@
 
 namespace zipper {
 
-template <concepts::ViewDerived View>
+template <concepts::QualifiedViewDerived View>
 class ArrayBase : public ZipperBase<ArrayBase, View> {
    public:
     ArrayBase() = default;
@@ -102,12 +102,12 @@ class ArrayBase : public ZipperBase<ArrayBase, View> {
     //
 
     auto pow(value_type const& exp) const {
-        return ArrayBase<views::unary::ScalarPowerView<view_type, value_type>>(
+        return ArrayBase<views::unary::ScalarPowerView<const view_type, value_type>>(
             view(), exp);
     }
 
     auto abs() const {
-        return ArrayBase<views::unary::AbsView<view_type>>(view());
+        return ArrayBase<views::unary::AbsView<const view_type>>(view());
     }
 
     value_type sum() const {
@@ -120,13 +120,13 @@ class ArrayBase : public ZipperBase<ArrayBase, View> {
 
     template <index_type T>
     value_type norm_powered() const {
-        return views::reductions::LpNormPowered<T, view_type>(view())();
+        return views::reductions::LpNormPowered<T, const view_type>(view())();
     }
     value_type norm_powered(value_type T) const { return pow(T).abs().sum(); }
 
     template <index_type T = 2>
     value_type norm() const {
-        return views::reductions::LpNorm<T, view_type>(view())();
+        return views::reductions::LpNorm<T,const view_type>(view())();
     }
     value_type norm(value_type T) const {
         value_type p = value_type(1.0) / T;
@@ -180,9 +180,9 @@ class ArrayBase : public ZipperBase<ArrayBase, View> {
     }
 };
 
-template <concepts::ViewDerived View>
+template <concepts::QualifiedViewDerived View>
 ArrayBase(View&& view) -> ArrayBase<View>;
-template <concepts::ViewDerived View>
+template <concepts::QualifiedViewDerived View>
 ArrayBase(const View& view) -> ArrayBase<View>;
 template <class T, std::size_t Size = std::dynamic_extent>
 ArrayBase(std::span<T, Size> s)

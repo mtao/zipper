@@ -8,7 +8,7 @@
 #include "zipper/types.hpp"
 
 namespace zipper {
-template <concepts::ViewDerived T>
+template <concepts::QualifiedViewDerived T>
 class TensorBase;
 template <typename ValueType, concepts::ExtentsType Extents,
           bool LeftMajor = true>
@@ -34,7 +34,7 @@ struct IsTensorBase<TensorBase<T>> : std::true_type {};
 
 template <typename T>
 concept TensorBaseDerived =
-    (concepts::ViewDerived<T> && std::derived_from<T, zipper::TensorBase<T>>) ||
+    (concepts::QualifiedViewDerived<T> && std::derived_from<T, zipper::TensorBase<T>>) ||
     detail::IsTensor<T>::value || detail::IsTensorBase<T>::value;
 }  // namespace zipper::concepts
 #endif

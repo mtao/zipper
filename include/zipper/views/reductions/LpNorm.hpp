@@ -37,7 +37,7 @@ struct lp_norm_holder {
         }
 
        private:
-        const View& m_view;
+        View& m_view;
     };
     template <zipper::concepts::QualifiedViewDerived ViewType,
 

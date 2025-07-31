@@ -18,7 +18,7 @@ namespace zipper {
 //        };
 //        }
 
-template <concepts::ViewDerived View>
+template <concepts::QualifiedViewDerived View>
 class TensorBase : public ZipperBase<TensorBase, View> {
    public:
     using Base = ZipperBase<TensorBase, View>;
@@ -91,9 +91,9 @@ class TensorBase : public ZipperBase<TensorBase, View> {
     }
 };
 
-template <concepts::ViewDerived View>
+template <concepts::QualifiedViewDerived View>
 TensorBase(View&& view) -> TensorBase<View>;
-template <concepts::ViewDerived View>
+template <concepts::QualifiedViewDerived View>
 TensorBase(const View& view) -> TensorBase<View>;
 
 template <class T, std::size_t Size = std::dynamic_extent>

@@ -35,8 +35,8 @@ class CoefficientProduct {
     const View& m_view;
 };  // namespace unarytemplate<typenameA,typenameB>class AdditionView
 
-template <zipper::concepts::ViewDerived View>
-CoefficientProduct(const View&) -> CoefficientProduct<View>;
+template <zipper::concepts::QualifiedViewDerived View>
+CoefficientProduct(View&) -> CoefficientProduct<View>;
 
 }  // namespace reductions
 }  // namespace zipper::views

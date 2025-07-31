@@ -10,8 +10,8 @@
 #include "ViewDerived.hpp"
 
 namespace zipper {
-template <template <concepts::ViewDerived> typename DerivedT,
-          concepts::ViewDerived View>
+template <template <concepts::QualifiedViewDerived> typename DerivedT,
+          concepts::QualifiedViewDerived View>
 class ZipperBase;
 }  // namespace zipper
 namespace zipper::concepts {
@@ -19,8 +19,8 @@ namespace detail {
 
 template <typename>
 struct IsZipperBase : public std::false_type {};
-template <template <concepts::ViewDerived> typename DerivedT,
-          concepts::ViewDerived View>
+template <template <concepts::QualifiedViewDerived> typename DerivedT,
+          concepts::QualifiedViewDerived View>
 struct IsZipperBase<ZipperBase<DerivedT, View>> : std::true_type {};
 
 template <concepts::VectorBaseDerived View>

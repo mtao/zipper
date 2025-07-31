@@ -6,7 +6,7 @@
 namespace zipper::detail {
 
 
-template <template <concepts::ViewDerived> typename DerivedT, zipper::concepts::QualifiedViewDerived ViewType, rank_type... Indices>
+template <template <concepts::QualifiedViewDerived> typename DerivedT, zipper::concepts::QualifiedViewDerived ViewType, rank_type... Indices>
 class PartialReductionDispatcher {
    public:
     PartialReductionDispatcher(ViewType& v) : m_view_dispatcher(v) {}

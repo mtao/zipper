@@ -60,7 +60,7 @@ class SwizzleView
     SwizzleView(SwizzleView&&) = default;
     SwizzleView& operator=(const SwizzleView&) = delete;
     SwizzleView& operator=(SwizzleView&&) = delete;
-    SwizzleView(const ViewType& b)
+    SwizzleView(QualifiedViewType& b)
         : Base(b, swizzler_type::swizzle_extents(b.extents())) {}
 
     template <zipper::concepts::TupleLike T, rank_type... ranks>

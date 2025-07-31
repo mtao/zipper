@@ -12,11 +12,11 @@ template <zipper::concepts::MatrixViewDerived A, zipper::concepts::VectorViewDer
 class MatrixVectorProductView;
 
 }
-template <typename A, typename B>
+template <zipper::concepts::MatrixViewDerived A, zipper::concepts::VectorViewDerived B>
 struct detail::ViewTraits<binary::MatrixVectorProductView<A, B>>
     : public binary::detail::DefaultBinaryViewTraits<A, B> {
-    using ATraits = detail::ViewTraits<A>;
-    using BTraits = detail::ViewTraits<B>;
+    using ATraits = detail::ViewTraits<std::decay_t<A>>;
+    using BTraits = detail::ViewTraits<std::decay_t<B>>;
     using extents_type = extents<ATraits::extents_type::static_extent(0)>;
     constexpr static bool is_coefficient_consistent = false;
     constexpr static bool is_value_based = false;

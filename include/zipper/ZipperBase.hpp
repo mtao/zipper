@@ -16,8 +16,8 @@
 
 namespace zipper {
 
-template <template <concepts::ViewDerived> typename DerivedT,
-          concepts::ViewDerived View>
+template <template <concepts::QualifiedViewDerived> typename DerivedT,
+          concepts::QualifiedViewDerived View>
 class ZipperBase {
    public:
     ZipperBase()
@@ -50,7 +50,7 @@ class ZipperBase {
     ZipperBase(ZipperBase&& v) = default;
 
     ZipperBase(const Derived& v) : ZipperBase(v.view()) {}
-    ZipperBase(const View& v) : m_view(v) {}
+    ZipperBase(View& v) : m_view(v) {}
     ZipperBase(const ZipperBase& v) = default;
     // Derived& operator=(concepts::ViewDerived auto const& v) {
     //     m_view = v;
@@ -143,19 +143,19 @@ class ZipperBase {
     template <typename OpType>
         requires(views::unary::concepts::ScalarOperation<value_type, OpType>)
     auto unary_expr(const OpType& op) const {
-        using V = views::unary::OperationView<View, OpType>;
+        using V = views::unary::OperationView<const View, OpType>;
         return DerivedT<V>(V(view(), op));
     }
 
     template <template <typename> typename BaseType = DerivedT,
               rank_type... ranks>
     auto swizzle() const {
-        using V = views::unary::SwizzleView<view_type, ranks...>;
+        using V = views::unary::SwizzleView<const view_type, ranks...>;
         return BaseType<V>(V(view()));
     }
     template <typename T>
     auto cast() const {
-        using V = views::unary::CastView<T, view_type>;
+        using V = views::unary::CastView<T, const view_type>;
         return DerivedT<V>(V(view()));
     }
 
@@ -177,14 +177,14 @@ class ZipperBase {
               template <typename> typename BaseType = DerivedT>
     auto repeat_left() const {
         using V = views::unary::RepeatView<views::unary::RepeatMode::Left,
-                                           Count, view_type>;
+                                           Count, const view_type>;
         return BaseType<V>(V(view()));
     }
     template <rank_type Count = 1,
               template <typename> typename BaseType = DerivedT>
     auto repeat_right() const {
         using V = views::unary::RepeatView<views::unary::RepeatMode::Right,
-                                           Count, view_type>;
+                                           Count, const view_type>;
         return BaseType<V>(V(view()));
     }
 

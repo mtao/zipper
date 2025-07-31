@@ -34,14 +34,14 @@ struct coeffwise_extents_values<extents<AR, AC>, extents<BR, BC>> {
     }
 };
 }  // namespace detail
-template <typename A, typename B>
+template <zipper::concepts::MatrixViewDerived A, zipper::concepts::MatrixViewDerived B>
 struct detail::ViewTraits<binary::MatrixProductView<A, B>>
     : public binary::detail::DefaultBinaryViewTraits<A, B>
 //: public binary::detail::MatrixWiseTraits<A, B> {
 //: public detail::ViewTraits<A> {
 {
-    using ATraits = detail::ViewTraits<A>;
-    using BTraits = detail::ViewTraits<B>;
+    using ATraits = detail::ViewTraits<std::decay_t<A>>;
+    using BTraits = detail::ViewTraits<std::decay_t<B>>;
     using ConvertExtentsUtil =
         coeffwise_extents_values<typename ATraits::extents_type,
                                  typename BTraits::extents_type>;

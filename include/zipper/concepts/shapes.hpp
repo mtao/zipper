@@ -7,8 +7,8 @@
 #include "zipper/utils/extents/is_compatible.hpp"
 
 namespace zipper {
-template <template <concepts::ViewDerived> typename DerivedT,
-          concepts::ViewDerived View>
+template <template <concepts::QualifiedViewDerived> typename DerivedT,
+          concepts::QualifiedViewDerived View>
 class ZipperBase;
 }  // namespace zipper
 namespace zipper::concepts {
@@ -37,8 +37,8 @@ struct ValidExtents<T, Shapes...>
     */
 
 /*
-template <template <concepts::ViewDerived> typename DerivedT,
-          concepts::ViewDerived View, index_type... Shapes>
+template <template <concepts::QualifiedViewDerived> typename DerivedT,
+          concepts::QualifiedViewDerived View, index_type... Shapes>
 struct ValidExtents<ZipperBase<DerivedT, View>, Shapes...>
     : public ValidExtents<typename View::extents_type, Shapes...> {};
 

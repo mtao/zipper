@@ -87,7 +87,7 @@ TEST_CASE("test_storage", "[storage][dense]") {
         }
         fmt::print("\n");
     }
-    zipper::views::unary::CastView<int, decltype(a)> cv(a);
+    auto cv = zipper::views::unary::cast<int>(a);
 
     for (zipper::index_type j = 0; j < cv.extent(0); ++j) {
         for (zipper::index_type k = 0; k < cv.extent(1); ++k) {

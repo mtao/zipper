@@ -21,7 +21,7 @@ namespace zipper {
 template <typename ValueType, index_type Rows>
 class Vector;
 
-template <concepts::ViewDerived View>
+template <concepts::QualifiedViewDerived View>
 class VectorBase : public ZipperBase<VectorBase, View> {
    public:
     VectorBase() = default;
@@ -49,10 +49,10 @@ class VectorBase : public ZipperBase<VectorBase, View> {
         requires(view_type::is_writable)
         : VectorBase(other.view()) {}
 
-    VectorBase(concepts::ViewDerived auto const& v) : Base(v) {}
-    VectorBase(concepts::ViewDerived auto&& v) : Base(std::move(v)) {}
+    VectorBase(concepts::QualifiedViewDerived auto & v) : Base(v) {}
+    VectorBase(concepts::QualifiedViewDerived auto&& v) : Base(std::move(v)) {}
     VectorBase(const extents_type& e) : Base(e) {}
-    VectorBase& operator=(concepts::ViewDerived auto const& v) {
+    VectorBase& operator=(concepts::QualifiedViewDerived auto const& v) {
         return Base::operator=(v);
     }
     template <typename... Args>
@@ -112,7 +112,7 @@ class VectorBase : public ZipperBase<VectorBase, View> {
 
     template <index_type T>
     value_type norm_powered() const {
-        return views::reductions::LpNormPowered<T, view_type>(view())();
+        return views::reductions::LpNormPowered<T, const view_type>(view())();
     }
     value_type norm_powered(value_type T) const {
         return views::reductions::CoefficientSum{
@@ -218,7 +218,7 @@ class VectorBase : public ZipperBase<VectorBase, View> {
 
     template <index_type T = 2>
     value_type norm() const {
-        return views::reductions::LpNorm<T, view_type>(view())();
+        return views::reductions::LpNorm<T, const view_type>(view())();
     }
     value_type norm(value_type T) const {
         value_type p = value_type(1.0) / T;
@@ -285,14 +285,14 @@ template <concepts::VectorBaseDerived View>
 auto operator*(View const& lhs, typename View::value_type const& rhs) {
     using V =
         views::unary::ScalarMultipliesView<typename View::value_type,
-                                           typename View::view_type, true>;
+                                           const typename View::view_type, true>;
     return VectorBase<V>(V(lhs.view(), rhs));
 }
 template <concepts::VectorBaseDerived View>
 auto operator*(typename View::value_type const& lhs, View const& rhs) {
     using V =
         views::unary::ScalarMultipliesView<typename View::value_type,
-                                           typename View::view_type, false>;
+                                           const typename View::view_type, false>;
     return VectorBase<V>(V(lhs, rhs.view()));
 }
 

@@ -8,7 +8,7 @@
 #include "zipper/types.hpp"
 
 namespace zipper {
-template <concepts::ViewDerived T>
+template <concepts::QualifiedViewDerived T>
 class FormBase;
 template <typename ValueType, concepts::ExtentsType Extents,
           bool LeftMajor = true>
@@ -35,7 +35,7 @@ struct IsFormBase<FormBase<T>> : std::true_type {};
 
 template <typename T>
 concept FormBaseDerived =
-    (concepts::ViewDerived<T> && std::derived_from<T, zipper::FormBase<T>>) ||
+    (concepts::QualifiedViewDerived<T> && std::derived_from<T, zipper::FormBase<T>>) ||
     detail::IsForm<T>::value || detail::IsFormBase<T>::value;
 }  // namespace zipper::concepts
 #endif

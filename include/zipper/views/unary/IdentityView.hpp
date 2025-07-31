@@ -8,7 +8,7 @@
 namespace zipper::views::unary {
 
 
-template <zipper::concepts::ViewDerived B>
+template <zipper::concepts::QualifiedViewDerived B>
 using IdentityView = OperationView<
     B, std::identity>;
 

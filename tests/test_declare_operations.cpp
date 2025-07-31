@@ -7,7 +7,7 @@
 #include "zipper/views/reductions/All.hpp"
 
 namespace zipper {
-template <concepts::ViewDerived View>
+template <concepts::QualifiedViewDerived View>
 class TestBase {
    public:
     using value_type = View::value_type;

@@ -6,7 +6,7 @@
 #include "MatrixViewDerived.hpp"
 
 namespace zipper {
-template <concepts::ViewDerived T>
+template <concepts::QualifiedViewDerived T>
 class MatrixBase;
 template <typename T, index_type R, index_type C, bool RowMajor = true>
 class Matrix;

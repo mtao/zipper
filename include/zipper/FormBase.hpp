@@ -12,7 +12,7 @@
 
 namespace zipper {
 
-template <concepts::ViewDerived View>
+template <concepts::QualifiedViewDerived View>
 class FormBase : public ZipperBase<FormBase, View> {
    public:
     using Base = ZipperBase<FormBase, View>;
@@ -106,9 +106,9 @@ class FormBase : public ZipperBase<FormBase, View> {
     }
 };
 
-template <concepts::ViewDerived View>
+template <concepts::QualifiedViewDerived View>
 FormBase(View&& view) -> FormBase<View>;
-template <concepts::ViewDerived View>
+template <concepts::QualifiedViewDerived View>
 FormBase(const View& view) -> FormBase<View>;
 template <class T, std::size_t Size = std::dynamic_extent>
 FormBase(const std::span<T, Size>& s)

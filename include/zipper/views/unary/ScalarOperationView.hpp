@@ -19,6 +19,7 @@ struct detail::ViewTraits<
     using value_type = decltype(std::declval<Operation>()(
         std::declval<typename ChildTraits::value_type>(),
         std::declval<Scalar>()));
+    constexpr static bool is_writable = false;
 };
 
 namespace unary {

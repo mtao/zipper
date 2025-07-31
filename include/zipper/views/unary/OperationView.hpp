@@ -7,22 +7,23 @@
 namespace zipper::views {
 namespace unary {
 // TODO: operation should inherit std::unary_function<T,U>
-template <zipper::concepts::QualifiedViewDerived B, 
-         //
-         //concepts::ScalarOperation<typename B::value_type> Operation,
-         typename Operation,
-         //
+template <zipper::concepts::QualifiedViewDerived B,
+          //
+          // concepts::ScalarOperation<typename B::value_type> Operation,
+          typename Operation,
+          //
           bool PreservesZeros = false>
-         //concepts::ScalarOperation<typename Child::value_type>
+// concepts::ScalarOperation<typename Child::value_type>
 class OperationView;
 
 }  // namespace unary
-template <zipper::concepts::QualifiedViewDerived Child, 
-         //
-         //unary::concepts::ScalarOperation<typename Child::value_type> Operation,
-         typename Operation,
-         //
-         bool PreservesZeros>
+template <zipper::concepts::QualifiedViewDerived Child,
+          //
+          // unary::concepts::ScalarOperation<typename Child::value_type>
+          // Operation,
+          typename Operation,
+          //
+          bool PreservesZeros>
 struct detail::ViewTraits<
     unary::OperationView<Child, Operation, PreservesZeros>>
     : public zipper::views::unary::detail::DefaultUnaryViewTraits<Child,
@@ -34,18 +35,15 @@ struct detail::ViewTraits<
 // represents a coefficient-wise transformation of an underlyng view
 namespace unary {
 
+template <zipper::concepts::QualifiedViewDerived Child,
+          // concepts::ScalarOperation<typename Child::value_type> Operation,
+          typename Operation,
+          //
+          bool PreservesZeros>
 
-
-
-template <zipper::concepts::QualifiedViewDerived Child, 
-         //concepts::ScalarOperation<typename Child::value_type> Operation,
-         typename Operation,
-         //
-         bool PreservesZeros>
-
-         //requires(concepts::ScalarOperation<Child::value_type,Operation>)
+// requires(concepts::ScalarOperation<Child::value_type,Operation>)
 class OperationView
-    : public UnaryViewBase<OperationView<Child, Operation>, Child> {
+    : public UnaryViewBase<OperationView<Child, Operation>, const Child> {
    public:
     using self_type = OperationView<Child, Operation>;
     using traits = zipper::views::detail::ViewTraits<self_type>;
@@ -54,11 +52,11 @@ class OperationView
     using extents_type = traits::extents_type;
     using value_type = traits::value_type;
 
-    using Base = UnaryViewBase<self_type, Child>;
+    using Base = UnaryViewBase<self_type, const Child>;
     using Base::extent;
     using Base::view;
 
-    OperationView(Child& v, const Operation& op = {})
+    OperationView(const Child& v, const Operation& op = {})
         : Base(v), m_op(op) {}
 
     using child_value_type = traits::base_value_type;
@@ -71,8 +69,8 @@ class OperationView
     Operation m_op;
 };
 
-template <typename A, zipper::concepts::ViewDerived B>
-OperationView(const A& a, const B& b) -> OperationView<A, B>;
+template <typename A, zipper::concepts::QualifiedViewDerived B>
+OperationView(const A& a, B& b) -> OperationView<A, B>;
 }  // namespace unary
 }  // namespace zipper::views
 #endif

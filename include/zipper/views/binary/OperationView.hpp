@@ -21,15 +21,15 @@
 
 namespace zipper::views {
 namespace binary {
-template <zipper::concepts::ViewDerived A, zipper::concepts::ViewDerived B, typename Operation>
+template <zipper::concepts::QualifiedViewDerived A, zipper::concepts::QualifiedViewDerived B, typename Operation>
 class OperationView;
 
 }
 template <typename A, typename B, typename Operation>
 struct detail::ViewTraits<binary::OperationView<A, B, Operation>>
     : public binary::detail::DefaultBinaryViewTraits<A, B> {
-    using ATraits = detail::ViewTraits<A>;
-    using BTraits = detail::ViewTraits<B>;
+    using ATraits = detail::ViewTraits<std::decay_t<A>>;
+    using BTraits = detail::ViewTraits<std::decay_t<B>>;
     using ConvertExtentsUtil = binary::detail::coeffwise_extents_values<
         typename ATraits::extents_type, typename BTraits::extents_type>;
     using extents_type = typename ConvertExtentsUtil::merged_extents_type;
@@ -39,15 +39,15 @@ struct detail::ViewTraits<binary::OperationView<A, B, Operation>>
 };
 
 namespace binary {
-template <zipper::concepts::ViewDerived A, zipper::concepts::ViewDerived B, typename Operation>
+template <zipper::concepts::QualifiedViewDerived A, zipper::concepts::QualifiedViewDerived B, typename Operation>
 class OperationView
-    : public BinaryViewBase<OperationView<A, B, Operation>, A, B> {
+    : public BinaryViewBase<OperationView<A, B, Operation>, const A, const B> {
    public:
     using self_type = OperationView<A, B, Operation>;
     using traits = zipper::views::detail::ViewTraits<self_type>;
     using extents_type = typename traits::extents_type;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
-    using Base = BinaryViewBase<self_type, A, B>;
+    using Base = BinaryViewBase<self_type, const A, const B>;
     using value_type = traits::value_type;
     constexpr static bool holds_extents = traits::holds_extents;
     constexpr static bool is_static = extents_traits::is_static;
@@ -98,7 +98,7 @@ class OperationView
    private:
     Operation m_op;
 };
-template <zipper::concepts::ViewDerived A, zipper::concepts::ViewDerived B, typename Operation>
+template <zipper::concepts::QualifiedViewDerived A, zipper::concepts::QualifiedViewDerived B, typename Operation>
 OperationView(const A& a, const B& b, const Operation& op)
     -> OperationView<A, B, Operation>;
 
