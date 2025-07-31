@@ -49,7 +49,7 @@ class VectorBase : public ZipperBase<VectorBase, View> {
         requires(view_type::is_writable)
         : VectorBase(other.view()) {}
 
-    VectorBase(concepts::QualifiedViewDerived auto & v) : Base(v) {}
+    VectorBase(concepts::QualifiedViewDerived auto& v) : Base(v) {}
     VectorBase(concepts::QualifiedViewDerived auto&& v) : Base(std::move(v)) {}
     VectorBase(const extents_type& e) : Base(e) {}
     VectorBase& operator=(concepts::QualifiedViewDerived auto const& v) {
@@ -71,6 +71,14 @@ class VectorBase : public ZipperBase<VectorBase, View> {
         requires(view_type::is_writable)
     {
         return operator=(other.view());
+    }
+    constexpr index_type size() const { return extent(0); }
+    constexpr index_type rows() const { return extent(0); }
+
+    void resize(index_type size)
+        requires(extents_traits::is_dynamic)
+    {
+        view().resize(extents_type{size});
     }
 
     // TODO: make vectorbase or zipperbase assignable from initializer lists
@@ -128,6 +136,55 @@ class VectorBase : public ZipperBase<VectorBase, View> {
             views::binary::CrossProductView<View, typename O::view_type>>(
             views::binary::CrossProductView<View, typename O::view_type>(
                 view(), o.view()));
+    }
+
+    template <index_type Start, index_type Size>
+    auto segment()
+        requires(view_type::is_writable)
+    {
+        auto S = slice(std::integral_constant<index_type, Start>{},
+                       std::integral_constant<index_type, Size>{});
+        auto v = Base::slice_view(S);
+        using V = std::decay_t<decltype(v)>;
+        return VectorBase<V>(std::move(v));
+    }
+    template <index_type Start, index_type Size>
+    auto segment() const {
+        auto S = slice(std::integral_constant<index_type, Start>{},
+                       std::integral_constant<index_type, Size>{});
+        auto v = Base::slice_view(S);
+        using V = std::decay_t<decltype(v)>;
+        return VectorBase<V>(std::move(v));
+    }
+    template <index_type Size>
+    auto segment(index_type start)
+        requires(view_type::is_writable)
+    {
+        auto S = slice(start, std::integral_constant<index_type, Size>{});
+        auto v = Base::slice_view(S);
+        using V = std::decay_t<decltype(v)>;
+        return VectorBase<V>(std::move(v));
+    }
+    template <index_type Size>
+    auto segment(index_type start) const {
+        auto S = slice(start, Size);
+        auto v = Base::slice_view(S);
+        using V = std::decay_t<decltype(v)>;
+        return VectorBase<V>(std::move(v));
+    }
+    auto segment(index_type start, index_type size)
+        requires(view_type::is_writable)
+    {
+        auto S = slice(start, size);
+        auto v = Base::slice_view(S);
+        using V = std::decay_t<decltype(v)>;
+        return VectorBase<V>(std::move(v));
+    }
+    auto segment(index_type start, index_type size) const {
+        auto S = slice(start, size);
+        auto v = Base::slice_view(S);
+        using V = std::decay_t<decltype(v)>;
+        return VectorBase<V>(std::move(v));
     }
 
     template <index_type I>
@@ -209,11 +266,11 @@ class VectorBase : public ZipperBase<VectorBase, View> {
 
     // implements ones * this.transpose()
     auto repeat_left() const {
-        return Base::template repeat_left<1,MatrixBase>();
+        return Base::template repeat_left<1, MatrixBase>();
     }
     // implements  this * ones.transpose()
     auto repeat_right() const {
-        return Base::template repeat_right<1,MatrixBase>();
+        return Base::template repeat_right<1, MatrixBase>();
     }
 
     template <index_type T = 2>
@@ -283,16 +340,14 @@ bool operator!=(View1 const& lhs, View2 const& rhs) {
 }
 template <concepts::VectorBaseDerived View>
 auto operator*(View const& lhs, typename View::value_type const& rhs) {
-    using V =
-        views::unary::ScalarMultipliesView<typename View::value_type,
-                                           const typename View::view_type, true>;
+    using V = views::unary::ScalarMultipliesView<
+        typename View::value_type, const typename View::view_type, true>;
     return VectorBase<V>(V(lhs.view(), rhs));
 }
 template <concepts::VectorBaseDerived View>
 auto operator*(typename View::value_type const& lhs, View const& rhs) {
-    using V =
-        views::unary::ScalarMultipliesView<typename View::value_type,
-                                           const typename View::view_type, false>;
+    using V = views::unary::ScalarMultipliesView<
+        typename View::value_type, const typename View::view_type, false>;
     return VectorBase<V>(V(lhs, rhs.view()));
 }
 

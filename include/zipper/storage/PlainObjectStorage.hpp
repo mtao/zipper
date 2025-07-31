@@ -35,7 +35,6 @@ class PlainObjectStorage
     using ParentType::assign;
 
     PlainObjectStorage()
-        requires(IsStatic)
         : ParentType(), m_accessor() {}
 
     PlainObjectStorage(const PlainObjectStorage&) = default;

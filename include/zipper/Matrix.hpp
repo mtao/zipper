@@ -36,7 +36,7 @@ class Matrix
     using Base::transpose;
 
     Matrix()
-        requires(extents_traits::is_static)
+        //requires(extents_traits::is_static)
     = default;
 
     Matrix(index_type dyn_size)

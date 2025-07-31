@@ -51,6 +51,7 @@ class Vector
         assert(rows == extent(0));
     }
 
+
     template <index_type R2>
     Vector(const Vector<value_type, R2>& other) : Base(other.view()) {}
 
