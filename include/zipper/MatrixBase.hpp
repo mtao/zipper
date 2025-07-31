@@ -68,17 +68,17 @@ class MatrixBase : public ZipperBase<MatrixBase, View> {
         constexpr static bool dynamic_col =
             extents_traits::is_dynamic_extent(1);
         if constexpr (dynamic_row && dynamic_col) {
-            view().resize({rows, cols});
+            view().resize(extents_type{rows, cols});
         } else if constexpr (dynamic_row) {
-            view().resize({rows});
+            view().resize(extents_type{rows});
         } else if constexpr (dynamic_col) {
-            view().resize({cols});
+            view().resize(extents_type{cols});
         }
     }
     void resize(index_type size)
         requires(extents_traits::rank_dynamic == 1)
     {
-        view().resize({size});
+        view().resize(extents_type{size});
     }
 
     auto as_array() const { return zipper::as_array(*this); }

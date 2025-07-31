@@ -76,7 +76,7 @@ class VectorBase : public ZipperBase<VectorBase, View> {
     void resize(index_type size)
         requires(extents_traits::is_dynamic)
     {
-        view().resize({size});
+        view().resize(extents_type{size});
     }
 
     // TODO: make vectorbase or zipperbase assignable from initializer lists
