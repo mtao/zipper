@@ -62,9 +62,26 @@ class MatrixBase : public ZipperBase<MatrixBase, View> {
         return Base::operator=(other);
     }
 
-    auto as_array() const {
-        return zipper::as_array(*this);
+    void resize(index_type rows, index_type cols) {
+        constexpr static bool dynamic_row =
+            extents_traits::is_dynamic_extent(0);
+        constexpr static bool dynamic_col =
+            extents_traits::is_dynamic_extent(1);
+        if constexpr (dynamic_row && dynamic_col) {
+            view().resize({rows, cols});
+        } else if constexpr (dynamic_row) {
+            view().resize({rows});
+        } else if constexpr (dynamic_col) {
+            view().resize({cols});
+        }
     }
+    void resize(index_type size)
+        requires(extents_traits::rank_dynamic == 1)
+    {
+        view().resize({size});
+    }
+
+    auto as_array() const { return zipper::as_array(*this); }
 
     value_type trace() const { return views::reductions::Trace(view())(); }
 
@@ -331,23 +348,22 @@ auto operator*(View1 const& lhs, View2 const& rhs) {
 
 template <concepts::MatrixBaseDerived View>
 auto operator*(View const& lhs, typename View::value_type const& rhs) {
-    using V =
-        views::unary::ScalarMultipliesView<typename View::value_type,
-                                           const typename View::view_type, true>;
+    using V = views::unary::ScalarMultipliesView<
+        typename View::value_type, const typename View::view_type, true>;
     return MatrixBase<V>(V(lhs.view(), rhs));
 }
 template <concepts::MatrixBaseDerived View>
 auto operator*(typename View::value_type const& lhs, View const& rhs) {
-    using V =
-        views::unary::ScalarMultipliesView<typename View::value_type,
-                                           const typename View::view_type, false>;
+    using V = views::unary::ScalarMultipliesView<
+        typename View::value_type, const typename View::view_type, false>;
     return MatrixBase<V>(V(lhs, rhs.view()));
 }
 
 template <concepts::MatrixBaseDerived View1, concepts::VectorBaseDerived View2>
 auto operator*(View1 const& lhs, View2 const& rhs) {
-    using V = views::binary::MatrixVectorProductView<const typename View1::view_type,
-                                                     const typename View2::view_type>;
+    using V =
+        views::binary::MatrixVectorProductView<const typename View1::view_type,
+                                               const typename View2::view_type>;
 
     return VectorBase<V>(V(lhs.view(), rhs.view()));
 }

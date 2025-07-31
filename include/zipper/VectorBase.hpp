@@ -73,6 +73,12 @@ class VectorBase : public ZipperBase<VectorBase, View> {
         return operator=(other.view());
     }
 
+    void resize(index_type size)
+        requires(extents_traits::is_dynamic)
+    {
+        view().resize(size);
+    }
+
     // TODO: make vectorbase or zipperbase assignable from initializer lists
     // template <typename T>
     // VectorBase& operator=(const std::initializer_list<T>& l)
