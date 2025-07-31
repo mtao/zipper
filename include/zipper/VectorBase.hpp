@@ -49,7 +49,7 @@ class VectorBase : public ZipperBase<VectorBase, View> {
         requires(view_type::is_writable)
         : VectorBase(other.view()) {}
 
-    VectorBase(concepts::QualifiedViewDerived auto & v) : Base(v) {}
+    VectorBase(concepts::QualifiedViewDerived auto& v) : Base(v) {}
     VectorBase(concepts::QualifiedViewDerived auto&& v) : Base(std::move(v)) {}
     VectorBase(const extents_type& e) : Base(e) {}
     VectorBase& operator=(concepts::QualifiedViewDerived auto const& v) {
@@ -159,7 +159,7 @@ class VectorBase : public ZipperBase<VectorBase, View> {
     }
     template <index_type Size>
     auto segment(index_type start) const {
-        auto S = slice(std::integral_constant<index_type, 0>{}, Size);
+        auto S = slice(start, Size);
         auto v = Base::slice_view(S);
         using V = std::decay_t<decltype(v)>;
         return VectorBase<V>(std::move(v));
@@ -332,16 +332,14 @@ bool operator!=(View1 const& lhs, View2 const& rhs) {
 }
 template <concepts::VectorBaseDerived View>
 auto operator*(View const& lhs, typename View::value_type const& rhs) {
-    using V =
-        views::unary::ScalarMultipliesView<typename View::value_type,
-                                           const typename View::view_type, true>;
+    using V = views::unary::ScalarMultipliesView<
+        typename View::value_type, const typename View::view_type, true>;
     return VectorBase<V>(V(lhs.view(), rhs));
 }
 template <concepts::VectorBaseDerived View>
 auto operator*(typename View::value_type const& lhs, View const& rhs) {
-    using V =
-        views::unary::ScalarMultipliesView<typename View::value_type,
-                                           const typename View::view_type, false>;
+    using V = views::unary::ScalarMultipliesView<
+        typename View::value_type, const typename View::view_type, false>;
     return VectorBase<V>(V(lhs, rhs.view()));
 }
 
