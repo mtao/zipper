@@ -51,8 +51,6 @@ class Vector
         assert(rows == extent(0));
     }
 
-    constexpr index_type size() const { return extent(0); }
-    constexpr index_type rows() const { return extent(0); }
 
     template <index_type R2>
     Vector(const Vector<value_type, R2>& other) : Base(other.view()) {}

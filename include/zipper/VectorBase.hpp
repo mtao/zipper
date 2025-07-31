@@ -72,6 +72,8 @@ class VectorBase : public ZipperBase<VectorBase, View> {
     {
         return operator=(other.view());
     }
+    constexpr index_type size() const { return extent(0); }
+    constexpr index_type rows() const { return extent(0); }
 
     void resize(index_type size)
         requires(extents_traits::is_dynamic)
