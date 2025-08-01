@@ -17,19 +17,20 @@
 #endif
 #include <fmt/format.h>
 #include <fmt/ranges.h>
+#include <fmt/std.h>
 #pragma GCC diagnostic pop
 #include <vector>
 
 #include "extents/extents_formatter.hpp"
+#include "zipper/Vector.hpp"
 #include "zipper/concepts/MatrixBaseDerived.hpp"
 #include "zipper/concepts/VectorBaseDerived.hpp"
 #include "zipper/types.hpp"
 
 namespace zipper {
-auto format_as(concepts::VectorBaseDerived auto const& v) {
-    return fmt::format("{}", fmt::join(v.eval(), ","));
-}
-auto format_as(concepts::MatrixBaseDerived auto const& M) {
+
+template <concepts::MatrixBaseDerived Mat>
+auto format_as(Mat const& M) {
     constexpr static index_type dim =
         std::decay_t<decltype(M)>::static_extent(0);
     if constexpr (dim == std::dynamic_extent) {
@@ -39,13 +40,32 @@ auto format_as(concepts::MatrixBaseDerived auto const& M) {
         return fmt::format("{}",
                            fmt::join(f(std::make_index_sequence<dim>{}), ","));
     } else {
-        std::vector<decltype(M.row(0))> a;
+        using T = Mat::value_type;
+        constexpr static index_type R = Mat::extents_type::static_extent(1);
+        std::vector<Vector<T, R>> a;
+        // std::vector<std::string> a_;
         for (index_type j = 0; j < M.extent(0); ++j) {
             a.emplace_back(M.row(j));
         }
-        return fmt::format("{}", fmt::join(a, ";"));
+        return fmt::format("[{}]", fmt::join(a, ";"));
     }
 }
 }  // namespace zipper
+template <zipper::concepts::VectorBaseDerived Vec>
+    requires(
+        !std::is_same_v<std::decay_t<Vec>,
+                        zipper::Vector<typename Vec::value_type,
+                                       Vec::extents_type::static_extent(0)>>)
+struct fmt::formatter<Vec>
+    : formatter<zipper::Vector<typename Vec::value_type,
+                               Vec::extents_type::static_extent(0)>> {
+    // parse is inherited from formatter<string_view>.
 
+    auto format(const Vec& v, format_context& ctx) const
+        -> format_context::iterator {
+        return formatter<zipper::Vector<typename Vec::value_type,
+                                        Vec::extents_type::static_extent(0)>>::
+            format(v.eval(), ctx);
+    }
+};
 #endif
