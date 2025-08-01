@@ -1,7 +1,5 @@
 
 
-#include "../catch_include.hpp"
-#include "../fmt_include.hpp"
 #include <iostream>
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
@@ -12,6 +10,9 @@
 #include <zipper/types.hpp>
 #include <zipper/views/nullary/ConstantView.hpp>
 #include <zipper/views/nullary/RandomView.hpp>
+
+#include "../catch_include.hpp"
+#include "../fmt_include.hpp"
 
 namespace {
 void print(zipper::concepts::ArrayBaseDerived auto const& M) {
@@ -124,9 +125,10 @@ TEST_CASE("test_matrix_slicing", "[extents][matrix][slice]") {
         zipper::extents<4, 4>{}, 0, 20));
 
     zipper::Matrix MN = RN;
-    zipper::Matrix<double,std::dynamic_extent,std::dynamic_extent> MND = MN;
+    zipper::Matrix<double, std::dynamic_extent, std::dynamic_extent> MND = MN;
     auto full_slice = MN.slice<zipper::full_extent_t, zipper::full_extent_t>();
-    auto full_sliceD = MND.slice<zipper::full_extent_t, zipper::full_extent_t>();
+    auto full_sliceD =
+        MND.slice<zipper::full_extent_t, zipper::full_extent_t>();
 
     REQUIRE(MN.extents() == full_slice.extents());
     REQUIRE(full_sliceD.extents() == full_slice.extents());
@@ -148,29 +150,29 @@ TEST_CASE("test_matrix_slicing", "[extents][matrix][slice]") {
 
     // zipper::slice(zipper::index_type(1));
     {
-        auto S =
-            MN.slice(zipper::slice(1, MN.extent(0) - 1), zipper::full_extent_t{});
+        auto S = MN.slice(zipper::slice(1, MN.extent(0) - 1),
+                          zipper::full_extent_t{});
 
-        auto SD =
-            MND.slice(zipper::slice(1, MND.extent(0) - 1), zipper::full_extent_t{});
+        auto SD = MND.slice(zipper::slice(1, MND.extent(0) - 1),
+                            zipper::full_extent_t{});
 
         REQUIRE(S.extent(0) == MN.extent(0) - 1);
         REQUIRE(S.extent(1) == MN.extent(1));
 
-        REQUIRE(SD.extents() == S.extents()) ;
+        REQUIRE(SD.extents() == S.extents());
         for (const auto& [a, b] :
              zipper::utils::extents::all_extents_indices(S.extents())) {
             static_assert(std::is_integral_v<std::decay_t<decltype(a)>>);
             static_assert(std::is_integral_v<std::decay_t<decltype(b)>>);
             CHECK(S(a, b) == MN(a + 1, b));
-            CHECK(SD(a, b) == S(a,b));
+            CHECK(SD(a, b) == S(a, b));
         }
     }
 
     auto slice = MN.slice<std::integral_constant<zipper::index_type, 1>,
                           zipper::full_extent_t>();
     auto sliceD = MND.slice<std::integral_constant<zipper::index_type, 1>,
-                          zipper::full_extent_t>();
+                            zipper::full_extent_t>();
     REQUIRE(slice.extent(0) == 4);
     REQUIRE(slice.extents().rank() == 1);
     CHECK(slice(0) == MN(1, 0));
@@ -282,19 +284,43 @@ TEST_CASE("test_matrix_slicing", "[extents][matrix][slice]") {
 }
 
 TEST_CASE("test_vector_slice_assignment", "[extents][vector][slice]") {
-    zipper::Vector<double,4> x;
+    zipper::Vector<double, 4> x;
 
     x(3) = 2;
 
-    x.head<3>()= zipper::views::nullary::ConstantView<double>(1);
+    x.head<3>() = zipper::views::nullary::ConstantView<double>(1);
     CHECK(x(0) == 1);
     CHECK(x(1) == 1);
     CHECK(x(2) == 1);
     CHECK(x(3) == 2);
-
 }
-
 
 TEST_CASE("test_partial_slice", "[extents][tensor][slice]") {
     spdlog::info("Manipulating MN: ");
+}
+
+TEST_CASE("test_span_array_access", "[vector][storage][dense][span]") {
+    {
+        zipper::Vector<double, 3> x = {1, 2, 3};
+
+        std::array<zipper::index_type, 2> a{{0, 2}};
+        auto s = x(a);
+        REQUIRE(s.extents().rank() == 2);
+        CHECK(s(0) == 1);
+        CHECK(s(1) == 3);
+    }
+    /*
+    {
+        zipper::Vector<double, std::dynamic_extent> x = {1, 2, 3};
+
+        std::vector<index_type> a{{0,2}};
+        auto s = x(a);
+        REQUIRE(s.extents().rank() == 2);
+        CHECK(s(0) == 1);
+        CHECK(s(0) == 3);
+
+
+
+    }
+    */
 }

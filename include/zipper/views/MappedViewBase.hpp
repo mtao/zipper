@@ -1,7 +1,6 @@
 #if !defined(ZIPPER_VIEWS_MAPPEDVIEWBASE_HPP)
 #define ZIPPER_VIEWS_MAPPEDVIEWBASE_HPP
 
-
 #include "ViewBase.hpp"
 #include "detail/ViewTraits.hpp"
 #include "zipper/detail//ExtentsTraits.hpp"
@@ -26,13 +25,13 @@ class MappedViewBase : public ViewBase<Derived_> {
     constexpr static bool IsStatic = extents_traits::is_static;
     using mapping_type = traits::mapping_type;
 
-    const extents_type& extents() const { return m_mapping.extents(); }
     const mapping_type& mapping() const { return m_mapping; }
+    const extents_type& extents() const { return mapping().extents(); }
 
     MappedViewBase()
-        requires(IsStatic): m_mapping()
-    {}
-    template <typename... Args>
+        // requires(IsStatic):
+        : m_mapping() {}
+
     MappedViewBase(const extents_type& extents) : m_mapping(extents) {}
 
     template <concepts::ExtentsType E2>
@@ -48,8 +47,7 @@ class MappedViewBase : public ViewBase<Derived_> {
         static_assert((std::is_integral_v<std::decay_t<Indices>> && ...));
         static_assert((!concepts::TupleLike<Indices> && ...));
 #if !defined(NDEBUG)
-        assert(
-            zipper::utils::extents::indices_in_range(extents(), indices...));
+        assert(zipper::utils::extents::indices_in_range(extents(), indices...));
 #endif
         index_type r = mapping()(std::forward<Indices>(indices)...);
         return r;
@@ -61,21 +59,24 @@ class MappedViewBase : public ViewBase<Derived_> {
         index_type idx = get_index(std::forward<Indices>(indices)...);
         return derived().coeff_linear(idx);
     }
-   template <typename... Indices>
-   auto coeff_ref(Indices&&... indices)
-       -> value_type& requires(traits::is_writable) {
-           index_type idx = get_index(std::forward<Indices>(indices)...);
-           return derived().coeff_ref_linear(idx);
-       }
+    template <typename... Indices>
+    auto coeff_ref(Indices&&... indices) -> value_type&
+        requires(traits::is_writable)
+    {
+        index_type idx = get_index(std::forward<Indices>(indices)...);
+        return derived().coeff_ref_linear(idx);
+    }
 
-   template <typename... Indices>
-   auto const_coeff_ref(Indices&&... indices) const
-       -> const value_type& requires(traits::is_writable) {
-           index_type idx = get_index(std::forward<Indices>(indices)...);
-           return derived().const_coeff_ref_linear(idx);
-       }
+    template <typename... Indices>
+    auto const_coeff_ref(Indices&&... indices) const -> const value_type&
+        requires(traits::is_writable)
+    {
+        index_type idx = get_index(std::forward<Indices>(indices)...);
+        return derived().const_coeff_ref_linear(idx);
+    }
 
-   private : mapping_type m_mapping;
+   private:
+    mapping_type m_mapping;
 };
 
 }  // namespace zipper::views

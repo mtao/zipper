@@ -63,27 +63,6 @@ class SwizzleView
     SwizzleView(QualifiedViewType& b)
         : Base(b, swizzler_type::swizzle_extents(b.extents())) {}
 
-    template <zipper::concepts::TupleLike T, rank_type... ranks>
-    auto _coeff(const T& idxs, std::integer_sequence<rank_type, ranks...>) const
-        -> value_type {
-        return view().coeff(std::get<ranks>(idxs)...);
-    }
-    template <zipper::concepts::TupleLike T, rank_type... ranks>
-    auto _coeff_ref(const T& idxs, std::integer_sequence<rank_type, ranks...>)
-        -> value_type&
-        requires(traits::is_writable)
-    {
-        return view().coeff_ref(std::get<ranks>(idxs)...);
-    }
-
-    template <zipper::concepts::TupleLike T, rank_type... ranks>
-    auto _const_coeff_ref(const T& idxs,
-                          std::integer_sequence<rank_type, ranks...>) const
-        -> const value_type&
-        requires(traits::is_writable)
-    {
-        return view().const_coeff_ref(std::get<ranks>(idxs)...);
-    }
 
     template <typename... Args>
         requires(extents_type::rank() == sizeof...(Args))
@@ -121,6 +100,28 @@ class SwizzleView
         views::detail::AssignHelper<V, self_type>::assign(v, *this);
     }
 
+   private:
+    template <zipper::concepts::TupleLike T, rank_type... ranks>
+    auto _coeff(const T& idxs, std::integer_sequence<rank_type, ranks...>) const
+        -> value_type {
+        return view().coeff(std::get<ranks>(idxs)...);
+    }
+    template <zipper::concepts::TupleLike T, rank_type... ranks>
+    auto _coeff_ref(const T& idxs, std::integer_sequence<rank_type, ranks...>)
+        -> value_type&
+        requires(traits::is_writable)
+    {
+        return view().coeff_ref(std::get<ranks>(idxs)...);
+    }
+
+    template <zipper::concepts::TupleLike T, rank_type... ranks>
+    auto _const_coeff_ref(const T& idxs,
+                          std::integer_sequence<rank_type, ranks...>) const
+        -> const value_type&
+        requires(traits::is_writable)
+    {
+        return view().const_coeff_ref(std::get<ranks>(idxs)...);
+    }
 };  // namespace unarytemplate<typenameA,typenameB>class AdditionView
 
 }  // namespace unary

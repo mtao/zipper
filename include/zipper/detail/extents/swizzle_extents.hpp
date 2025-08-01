@@ -140,8 +140,7 @@ struct ExtentsSwizzler {
 
     template <std::size_t... ValidIndices>
     constexpr static auto _unswizzle(concepts::TupleLike auto const& t,
-                                     std::index_sequence<ValidIndices...>)
-        -> std::array<index_type, valid_indices_rank> {
+                                     std::index_sequence<ValidIndices...>) {
         using input_type = std::decay_t<decltype(t)>;
         constexpr std::size_t my_size = std::tuple_size_v<input_type>;
         static_assert(
@@ -149,13 +148,18 @@ struct ExtentsSwizzler {
         static_assert(((SwizzleIndices < my_size ||
                         SwizzleIndices == std::dynamic_extent) &&
                        ...));
-        std::array<index_type, valid_indices_rank> r{
-            {_unswizzle_single_index<ValidIndices>(t)...}};
+        //std::array<index_type, valid_indices_rank> r{
+        //    {_unswizzle_single_index<ValidIndices>(t)...}};
+        //std::tuple<std::conditional_t<(ValidIndices==ValidIndices,index_type,void>...> r(
+        //    {_unswizzle_single_index<ValidIndices>(t)...});
+        //std::tuple<std::conditional_t<(ValidIndices==ValidIndices),index_type,void>...> r{
+        //    _unswizzle_single_index<ValidIndices>(t)...};
+        std::tuple r{
+            _unswizzle_single_index<ValidIndices>(t)...};
         return r;
     }
 
-    constexpr static auto _unswizzle(concepts::TupleLike auto const& t)
-        -> std::array<index_type, valid_indices_rank> {
+    constexpr static auto _unswizzle(concepts::TupleLike auto const& t) {
         return _unswizzle(t, std::make_index_sequence<valid_indices_rank>{});
         // using input_type = std::decay_t<decltype(t)>;
         // constexpr std::size_t my_size = std::tuple_size_v<input_type>;
@@ -168,8 +172,7 @@ struct ExtentsSwizzler {
     }
 
     template <typename... Indices>
-    constexpr static auto unswizzle(Indices&&... indices)
-        -> std::array<index_type, valid_indices_rank> {
+    constexpr static auto unswizzle(Indices&&... indices) {
         if constexpr (sizeof...(Indices) == 1 &&
                       (concepts::TupleLike<Indices> && ...)) {
             return _unswizzle(std::forward<Indices>(indices)...);

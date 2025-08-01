@@ -2,6 +2,8 @@
 #define ZIPPER_CONCEPTS_SLICELIKE_HPP
 #include "IndexLike.hpp"
 #include "zipper/types.hpp"
+#include <vector>
+#include <array>
 
 namespace zipper::concepts {
 
@@ -22,6 +24,12 @@ struct slice_like<slice_type<OffsetType, ExtentType, StrideType>>
 
 template <>
 struct slice_like<full_extent_type> : public std::true_type {};
+
+template <>
+struct slice_like<std::vector<index_type>> : public std::true_type {};
+
+template <size_t N>
+struct slice_like<std::array<index_type,N>> : public std::true_type {};
 
 }  // namespace detail
 

@@ -34,8 +34,7 @@ class PlainObjectStorage
     accessor_type& linear_access() { return m_accessor; }
     using ParentType::assign;
 
-    PlainObjectStorage()
-        : ParentType(), m_accessor() {}
+    PlainObjectStorage() : ParentType(), m_accessor() {}
 
     PlainObjectStorage(const PlainObjectStorage&) = default;
     PlainObjectStorage(PlainObjectStorage&&) = default;
@@ -51,16 +50,18 @@ class PlainObjectStorage
 
     span_type as_span() {
         if constexpr (IsStatic) {
-            return span_type(accessor().span());
+            return span_type(accessor().as_stl_span());
         } else {
-            return span_type(accessor().span(), extents());
+            const extents_type& e = ParentType::extents();
+            return span_type(accessor().as_stl_span(), e);
         }
     }
     const span_type as_span() const {
         if constexpr (IsStatic) {
-            return span_type(accessor().span());
+            return span_type(accessor().as_stl_span());
         } else {
-            return span_type(accessor().span(), extents());
+            const extents_type& e = ParentType::extents();
+            return span_type(accessor().as_stl_span(), e);
         }
     }
 

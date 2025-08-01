@@ -16,9 +16,9 @@ TEST_CASE("test_swizzle_pair", "[swizzle]") {
     auto a = Swizzler::unswizzle(4, 5);
     CHECK(Swizzler::_unswizzle_single_index<0>(std::make_tuple(4, 5)) == 5);
     CHECK(Swizzler::_unswizzle_single_index<1>(std::make_tuple(4, 5)) == 4);
-    REQUIRE(a.size() == 2);
-    CHECK(a[0] == 5);
-    CHECK(a[1] == 4);
+        REQUIRE(std::tuple_size_v<decltype(a)> == 2);
+        CHECK(std::get<0>(a) == 5);
+        CHECK(std::get<1>(a) == 4);
 }
 TEST_CASE("test_swizzle_lift", "[swizzle]") {
     {
@@ -35,8 +35,8 @@ TEST_CASE("test_swizzle_lift", "[swizzle]") {
 
         CHECK(Swizzler::_unswizzle_single_index<0>(std::make_tuple(4, 5)) == 5);
         auto a = Swizzler::unswizzle(4, 5);
-        REQUIRE(a.size() == 1);
-        CHECK(a[0] == 5);
+        REQUIRE(std::tuple_size_v<decltype(a)> == 1);
+        CHECK(std::get<0>(a) == 5);
     }
     {
         using Swizzler =
@@ -51,8 +51,8 @@ TEST_CASE("test_swizzle_lift", "[swizzle]") {
         CHECK(Swizzler::_unswizzle_single_index<0>(std::make_tuple(4, 5)) == 4);
 
         auto a = Swizzler::unswizzle(4, 5);
-        REQUIRE(a.size() == 1);
-        CHECK(a[0] == 4);
+        REQUIRE(std::tuple_size_v<decltype(a)> == 1);
+        CHECK(std::get<0>(a) == 4);
     }
 
     {
@@ -70,8 +70,8 @@ TEST_CASE("test_swizzle_lift", "[swizzle]") {
               6);
         CHECK(Swizzler::_unswizzle_single_index<1>(std::make_tuple(4, 5, 6)) ==
               4);
-        REQUIRE(a.size() == 2);
-        CHECK(a[0] == 6);
-        CHECK(a[1] == 4);
+        REQUIRE(std::tuple_size_v<decltype(a)> == 2);
+        CHECK(std::get<0>(a) == 6);
+        CHECK(std::get<1>(a) == 4);
     }
 }

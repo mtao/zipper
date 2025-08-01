@@ -2,12 +2,12 @@
 #define ZIPPER_VIEWS_NULLARY_DENSESTORAGEVIEWBASE_HPP
 #include <ranges>
 
-#include "zipper/views/detail/ViewTraits.hpp"
-#include "zipper/views/MappedViewBase.hpp"
-#include "zipper/views/detail/AssignHelper.hpp"
 #include "detail/DenseStorageViewTraits.hpp"
 #include "zipper/concepts/TupleLike.hpp"
 #include "zipper/utils/extents/all_extents_indices.hpp"
+#include "zipper/views/MappedViewBase.hpp"
+#include "zipper/views/detail/AssignHelper.hpp"
+#include "zipper/views/detail/ViewTraits.hpp"
 namespace zipper::views::nullary {
 template <typename Derived_>
 class DenseStorageViewBase : public MappedViewBase<Derived_> {
@@ -25,13 +25,16 @@ class DenseStorageViewBase : public MappedViewBase<Derived_> {
     using value_type = traits::value_type;
     constexpr static bool IsStatic = extents_traits::is_static;
 
+    static_assert(extents_type::rank() > 0);
     using ParentType = MappedViewBase<Derived>;
     using ParentType::extent;
     using ParentType::extents;
+    static_assert(
+        std::is_same_v<typename ParentType::extents_type, extents_type>);
 
     using ParentType::ParentType;
 
-    //using ParentType::mapping;
+    // using ParentType::mapping;
 
     using layout_policy = traits::layout_policy;
     using accessor_policy = traits::accessor_policy;
@@ -101,5 +104,5 @@ class DenseStorageViewBase : public MappedViewBase<Derived_> {
     */
     constexpr size_t size() const { return extents_traits::size(extents()); }
 };
-}  // namespace zipper::views
+}  // namespace zipper::views::nullary
 #endif

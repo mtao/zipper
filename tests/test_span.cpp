@@ -1,10 +1,11 @@
 
-#include "catch_include.hpp"
 #include <iostream>
 #include <span>
-#include <zipper/VectorBase.hpp>
-#include <zipper/Vector.hpp>
 #include <zipper/Matrix.hpp>
+#include <zipper/Vector.hpp>
+#include <zipper/VectorBase.hpp>
+
+#include "catch_include.hpp"
 using namespace zipper;
 TEST_CASE("test_vector_span", "[vector][storage][dense][span]") {
     std::vector<int> vec = {2, 3};
@@ -48,9 +49,10 @@ TEST_CASE("test_vector_span", "[vector][storage][dense][span]") {
     // CHECK(v(1) == 3);
 }
 TEST_CASE("test_matrix_span", "[matrix][storage][dense][span]") {
-    std::vector<int> vec = {0,1,2,3};
-    zipper::Matrix<int,2,2>::span_type M = std::span<int,4>(vec);
-    zipper::Matrix<int,std::dynamic_extent,std::dynamic_extent>::span_type Md(std::span<int>(vec), zipper::create_dextents(2,2));
+    std::vector<int> vec = {0, 1, 2, 3};
+    zipper::Matrix<int, 2, 2>::span_type M = std::span<int, 4>(vec);
+    zipper::Matrix<int, std::dynamic_extent, std::dynamic_extent>::span_type Md(
+        std::span<int>(vec), zipper::create_dextents(2, 2));
 
     static_assert(M.static_extent(0) == 2);
     static_assert(M.static_extent(1) == 2);
@@ -61,13 +63,12 @@ TEST_CASE("test_matrix_span", "[matrix][storage][dense][span]") {
     REQUIRE(Md.extent(0) == 2);
     REQUIRE(Md.extent(1) == 2);
 
-    CHECK(M(0,0) == 0);
-    CHECK(M(0,1) == 1);
-    CHECK(M(1,0) == 2);
-    CHECK(M(1,1) == 3);
+    CHECK(M(0, 0) == 0);
+    CHECK(M(0, 1) == 1);
+    CHECK(M(1, 0) == 2);
+    CHECK(M(1, 1) == 3);
 
     CHECK((M == Md));
-
 
     // this last case WOULD be very cool, but seems to not work due to a parse
     // limitation in type deductions? In particular, gcc at least seems to
@@ -75,4 +76,24 @@ TEST_CASE("test_matrix_span", "[matrix][storage][dense][span]") {
     // VectorBase(y) = {4, 5};
     // CHECK(v(0) == 2);
     // CHECK(v(1) == 3);
+}
+TEST_CASE("test_span_view", "[vector][storage][dense][span]") {
+    {
+        zipper::Vector<double, 3> x = {1, 2, 3};
+
+        VectorBase y = x.view().as_span();
+        CHECK(x == y);
+        VectorBase z = x.view().as_std_span();
+        CHECK(x == z);
+    }
+    {
+        zipper::Vector<double, std::dynamic_extent> x = {1, 2, 3};
+
+        static_assert(std::decay_t<decltype(x)>::extents_type::rank() == 1);
+
+        VectorBase y = x.view().as_span();
+        CHECK(x == y);
+        VectorBase z = x.view().as_std_span();
+        CHECK(x == z);
+    }
 }

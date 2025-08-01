@@ -58,15 +58,10 @@ class SpanStorage
         requires(!IsStatic && extents_type::rank() == 1)
         : ParentType(extents_type(s.size())), m_accessor(s) {}
 
-    template <concepts::ExtentsType E2>
-    void resize(const E2& e)
-        requires(extents_traits::template is_convertable_from<E2>() &&
-                 !IsStatic)
-    {
-        static_assert(E2::rank() != 0);
-        this->resize_extents(e);
-        m_accessor.container().resize(extents_traits::size(e));
-    }
+    auto begin() noexcept { return m_accessor.begin(); }
+    auto end() noexcept { return m_accessor.end(); }
+    auto begin() const noexcept { return m_accessor.begin(); }
+    auto end() const noexcept { return m_accessor.end(); }
 
    private:
     accessor_type m_accessor;

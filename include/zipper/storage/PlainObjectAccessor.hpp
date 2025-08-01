@@ -32,6 +32,12 @@ class StaticValueAccessor {
     auto begin() const { return m_data.begin(); }
     auto end() const { return m_data.end(); }
 
+    auto as_stl_span() {
+        return std::span<value_type,N_>(m_data); 
+    }
+    auto as_stl_span() const{
+        return std::span<const value_type,N_>(m_data); 
+    }
    private:
     // default assigning an empty array makes sure it's initialized / removes a gcc warning
     storage_type m_data = {};
@@ -53,6 +59,14 @@ class DynamicValueAccessor {
 
     const auto& container() const { return m_data; }
     auto& container() { return m_data; }
+
+
+    auto as_stl_span() {
+        return std::span<value_type,std::dynamic_extent>(m_data); 
+    }
+    auto as_stl_span() const{
+        return std::span<const value_type,std::dynamic_extent>(m_data); 
+    }
 
     using iterator_type = storage_type::iterator;
     using const_iterator_type = storage_type::const_iterator;

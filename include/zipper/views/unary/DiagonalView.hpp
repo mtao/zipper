@@ -9,6 +9,7 @@
 
 namespace zipper::views {
 namespace unary {
+    // extracts the diagonal elements of a tensor
 template <zipper::concepts::QualifiedViewDerived ViewType>
 class DiagonalView;
 
