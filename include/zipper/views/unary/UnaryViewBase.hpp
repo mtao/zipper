@@ -12,9 +12,9 @@ template <zipper::concepts::QualifiedViewDerived Child,
           bool _holds_extents = false>
 struct DefaultUnaryViewTraits
     : public views::detail::DefaultViewTraits<
-          typename views::detail::ViewTraits<std::decay_t<Child>>::value_type,
+          typename views::detail::ViewTraits<Child>::value_type,
           typename views::detail::ViewTraits<
-              std::decay_t<Child>>::extents_type> {
+              Child>::extents_type> {
     // to pass a base type to the UnaryViewBase
     constexpr static bool holds_extents = _holds_extents;
     constexpr static bool is_const = std::is_const_v<Child>;
@@ -22,7 +22,7 @@ struct DefaultUnaryViewTraits
     using base_type =
         std::conditional_t<holds_extents, DimensionedViewBase<Derived>,
                            ViewBase<Derived>>;
-    using base_traits = views::detail::ViewTraits<std::decay_t<Child>>;
+    using base_traits = views::detail::ViewTraits<Child>;
     using base_value_type = base_traits::value_type;
     constexpr static bool is_coefficient_consistent =
         base_traits::is_coefficient_consistent;

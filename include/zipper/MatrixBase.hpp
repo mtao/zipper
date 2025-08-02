@@ -305,25 +305,25 @@ class MatrixBase : public ZipperBase<MatrixBase, View> {
     auto bottomRows() {
         detail::ConstexprArithmetic size(static_index_t<Size>{});
         auto t = size - detail::extents::get_extent<0>(extents());
-        return row_slice(zipper::slice({}, t.value()));
+        return row_slice(zipper::slice( t.value(), size.value()));
     }
     template <index_type Size>
     auto bottomRows() const {
         detail::ConstexprArithmetic size(static_index_t<Size>{});
         auto t = size - detail::extents::get_extent<0>(extents());
-        return row_slice(zipper::slice({}, t.value()));
+        return row_slice(zipper::slice(t.value(), size.value()));
     }
     template <index_type Size>
     auto rightCols() {
         detail::ConstexprArithmetic size(static_index_t<Size>{});
         auto t = size - detail::extents::get_extent<1>(extents());
-        return col_slice(zipper::slice({}, t.value()));
+        return col_slice(zipper::slice(t.value(), size.value()));
     }
     template <index_type Size>
     auto rightCols() const {
         detail::ConstexprArithmetic size(static_index_t<Size>{});
         auto t = size - detail::extents::get_extent<1>(extents());
-        return col_slice(zipper::slice({}, t.value()));
+        return col_slice(zipper::slice(t.value(), size.value()));
     }
 
     auto rowwise() {

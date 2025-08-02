@@ -10,8 +10,8 @@ namespace detail {
 template <zipper::concepts::QualifiedViewDerived ChildA,
           zipper::concepts::QualifiedViewDerived ChildB, bool _holds_extents = true>
 struct DefaultBinaryViewTraits : public views::detail::DefaultViewTraits<> {
-    using ATraits = views::detail::ViewTraits<std::decay_t<ChildA>>;
-    using BTraits = views::detail::ViewTraits<std::decay_t<ChildB>>;
+    using ATraits = views::detail::ViewTraits<ChildA>;
+    using BTraits = views::detail::ViewTraits<ChildB>;
     using lhs_value_type = ATraits::value_type;
     using rhs_value_type = BTraits::value_type;
     // using extents_type = typename BaseTraits::extents_type;

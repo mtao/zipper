@@ -16,7 +16,7 @@ struct lp_norm_holder {
         using self_type = LpNorm<View>;
         using view_type = View;
         using view_traits =
-            zipper::views::detail::ViewTraits<std::decay_t<view_type>>;
+            zipper::views::detail::ViewTraits<view_type>;
         using value_type = typename view_traits::value_type;
 
         LpNorm(View& v) : m_view(v) {}

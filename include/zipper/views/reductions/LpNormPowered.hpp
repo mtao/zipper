@@ -20,7 +20,7 @@ struct lp_norm_powered_holder {
         using self_type = LpNormPowered<View>;
         using view_type = View;
         using view_traits =
-            zipper::views::detail::ViewTraits<std::decay_t<view_type>>;
+            zipper::views::detail::ViewTraits<view_type>;
         using value_type = typename view_traits::value_type;
 
         LpNormPowered(View& v) : m_view(v) {}

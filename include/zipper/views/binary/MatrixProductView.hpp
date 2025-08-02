@@ -40,8 +40,8 @@ struct detail::ViewTraits<binary::MatrixProductView<A, B>>
 //: public binary::detail::MatrixWiseTraits<A, B> {
 //: public detail::ViewTraits<A> {
 {
-    using ATraits = detail::ViewTraits<std::decay_t<A>>;
-    using BTraits = detail::ViewTraits<std::decay_t<B>>;
+    using ATraits = detail::ViewTraits<A>;
+    using BTraits = detail::ViewTraits<B>;
     using ConvertExtentsUtil =
         coeffwise_extents_values<typename ATraits::extents_type,
                                  typename BTraits::extents_type>;

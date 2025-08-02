@@ -14,15 +14,15 @@ struct cast {
 // converts an underlying view to a new type
 template <typename A, zipper::concepts::QualifiedViewDerived Child>
 using CastView = OperationView<
-    Child,
-    detail::cast<typename zipper::views::detail::ViewTraits<std::decay_t<Child>>::value_type,
+    const Child,
+    detail::cast<typename zipper::views::detail::ViewTraits<Child>::value_type,
                  A>,
     true>;
 
 // converts b into a view of type A
 template <typename A, zipper::concepts::QualifiedViewDerived B>
 auto cast(B& b) {
-    return CastView<A, const B>(b);
+    return CastView<A, B>(b);
 }
 
 }  // namespace zipper::views

@@ -10,8 +10,8 @@ namespace zipper::views::binary {
 namespace detail {
 template <concepts::QualifiedViewDerived ViewA, concepts::QualifiedViewDerived ViewB>
 struct scalar_type {
-    using ATraits = views::detail::ViewTraits<std::decay_t<ViewA>>;
-    using BTraits = views::detail::ViewTraits<std::decay_t<ViewB>>;
+    using ATraits = views::detail::ViewTraits<ViewA>;
+    using BTraits = views::detail::ViewTraits<ViewB>;
 
     using a_value_type = ATraits::value_type;
     using b_value_type = BTraits::value_type;

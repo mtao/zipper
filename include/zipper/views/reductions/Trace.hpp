@@ -15,7 +15,7 @@ class Trace {
     using self_type = Trace<View>;
     using view_type = View;
     using view_traits =
-        zipper::views::detail::ViewTraits<std::decay_t<view_type>>;
+        zipper::views::detail::ViewTraits<view_type>;
     using value_type = typename view_traits::value_type;
 
     Trace(View& v) : m_view(v) {}

@@ -7,6 +7,20 @@ namespace zipper::views::detail {
 template <typename T>
 struct ViewTraits;
 
+template <typename T>
+struct ViewTraits<const T>: public ViewTraits<T> {
+    constexpr static bool is_const = false;
+    constexpr static bool is_writable = false;
+};
+template <typename T>
+struct ViewTraits<const T&>: public ViewTraits<T> {
+    constexpr static bool is_const = false;
+    constexpr static bool is_writable = false;
+};
+
+template <typename T>
+struct ViewTraits<T&>: public ViewTraits<T> {
+};
 // NOTE: template parameters should NOT be used in this struct so that derived
 // can overwrite them
 template <typename ValueType = void, typename Extents = zipper::dextents<0>>

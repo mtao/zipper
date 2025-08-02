@@ -28,8 +28,8 @@ namespace binary {
 template<typename A, typename B, typename Operation>
 struct detail::ViewTraits<binary::OperationView<A, B, Operation>>
   : public binary::detail::DefaultBinaryViewTraits<A, B> {
-    using ATraits = detail::ViewTraits<std::decay_t<A>>;
-    using BTraits = detail::ViewTraits<std::decay_t<B>>;
+    using ATraits = detail::ViewTraits<A>;
+    using BTraits = detail::ViewTraits<B>;
     using ConvertExtentsUtil = binary::detail::coeffwise_extents_values<
       typename ATraits::extents_type,
       typename BTraits::extents_type>;

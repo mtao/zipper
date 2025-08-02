@@ -334,7 +334,7 @@ struct detail::ViewTraits<unary::SliceView<QualifiedViewType, Slices...>>
     : public zipper::views::unary::detail::DefaultUnaryViewTraits<
           QualifiedViewType, true> {
     using ViewType = std::decay_t<QualifiedViewType>;
-    using Base = detail::ViewTraits<ViewType>;
+    using Base = detail::ViewTraits<QualifiedViewType>;
 
     template <rank_type R>
     using get_slice_t =

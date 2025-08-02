@@ -31,8 +31,11 @@ class ZipperBase {
     }
     Derived& derived() { return static_cast<Derived&>(*this); }
 
-    using view_type = View;
+    using view_type = std::decay_t<View>;
     using view_traits = views::detail::ViewTraits<view_type>;
+
+    constexpr static bool is_const = std::is_const_v<View>;
+    constexpr static bool is_writable = view_traits::is_writable && !is_const;
     using value_type = View::value_type;
     using extents_type = View::extents_type;
     using extents_traits = detail::ExtentsTraits<extents_type>;
@@ -67,7 +70,7 @@ class ZipperBase {
 
     template <concepts::ViewDerived Other>
     ZipperBase(const Other& other)
-        requires(view_type::is_writable &&
+        requires(is_writable &&
                  zipper::utils::extents::assignable_extents_v<
                      typename Other::extents_type, extents_type>)
         : m_view(extents_traits::convert_from(other.extents())) {
@@ -80,7 +83,7 @@ class ZipperBase {
 
     template <concepts::ViewDerived Other>
     Derived& operator=(const Other& other)
-        requires(view_type::is_writable &&
+        requires(is_writable &&
                  zipper::utils::extents::assignable_extents_v<
                      typename Other::extents_type, extents_type>)
     {
@@ -92,7 +95,7 @@ class ZipperBase {
     }
     template <concepts::ViewDerived Other>
     Derived& operator=(Other&& other)
-        requires(view_type::is_writable &&
+        requires(is_writable &&
                  zipper::utils::extents::assignable_extents_v<
                      typename Other::extents_type, extents_type>)
     {
@@ -105,7 +108,7 @@ class ZipperBase {
 
     template <concepts::ZipperBaseDerived Other>
     Derived& operator+=(const Other& other)
-        requires(view_type::is_writable)
+        requires(is_writable)
     {
         *this = *this + other;
 #pragma GCC diagnostic push
@@ -115,7 +118,7 @@ class ZipperBase {
     }
     template <concepts::ZipperBaseDerived Other>
     Derived& operator-=(const Other& other)
-        requires(view_type::is_writable)
+        requires(is_writable)
     {
         *this = *this - other;
 #pragma GCC diagnostic push
@@ -124,7 +127,7 @@ class ZipperBase {
 #pragma GCC diagnostic pop
     }
     Derived& operator*=(const value_type& other)
-        requires(view_type::is_writable)
+        requires(is_writable)
     {
         *this = other * *this;
 #pragma GCC diagnostic push
@@ -133,7 +136,7 @@ class ZipperBase {
 #pragma GCC diagnostic pop
     }
     Derived& operator/=(const value_type& other)
-        requires(view_type::is_writable)
+        requires(is_writable)
     {
         *this = *this / other;
 #pragma GCC diagnostic push
@@ -144,8 +147,9 @@ class ZipperBase {
 
     template <typename OpType>
         requires(views::unary::concepts::ScalarOperation<value_type, OpType>)
+
     auto unary_expr(const OpType& op) const {
-        using V = views::unary::OperationView<const View, OpType>;
+        using V = views::unary::OperationView<const view_type, OpType>;
         return DerivedT<V>(V(view(), op));
     }
 
@@ -158,7 +162,8 @@ class ZipperBase {
     template <typename T>
     auto cast() const {
         using V = views::unary::CastView<T, const view_type>;
-        return DerivedT<V>(V(view()));
+        return DerivedT<V>(V(
+                    view()));
     }
 
     template <typename... Args>

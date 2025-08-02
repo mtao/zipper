@@ -11,12 +11,12 @@ namespace zipper::views::unary {
 template <zipper::concepts::QualifiedViewDerived View>
 using NegateView = OperationView<
     View,
-    std::negate<typename zipper::views::detail::ViewTraits<std::decay_t<View>>::value_type> >;
+    std::negate<typename zipper::views::detail::ViewTraits<View>::value_type> >;
 
 template <zipper::concepts::QualifiedViewDerived View>
 using LogicalNotView = OperationView<
     View, std::logical_not<
-              typename zipper::views::detail::ViewTraits<std::decay_t<View>>::value_type> >;
+              typename zipper::views::detail::ViewTraits<View>::value_type> >;
 
 template <zipper::concepts::QualifiedViewDerived View>
 using BitNotView =

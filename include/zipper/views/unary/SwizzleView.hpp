@@ -27,7 +27,7 @@ struct detail::ViewTraits<unary::SwizzleView<QualifiedViewType, Indices...>>
 
     // TODO: fix this so ViewTraits are all aware of qulaifiacitons
     using QualifiedBase = zipper::views::detail::ViewTraits<QualifiedViewType>;
-    using Base = zipper::views::detail::ViewTraits<ViewType>;
+    using Base = zipper::views::detail::ViewTraits<QualifiedViewType>;
     using extents_type = swizzler_type::template extents_type_swizzler_t<
         typename Base::extents_type>;
     using value_type = Base::value_type;
