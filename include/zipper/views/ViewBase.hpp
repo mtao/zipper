@@ -33,6 +33,7 @@ class ViewBase {
         traits::is_coefficient_consistent;
     constexpr static bool is_writable = traits::is_writable;
     constexpr static rank_type rank = extents_type::rank();
+    static_assert(extents_type::rank() >= 0);
     using array_type = std::array<index_type, rank>;
     // using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
 

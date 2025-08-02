@@ -83,6 +83,8 @@ TEST_CASE("test_matrix_slice_shapes", "[extents][matrix][slice]") {
         static_assert(ST::actionable_indices.size() == 2);
         static_assert(ST::actionable_indices[0] == std::dynamic_extent);
         static_assert(ST::actionable_indices[1] == 0);
+        static_assert(ST::extents_type::rank() == 1);
+        static_assert(ST::extents_type::static_extent(0) == 5);
         static_assert(std::is_same_v<ST::extents_type, zipper::extents<5>>);
 
         REQUIRE(1 == slice.view().get_index<0>(4));
@@ -305,22 +307,20 @@ TEST_CASE("test_span_array_access", "[vector][storage][dense][span]") {
 
         std::array<zipper::index_type, 2> a{{0, 2}};
         auto s = x(a);
-        REQUIRE(s.extents().rank() == 2);
+        REQUIRE(s.extents().rank() == 1);
         CHECK(s(0) == 1);
         CHECK(s(1) == 3);
     }
-    /*
     {
         zipper::Vector<double, std::dynamic_extent> x = {1, 2, 3};
 
-        std::vector<index_type> a{{0,2}};
+        std::vector<zipper::index_type> a{{0,2}};
         auto s = x(a);
-        REQUIRE(s.extents().rank() == 2);
+        REQUIRE(s.extents().rank() == 1);
         CHECK(s(0) == 1);
-        CHECK(s(0) == 3);
+        CHECK(s(1) == 3);
 
 
 
     }
-    */
 }
