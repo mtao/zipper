@@ -85,6 +85,39 @@ class MatrixBase : public ZipperBase<MatrixBase, View> {
 
     value_type trace() const { return views::reductions::Trace(view())(); }
 
+    template <typename... Args>
+    auto operator()(Args&&... idxs) const -> decltype(auto)
+
+    {
+        decltype(auto) r = Base::operator()(std::forward<Args>(idxs)...);
+        if constexpr (std::is_same_v<std::decay_t<decltype(r)>, value_type>) {
+            return r;
+        } else {
+            using R = typename std::decay_t<decltype(r)>;
+            if constexpr (R::extents_type::rank() == 1) {
+                return VectorBase<R>(r);
+            } else if constexpr (R::extents_type::rank() == 2) {
+                return MatrixBase<R>(r);
+            }
+        }
+    }
+    template <typename... Args>
+    auto operator()(Args&&... idxs) -> decltype(auto)
+
+    {
+        decltype(auto) r = Base::operator()(std::forward<Args>(idxs)...);
+        if constexpr (std::is_same_v<std::decay_t<decltype(r)>, value_type>) {
+            return r;
+        } else {
+            using R = typename std::decay_t<decltype(r)>;
+            if constexpr (R::extents_type::rank() == 1) {
+                return VectorBase<R>(r);
+            } else if constexpr (R::extents_type::rank() == 2) {
+                return MatrixBase<R>(r);
+            }
+        }
+    }
+
    public:
     constexpr index_type rows() const { return extent(0); }
     constexpr index_type cols() const { return extent(1); }
@@ -314,6 +347,13 @@ class MatrixBase : public ZipperBase<MatrixBase, View> {
                                                   0>(view());
     }
 };
+
+template <typename T>
+using MatrixXX = Matrix<T, dynamic_extent, dynamic_extent>;
+template <typename T, index_type R>
+using MatrixRX = Matrix<T, R, dynamic_extent>;
+template <typename T, index_type C>
+using MatrixXC = Matrix<T, dynamic_extent, C>;
 
 template <concepts::MatrixViewDerived View>
 MatrixBase(View&& view) -> MatrixBase<View>;

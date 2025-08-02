@@ -3,6 +3,6 @@
         "alternate": "include/zipper/{}.hpp"
     },
     "include/zipper/*.hpp": {
-        "alternate": "src/{}.hxx"
+        "alternate": "include/zipper/{}.hxx"
     }
 }

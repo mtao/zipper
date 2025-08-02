@@ -16,10 +16,12 @@
 
 namespace zipper {
 
+
 template <template <concepts::QualifiedViewDerived> typename DerivedT,
           concepts::QualifiedViewDerived View>
 class ZipperBase {
    public:
+
     ZipperBase()
         requires(std::is_default_constructible_v<View>)
         : m_view() {}
@@ -163,13 +165,13 @@ class ZipperBase {
     auto operator()(Args&&... idxs) -> decltype(auto)
         requires(view_traits::is_writable)
     {
-        return view()(std::forward<Args>(idxs)...);
+        return view()(filter_args(std::forward<Args>(idxs))...);
     }
     template <typename... Args>
     auto operator()(Args&&... idxs) const -> decltype(auto)
 
     {
-        return view()(std::forward<Args>(idxs)...);
+        return view()(filter_args(std::forward<Args>(idxs))...);
     }
 
     // pads left with dummy dimensions
@@ -196,7 +198,7 @@ class ZipperBase {
         using my_view_type =
             views::unary::SliceView<const view_type, std::decay_t<Slices>...>;
 
-        return my_view_type(view(), std::forward<Slices>(slices)...);
+        return my_view_type(view(), filter_args(std::forward<Slices>(slices))...);
     }
 
     template <concepts::SliceLike... Slices>
@@ -210,7 +212,7 @@ class ZipperBase {
     auto slice_view(Slices&&... slices) {
         using my_view_type =
             views::unary::SliceView<view_type, std::decay_t<Slices>...>;
-        return my_view_type(view(), std::forward<Slices>(slices)...);
+        return my_view_type(view(), filter_args(std::forward<Slices>(slices))...);
     }
     template <concepts::SliceLike... Slices>
     auto slice_view() {
@@ -221,6 +223,14 @@ class ZipperBase {
 
    public:
    private:
+    template <typename T>
+    static auto filter_args(T&& v) -> decltype(auto) {
+        if constexpr(concepts::ZipperBaseDerived<std::decay_t<T>>) {
+            return v.view();
+        } else {
+            return std::forward<T>(v);
+        }
+    }
     View m_view;
 };
 

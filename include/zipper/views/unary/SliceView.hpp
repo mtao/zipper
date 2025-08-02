@@ -4,6 +4,7 @@
 #include "UnaryViewBase.hpp"
 #include "zipper/concepts/SlicePackLike.hpp"
 #include "zipper/concepts/ViewDerived.hpp"
+#include "zipper/concepts/ZipperBaseDerived.hpp"
 #include "zipper/concepts/stl.hpp"
 #include "zipper/detail/constexpr_arithmetic.hpp"
 #include "zipper/detail/is_integral_constant.hpp"
@@ -121,6 +122,47 @@ struct slice_helper<std::integral_constant<index_type, N>> {
 
     constexpr index_type get_index() const { return N; }
 };
+template <zipper::concepts::QualifiedViewDerived View> requires(View::extents_type::rank() == 1)
+struct slice_helper<View> {
+   public:
+    using type = View;
+    constexpr slice_helper(const type &t) : m_slice(t) {}
+    template <rank_type M, zipper::concepts::ExtentsType ET>
+    constexpr static index_type static_extent() {
+        return View::extents_type::static_extent(0);
+    }
+    template <rank_type M, zipper::concepts::ExtentsType ET>
+    constexpr static index_type extent(const type &t, const ET &) {
+        return t.extent(0);
+    }
+
+    constexpr index_type get_index(index_type input) const {
+        return m_slice(input);
+    }
+
+   private:
+    type m_slice;
+};
+//template <zipper::concepts::ZipperBaseDerived ZBase>
+//struct slice_helper<ZBase> {
+//    using type = ZBase;
+//    template <rank_type M, zipper::concepts::ExtentsType ET>
+//    constexpr static index_type static_extent() {
+//        return ZBase::extents_type::static_extent(0);
+//    }
+//    template <rank_type M, zipper::concepts::ExtentsType ET>
+//    constexpr static index_type extent(const type &t, const ET &) {
+//        return t.extent(0);
+//    }
+//
+//    constexpr index_type get_index(index_type input) const {
+//        return m_slice(input);
+//    }
+//
+//   private:
+//    std::decay_t<decltype(std::declval<ZBase>().eval())> m_slice;
+//};
+
 template <size_t N>
 struct slice_helper<std::array<index_type, N>> {
    public:

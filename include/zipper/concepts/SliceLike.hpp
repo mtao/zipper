@@ -4,6 +4,7 @@
 #include "zipper/types.hpp"
 #include <vector>
 #include <array>
+#include "ViewDerived.hpp"
 
 namespace zipper::concepts {
 
@@ -30,6 +31,10 @@ struct slice_like<std::vector<index_type>> : public std::true_type {};
 
 template <size_t N>
 struct slice_like<std::array<index_type,N>> : public std::true_type {};
+
+template <zipper::concepts::QualifiedViewDerived View> requires(View::extents_type::rank() == 1)
+struct slice_like<View> : public std::true_type {};
+
 
 }  // namespace detail
 

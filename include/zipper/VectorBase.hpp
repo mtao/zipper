@@ -104,7 +104,9 @@ class VectorBase : public ZipperBase<VectorBase, View> {
     VectorBase& operator=(const std::initializer_list<T>& l)
         requires(extents_traits::is_dynamic)
     {
-        view().resize(extents_type(l.size()));
+        if constexpr (traits::is_resizable) {
+            view().resize(extents_type(l.size()));
+        }
         for (index_type j = 0; j < extent(0); ++j) {
             (*this)(j) = std::data(l)[j];
         }

@@ -30,14 +30,46 @@ class Matrix
     using span_type =
         MatrixBase<storage::SpanStorage<ValueType, zipper::extents<Rows, Cols>,
                                         layout_type>>;
-    using const_span_type =
-        MatrixBase<storage::SpanStorage<const ValueType, zipper::extents<Rows, Cols>,
-                                        layout_type>>;
+    using const_span_type = MatrixBase<storage::SpanStorage<
+        const ValueType, zipper::extents<Rows, Cols>, layout_type>>;
     using Base::transpose;
 
     Matrix()
-        //requires(extents_traits::is_static)
-    = default;
+        // requires(extents_traits::is_static)
+        = default;
+
+    template <typename T>
+    Matrix(const std::initializer_list<std::initializer_list<T>>& l)
+        requires(extents_traits::is_static)
+    {
+        assert(l.size() == extent(0));
+        for (index_type j = 0; j < l.size(); ++j) {
+            assert(l[j].size() == extent(1));
+            l.row(j) = l[j];
+        }
+    }
+    template <typename T>
+    Matrix(const std::initializer_list<std::initializer_list<T>>& l)
+        requires(extents_traits::rank_dynamic == 1)
+        : Base(extents_type(extents_traits::is_dynamic_extent(0)
+                                ? l.size()
+                                : l.begin()->size())) {
+        auto it = l.begin();
+        for (index_type j = 0; j < l.size(); ++j, ++it) {
+            assert(it->size() == extent(1));
+            row(j) = *it;
+        }
+    }
+    template <typename T>
+    Matrix(const std::initializer_list<std::initializer_list<T>>& l)
+        requires(extents_traits::rank_dynamic == 2)
+        : Base(extents_type(l.size(), l.begin()->size())) {
+        auto it = l.begin();
+        for (index_type j = 0; j < l.size(); ++j, ++it) {
+            assert(it->size() == extent(1));
+            row(j) = *it;
+        }
+    }
 
     Matrix(index_type dyn_size)
         requires(extents_traits::rank_dynamic == 1)
@@ -55,15 +87,15 @@ class Matrix
         : Base() {}
 
 #if defined(NDEBUG)
-    Matrix(index_type , index_type )
+    Matrix(index_type, index_type)
 #else
     Matrix(index_type rows, index_type cols)
 #endif
         requires(extents_traits::is_static)
         : Base() {
-            assert(rows == extent(0));
-            assert(cols == extent(1));
-        }
+        assert(rows == extent(0));
+        assert(cols == extent(1));
+    }
 
     template <concepts::MatrixBaseDerived Other>
     Matrix(const Other& other) : Base(other) {}
@@ -101,49 +133,16 @@ class Matrix
         Base::operator=(other.view());
         return *this;
     }
-
-    template <typename... Args>
-    auto operator()(Args&&... idxs) const -> decltype(auto)
-
-    {
-        decltype(auto) r = view()(std::forward<Args>(idxs)...);
-        if constexpr (std::is_same_v<std::decay_t<decltype(r)>, value_type>) {
-            return r;
-        } else {
-            using R = typename std::decay_t<decltype(r)>;
-            if constexpr (R::extents_type::rank() == 1) {
-                return VectorBase<R>(r);
-            } else if constexpr (R::extents_type::rank() == 2) {
-                return MatrixBase<R>(r);
-            }
-        }
-    }
-    template <typename... Args>
-    auto operator()(Args&&... idxs) -> decltype(auto)
-
-    {
-        decltype(auto) r = view()(std::forward<Args>(idxs)...);
-        if constexpr (std::is_same_v<std::decay_t<decltype(r)>, value_type>) {
-            return r;
-        } else {
-            using R = typename std::decay_t<decltype(r)>;
-            if constexpr (R::extents_type::rank() == 1) {
-                return VectorBase<R>(r);
-            } else if constexpr (R::extents_type::rank() == 2) {
-                return MatrixBase<R>(r);
-            }
-        }
-    }
 };
 template <concepts::MatrixViewDerived MB>
-Matrix(const MB& o)
-    -> Matrix<std::decay_t<typename MB::value_type>, MB::extents_type::static_extent(0),
-              MB::extents_type::static_extent(1)>;
+Matrix(const MB& o) -> Matrix<std::decay_t<typename MB::value_type>,
+                              MB::extents_type::static_extent(0),
+                              MB::extents_type::static_extent(1)>;
 
 template <concepts::MatrixBaseDerived MB>
-Matrix(const MB& o)
-    -> Matrix<std::decay_t<typename MB::value_type>, MB::extents_type::static_extent(0),
-              MB::extents_type::static_extent(1)>;
+Matrix(const MB& o) -> Matrix<std::decay_t<typename MB::value_type>,
+                              MB::extents_type::static_extent(0),
+                              MB::extents_type::static_extent(1)>;
 
 }  // namespace zipper
 

@@ -24,6 +24,7 @@ namespace zipper {
 struct empty {};
 using index_type = std::size_t;
 using rank_type = std::size_t;
+constexpr static index_type dynamic_extent = std::dynamic_extent;
 template <index_type... Extents>
 #if defined(__cpp_lib_mdspan)
 using extents = std::extents<index_type, Extents...>;
@@ -71,7 +72,7 @@ template <typename OffsetType, typename ExtentType, typename StrideType>
 using slice_t = slice_type<OffsetType, ExtentType, StrideType>;
 
 template <typename OffsetType = static_index_t<0>,
-          typename ExtentType = static_index_t<std::dynamic_extent>,
+          typename ExtentType = static_index_t<dynamic_extent>,
           typename StrideType = static_index_t<1>>
 inline auto slice(OffsetType start = {}, ExtentType size = {},
                   StrideType stride = {}) {

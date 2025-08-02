@@ -99,6 +99,9 @@ class Vector
     using Base::operator=;
 };
 
+template <typename T>
+using VectorX = Vector<T, dynamic_extent>;
+
 template <concepts::VectorViewDerived MB>
 Vector(const MB& o)
     -> Vector<std::decay_t<typename MB::value_type>, MB::extents_type::static_extent(0)>;

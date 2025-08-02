@@ -324,3 +324,39 @@ TEST_CASE("test_span_array_access", "[vector][storage][dense][span]") {
 
     }
 }
+TEST_CASE("test_span_view_access", "[vector][storage][dense][span]") {
+    {
+        zipper::Vector<double, 3> x = {1, 2, 3};
+
+        zipper::Vector<zipper::index_type,2> a = {{0,2}};
+        auto s = x(a);
+        REQUIRE(s.extents().rank() == 1);
+        CHECK(s(0) == 1);
+        CHECK(s(1) == 3);
+    }
+    {
+        zipper::Vector<double, std::dynamic_extent> x = {1, 2, 3};
+
+        zipper::Vector<zipper::index_type,std::dynamic_extent> a = {{0,2}};
+        auto s = x(a);
+        REQUIRE(s.extents().rank() == 1);
+        CHECK(s(0) == 1);
+        CHECK(s(1) == 3);
+
+
+
+    }
+    {
+        zipper::Matrix<double, 2,std::dynamic_extent> V = {{1, 2, 3},{0,2,1}};
+
+        zipper::Vector<zipper::index_type,2> a = {{0,2}};
+        auto s = V(0,a);
+        REQUIRE(s.extents().rank() == 1);
+        CHECK(s(0) == 1);
+        CHECK(s(1) == 3);
+        auto r = V(1,a);
+        REQUIRE(r.extents().rank() == 1);
+        CHECK(r(0) == 0);
+        CHECK(r(1) == 1);
+    }
+}
