@@ -66,20 +66,20 @@ TEST_CASE("test_matrix_slice_shapes", "[extents][matrix][slice]") {
         using T = ST::slice_storage_type;
 
         static_assert(std::is_same_v<zipper::full_extent_type,
-                                     std::tuple_element_t<1, T>>);
+                                     std::tuple_element_t<1, T>::type>);
 
         static_assert(
             std::is_same_v<std::integral_constant<zipper::index_type, 1>,
-                           std::tuple_element_t<0, T>>);
+                           std::tuple_element_t<0, T>::type>);
 
-        static_assert(zipper::concepts::SliceLike<std::tuple_element_t<0, T>>);
-        static_assert(zipper::concepts::SliceLike<std::tuple_element_t<1, T>>);
+        static_assert(zipper::concepts::SliceLike<std::tuple_element_t<0, T>::type>);
+        static_assert(zipper::concepts::SliceLike<std::tuple_element_t<1, T>::type>);
 
-        static_assert(zipper::concepts::IndexLike<std::tuple_element_t<0, T>>);
-        static_assert(!zipper::concepts::IndexLike<std::tuple_element_t<1, T>>);
+        static_assert(zipper::concepts::IndexLike<std::tuple_element_t<0, T>::type>);
+        static_assert(!zipper::concepts::IndexLike<std::tuple_element_t<1, T>::type>);
 
         static_assert(std::is_same_v<zipper::full_extent_type,
-                                     std::tuple_element_t<1, T>>);
+                                     std::tuple_element_t<1, T>::type>);
         static_assert(ST::actionable_indices.size() == 2);
         static_assert(ST::actionable_indices[0] == std::dynamic_extent);
         static_assert(ST::actionable_indices[1] == 0);
@@ -95,20 +95,20 @@ TEST_CASE("test_matrix_slice_shapes", "[extents][matrix][slice]") {
         using T = ST::slice_storage_type;
 
         static_assert(std::is_same_v<zipper::full_extent_type,
-                                     std::tuple_element_t<0, T>>);
+                                     std::tuple_element_t<0, T>::type>);
 
         static_assert(
             std::is_same_v<std::integral_constant<zipper::index_type, 1>,
-                           std::tuple_element_t<1, T>>);
+                           std::tuple_element_t<1, T>::type>);
 
-        static_assert(zipper::concepts::SliceLike<std::tuple_element_t<0, T>>);
-        static_assert(zipper::concepts::SliceLike<std::tuple_element_t<1, T>>);
+        static_assert(zipper::concepts::SliceLike<std::tuple_element_t<0, T>::type>);
+        static_assert(zipper::concepts::SliceLike<std::tuple_element_t<1, T>::type>);
 
-        static_assert(zipper::concepts::IndexLike<std::tuple_element_t<1, T>>);
-        static_assert(!zipper::concepts::IndexLike<std::tuple_element_t<0, T>>);
+        static_assert(zipper::concepts::IndexLike<std::tuple_element_t<1, T>::type>);
+        static_assert(!zipper::concepts::IndexLike<std::tuple_element_t<0, T>::type>);
 
         static_assert(std::is_same_v<zipper::full_extent_type,
-                                     std::tuple_element_t<0, T>>);
+                                     std::tuple_element_t<0, T>::type>);
         static_assert(ST::actionable_indices.size() == 2);
         static_assert(ST::actionable_indices[1] == std::dynamic_extent);
         static_assert(ST::actionable_indices[0] == 0);

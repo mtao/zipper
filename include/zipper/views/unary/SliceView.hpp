@@ -19,12 +19,15 @@ class SliceView;
 
 namespace detail {
 template <typename T>
-struct slice_helper {};
+struct slice_helper;
 
 template <typename OffsetType, typename ExtentType, typename StrideType>
 struct slice_helper<
     std::experimental::strided_slice<OffsetType, ExtentType, StrideType>> {
    public:
+    using type =
+        std::experimental::strided_slice<OffsetType, ExtentType, StrideType>;
+    constexpr slice_helper(const type &t) : m_slice(t) {}
     constexpr static auto get_extent(const auto &stride, const auto &extent) {
         return extent > 0 ? 1 + (extent - 1) / stride : 0;
     }
@@ -43,33 +46,44 @@ struct slice_helper<
         constexpr zipper::detail::ConstexprArithmetic<static_index_t<extent>> e;
         return get_extent(s, e);
     }
+
     template <rank_type N, zipper::concepts::ExtentsType ET>
-    constexpr index_type extent(const ET &) const {
-        constexpr zipper::detail::ConstexprArithmetic s = m_slice.stride;
-        constexpr zipper::detail::ConstexprArithmetic e = m_slice.extent;
+    constexpr static auto internal_extent(const type &t, const ET &e) {
+        if constexpr (std::is_same_v<ExtentType,
+                                     static_index_t<std::dynamic_extent>>) {
+            return e.extent(N);
+        } else {
+            return t.extent();
+        }
+    }
+
+    template <rank_type N, zipper::concepts::ExtentsType ET>
+    constexpr static index_type extent(const type &t, const ET &ex) {
+        constexpr zipper::detail::ConstexprArithmetic s = t.stride;
+        constexpr zipper::detail::ConstexprArithmetic e = internal_extent(t, e);
         return get_extent(s, e);
     }
 
-    constexpr index_type get_index(index_type input) const {
+    index_type get_index(index_type input) const {
         index_type start = std::experimental::detail::first_of(m_slice);
-        constexpr index_type stride =
-            std::experimental::detail::stride_of(m_slice);
+        index_type stride = std::experimental::detail::stride_of(m_slice);
         return start + input * stride;
     }
 
    private:
-    std::experimental::strided_slice<OffsetType, ExtentType, StrideType>
-        m_slice;
+    type m_slice;
 };
 template <>
 struct slice_helper<full_extent_t> {
    public:
+    using type = full_extent_t;
+    constexpr slice_helper(const type &) {}
     template <rank_type N, zipper::concepts::ExtentsType ET>
     constexpr static index_type static_extent() {
         return ET::static_extent(N);
     }
     template <rank_type N, zipper::concepts::ExtentsType ET>
-    constexpr index_type extent(const ET &e) const {
+    constexpr static index_type extent(const type &t, const ET &e) {
         return e.extent(N);
     }
 
@@ -79,16 +93,18 @@ template <typename T>
     requires(std::is_integral_v<T>)
 struct slice_helper<T> {
    public:
+    using type = index_type;
+    constexpr slice_helper(const type &t) : m_slice(t) {}
     template <rank_type N, zipper::concepts::ExtentsType ET>
     constexpr static index_type static_extent() {
         return 1;
     }
     template <rank_type N, zipper::concepts::ExtentsType ET>
-    constexpr index_type extent(const ET &) const {
+    constexpr static index_type extent(const type &t, const ET &) {
         return static_extent<N, ET>();
     }
 
-    constexpr index_type get_index(index_type) const { return m_slice; }
+    constexpr index_type get_index() const { return m_slice; }
 
    private:
     index_type m_slice;
@@ -97,44 +113,52 @@ struct slice_helper<T> {
 template <index_type N>
 struct slice_helper<std::integral_constant<index_type, N>> {
    public:
+    using type = std::integral_constant<index_type, N>;
+    constexpr slice_helper(std::integral_constant<index_type, N>) {}
     template <rank_type M, zipper::concepts::ExtentsType ET>
     constexpr static index_type static_extent() {
         return 1;
     }
     template <rank_type M, zipper::concepts::ExtentsType ET>
-    constexpr index_type extent(const ET &) const {
+    constexpr static index_type extent(const type &, const ET &) {
         return static_extent<M, ET>();
     }
 
-    constexpr index_type get_index(index_type) const { return N; }
+    constexpr index_type get_index() const { return N; }
 };
 template <size_t N>
 struct slice_helper<std::array<index_type, N>> {
    public:
+    using type = std::array<index_type, N>;
+    constexpr slice_helper(const type &t) : m_slice(t) {}
     template <rank_type M, zipper::concepts::ExtentsType ET>
     constexpr static index_type static_extent() {
         return index_type(M);
     }
     template <rank_type M, zipper::concepts::ExtentsType ET>
-    constexpr index_type extent(const ET &) const {
+    constexpr static index_type extent(const type &t, const ET &) {
         return static_extent<M, ET>();
     }
 
-    constexpr index_type get_index(index_type input) const { return m_slice; }
+    constexpr index_type get_index(index_type input) const {
+        return m_slice[input];
+    }
 
    private:
-    std::array<index_type, N> m_slice;
+    type m_slice;
 };
 template <>
 struct slice_helper<std::vector<index_type>> {
    public:
+    using type = std::vector<index_type>;
+    constexpr slice_helper(const type &t) : m_slice(t) {}
     template <rank_type N, zipper::concepts::ExtentsType ET>
     constexpr static index_type static_extent() {
         return std::dynamic_extent;
     }
     template <rank_type N, zipper::concepts::ExtentsType ET>
-    constexpr index_type extent(const ET &) const {
-        return m_slice.size();
+    constexpr static index_type extent(const type &t, const ET &) {
+        return t.size();
     }
 
     constexpr index_type get_index(index_type input) const {
@@ -154,8 +178,8 @@ struct _slice_extent_helper<ET, std::integer_sequence<rank_type, N...>,
     using get_slice_t =
         std::decay_t<std::tuple_element_t<R, std::tuple<Slices...>>>;
 
-    // using extents_type = zipper::extents<
-    //     slice_helper<get_slice_t<N>>::template static_extent<N, ET>()...>;
+    template <size_t N>
+    using single_slice_helper = slice_helper<get_slice_t<N>>;
 
     template <std::size_t... Indices>
     consteval static std::array<rank_type, sizeof...(Indices)> get_actionable(
@@ -189,36 +213,59 @@ struct _slice_extent_helper<ET, std::integer_sequence<rank_type, N...>,
         }
         return r;
     }
+
+    constexpr static auto actionable_indices =
+        get_actionable(std::make_index_sequence<ET::rank()>{});
     constexpr static rank_type rank = []() {
-        auto a = get_actionable();
         rank_type j = 0;
-        for (const auto &i : a) {
-            if (a != std::dynamic_extent) {
+        for (const auto &i : actionable_indices) {
+            if (i != std::dynamic_extent) {
                 j++;
             }
         }
         return j;
     }();
-    template <rank_type... Rs>
-    using _extents_type =
-        extents < using extents_type =
-            _Extents_type < std::make_integer_sequence <
+    template <typename>
+    struct _extents_maker;
 
-            constexpr static std::array<rank_type, extents_type::rank_dynamic()>
-                dynamic_full_indices =
-                zipper::detail::extents::dynamic_extents_indices_v<
-                    extents_type>;
+    template <rank_type... Rs>
+    struct _extents_maker<std::integer_sequence<rank_type, Rs...>> {
+        consteval static rank_type get_rank(rank_type r) {
+            for (rank_type j = 0; j < actionable_indices.size(); ++j) {
+                if (actionable_indices[j] == r) {
+                    return j;
+                }
+            }
+        }
+        using type =
+            extents<single_slice_helper<get_rank(Rs)>::static_extent()...>;
+    };
+    // using _extents_type =
+    //     extents <
+    using maker =
+        _extents_maker<decltype(std::make_integer_sequence<rank_type, rank>{})>;
+    using extents_type = typename maker::type;
+
+    constexpr static std::array<rank_type, extents_type::rank_dynamic()>
+        dynamic_indices =
+            zipper::detail::extents::dynamic_extents_indices_v<extents_type>;
+
     template <rank_type... Is>
     constexpr static auto _get_extents(const ET &base,
-                                       std::integer_sequence<rank_type, Is...>)
+                                       std::integer_sequence<rank_type, Is...>,
+                                       const Slices &...slices)
         -> extents_type {
-        return extents_type(base.extent(dynamic_full_indices[Is])...);
+        return extents_type(single_slice_helper<dynamic_indices[Is]>::extent(
+            pack_index<dynamic_indices[Is]>(slices...), base)...);
     }
 
-    constexpr static auto get_extents(const ET &base) -> extents_type {
+    constexpr static auto get_extents(const ET &base, const Slices &...slices)
+        -> extents_type {
         return get_extents(
-            base, std::make_integer_sequence<rank_type,
-                                             extents_type::rank_dynamic()>{});
+            base,
+            std::make_integer_sequence<rank_type,
+                                       extents_type::rank_dynamic()>{},
+            slices...);
     }
     //
 };
@@ -283,7 +330,8 @@ class SliceView : public UnaryViewBase<SliceView<QualifiedViewType, Slices...>,
     using view_extents_type = view_traits::extents_type;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
 
-    using slice_storage_type = std::tuple<std::decay_t<Slices>...>;
+    using slice_storage_type =
+        std::tuple<detail::slice_helper<std::decay_t<Slices>>...>;
 
     constexpr static std::array<rank_type, view_extents_type::rank()>
         actionable_indices = traits::actionable_indices;
@@ -298,35 +346,20 @@ class SliceView : public UnaryViewBase<SliceView<QualifiedViewType, Slices...>,
     // for some reason having zipper::full_extent makes this necessary. TODO fix
     // this
     SliceView(QualifiedViewType &b, const Slices &...slices)
-        : Base(b, std::experimental::submdspan_extents(b.extents(), slices...)),
-          m_slices(slices...) {}
+        : Base(b, traits::extents_helper::get_extents(b.extents(), slices...)),
+          m_slices(detail::slice_helper<std::decay_t<Slices>>(slices)...) {}
 
     template <rank_type K, typename... Args>
     index_type get_index(Args &&...a) const {
         // static_assert(K < sizeof...(Args));
         const auto &s = std::get<K>(m_slices);
-
-        using SType = std::decay_t<decltype(s)>;
-        if constexpr (zipper::detail::is_integral_constant_v<SType>) {
-            return s;
-        } else if constexpr (std::is_integral_v<SType>) {
-            return s;
+        // slices that aren't "actionable" ahve the value std::dynamic_extent
+        constexpr static index_type index = actionable_indices[K];
+        if constexpr (index == std::dynamic_extent) {
+            return s.get_index();
         } else {
-            const auto &v =
-                zipper::detail::pack_index<actionable_indices[K]>(a...);
-            if constexpr (std::is_same_v<SType, std::vector<index_type>>) {
-                return s[v];
-            } else if constexpr (zipper::concepts::is_stl_array<SType>) {
-                return s[v];
-            } else if constexpr (std::is_same_v<SType,
-                                                zipper::full_extent_type>) {
-                return v;
-            } else {
-                const index_type start = std::experimental::detail::first_of(s);
-                const index_type stride =
-                    std::experimental::detail::stride_of(s);
-                return start + v * stride;
-            }
+            const auto &v = zipper::detail::pack_index<index>(a...);
+            return s.get_index(v);
         }
     }
 
