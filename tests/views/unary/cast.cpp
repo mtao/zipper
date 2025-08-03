@@ -20,7 +20,7 @@
 using namespace zipper;
 
 
-TEST_CASE("test_partial_sum", "[views][unary]") {
+TEST_CASE("test_cast", "[views][unary]") {
     {
         using IType = views::nullary::IdentityView<double, 3, 3>;
         IType i;

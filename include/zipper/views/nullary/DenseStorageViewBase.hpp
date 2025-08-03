@@ -41,6 +41,7 @@ class DenseStorageViewBase : public MappedViewBase<Derived_> {
     using value_accessor_type = traits::value_accessor_type;
     using mapping_type = typename layout_policy::template mapping<extents_type>;
     using span_type = extents_traits::template span_type<value_type>;
+    using const_span_type = extents_traits::template span_type<const value_type>;
     using mdspan_type = zipper::mdspan<value_type, extents_type, layout_policy,
                                        accessor_policy>;
 
@@ -74,11 +75,12 @@ class DenseStorageViewBase : public MappedViewBase<Derived_> {
         }
     }
 
+    // todo fixing names
     auto as_std_span() -> span_type {
-        return span_type(accessor().container());
+        return accessor().as_stl_span();
     }
-    auto as_std_span() const -> const span_type {
-        return span_type(accessor().container());
+    auto as_std_span() const -> const_span_type {
+        return accessor().as_stl_span();
     }
 
     template <typename E2>
