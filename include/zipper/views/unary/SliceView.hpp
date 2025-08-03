@@ -122,7 +122,8 @@ struct slice_helper<std::integral_constant<index_type, N>> {
 
     constexpr index_type get_index() const { return N; }
 };
-template <zipper::concepts::QualifiedViewDerived View> requires(View::extents_type::rank() == 1)
+template <zipper::concepts::QualifiedViewDerived View>
+    requires(View::extents_type::rank() == 1)
 struct slice_helper<View> {
    public:
     using type = View;
@@ -143,25 +144,25 @@ struct slice_helper<View> {
    private:
     type m_slice;
 };
-//template <zipper::concepts::ZipperBaseDerived ZBase>
-//struct slice_helper<ZBase> {
-//    using type = ZBase;
-//    template <rank_type M, zipper::concepts::ExtentsType ET>
-//    constexpr static index_type static_extent() {
-//        return ZBase::extents_type::static_extent(0);
-//    }
-//    template <rank_type M, zipper::concepts::ExtentsType ET>
-//    constexpr static index_type extent(const type &t, const ET &) {
-//        return t.extent(0);
-//    }
+// template <zipper::concepts::ZipperBaseDerived ZBase>
+// struct slice_helper<ZBase> {
+//     using type = ZBase;
+//     template <rank_type M, zipper::concepts::ExtentsType ET>
+//     constexpr static index_type static_extent() {
+//         return ZBase::extents_type::static_extent(0);
+//     }
+//     template <rank_type M, zipper::concepts::ExtentsType ET>
+//     constexpr static index_type extent(const type &t, const ET &) {
+//         return t.extent(0);
+//     }
 //
-//    constexpr index_type get_index(index_type input) const {
-//        return m_slice(input);
-//    }
+//     constexpr index_type get_index(index_type input) const {
+//         return m_slice(input);
+//     }
 //
-//   private:
-//    std::decay_t<decltype(std::declval<ZBase>().eval())> m_slice;
-//};
+//    private:
+//     std::decay_t<decltype(std::declval<ZBase>().eval())> m_slice;
+// };
 
 template <size_t N>
 struct slice_helper<std::array<index_type, N>> {
@@ -170,7 +171,7 @@ struct slice_helper<std::array<index_type, N>> {
     constexpr slice_helper(const type &t) : m_slice(t) {}
     template <rank_type M, zipper::concepts::ExtentsType ET>
     constexpr static index_type static_extent() {
-        return index_type(M);
+        return index_type(N);
     }
     template <rank_type M, zipper::concepts::ExtentsType ET>
     constexpr static index_type extent(const type &t, const ET &) {
