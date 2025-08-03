@@ -62,10 +62,10 @@ class DynamicValueAccessor {
 
 
     auto as_stl_span() {
-        return std::span<value_type,std::dynamic_extent>(m_data); 
+        return std::span<value_type,std::dynamic_extent>(m_data.begin(),m_data.end()); 
     }
     auto as_stl_span() const{
-        return std::span<const value_type,std::dynamic_extent>(m_data); 
+        return std::span<const value_type,std::dynamic_extent>(m_data.begin(),m_data.end()); 
     }
 
     using iterator_type = storage_type::iterator;
