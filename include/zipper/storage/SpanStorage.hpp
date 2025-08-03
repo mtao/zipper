@@ -56,7 +56,8 @@ class SpanStorage
 
     SpanStorage(value_type* s)
         requires(IsStatic)
-        : ParentType(), m_accessor(std_span_type(s,std_span_type::extent) {}
+        : ParentType(), m_accessor(std_span_type(s,std_span_type::extent)) {}
+
 
     SpanStorage(const std_span_type& s)
         requires(!IsStatic && extents_type::rank() == 1)
