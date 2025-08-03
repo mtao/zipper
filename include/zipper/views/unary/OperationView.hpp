@@ -43,9 +43,10 @@ template <zipper::concepts::QualifiedViewDerived Child,
 
 // requires(concepts::ScalarOperation<Child::value_type,Operation>)
 class OperationView
-    : public UnaryViewBase<OperationView<Child, Operation>, Child> {
+    : public UnaryViewBase<OperationView<Child, Operation, PreservesZeros>,
+                           Child> {
    public:
-    using self_type = OperationView<Child, Operation>;
+    using self_type = OperationView<Child, Operation, PreservesZeros>;
     using Base = UnaryViewBase<self_type, Child>;
     using traits = zipper::views::detail::ViewTraits<self_type>;
     constexpr static bool holds_extents = traits::holds_extents;
@@ -56,8 +57,7 @@ class OperationView
     using Base::extent;
     using Base::view;
 
-    OperationView(Child& v, const Operation& op = {})
-        : Base(v), m_op(op) {}
+    OperationView(Child& v, const Operation& op = {}) : Base(v), m_op(op) {}
 
     using child_value_type = traits::base_value_type;
 

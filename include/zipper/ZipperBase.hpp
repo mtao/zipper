@@ -16,12 +16,10 @@
 
 namespace zipper {
 
-
 template <template <concepts::QualifiedViewDerived> typename DerivedT,
           concepts::QualifiedViewDerived View>
 class ZipperBase {
    public:
-
     ZipperBase()
         requires(std::is_default_constructible_v<View>)
         : m_view() {}
@@ -70,9 +68,8 @@ class ZipperBase {
 
     template <concepts::ViewDerived Other>
     ZipperBase(const Other& other)
-        requires(is_writable &&
-                 zipper::utils::extents::assignable_extents_v<
-                     typename Other::extents_type, extents_type>)
+        requires(is_writable && zipper::utils::extents::assignable_extents_v<
+                                    typename Other::extents_type, extents_type>)
         : m_view(extents_traits::convert_from(other.extents())) {
         m_view.assign(other);
     }
@@ -83,9 +80,8 @@ class ZipperBase {
 
     template <concepts::ViewDerived Other>
     Derived& operator=(const Other& other)
-        requires(is_writable &&
-                 zipper::utils::extents::assignable_extents_v<
-                     typename Other::extents_type, extents_type>)
+        requires(is_writable && zipper::utils::extents::assignable_extents_v<
+                                    typename Other::extents_type, extents_type>)
     {
         m_view.assign(other);
 #pragma GCC diagnostic push
@@ -95,9 +91,8 @@ class ZipperBase {
     }
     template <concepts::ViewDerived Other>
     Derived& operator=(Other&& other)
-        requires(is_writable &&
-                 zipper::utils::extents::assignable_extents_v<
-                     typename Other::extents_type, extents_type>)
+        requires(is_writable && zipper::utils::extents::assignable_extents_v<
+                                    typename Other::extents_type, extents_type>)
     {
         m_view.assign(other);
 #pragma GCC diagnostic push
@@ -162,8 +157,8 @@ class ZipperBase {
     template <typename T>
     auto cast() const {
         using V = views::unary::CastView<T, const view_type>;
-        return DerivedT<V>(V(
-                    view()));
+
+        return DerivedT<V>(V(view()));
     }
 
     template <typename... Args>
@@ -203,7 +198,8 @@ class ZipperBase {
         using my_view_type =
             views::unary::SliceView<const view_type, std::decay_t<Slices>...>;
 
-        return my_view_type(view(), filter_args(std::forward<Slices>(slices))...);
+        return my_view_type(view(),
+                            filter_args(std::forward<Slices>(slices))...);
     }
 
     template <concepts::SliceLike... Slices>
@@ -217,7 +213,8 @@ class ZipperBase {
     auto slice_view(Slices&&... slices) {
         using my_view_type =
             views::unary::SliceView<view_type, std::decay_t<Slices>...>;
-        return my_view_type(view(), filter_args(std::forward<Slices>(slices))...);
+        return my_view_type(view(),
+                            filter_args(std::forward<Slices>(slices))...);
     }
     template <concepts::SliceLike... Slices>
     auto slice_view() {
@@ -230,7 +227,7 @@ class ZipperBase {
    private:
     template <typename T>
     static auto filter_args(T&& v) -> decltype(auto) {
-        if constexpr(concepts::ZipperBaseDerived<std::decay_t<T>>) {
+        if constexpr (concepts::ZipperBaseDerived<std::decay_t<T>>) {
             return v.view();
         } else {
             return std::forward<T>(v);

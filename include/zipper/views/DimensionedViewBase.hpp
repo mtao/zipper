@@ -19,12 +19,13 @@ class DimensionedViewBase : public ViewBase<Derived_> {
         return static_cast<const Derived&>(*this);
     }
     constexpr DimensionedViewBase()
-        requires(IsStatic): m_extents({})
-    {}
+        requires(IsStatic)
+        : m_extents({}) {}
     template <typename... Args>
-    constexpr DimensionedViewBase(const extents_type& extents) : m_extents(extents) {}
+    constexpr DimensionedViewBase(const extents_type& extents)
+        : m_extents(extents) {}
 
-    constexpr  auto extents() const -> const extents_type& { return m_extents; }
+    constexpr auto extents() const -> const extents_type& { return m_extents; }
 
     constexpr index_type extent(rank_type i) const {
         return m_extents.extent(i);
