@@ -1,3 +1,4 @@
+#include "zipper/storage/SpanStorage.hpp"
 #if !defined(ZIPPER_UTILS_FORMATTER_HPP)
 #define ZIPPER_UTILS_FORMATTER_HPP
 #pragma GCC diagnostic push
@@ -27,45 +28,80 @@
 #include "zipper/concepts/VectorBaseDerived.hpp"
 #include "zipper/types.hpp"
 
+// template <zipper::concepts::MatrixBaseDerived Mat>
+// auto format_as(Mat const& M) {
+//     return 0;
+// }
 namespace zipper {
 
-template <concepts::MatrixBaseDerived Mat>
-auto format_as(Mat const& M) {
-    constexpr static index_type dim =
-        std::decay_t<decltype(M)>::static_extent(0);
-    if constexpr (dim == std::dynamic_extent) {
-        auto f = [M]<std::size_t... N>(std::index_sequence<N...>) {
-            return std::make_tuple(M.row(N)...);
+// auto format_as(auto const& M) { return fmt::format("{}", M.view()); }
+// template <typename T, zipper::index_type N>
+// auto format_as(
+//    const zipper::storage::PlainObjectStorage<T, zipper::extents<N>>& v) {
+//    return fmt::format("{}", v.as_std_span());
+//}
+// template <typename T, zipper::index_type N>
+// auto format_as(const zipper::storage::SpanStorage<T, zipper::extents<N>>& v)
+// {
+//    return fmt::format("{}", v.as_std_span());
+//}
+
+template <zipper::concepts::ZipperBaseDerived ZType>
+auto format_as_(ZType const& M) {
+    constexpr static zipper::rank_type rank = ZType::extents_type::rank();
+
+    if constexpr (rank == 0) {
+        return fmt::format("{}", M());
+    } else if constexpr (rank == 1) {
+        return fmt::format("{}", as_vector(M).eval());
+    } else if constexpr (rank > 1) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtautological-compare"
+        auto partial_trace_ =
+            []<zipper::rank_type... N>(
+                const ZType& V, zipper::index_type j,
+                std::integer_sequence<zipper::rank_type, N...>) {
+                return V.slice(
+                    j, std::enable_if_t<(N == N), zipper::full_extent_t>{}...);
+            };
+#pragma GCC diagnostic pop
+        auto partial_trace = [partial_trace_](const ZType& V,
+                                              zipper::index_type j) {
+            return partial_trace_(
+                V, j,
+                std::make_integer_sequence<zipper::rank_type, rank - 1>{});
         };
-        return fmt::format("{}",
-                           fmt::join(f(std::make_index_sequence<dim>{}), ","));
-    } else {
-        using T = Mat::value_type;
-        constexpr static index_type R = Mat::extents_type::static_extent(1);
-        std::vector<Vector<T, R>> a;
-        // std::vector<std::string> a_;
-        for (index_type j = 0; j < M.extent(0); ++j) {
-            a.emplace_back(M.row(j));
+        std::vector<std::string> fmts;
+        for (zipper::index_type j = 0; j < M.extent(0); ++j) {
+            fmts.emplace_back(format_as_(partial_trace(M, j)));
         }
-        return fmt::format("[{}]", fmt::join(a, ";"));
+        return fmt::format("[{}]", fmt::join(fmts, ";"));
     }
 }
-}  // namespace zipper
-template <zipper::concepts::VectorBaseDerived Vec>
+// template <zipper::concepts::ZipperBaseDerived ZType>
+// auto format_as(ZType const& M) {
+//     return format_as_(static_cast<typename ZType::Base&>(M));
+// }
+template <zipper::concepts::ZipperBaseDerived ZType>
     requires(
-        !std::is_same_v<std::decay_t<Vec>,
-                        zipper::Vector<typename Vec::value_type,
-                                       Vec::extents_type::static_extent(0)>>)
-struct fmt::formatter<Vec>
-    : formatter<zipper::Vector<typename Vec::value_type,
-                               Vec::extents_type::static_extent(0)>> {
-    // parse is inherited from formatter<string_view>.
+        !std::is_same_v<ZType, Vector<typename ZType::value_type,
+                                      ZType::extents_type::static_extent(0)>>)
+auto format_as(ZType const& M) {
+    return format_as_(M);
+}
+// template <zipper::concepts::MatrixBaseDerived ZType>
+// auto format_as(ZType const& M) {
+//     return format_as_(M);
+// }
+//  template <typename T, index_type R>
+//  auto format_as(Vector<T, R> const& M) {
+//     return fmt::format("Hi {}", M.extents());
+//     // return format_as_(M);
+// }
+//  template <typename T, index_type R, index_type C>
+//  auto format_as(Matrix<T, R, C> const& M) {
+//     return format_as_(M);
+// }
+}  // namespace zipper
 
-    auto format(const Vec& v, format_context& ctx) const
-        -> format_context::iterator {
-        return formatter<zipper::Vector<typename Vec::value_type,
-                                        Vec::extents_type::static_extent(0)>>::
-            format(v.eval(), ctx);
-    }
-};
 #endif

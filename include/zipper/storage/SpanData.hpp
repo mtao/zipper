@@ -22,8 +22,8 @@ class SpanData {
     const auto& container() const { return m_data; }
     auto& container() { return m_data; }
 
-    auto as_stl_span() { return m_data; }
-    auto as_stl_span() const { return m_data; }
+    auto as_std_span() { return m_data; }
+    auto as_std_span() const { return m_data; }
 
     // TODO: for cpp<23 iterator_type and const_iterator_type are different.
     // feeling very lazy as this discrepency disappears with cpp23

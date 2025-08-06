@@ -1,7 +1,7 @@
 #if !defined(ZIPPER_STORAGE_PLAINOBJECTSTORAGE_HPP)
 #define ZIPPER_STORAGE_PLAINOBJECTSTORAGE_HPP
 
-#include "PlainObjectAccessor.hpp"
+#include "DenseAccessor.hpp"
 #include "SpanStorage.hpp"
 #include "layout_types.hpp"
 #include "zipper/detail//ExtentsTraits.hpp"
@@ -21,13 +21,12 @@ class PlainObjectStorage
     using value_type = ValueType;
     using extents_type = Extents;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
-    constexpr static bool IsStatic =
-        zipper::detail::ExtentsTraits<extents_type>::is_static;
+    constexpr static bool IsStatic = extents_traits::is_static;
 
     using span_type =
         SpanStorage<ValueType, Extents, LayoutPolicy, AccessorPolicy>;
 
-    using accessor_type = PlainObjectAccessor<value_type, extents_type>;
+    using accessor_type = DenseData<value_type, extents_traits::static_size>;
     const accessor_type& accessor() const { return m_accessor; }
     accessor_type& accessor() { return m_accessor; }
     const accessor_type& linear_access() const { return m_accessor; }
@@ -50,18 +49,18 @@ class PlainObjectStorage
 
     span_type as_span() {
         if constexpr (IsStatic) {
-            return span_type(accessor().as_stl_span());
+            return span_type(accessor().as_std_span());
         } else {
             const extents_type& e = ParentType::extents();
-            return span_type(accessor().as_stl_span(), e);
+            return span_type(accessor().as_std_span(), e);
         }
     }
     const span_type as_span() const {
         if constexpr (IsStatic) {
-            return span_type(accessor().as_stl_span());
+            return span_type(accessor().as_std_span());
         } else {
             const extents_type& e = ParentType::extents();
-            return span_type(accessor().as_stl_span(), e);
+            return span_type(accessor().as_std_span(), e);
         }
     }
 
@@ -69,7 +68,7 @@ class PlainObjectStorage
     PlainObjectStorage(const extents_type& extents, Args&&... args)
         : ParentType(extents), m_accessor(std::forward<Args>(args)...) {}
 
-    template <concepts::ExtentsType E2>
+    template <zipper::concepts::ExtentsType E2>
     void resize(const E2& e)
         requires(extents_traits::template is_convertable_from<E2>() &&
                  !IsStatic)
@@ -103,8 +102,9 @@ struct detail::ViewTraits<zipper::storage::PlainObjectStorage<
 {
     using value_type = ValueType;
     using extents_type = Extents;
+    using extents_traits = typename zipper::detail::ExtentsTraits<extents_type>;
     using value_accessor_type =
-        storage::PlainObjectAccessor<ValueType, Extents>;
+        storage::DenseData<ValueType, extents_traits::static_size>;
     using layout_policy = LayoutPolicy;
     using accessor_policy = AccessorPolicy;
     using mapping_type = typename layout_policy::template mapping<extents_type>;

@@ -2,8 +2,10 @@
 #define ZIPPER_STORAGE_DENSEACCESSOR_HPP
 
 #include "SpanData.hpp"
+#include "DenseData.hpp"
 #include "concepts/DataLike.hpp"
 #include "zipper/detail//ExtentsTraits.hpp"
+#include "zipper/concepts//ExtentsType.hpp"
 #include "zipper/views/nullary/DenseStorageViewBase.hpp"
 
 namespace zipper::storage {

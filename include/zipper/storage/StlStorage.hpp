@@ -76,7 +76,7 @@ struct StlStorageInfo<std::array<S, N>> : public StlStorageInfo<S> {
     // }
 };
 
-using extents_type =
+//using extents_type =
 
 }  // namespace detail
 
