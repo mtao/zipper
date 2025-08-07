@@ -1,6 +1,7 @@
 #if !defined(ZIPPER_STORAGE_STLStorage_HPP)
 #define ZIPPER_STORAGE_STLStorage_HPP
 #include <array>
+#include <cassert>
 #include <cstdint>
 #include <vector>
 
@@ -29,6 +30,7 @@ template <typename S>
 struct StlStorageInfo<std::vector<S>> : public StlStorageInfo<S> {
     using self_type = std::vector<S>;
     constexpr static rank_type rank = StlStorageInfo<S>::rank + 1;
+    using value_type = typename StlStorageInfo<S>::value_type;
     constexpr static index_type my_static_extent = std::dynamic_extent;
     template <typename... Args>
     static auto& get_value(std::vector<S>& A, index_type i, Args&&... args) {
@@ -65,8 +67,8 @@ struct StlStorageInfo<std::vector<S>> : public StlStorageInfo<S> {
         }
     }
     template <typename... Args>
-    consteval bool is_valid_extent(const self_type& v, index_type size,
-                                   Args&&... args) {
+    static consteval bool is_valid_extent(const self_type& v, index_type size,
+                                          Args&&... args) {
         if (v.size() != size) {
             return false;
         }
@@ -78,12 +80,18 @@ struct StlStorageInfo<std::vector<S>> : public StlStorageInfo<S> {
         }
         return true;
     }
+    template <typename... Args>
+    static self_type initialize(const value_type& d, index_type size,
+                                Args&&... args) {
+        self_type v(size, StlStorageInfo<S>::initialize(d, args...));
+    }
 };
 template <size_t N, typename S>
 struct StlStorageInfo<std::array<S, N>> : public StlStorageInfo<S> {
     using self_type = std::array<S, N>;
     constexpr static rank_type rank = StlStorageInfo<S>::rank + 1;
     constexpr static index_type my_static_extent = index_type(N);
+    using value_type = typename StlStorageInfo<S>::value_type;
     template <typename... Args>
     static auto& get_value(std::array<S, N>& A, index_type i, Args&&... args) {
         return StlStorageInfo<S>::get_value(A[i], std::forward<Args>(args)...);
@@ -128,8 +136,8 @@ struct StlStorageInfo<std::array<S, N>> : public StlStorageInfo<S> {
         detail_<decltype(std::make_integer_sequence<rank_type, rank>{})>;
 
     template <typename... Args>
-    consteval bool is_valid_extent(const self_type& v, index_type size,
-                                   Args&&... args) {
+    static consteval bool is_valid_extent(const self_type& v, index_type size,
+                                          Args&&... args) {
         if (v.size() != size) {
             return false;
         }
@@ -140,6 +148,16 @@ struct StlStorageInfo<std::array<S, N>> : public StlStorageInfo<S> {
             }
         }
         return true;
+    }
+    template <typename... Args>
+    static self_type initialize(const value_type& d, index_type size,
+                                Args&&... args) {
+        assert(size == my_static_extent);
+        self_type v;
+        for (auto& x : v) {
+            x = StlStorageInfo<S>::initialize(d, args...);
+        }
+        return v;
     }
     // using extents_type = zipper::extents<N>();
     // constexpr static extents_type extents(const std::array<int64_t, N>& A) {
@@ -155,6 +173,7 @@ struct StlStorageInfo : public detail::StlStorageInfo<S> {
     using internal_info = detail::StlStorageInfo<S>;
 
     constexpr static rank_type rank = internal_info::rank;
+    using value_type = typename internal_info::value_type;
     template <typename>
     struct detail_;
     template <rank_type... Ms>
@@ -162,6 +181,10 @@ struct StlStorageInfo : public detail::StlStorageInfo<S> {
         using extents_type =
             extents<internal_info::template static_extent<rank - 1 - Ms>()...>;
         //
+        static S initialize(const extents_type& e,
+                            const value_type& default_value) {
+            return internal_info::initialize(default_value, e.extent(Ms)...);
+        }
     };
     using detail =
         detail_<decltype(std::make_integer_sequence<rank_type, rank>{})>;
@@ -193,19 +216,27 @@ struct StlStorageInfo : public detail::StlStorageInfo<S> {
     static const auto& get_value(const auto& v, Args&&... args) {
         return internal_info::get_value(v, std::forward<Args>(args)...);
     }
+
+    static S initialize(const extents_type& e,
+                        const value_type& default_value) {
+        return detail::initialize(e, default_value);
+    }
 };
 
 template <typename S>
 struct StlStorage {
    public:
-    using info_helper = StlStorageInfo<S>;
+    using info_helper = StlStorageInfo<std::decay_t<S>>;
     using extents_type = typename info_helper::extents_type;
     using value_type = typename info_helper::value_type;
     consteval static index_type rank() { return info_helper::rank(); }
     consteval static index_type static_extent(rank_type r) {
         return extents_type::static_extent;
     }
-    StlStorage(const S& d) : m_data(d) {}
+    StlStorage(const extents_type& e = {},
+               const value_type& default_value = 0.0)
+        : m_data(info_helper::initialize(e, default_value)) {}
+    StlStorage(S& d) : m_data(d) {}
 
     extents_type extents() const { return info_helper::make_extents(m_data); }
 
@@ -230,6 +261,19 @@ template <typename S>
 StlStorage(const S&) -> StlStorage<S>;
 template <typename S>
 StlStorageInfo(const S&) -> StlStorageInfo<S>;
+
+template <typename S>
+auto get_non_owning_stl_storage(const S& s) {
+    return StlStorage<const S&>(s);
+}
+template <typename S>
+auto get_const_non_owning_stl_storage(const S& s) {
+    return StlStorage<const S&>(s);
+}
+template <typename S>
+auto get_non_owning_stl_storage(S& s) {
+    return StlStorage<S&>(s);
+}
 
 }  // namespace zipper::storage
 
