@@ -8,6 +8,37 @@
 #include "zipper/concepts/IndexPackLike.hpp"
 #include "zipper/detail/extents/dynamic_extents_indices.hpp"
 #include "zipper/types.hpp"
+#include "zipper/views/DimensionedViewBase.hpp"
+
+namespace zipper::storage {
+template <typename S>
+struct StlStorage;
+template <typename S>
+struct StlStorageInfo;
+
+}  // namespace zipper::storage
+namespace zipper::views {
+template <typename S>
+struct detail::ViewTraits<zipper::storage::StlStorage<S>>
+    : public detail::DefaultViewTraits<
+          typename zipper::storage::StlStorageInfo<std::decay_t<S>>::value_type,
+          typename zipper::storage::StlStorageInfo<
+              std::decay_t<S>>::extents_type>
+/*: public detail::ViewTraits <
+  views::StorageViewBase<zipper::storage::SpanStorage<
+      ValueType, Extents, LayoutPolicy, AccessorPolicy>> */
+{
+    using StlType = std::decay_t<S>;
+    using value_type =
+        typename zipper::storage::StlStorageInfo<StlType>::value_type;
+    constexpr static bool is_const = std::is_const_v<S>;
+    using extents_type =
+        typename zipper::storage::StlStorageInfo<StlType>::extents_type;
+    using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
+    constexpr static bool is_writable = !is_const;
+    constexpr static bool is_coefficient_consistent = true;
+};
+}  // namespace zipper::views
 
 namespace zipper::storage {
 
@@ -25,6 +56,8 @@ struct StlStorageInfo {
     using get_type = std::enable_if<(N == -1), value_type>;
 
     consteval bool is_valid_extent(const T&) { return true; }
+
+    static value_type initialize(const value_type& t) { return t; }
 };
 template <typename S>
 struct StlStorageInfo<std::vector<S>> : public StlStorageInfo<S> {
@@ -159,6 +192,13 @@ struct StlStorageInfo<std::array<S, N>> : public StlStorageInfo<S> {
         }
         return v;
     }
+    static self_type initialize(const value_type& d) {
+        self_type v;
+        for (auto& x : v) {
+            x = StlStorageInfo<S>::initialize(d);
+        }
+        return v;
+    }
     // using extents_type = zipper::extents<N>();
     // constexpr static extents_type extents(const std::array<int64_t, N>& A) {
     //     return extents_type();
@@ -221,24 +261,37 @@ struct StlStorageInfo : public detail::StlStorageInfo<S> {
                         const value_type& default_value) {
         return detail::initialize(e, default_value);
     }
+    static S initialize(const value_type& default_value) {
+        return detail::initialize(default_value);
+    }
 };
 
 template <typename S>
-struct StlStorage {
+struct StlStorage : public zipper::views::DimensionedViewBase<StlStorage<S>> {
    public:
+    using Base = zipper::views::DimensionedViewBase<StlStorage<S>>;
     using info_helper = StlStorageInfo<std::decay_t<S>>;
     using extents_type = typename info_helper::extents_type;
     using value_type = typename info_helper::value_type;
+    using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
+    constexpr static bool IsStatic = extents_traits::is_static;
     consteval static index_type rank() { return info_helper::rank(); }
     consteval static index_type static_extent(rank_type r) {
         return extents_type::static_extent;
     }
+
     StlStorage(const extents_type& e = {},
                const value_type& default_value = 0.0)
-        : m_data(info_helper::initialize(e, default_value)) {}
-    StlStorage(S& d) : m_data(d) {}
+        requires(!IsStatic)
+        : Base(e), m_data(info_helper::initialize(e, default_value)) {}
 
-    extents_type extents() const { return info_helper::make_extents(m_data); }
+    StlStorage(const value_type& default_value = 0.0)
+        requires(IsStatic)
+        : Base(), m_data(info_helper::initialize(default_value)) {}
+    StlStorage(S& d) : Base(info_helper::make_extents(d)), m_data(d) {}
+
+    // extents_type extents() const { return info_helper::make_extents(m_data);
+    // }
 
     template <zipper::concepts::IndexLike... Args>
     const value_type& const_coeff_ref(Args&&... args) const {

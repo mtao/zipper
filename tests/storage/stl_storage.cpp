@@ -1,4 +1,5 @@
-
+#include <zipper/MatrixBase.hpp>
+#include <zipper/VectorBase.hpp>
 #include <zipper/storage/StlStorage.hpp>
 
 #include "../catch_include.hpp"
@@ -347,3 +348,106 @@ TEST_CASE("stl_storage_non_owning", "[data]") {
         CHECK(x[1][2] == 26);
     }
 }
+
+TEST_CASE("stl_storage_zipper_bases", "[data]") {
+    {
+        std::vector<double> x = {0, 1, 2};
+        auto storage = zipper::storage::get_non_owning_stl_storage(x);
+        zipper::VectorBase X = storage;
+        CHECK(X(0) == 0);
+        CHECK(X(1) == 1);
+        CHECK(X(2) == 2);
+
+        X(0) = 4;
+        X(1) = 5;
+        X(2) = 6;
+        CHECK(X(0) == 4);
+        CHECK(X(1) == 5);
+        CHECK(X(2) == 6);
+    }
+
+    {
+        std::array<double, 3> x{{0, 1, 2}};
+        auto storage = zipper::storage::get_non_owning_stl_storage(x);
+        zipper::VectorBase X = storage;
+        CHECK(X(0) == 0);
+        CHECK(X(1) == 1);
+        CHECK(X(2) == 2);
+
+        X(0) = 4;
+        X(1) = 5;
+        X(2) = 6;
+
+        CHECK(X(0) == 4);
+        CHECK(X(1) == 5);
+        CHECK(X(2) == 6);
+    }
+    {
+        std::vector<std::array<double, 3>> x{{0, 1, 2}, {3, 4, 5}};
+
+        auto storage = zipper::storage::get_non_owning_stl_storage(x);
+        zipper::MatrixBase X = storage;
+        CHECK(X(0, 0) == 0);
+        CHECK(X(0, 1) == 1);
+        CHECK(X(0, 2) == 2);
+        CHECK(X(1, 0) == 3);
+        CHECK(X(1, 1) == 4);
+        CHECK(X(1, 2) == 5);
+
+        X(0, 0) = 14;
+        X(0, 1) = 15;
+        X(0, 2) = 16;
+        X(1, 0) = 24;
+        X(1, 1) = 25;
+        X(1, 2) = 26;
+
+        CHECK(x[0][0] == 14);
+        CHECK(x[0][1] == 15);
+        CHECK(x[0][2] == 16);
+        CHECK(x[1][0] == 24);
+        CHECK(x[1][1] == 25);
+        CHECK(x[1][2] == 26);
+
+        CHECK(X(0, 0) == 14);
+        CHECK(X(0, 1) == 15);
+        CHECK(X(0, 2) == 16);
+        CHECK(X(1, 0) == 24);
+        CHECK(X(1, 1) == 25);
+        CHECK(X(1, 2) == 26);
+    }
+
+    {
+        std::array<std::vector<double>, 2> x{{{0, 1, 2}, {3, 4, 5}}};
+
+        auto storage = zipper::storage::get_non_owning_stl_storage(x);
+        zipper::MatrixBase X = storage;
+        CHECK(X(0, 0) == 0);
+        CHECK(X(0, 1) == 1);
+        CHECK(X(0, 2) == 2);
+        CHECK(X(1, 0) == 3);
+        CHECK(X(1, 1) == 4);
+        CHECK(X(1, 2) == 5);
+
+        X(0, 0) = 14;
+        X(0, 1) = 15;
+        X(0, 2) = 16;
+        X(1, 0) = 24;
+        X(1, 1) = 25;
+        X(1, 2) = 26;
+
+        CHECK(x[0][0] == 14);
+        CHECK(x[0][1] == 15);
+        CHECK(x[0][2] == 16);
+        CHECK(x[1][0] == 24);
+        CHECK(x[1][1] == 25);
+        CHECK(x[1][2] == 26);
+
+        CHECK(X(0, 0) == 14);
+        CHECK(X(0, 1) == 15);
+        CHECK(X(0, 2) == 16);
+        CHECK(X(1, 0) == 24);
+        CHECK(X(1, 1) == 25);
+        CHECK(X(1, 2) == 26);
+    }
+}
+
