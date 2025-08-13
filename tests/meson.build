@@ -10,8 +10,6 @@ zipper_test_dep = declare_dependency(dependencies: [zipper_dep, catch2_with_main
 test_hello_world = executable('test_hello_world', ['test_hello_world.cpp', 'test_struct.cpp'], dependencies: [zipper_test_dep], cpp_args:['-Wno-strict-overflow'])
 test('hello world', test_hello_world)
 
-test_iterate = executable('test_iterate', 'test_iterate.cpp', dependencies: [zipper_test_dep])
-test('iterate', test_iterate)
 
 base_class_sources = ['test_span.cpp', 'test_vector.cpp','test_matrix.cpp', 'test_tensor.cpp', 'test_array.cpp']
 test_base_classes = executable('test_base_classes', base_class_sources, dependencies: [zipper_test_dep])

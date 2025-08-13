@@ -24,6 +24,9 @@ class ViewBase {
     }
 
     using traits = detail::ViewTraits<Derived>;
+
+    // if it's const then it's not writable
+    //static_assert(!traits::is_const || traits::is_writable);
     using extents_type = traits::extents_type;
     using value_type = traits::value_type;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;

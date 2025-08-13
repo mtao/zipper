@@ -19,6 +19,7 @@ class DenseStorageViewBase : public MappedViewBase<Derived_> {
     }
     using BaseType = ViewBase<Derived>;
     using traits = views::detail::ViewTraits<Derived>;
+    constexpr static bool is_const = traits::is_const;
 
     using extents_type = traits::extents_type;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
@@ -51,17 +52,25 @@ class DenseStorageViewBase : public MappedViewBase<Derived_> {
     const value_accessor_type& accessor() const {
         return derived().linear_access();
     }
-    value_type* data() { return accessor().data(); }
+    value_type* data()
+        requires(!is_const)
+    {
+        return accessor().data();
+    }
     const value_type* data() const { return accessor().data(); }
     value_type coeff_linear(index_type i) const { return accessor().coeff(i); }
-    value_type& coeff_ref_linear(index_type i) {
+    value_type& coeff_ref_linear(index_type i)
+        requires(!is_const)
+    {
         return accessor().coeff_ref(i);
     }
     const value_type& const_coeff_ref_linear(index_type i) const {
         return accessor().const_coeff_ref(i);
     }
 
-    mdspan_type as_mdspan() {
+    mdspan_type as_mdspan()
+        requires(!is_const)
+    {
         if constexpr (IsStatic) {
             return mdspan_type(data());
         } else {
@@ -83,7 +92,9 @@ class DenseStorageViewBase : public MappedViewBase<Derived_> {
     }
 
     template <typename E2>
-    void resize(const E2& e) {
+    void resize(const E2& e)
+        requires(!is_const)
+    {
         return derived().resize(e);
     }
 

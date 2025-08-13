@@ -125,7 +125,9 @@ struct detail::ViewTraits<zipper::storage::DenseAccessor<
     using accessor_policy = AccessorPolicy;
     using mapping_type = typename layout_policy::template mapping<extents_type>;
     constexpr static bool is_writable = true;
+    constexpr static bool is_const = false;
     constexpr static bool is_coefficient_consistent = true;
+    constexpr static bool is_resizable = extents_type::rank_dynamic() > 0;
 };
 }  // namespace zipper::views
 #endif
