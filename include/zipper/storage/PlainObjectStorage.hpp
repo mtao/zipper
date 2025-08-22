@@ -75,7 +75,7 @@ class PlainObjectStorage
     {
         static_assert(E2::rank() != 0);
         this->resize_extents(e);
-        m_accessor.container().resize(extents_traits::size(e));
+        m_accessor.container().resize(zipper::detail::ExtentsTraits<E2>::size(e));
     }
     using iterator_type = accessor_type::iterator_type;
     using const_iterator_type = accessor_type::const_iterator_type;
