@@ -15,8 +15,8 @@ TEST_CASE("test_storage", "[storage][dense]") {
 
     auto as = a.as_std_span();
     zipper::storage::PlainObjectStorage<
-        double, zipper::extents<4, std::experimental::dynamic_extent>>
-        b(zipper::extents<4, std::experimental::dynamic_extent>{4});
+        double, zipper::extents<4, zipper::dynamic_extent>>
+        b(zipper::extents<4, zipper::dynamic_extent>{4});
 
     spdlog::info(
         "A size: {} {} {}", a.accessor().container().size(),

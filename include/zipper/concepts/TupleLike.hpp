@@ -24,6 +24,9 @@ struct tuple_like<ranges::common_tuple<Types...>> : public std::true_type {};
 }  // namespace detail
 
 template <typename T>
-concept TupleLike = detail::tuple_like<T>::value;
+concept TupleLike = detail::tuple_like<std::decay_t<T>>::value;
+
+template <typename... T>
+concept SingleTuplePackLike = sizeof...(T) == 1 && (TupleLike<T>&&...);
 }  // namespace zipper::concepts
 #endif

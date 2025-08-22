@@ -1,4 +1,5 @@
 subdir('reductions')
+subdir('nullary')
 subdir('unary')
 test_views = executable('test_views', ['test_vector.cpp', 'test_products.cpp', 'test_homogeneous.cpp'], dependencies: [zipper_test_dep])
 test('views', test_views)

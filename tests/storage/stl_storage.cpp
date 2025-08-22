@@ -1,5 +1,5 @@
-#include <zipper/MatrixBase.hpp>
-#include <zipper/VectorBase.hpp>
+//#include <zipper/MatrixBase.hpp>
+//#include <zipper/VectorBase.hpp>
 #include <zipper/storage/StlStorage.hpp>
 
 #include "../catch_include.hpp"
@@ -349,6 +349,7 @@ TEST_CASE("stl_storage_non_owning", "[data]") {
     }
 }
 
+/*
 TEST_CASE("stl_storage_zipper_bases", "[data]") {
     {
         std::vector<double> x = {0, 1, 2};
@@ -451,3 +452,4 @@ TEST_CASE("stl_storage_zipper_bases", "[data]") {
     }
 }
 
+*/

@@ -21,7 +21,11 @@
 
 #include "zipper/types.hpp"
 
+#if defined(__cpp_lib_mdspan)
+namespace std{
+#else
 namespace std::experimental {
+#endif
 template <typename index_type, index_type... Extents>
 std::string format_as(const extents<index_type, Extents...>& foo) {
     auto f = [foo]<std::size_t... N>(std::index_sequence<N...>) {
@@ -31,6 +35,11 @@ std::string format_as(const extents<index_type, Extents...>& foo) {
         "extents({})",
         fmt::join(f(std::make_index_sequence<sizeof...(Extents)>{}), ","));
 }
+// this last macro is just to prevent clang-format from changing the comment when committing on different machines
+#if defined(__cpp_lib_mdspan)
+}  // namespace std
+#else
 }  // namespace std::experimental
+#endif
 
 #endif

@@ -80,7 +80,7 @@ class PartialReductionView
         using type =
             SliceView<const ViewType,
                       std::conditional_t<traits::index_remover::in_sequence(N),
-                                         rank_type, full_extent_type>...>;
+                                         rank_type, full_extent_t>...>;
     };
 
     using slice_type = slice_type_<std::decay_t<

@@ -9,6 +9,7 @@
 #include "zipper/concepts/TupleLike.hpp"
 #include "zipper/concepts/ViewAccessPack.hpp"
 #include "zipper/types.hpp"
+#include "zipper/detail/slice_helpers.hpp"
 
 namespace zipper::utils::extents {
 
@@ -29,14 +30,14 @@ bool indices_in_range(std::integer_sequence<rank_type, N...>, const Extents& ext
             } else {
                 return index_type(index) < Extents::static_extent(J);
             }
-        } else if constexpr (std::is_same_v<full_extent_type,
+        } else if constexpr (std::is_same_v<full_extent_t,
                                             std::decay_t<T>>) {
             return true;
         } else {
             constexpr index_type start =
-                std::experimental::detail::first_of(index);
+                zipper::detail::first_of(index);
             constexpr index_type end =
-                std::experimental::detail::last_of(index);
+                zipper::detail::last_of(index);
             if (0 < start) {
                 return false;
             }

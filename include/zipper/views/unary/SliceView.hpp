@@ -24,10 +24,10 @@ struct slice_helper;
 
 template <typename OffsetType, typename ExtentType, typename StrideType>
 struct slice_helper<
-    std::experimental::strided_slice<OffsetType, ExtentType, StrideType>> {
+    strided_slice<OffsetType, ExtentType, StrideType>> {
    public:
     using type =
-        std::experimental::strided_slice<OffsetType, ExtentType, StrideType>;
+        strided_slice<OffsetType, ExtentType, StrideType>;
     constexpr slice_helper(const type &t) : m_slice(t) {}
     constexpr static auto get_extent(const auto &stride, const auto &extent) {
         return extent > 0 ? 1 + (extent - 1) / stride : 0;
@@ -61,8 +61,8 @@ struct slice_helper<
     }
 
     index_type get_index(index_type input) const {
-        index_type start = std::experimental::detail::first_of(m_slice);
-        index_type stride = std::experimental::detail::stride_of(m_slice);
+        index_type start = zipper::detail::first_of(m_slice);
+        index_type stride = zipper::detail::stride_of(m_slice);
         return start + input * stride;
     }
 
@@ -96,7 +96,7 @@ struct slice_helper<T> {
         return 1;
     }
     template <rank_type N, zipper::concepts::ExtentsType ET>
-    constexpr static index_type extent(const type &t, const ET &) {
+    constexpr static index_type extent(const type &/*t*/, const ET &) {
         return static_extent<N, ET>();
     }
 
@@ -174,7 +174,7 @@ struct slice_helper<std::array<index_type, N>> {
         return index_type(N);
     }
     template <rank_type M, zipper::concepts::ExtentsType ET>
-    constexpr static index_type extent(const type &t, const ET &) {
+    constexpr static index_type extent(const type &/*t*/, const ET &) {
         return static_extent<M, ET>();
     }
 

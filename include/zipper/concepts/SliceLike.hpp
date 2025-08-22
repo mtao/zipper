@@ -24,7 +24,7 @@ struct slice_like<slice_type<OffsetType, ExtentType, StrideType>>
     : public std::true_type {};
 
 template <>
-struct slice_like<full_extent_type> : public std::true_type {};
+struct slice_like<full_extent_t> : public std::true_type {};
 
 template <>
 struct slice_like<std::vector<index_type>> : public std::true_type {};

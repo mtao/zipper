@@ -28,13 +28,49 @@ constexpr static index_type dynamic_extent = std::dynamic_extent;
 template <index_type... Extents>
 #if defined(__cpp_lib_mdspan)
 using extents = std::extents<index_type, Extents...>;
+// fully dynamic extents
+template <rank_type N>
+using dextents = std::dextents<index_type, N>;
+struct full_extent_t {};
+template <typename OffsetType, typename ExtentType, typename StrideType>
+    struct strided_slice {
+        OffsetType offset;
+        ExtentType extent;
+        StrideType stride;
+    };
+template <typename OffsetType, typename ExtentType, typename StrideType>
+using slice_type =
+    strided_slice<OffsetType, ExtentType, StrideType>;
+using default_layout_policy = std::layout_right;
+template <typename T>
+using default_accessor_policy = std::default_accessor<T>;
+
+template <typename T, typename Extents,
+          typename LayoutPolicy = default_layout_policy,
+          typename AccessorPolicy = default_accessor_policy<T>>
+using mdspan =
+    std::mdspan<T, Extents, LayoutPolicy, AccessorPolicy>;
 #else
 using extents = std::experimental::extents<index_type, Extents...>;
-#endif
-
 // fully dynamic extents
 template <rank_type N>
 using dextents = std::experimental::dextents<index_type, N>;
+using full_extent_t = std::experimental::full_extent_t;
+using full_extent_type = std::experimental::full_extent_t;
+template <typename OffsetType, typename ExtentType, typename StrideType>
+using slice_type =
+    std::experimental::strided_slice<OffsetType, ExtentType, StrideType>;
+using default_layout_policy = std::experimental::layout_right;
+template <typename T>
+using default_accessor_policy = std::experimental::default_accessor<T>;
+
+template <typename T, typename Extents,
+          typename LayoutPolicy = default_layout_policy,
+          typename AccessorPolicy = default_accessor_policy<T>>
+using mdspan =
+    std::experimental::mdspan<T, Extents, LayoutPolicy, AccessorPolicy>;
+#endif
+
 
 // helper so users can pass in arguments to get extents
 template <concepts::IndexLike... Args>
@@ -42,8 +78,6 @@ auto create_dextents(const Args&... args) {
     return dextents<sizeof...(Args)>(args...);
 }
 
-using full_extent_t = std::experimental::full_extent_t;
-using full_extent_type = std::experimental::full_extent_t;
 
 template <typename T, T v>
 struct constant {
@@ -64,9 +98,6 @@ using static_rank_t = std::integral_constant<rank_type, N>;
 // template <rank_type N>
 // constexpr static static_rank_t<N> static_rank = {};
 
-template <typename OffsetType, typename ExtentType, typename StrideType>
-using slice_type =
-    std::experimental::strided_slice<OffsetType, ExtentType, StrideType>;
 
 template <typename OffsetType, typename ExtentType, typename StrideType>
 using slice_t = slice_type<OffsetType, ExtentType, StrideType>;
@@ -99,14 +130,5 @@ inline auto static_slice() {
     return static_slice_t<Offset, Extent, Stride>{};
 }
 
-using default_layout_policy = std::experimental::layout_right;
-template <typename T>
-using default_accessor_policy = std::experimental::default_accessor<T>;
-
-template <typename T, typename Extents,
-          typename LayoutPolicy = default_layout_policy,
-          typename AccessorPolicy = default_accessor_policy<T>>
-using mdspan =
-    std::experimental::mdspan<T, Extents, LayoutPolicy, AccessorPolicy>;
 }  // namespace zipper
 #endif

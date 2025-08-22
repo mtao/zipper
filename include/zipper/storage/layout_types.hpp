@@ -5,8 +5,13 @@
 #include "zipper/types.hpp"
 
 namespace zipper::storage {
+#if defined(__cpp_lib_mdspan)
+using layout_right = std::layout_right;
+using layout_left = std::layout_left;
+#else
 using layout_right = std::experimental::layout_right;
 using layout_left = std::experimental::layout_left;
+#endif
 
 // row major ~ layout_right
 using row_major = layout_right;
