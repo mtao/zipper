@@ -28,8 +28,9 @@ struct detail::ViewTraits<
     unary::OperationView<Child, Operation, PreservesZeros>>
     : public zipper::views::unary::detail::DefaultUnaryViewTraits<Child,
                                                                   false> {
+                                                                      using child_traits = ViewTraits<Child>;
     using value_type = std::decay_t<decltype(std::declval<Operation>()(
-        std::declval<typename Child::value_type>()))>;
+        std::declval<typename child_traits::value_type>()))>;
 };
 
 // represents a coefficient-wise transformation of an underlyng view

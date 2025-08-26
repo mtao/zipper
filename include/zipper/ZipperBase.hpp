@@ -34,8 +34,8 @@ class ZipperBase {
 
     constexpr static bool is_const = std::is_const_v<View>;
     constexpr static bool is_writable = view_traits::is_writable && !is_const;
-    using value_type = View::value_type;
-    using extents_type = View::extents_type;
+    using value_type = typename view_traits::value_type;
+    using extents_type = typename view_traits::extents_type;
     using extents_traits = detail::ExtentsTraits<extents_type>;
 
     const View& view() const { return m_view; }
@@ -48,12 +48,12 @@ class ZipperBase {
     // template <typename... Args>
     // ZipperBase(Args&&... v) : m_view(std::forward<Args>(v)...) {}
 
-    ZipperBase(View&& v) : m_view(std::move(v)) {}
+    ZipperBase(view_type&& v) : m_view(std::forward<View>(v)) {}
     ZipperBase(Derived&& v) : ZipperBase(std::move(v.view())) {}
     ZipperBase(ZipperBase&& v) = default;
 
     ZipperBase(const Derived& v) : ZipperBase(v.view()) {}
-    ZipperBase(View& v) : m_view(v) {}
+    ZipperBase(const view_type& v) : m_view(v) {}
     ZipperBase(const ZipperBase& v) = default;
     // Derived& operator=(concepts::ViewDerived auto const& v) {
     //     m_view = v;
@@ -76,7 +76,7 @@ class ZipperBase {
 
     template <typename... Args>
     ZipperBase(Args&&... args)
-        : ZipperBase(View(std::forward<Args>(args)...)) {}
+        : m_view(std::forward<Args>(args)...) {}
 
     template <concepts::ViewDerived Other>
     Derived& operator=(const Other& other)

@@ -57,9 +57,13 @@ template <rank_type N>
 using dextents = std::experimental::dextents<index_type, N>;
 using full_extent_t = std::experimental::full_extent_t;
 using full_extent_type = std::experimental::full_extent_t;
+
 template <typename OffsetType, typename ExtentType, typename StrideType>
-using slice_type =
+using strided_slice =
     std::experimental::strided_slice<OffsetType, ExtentType, StrideType>;
+
+template <typename OffsetType, typename ExtentType, typename StrideType>
+using slice_type = strided_slice<OffsetType, ExtentType, StrideType>;
 using default_layout_policy = std::experimental::layout_right;
 template <typename T>
 using default_accessor_policy = std::experimental::default_accessor<T>;

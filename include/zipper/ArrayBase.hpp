@@ -32,8 +32,9 @@ class ArrayBase : public ZipperBase<ArrayBase, View> {
     ArrayBase() = default;
 
     using view_type = View;
-    using value_type = View::value_type;
-    using extents_type = View::extents_type;
+    using traits = views::detail::ViewTraits<View>;
+    using value_type = typename traits::value_type;
+    using extents_type = typename traits::extents_type;
     using extents_traits = detail::ExtentsTraits<extents_type>;
     using Base = ZipperBase<ArrayBase, View>;
     using Base::Base;

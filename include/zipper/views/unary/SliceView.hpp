@@ -274,6 +274,9 @@ struct _slice_extent_helper<ET, std::integer_sequence<rank_type, N...>,
                     return j;
                 }
             }
+            // clang doesn't catch that all executions of this consteval turn out to return
+            assert(false);
+            return rank+1;
         }
         consteval static rank_type get_dynamic_rank(rank_type r) {
             return get_rank(dynamic_indices[r]);

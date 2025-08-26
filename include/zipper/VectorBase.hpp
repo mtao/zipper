@@ -27,9 +27,9 @@ class VectorBase : public ZipperBase<VectorBase, View> {
     VectorBase() = default;
 
     using view_type = View;
-    using value_type = View::value_type;
-    using extents_type = View::extents_type;
     using traits = zipper::views::detail::ViewTraits<view_type>;
+    using value_type = typename traits::value_type;
+    using extents_type = typename traits::extents_type;
     using extents_traits = detail::ExtentsTraits<extents_type>;
     static_assert(extents_traits::rank == 1);
     using Base = ZipperBase<VectorBase, View>;
