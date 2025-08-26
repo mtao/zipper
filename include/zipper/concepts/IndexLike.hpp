@@ -13,6 +13,6 @@ struct index_like<std::integral_constant<T, index>> : public std::true_type {};
 }  // namespace detail
 
 template <typename T>
-concept IndexLike = detail::index_like<T>::value;
+concept IndexLike = detail::index_like<std::decay_t<T>>::value;
 }  // namespace zipper::concepts
 #endif

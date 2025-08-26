@@ -7,7 +7,7 @@
 
 namespace zipper::views {
 namespace binary {
-template <zipper::concepts::ViewDerived A, zipper::concepts::ViewDerived B>
+template <zipper::concepts::QualifiedViewDerived A, zipper::concepts::QualifiedViewDerived B>
 class TensorProductView;
 
 namespace detail {
@@ -78,7 +78,7 @@ struct detail::ViewTraits<binary::TensorProductView<A, B>>
 };
 
 namespace binary {
-template <zipper::concepts::ViewDerived A, zipper::concepts::ViewDerived B>
+template <zipper::concepts::QualifiedViewDerived A, zipper::concepts::QualifiedViewDerived B>
 class TensorProductView : public BinaryViewBase<TensorProductView<A, B>, A, B> {
    public:
     using self_type = TensorProductView<A, B>;

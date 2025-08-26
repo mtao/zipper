@@ -9,6 +9,7 @@
 #include "zipper/detail/extents/dynamic_extents_indices.hpp"
 #include "zipper/types.hpp"
 #include "zipper/views/DimensionedViewBase.hpp"
+#include "zipper/views/detail/AssignHelper.hpp"
 
 namespace zipper::storage {
 template <typename S>
@@ -37,6 +38,7 @@ struct detail::ViewTraits<zipper::storage::StlStorage<S>>
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
     constexpr static bool is_writable = !is_const;
     constexpr static bool is_coefficient_consistent = true;
+    constexpr static bool is_resizable = extents_type::rank_dynamic() > 0;
 };
 }  // namespace zipper::views
 
@@ -58,6 +60,7 @@ struct StlStorageInfo {
     consteval bool is_valid_extent(const T&) { return true; }
 
     static value_type initialize(const value_type& t) { return t; }
+    static void resize(value_type&) {}
 };
 template <typename S>
 struct StlStorageInfo<std::vector<S>> : public StlStorageInfo<S> {
@@ -117,6 +120,14 @@ struct StlStorageInfo<std::vector<S>> : public StlStorageInfo<S> {
     static self_type initialize(const value_type& d, index_type size,
                                 Args&&... args) {
         self_type v(size, StlStorageInfo<S>::initialize(d, args...));
+    }
+
+    template <typename... Args>
+    static void resize(self_type& s, index_type size, Args&&... args) {
+        s.resize(size);
+        for (auto& x : s) {
+            StlStorageInfo<S>::resize(x, args...);
+        }
     }
 };
 template <size_t N, typename S>
@@ -199,6 +210,15 @@ struct StlStorageInfo<std::array<S, N>> : public StlStorageInfo<S> {
         }
         return v;
     }
+
+    template <typename... Args>
+    static void resize(self_type& s, index_type size, Args&&... args) {
+        assert(size == my_static_extent);
+        for (auto& x : s) {
+            StlStorageInfo<S>::resize(x, args...);
+        }
+    }
+
     // using extents_type = zipper::extents<N>();
     // constexpr static extents_type extents(const std::array<int64_t, N>& A) {
     //     return extents_type();
@@ -224,6 +244,9 @@ struct StlStorageInfo : public detail::StlStorageInfo<S> {
         static S initialize(const extents_type& e,
                             const value_type& default_value) {
             return internal_info::initialize(default_value, e.extent(Ms)...);
+        }
+        static void resize(S& s, const extents_type& e) {
+            internal_info::resize(s, e.extent(Ms)...);
         }
     };
     using detail =
@@ -264,19 +287,24 @@ struct StlStorageInfo : public detail::StlStorageInfo<S> {
     static S initialize(const value_type& default_value) {
         return detail::initialize(default_value);
     }
+
+    static void resize(S& s, const extents_type& e) {
+        return detail::resize(s, e);
+    }
 };
 
 template <typename S>
 struct StlStorage : public zipper::views::DimensionedViewBase<StlStorage<S>> {
    public:
     using Base = zipper::views::DimensionedViewBase<StlStorage<S>>;
+    using traits = views::detail::ViewTraits<StlStorage<S>>;
     using info_helper = StlStorageInfo<std::decay_t<S>>;
     using extents_type = typename info_helper::extents_type;
     using value_type = typename info_helper::value_type;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
     constexpr static bool IsStatic = extents_traits::is_static;
     consteval static index_type rank() { return info_helper::rank(); }
-    consteval static index_type static_extent(rank_type r) {
+    consteval static index_type static_extent(rank_type) {
         return extents_type::static_extent;
     }
 
@@ -290,6 +318,11 @@ struct StlStorage : public zipper::views::DimensionedViewBase<StlStorage<S>> {
         : Base(), m_data(info_helper::initialize(default_value)) {}
     StlStorage(S& d) : Base(info_helper::make_extents(d)), m_data(d) {}
 
+    void resize(const extents_type& e) {
+        Base::set_extent(e);
+        info_helper::resize(m_data, e);
+    }
+
     // extents_type extents() const { return info_helper::make_extents(m_data);
     // }
 
@@ -298,12 +331,22 @@ struct StlStorage : public zipper::views::DimensionedViewBase<StlStorage<S>> {
         return info_helper::get_value(m_data, std::forward<Args>(args)...);
     }
     template <zipper::concepts::IndexLike... Args>
-    value_type& coeff_ref(Args&&... args) {
+    value_type& coeff_ref(Args&&... args)
+        requires traits::is_writable
+    {
         return info_helper::get_value(m_data, std::forward<Args>(args)...);
     }
     template <zipper::concepts::IndexLike... Args>
     value_type coeff(Args&&... args) const {
         return info_helper::get_value(m_data, std::forward<Args>(args)...);
+    }
+
+    template <zipper::concepts::ViewDerived V>
+    void assign(const V& v)
+        requires(extents_traits::template is_convertable_from<
+                 typename views::detail::ViewTraits<V>::extents_type>())
+    {
+        views::detail::AssignHelper<V, StlStorage<S>>::assign(v, *this);
     }
 
    private:

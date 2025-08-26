@@ -8,20 +8,17 @@
 namespace zipper::views {
 
 template <typename Derived>
-template <typename... Indices>
-auto ViewBase<Derived>::coeff(Indices&&... indices) const -> value_type
-    requires((zipper::concepts::IndexLike<std::decay_t<Indices>> && ...))
-{
+template <concepts::IndexLike... Indices>
+auto ViewBase<Derived>::coeff(Indices&&... indices) const -> value_type {
     constexpr static rank_type size = sizeof...(Indices);
     // rank 0 views act like scalar values
     static_assert(rank == 0 || size == rank);
     return derived().coeff(std::forward<Indices>(indices)...);
 }
 template <typename Derived>
-template <typename... Indices>
+template <concepts::IndexLike... Indices>
 auto ViewBase<Derived>::coeff_ref(Indices&&... indices) -> value_type&
-    requires(is_writable &&
-             (zipper::concepts::IndexLike<std::decay_t<Indices>> && ...))
+    requires(is_writable)
 {
     constexpr static rank_type size = sizeof...(Indices);
     // rank 0 views act like scalar values
@@ -30,11 +27,10 @@ auto ViewBase<Derived>::coeff_ref(Indices&&... indices) -> value_type&
 }
 
 template <typename Derived>
-template <typename... Indices>
+template <concepts::IndexLike... Indices>
 auto ViewBase<Derived>::const_coeff_ref(Indices&&... indices) const
     -> const value_type&
-    requires(is_writable &&
-             (zipper::concepts::IndexLike<std::decay_t<Indices>> && ...))
+    requires(is_writable)
 {
     constexpr static rank_type size = sizeof...(Indices);
     // rank 0 views act like scalar values
@@ -133,11 +129,9 @@ auto ViewBase<Derived>::access_pack(Args&&... idxs) const -> decltype(auto)
 }
 
 template <typename Derived>
-template <typename... Args>
+template <concepts::SliceLike... Args>
 auto ViewBase<Derived>::access_index_pack(Args&&... idxs) const
-    -> decltype(auto)
-    requires(zipper::concepts::SlicePackLike<Args...>)
-{
+    -> decltype(auto) {
 #if !defined(NDEBUG)
     zipper::utils::extents::indices_in_range(extents(), idxs...);
 #endif
@@ -163,10 +157,8 @@ auto ViewBase<Derived>::access_pack(Args&&... idxs) -> decltype(auto)
 }
 
 template <typename Derived>
-template <typename... Args>
-auto ViewBase<Derived>::access_index_pack(Args&&... idxs) -> decltype(auto)
-    requires(zipper::concepts::SlicePackLike<Args...>)
-{
+template <concepts::SliceLike... Args>
+auto ViewBase<Derived>::access_index_pack(Args&&... idxs) -> decltype(auto) {
 #if !defined(NDEBUG)
     zipper::utils::extents::indices_in_range(extents(), idxs...);
 #endif
@@ -201,25 +193,23 @@ auto ViewBase<Derived>::access_tuple(const Tuple& t) -> decltype(auto) {
 }
 
 namespace unary {
-template <zipper::concepts::QualifiedViewDerived ViewType, typename... Slices>
-    requires(zipper::concepts::SlicePackLike<Slices...>)
+template <zipper::concepts::QualifiedViewDerived ViewType,
+          zipper::concepts::SliceLike... Slices>
 class SliceView;
 }
 template <typename Derived>
-template <typename... Slices>
+template <concepts::SliceLike... Slices>
 auto ViewBase<Derived>::access_slice(Slices&&... slices) const
-    requires(zipper::concepts::SlicePackLike<Slices...> &&
-             !zipper::concepts::IndexPackLike<Slices...>)
+    requires(!zipper::concepts::IndexPackLike<Slices...>)
 {
     return unary::SliceView<const Derived, std::decay_t<Slices>...>(
         derived(), std::forward<Slices>(slices)...);
 }
 
 template <typename Derived>
-template <typename... Slices>
+template <concepts::SliceLike... Slices>
 auto ViewBase<Derived>::access_slice(Slices&&... slices)
-    requires(zipper::concepts::SlicePackLike<Slices...> &&
-             !zipper::concepts::IndexPackLike<Slices...>)
+    requires(!zipper::concepts::IndexPackLike<Slices...>)
 {
     return unary::SliceView<Derived, std::decay_t<Slices>...>(
         derived(), std::forward<Slices>(slices)...);

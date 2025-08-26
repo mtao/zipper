@@ -1,11 +1,11 @@
 #if !defined(ZIPPER_STORAGE_DENSEACCESSOR_HPP)
 #define ZIPPER_STORAGE_DENSEACCESSOR_HPP
 
-#include "SpanData.hpp"
 #include "DenseData.hpp"
+#include "SpanData.hpp"
 #include "concepts/DataLike.hpp"
-#include "zipper/detail//ExtentsTraits.hpp"
 #include "zipper/concepts//ExtentsType.hpp"
+#include "zipper/detail//ExtentsTraits.hpp"
 #include "zipper/views/nullary/DenseStorageViewBase.hpp"
 
 namespace zipper::storage {
@@ -23,10 +23,14 @@ class DenseAccessor
    public:
     using ParentType = views::nullary::DenseStorageViewBase<
         DenseAccessor<DataType, Extents, LayoutPolicy, AccessorPolicy>>;
+
+    using self_type =
+        DenseAccessor<DataType, Extents, LayoutPolicy, AccessorPolicy>;
+    using traits = views::detail::ViewTraits<self_type>;
     using data_type = DataType;
     using value_type = DataType::value_type;
     using extents_type = Extents;
-    using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
+    using extents_traits = typename zipper::detail::ExtentsTraits<extents_type>;
     constexpr static bool IsStatic =
         zipper::detail::ExtentsTraits<extents_type>::is_static;
 
@@ -61,17 +65,14 @@ class DenseAccessor
     }
     DenseAccessor(data_type&& data)
         requires(IsStatic)
-        : ParentType(), m_data(std::move(data)) {
-    }
+        : ParentType(), m_data(std::move(data)) {}
 
     DenseAccessor(data_type data, const extents_type& extents_)
         requires(!IsStatic)
-        : ParentType(extents_), m_data(std::move(data)) {
-    }
+        : ParentType(extents_), m_data(std::move(data)) {}
     DenseAccessor(data_type data, const extents_type& extents_)
         requires(IsStatic)
-        : ParentType(extents_), m_data(std::move(data)) {
-    }
+        : ParentType(extents_), m_data(std::move(data)) {}
 
     span_type as_span() {
         if constexpr (IsStatic) {
