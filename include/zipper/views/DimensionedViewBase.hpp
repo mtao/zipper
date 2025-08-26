@@ -32,6 +32,9 @@ class DimensionedViewBase : public ViewBase<Derived_> {
         return extents_type::static_extent(i);
     }
 
+   protected:
+    void set_extent(const extents_type& e) { m_extents = e; }
+
    private:
     extents_type m_extents;
 };

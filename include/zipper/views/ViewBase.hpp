@@ -1,6 +1,5 @@
 #if !defined(ZIPPER_VIEWS_VIEWBASE_HPP)
 #define ZIPPER_VIEWS_VIEWBASE_HPP
-#include "zipper/types.hpp"
 #include <type_traits>
 
 #include "detail/ViewTraits.hpp"
@@ -10,6 +9,7 @@
 #include "zipper/concepts/ViewAccessTuple.hpp"
 #include "zipper/concepts/ViewDerived.hpp"
 #include "zipper/detail//ExtentsTraits.hpp"
+#include "zipper/types.hpp"
 
 namespace zipper::views {
 
@@ -26,7 +26,7 @@ class ViewBase {
     using traits = detail::ViewTraits<Derived>;
 
     // if it's const then it's not writable
-    //static_assert(!traits::is_const || traits::is_writable);
+    // static_assert(!traits::is_const || traits::is_writable);
     using extents_type = traits::extents_type;
     using value_type = traits::value_type;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
@@ -46,20 +46,20 @@ class ViewBase {
     static consteval index_type static_extent(rank_type i) {
         return extents_type::static_extent(i);
     }
-    constexpr auto extents() const -> const extents_type&{ return derived().extents(); }
+    constexpr auto extents() const -> const extents_type& {
+        return derived().extents();
+    }
 
    public:
-    template <typename... Indices>
-    auto coeff(Indices&&... indices) const -> value_type
-        requires((concepts::IndexLike<std::decay_t<Indices>> && ...));
-    template <typename... Indices>
-    auto coeff_ref(Indices&&... indices) -> value_type& requires(
-        is_writable && (concepts::IndexLike<std::decay_t<Indices>> && ...));
+    template <concepts::IndexLike... Indices>
+    auto coeff(Indices&&... indices) const -> value_type;
+    template <concepts::IndexLike... Indices>
+    auto coeff_ref(Indices&&... indices) -> value_type&
+        requires(is_writable);
 
-    template <typename... Indices>
-    auto const_coeff_ref(Indices&&... indices) const
-        -> const value_type& requires(
-            is_writable && (concepts::IndexLike<std::decay_t<Indices>> && ...));
+    template <concepts::IndexLike... Indices>
+    auto const_coeff_ref(Indices&&... indices) const -> const value_type&
+        requires(is_writable);
 
     template <typename... Args>
     auto operator()(Args&&... idxs) const -> decltype(auto);
@@ -71,21 +71,18 @@ class ViewBase {
     template <typename... Args>
     auto access_pack(Args&&... idxs) const -> decltype(auto);
 
-    template <typename... Args>
-    auto access_index_pack(Args&&... idxs) const -> decltype(auto)
-        requires(concepts::SlicePackLike<Args...>);
+    template <concepts::SliceLike... Args>
+    auto access_index_pack(Args&&... idxs) const -> decltype(auto);
 
     template <typename... Args>
     auto access_pack(Args&&... idxs) -> decltype(auto);
 
-    template <typename... Args>
-    auto access_index_pack(Args&&... idxs) -> decltype(auto)
-        requires(concepts::SlicePackLike<Args...>);
+    template <concepts::SliceLike... Args>
+    auto access_index_pack(Args&&... idxs) -> decltype(auto);
 
-    template <typename... Slices>
+    template <concepts::SliceLike... Slices>
     auto access_slice(Slices&&... slices) const
-        requires(concepts::SlicePackLike<Slices...> &&
-                 !concepts::IndexPackLike<Slices...>);
+        requires(!concepts::IndexPackLike<Slices...>);
 
     template <concepts::ViewAccessTuple Tuple, std::size_t... N>
     auto access_tuple(const Tuple& t, std::index_sequence<N...>) const
@@ -93,10 +90,9 @@ class ViewBase {
     template <concepts::ViewAccessTuple Tuple>
     auto access_tuple(const Tuple& t) const -> decltype(auto);
 
-    template <typename... Slices>
+    template <concepts::SliceLike... Slices>
     auto access_slice(Slices&&... slices)
-        requires(concepts::SlicePackLike<Slices...> &&
-                 !concepts::IndexPackLike<Slices...>);
+        requires(!concepts::IndexPackLike<Slices...>);
 
     template <concepts::ViewAccessTuple Tuple, std::size_t... N>
     auto access_tuple(const Tuple& t, std::index_sequence<N...>)

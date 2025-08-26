@@ -9,7 +9,7 @@
 #include "zipper/views/unary/PartialTraceView.hpp"
 namespace zipper::views {
 namespace binary {
-template <zipper::concepts::ViewDerived A, zipper::concepts::ViewDerived B>
+template <zipper::concepts::QualifiedViewDerived A, zipper::concepts::QualifiedViewDerived B>
 class FormTensorProductView;
 
 }
@@ -63,7 +63,7 @@ struct ViewTraits<binary::FormTensorProductView<A, B>>
 }  // namespace detail
 
 namespace binary {
-template <zipper::concepts::ViewDerived A, zipper::concepts::ViewDerived B>
+template <zipper::concepts::QualifiedViewDerived A, zipper::concepts::QualifiedViewDerived B>
 class FormTensorProductView : public ViewBase<FormTensorProductView<A, B>> {
    public:
     using self_type = FormTensorProductView<A, B>;
@@ -113,7 +113,7 @@ class FormTensorProductView : public ViewBase<FormTensorProductView<A, B>> {
     traits::partial_trace_type m_trace;
 };
 
-template <zipper::concepts::ViewDerived A, zipper::concepts::ViewDerived B>
+template <zipper::concepts::QualifiedViewDerived A, zipper::concepts::QualifiedViewDerived B>
 FormTensorProductView(const A& a, const B& b) -> FormTensorProductView<A, B>;
 }  // namespace binary
 }  // namespace zipper::views

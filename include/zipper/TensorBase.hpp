@@ -25,8 +25,9 @@ class TensorBase : public ZipperBase<TensorBase, View> {
     TensorBase() = default;
 
     using view_type = View;
-    using value_type = View::value_type;
-    using extents_type = View::extents_type;
+    using view_traits = views::detail::ViewTraits<View>;
+    using value_type = view_traits::value_type;
+    using extents_type = view_traits::extents_type;
     using extents_traits = detail::ExtentsTraits<extents_type>;
 
     template <index_type... N>

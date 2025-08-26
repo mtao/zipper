@@ -14,8 +14,8 @@
 
 namespace zipper::views {
 namespace unary {
-template <zipper::concepts::QualifiedViewDerived ViewType, typename... Slices>
-    requires(zipper::concepts::SlicePackLike<Slices...>)
+template <zipper::concepts::QualifiedViewDerived ViewType,
+          zipper::concepts::SliceLike... Slices>
 class SliceView;
 
 namespace detail {
@@ -23,11 +23,9 @@ template <typename T>
 struct slice_helper;
 
 template <typename OffsetType, typename ExtentType, typename StrideType>
-struct slice_helper<
-    strided_slice<OffsetType, ExtentType, StrideType>> {
+struct slice_helper<strided_slice<OffsetType, ExtentType, StrideType>> {
    public:
-    using type =
-        strided_slice<OffsetType, ExtentType, StrideType>;
+    using type = strided_slice<OffsetType, ExtentType, StrideType>;
     constexpr slice_helper(const type &t) : m_slice(t) {}
     constexpr static auto get_extent(const auto &stride, const auto &extent) {
         return extent > 0 ? 1 + (extent - 1) / stride : 0;
@@ -96,7 +94,7 @@ struct slice_helper<T> {
         return 1;
     }
     template <rank_type N, zipper::concepts::ExtentsType ET>
-    constexpr static index_type extent(const type &/*t*/, const ET &) {
+    constexpr static index_type extent(const type & /*t*/, const ET &) {
         return static_extent<N, ET>();
     }
 
@@ -174,7 +172,7 @@ struct slice_helper<std::array<index_type, N>> {
         return index_type(N);
     }
     template <rank_type M, zipper::concepts::ExtentsType ET>
-    constexpr static index_type extent(const type &/*t*/, const ET &) {
+    constexpr static index_type extent(const type & /*t*/, const ET &) {
         return static_extent<M, ET>();
     }
 
@@ -274,9 +272,10 @@ struct _slice_extent_helper<ET, std::integer_sequence<rank_type, N...>,
                     return j;
                 }
             }
-            // clang doesn't catch that all executions of this consteval turn out to return
+            // clang doesn't catch that all executions of this consteval turn
+            // out to return
             assert(false);
-            return rank+1;
+            return rank + 1;
         }
         consteval static rank_type get_dynamic_rank(rank_type r) {
             return get_rank(dynamic_indices[r]);
@@ -359,6 +358,7 @@ struct detail::ViewTraits<unary::SliceView<QualifiedViewType, Slices...>>
                                            Slices...>;
     //
     using extents_type = typename extents_helper::extents_type;
+    using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
 
     constexpr static std::array<rank_type, Base::extents_type::rank()>
         actionable_indices = extents_helper::get_actionable(
@@ -367,8 +367,7 @@ struct detail::ViewTraits<unary::SliceView<QualifiedViewType, Slices...>>
 
 namespace unary {
 template <zipper::concepts::QualifiedViewDerived QualifiedViewType,
-          typename... Slices>
-    requires(zipper::concepts::SlicePackLike<Slices...>)
+          zipper::concepts::SliceLike... Slices>
 class SliceView : public UnaryViewBase<SliceView<QualifiedViewType, Slices...>,
                                        QualifiedViewType> {
    public:

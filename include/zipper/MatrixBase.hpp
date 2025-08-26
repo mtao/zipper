@@ -30,8 +30,9 @@ class MatrixBase : public ZipperBase<MatrixBase, View> {
     MatrixBase() = default;
 
     using view_type = View;
-    using value_type = View::value_type;
-    using extents_type = View::extents_type;
+    using view_traits = views::detail::ViewTraits<View>;
+    using value_type = view_traits::value_type;
+    using extents_type = view_traits::extents_type;
     using extents_traits = detail::ExtentsTraits<extents_type>;
     static_assert(extents_traits::rank == 2);
     using Base = ZipperBase<MatrixBase, View>;
@@ -48,7 +49,7 @@ class MatrixBase : public ZipperBase<MatrixBase, View> {
 
     template <concepts::MatrixBaseDerived Other>
     MatrixBase(const Other& other)
-        requires(view_type::is_writable)
+        requires(view_traits::is_writable)
         : MatrixBase(other.view()) {}
 
     MatrixBase& operator=(concepts::MatrixBaseDerived auto const& v) {
@@ -57,7 +58,7 @@ class MatrixBase : public ZipperBase<MatrixBase, View> {
 
     template <concepts::MatrixViewDerived Other>
     MatrixBase& operator=(const Other& other)
-        requires(view_type::is_writable)
+        requires(view_traits::is_writable)
     {
         return Base::operator=(other);
     }
@@ -305,7 +306,7 @@ class MatrixBase : public ZipperBase<MatrixBase, View> {
     auto bottomRows() {
         detail::ConstexprArithmetic size(static_index_t<Size>{});
         auto t = size - detail::extents::get_extent<0>(extents());
-        return row_slice(zipper::slice( t.value(), size.value()));
+        return row_slice(zipper::slice(t.value(), size.value()));
     }
     template <index_type Size>
     auto bottomRows() const {
