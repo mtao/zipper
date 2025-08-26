@@ -49,12 +49,9 @@ TEST_CASE("static_dense_accessor", "[data]") {
     test(A);
     auto B = A.as_span();
     test(B);
-    // test_static<5>(A);
-    // test_dense<5>(A);
 }
 TEST_CASE("dynamic_dense_accessor", "[data]") {
         zipper::storage::DynamicDenseData<index_type> data(30);
-        zipper::storage::StaticDenseData<index_type,20> data2;
     zipper::storage::DenseAccessor<
         zipper::storage::DynamicDenseData<index_type>, dextents<2>,
         zipper::default_layout_policy, zipper::default_accessor_policy<int>>
@@ -64,9 +61,38 @@ TEST_CASE("dynamic_dense_accessor", "[data]") {
     //    zipper::storage::DynamicDenseData<index_type>, dextents<2>,
     //    zipper::default_layout_policy, zipper::default_accessor_policy<int>>
     //    A(extents(5, 6));
-    //test(A);
-    //auto B = A.as_span();
-    //test(B);
+    test(A);
+    auto B = A.as_span();
+    test(B);
     // test_static<5>(A);
     // test_dense<5>(A);
+}
+TEST_CASE("dynamic_static_dense_accessor", "[data]") {
+        zipper::storage::StaticDenseData<index_type,30> data;
+    zipper::storage::DenseAccessor<
+        zipper::storage::StaticDenseData<index_type,30>, dextents<2>,
+        zipper::default_layout_policy, zipper::default_accessor_policy<int>>
+        A(std::move(data),extents(5, 6));
+
+    test(A);
+    auto B = A.as_span();
+    test(B);
+}
+TEST_CASE("static_dynamic_dense_accessor", "[data]") {
+        zipper::storage::DynamicDenseData<index_type> data(30);
+    zipper::storage::DenseAccessor<
+        zipper::storage::DynamicDenseData<index_type>, extents<5,6>,
+        zipper::default_layout_policy, zipper::default_accessor_policy<int>>
+        A(std::move(data));
+
+    test(A);
+    auto B = A.as_span();
+    test(B);
+    zipper::storage::DenseAccessor<
+        zipper::storage::DynamicDenseData<index_type>, extents<5,6>,
+        zipper::default_layout_policy, zipper::default_accessor_policy<int>>
+        C;
+
+    CHECK(C.size() == 30);
+    CHECK(C.linear_access().size() == 30);
 }

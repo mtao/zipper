@@ -30,6 +30,9 @@ class DenseAccessor
     constexpr static bool IsStatic =
         zipper::detail::ExtentsTraits<extents_type>::is_static;
 
+    constexpr static bool data_is_static =
+        data_type::static_size != std::dynamic_extent;
+
     using span_type = DenseAccessor<SpanData<value_type, DataType::static_size>,
                                     Extents, LayoutPolicy, AccessorPolicy>;
 
@@ -40,8 +43,11 @@ class DenseAccessor
     using ParentType::size;
 
     DenseAccessor()
-        requires(IsStatic)
+        requires(IsStatic && data_is_static)
         : ParentType() {}
+    DenseAccessor()
+        requires(IsStatic && !data_is_static)
+        : ParentType(), m_data(extents_traits::static_size) {}
 
     DenseAccessor(const DenseAccessor&) = default;
     DenseAccessor(DenseAccessor&&) = default;
@@ -49,25 +55,22 @@ class DenseAccessor
     DenseAccessor& operator=(DenseAccessor&&) = default;
 
     DenseAccessor(const extents_type& extents_)
-        requires(!IsStatic)
+        requires(!IsStatic && !data_is_static)
         : ParentType(extents_), m_data(extents_traits::size(extents_)) {
         assert(m_data.size() == extents_traits::size(extents_));
     }
     DenseAccessor(data_type&& data)
         requires(IsStatic)
         : ParentType(), m_data(std::move(data)) {
-        static_assert(extents_traits::static_size == data_type::static_size);
     }
 
     DenseAccessor(data_type data, const extents_type& extents_)
         requires(!IsStatic)
         : ParentType(extents_), m_data(std::move(data)) {
-        assert(m_data.size() == extents_traits::size(extents_));
     }
     DenseAccessor(data_type data, const extents_type& extents_)
         requires(IsStatic)
         : ParentType(extents_), m_data(std::move(data)) {
-        static_assert(extents_traits::static_size == data_type::static_size);
     }
 
     span_type as_span() {
