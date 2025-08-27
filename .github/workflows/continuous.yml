@@ -38,11 +38,10 @@ jobs:
           python-version: '3.x'
 
       - name: Linux dependencies
-        run: |
-          if [ "$RUNNER_OS" == "Linux" ]; then
-          apt-get update
-          apt-get install -y ninja
-          fi
+          
+        run: | 
+          sudo apt-get update
+          sudo apt-get install -y ninja
 
 
       - name: Install python dependencies
