@@ -29,9 +29,8 @@ jobs:
         meson_version: ["1.7.2"] #["1.2.0", "1.3.0", "1.4.0"]
         build: ['debug']
         #build: ['debug','release']
+
     steps:
-      - name: Show default gcc version
-        run: gcc-14 --version
       - name: Checkout code
         uses: actions/checkout@v4
 
