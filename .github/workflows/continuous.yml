@@ -30,6 +30,8 @@ jobs:
         build: ['debug']
         #build: ['debug','release']
     steps:
+      - name: Show default gcc version
+        run: gcc --version
       - name: Checkout code
         uses: actions/checkout@v4
 
