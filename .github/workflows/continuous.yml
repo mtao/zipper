@@ -64,7 +64,7 @@ jobs:
       - name: Conan profile creation
         run: | 
           mkdir -p ~/.conan2/profiles
-          cat ~/.conan2/profiles/default
+          # cat ~/.conan2/profiles/default
           cp .github/workflows/conan_profiles/${{ matrix.os }}-${{ matrix.build }}.yaml ~/.conan2/profiles/${{ matrix.build }}
           conan profile detect
 
