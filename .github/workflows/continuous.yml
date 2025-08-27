@@ -50,18 +50,20 @@ jobs:
       - name: Install python dependencies
         run: python -m pip install meson==${{ matrix.meson_version }} ninja
 
-      - name: Cache conan 
-        uses: actions/cache@v4
-        with:
-          key: ${{ runner.os }}-${{ matrix.config }}-cache-${{ github.sha }}
-          path: |
-            ~/.conan2
+      #- name: Cache conan 
+      #  uses: actions/cache@v4
+      #  with:
+      #    key: ${{ runner.os }}-${{ matrix.config }}-cache-${{ github.sha }}
+      #    path: |
+      #      ~/.conan2
 
       - name: Install Conan
         id: conan
         uses: turtlebrowser/get-conan@main
         with:
           version: 2.8.1
+      - name: Show default gcc version
+        run: cat ~/.conan2/settings.yml
 
       - name: Conan profile creation
         run: | 
