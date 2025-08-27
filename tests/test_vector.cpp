@@ -31,6 +31,38 @@ void print(zipper::concepts::VectorBaseDerived auto const& M) {
 }  // namespace
    //
 using namespace zipper;
+TEST_CASE("test_deductions", "[vector][storage][dense]") {
+    Vector<double, 3> a{{0, 2, 4}};
+    std::vector<double> X{0,1,2};
+    std::array<double,3> Y{{3,5,7}};
+    VectorBase x = X;
+    CHECK(x(0) == 0);
+    CHECK(x(1) == 1);
+    CHECK(x(2) == 2);
+    x = a;
+    CHECK(x(0) == 2);
+    CHECK(x(1) == 4);
+    CHECK(x(2) == 6);
+
+
+    VectorBase y = Y;
+    CHECK(y(0) == 3);
+    CHECK(y(1) == 5);
+    CHECK(y(2) == 7);
+    y = a;
+    CHECK(y(0) == 2);
+    CHECK(y(1) == 4);
+    CHECK(y(2) == 6);
+#if defined(__cpp_lib_span_initializer_list)
+    VectorBase z = {1,2,3};
+    CHECK(z(0) == 1);
+    CHECK(z(1) == 2);
+    CHECK(z(2) == 3);
+#endif
+
+
+}
+
 TEST_CASE("test_dot", "[matrix][storage][dense]") {
     Vector<double, 3> a{{0, 2, 4}};
     Vector<double, 3> b{{1, 3, 5}};

@@ -335,6 +335,11 @@ VectorBase(const std::vector<T>& s)
     -> VectorBase<storage::SpanStorage<T, zipper::extents<std::dynamic_extent>>>;
 
 
+#if defined(__cpp_lib_span_initializer_list)
+template <class T>
+VectorBase(const std::initializer_list<T>& s)
+    -> VectorBase<storage::SpanStorage<T, zipper::extents<std::dynamic_extent>>>;
+#endif
 
 
 UNARY_DECLARATION(VectorBase, LogicalNot, operator!)
