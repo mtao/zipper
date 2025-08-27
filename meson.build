@@ -9,7 +9,12 @@ fmt_dep = dependency('fmt')
 
 spdlog_dep = dependency('spdlog')
 
-mdspan_dep = dependency('mdspan')
+if option('use_conan')
+  mdspan_dep = dependency('mdspan')
+else
+  mdspan_proj = subproject('mdspan')
+  mdspan_dep = mdspan_proj.get_variable('mdspan_dep')
+endif
 
 range_v3_dep = dependency('range-v3')
 

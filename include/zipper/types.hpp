@@ -14,7 +14,7 @@
 #if defined(__cpp_lib_mdspan)
 #include <mdspan>
 #else
-#include <experimental/mdspan>
+#include <mdspan/mdspan.hpp>
 #endif
 #pragma GCC diagnostic pop
 
@@ -51,28 +51,28 @@ template <typename T, typename Extents,
 using mdspan =
     std::mdspan<T, Extents, LayoutPolicy, AccessorPolicy>;
 #else
-using extents = std::experimental::extents<index_type, Extents...>;
+using extents = MDSPAN_IMPL_STANDARD_NAMESPACE::extents<index_type, Extents...>;
 // fully dynamic extents
 template <rank_type N>
-using dextents = std::experimental::dextents<index_type, N>;
-using full_extent_t = std::experimental::full_extent_t;
-using full_extent_type = std::experimental::full_extent_t;
+using dextents = MDSPAN_IMPL_STANDARD_NAMESPACE::dextents<index_type, N>;
+using full_extent_t = MDSPAN_IMPL_STANDARD_NAMESPACE::full_extent_t;
+using full_extent_type = MDSPAN_IMPL_STANDARD_NAMESPACE::full_extent_t;
 
 template <typename OffsetType, typename ExtentType, typename StrideType>
 using strided_slice =
-    std::experimental::strided_slice<OffsetType, ExtentType, StrideType>;
+    MDSPAN_IMPL_STANDARD_NAMESPACE::strided_slice<OffsetType, ExtentType, StrideType>;
 
 template <typename OffsetType, typename ExtentType, typename StrideType>
 using slice_type = strided_slice<OffsetType, ExtentType, StrideType>;
-using default_layout_policy = std::experimental::layout_right;
+using default_layout_policy = MDSPAN_IMPL_STANDARD_NAMESPACE::layout_right;
 template <typename T>
-using default_accessor_policy = std::experimental::default_accessor<T>;
+using default_accessor_policy = MDSPAN_IMPL_STANDARD_NAMESPACE::default_accessor<T>;
 
 template <typename T, typename Extents,
           typename LayoutPolicy = default_layout_policy,
           typename AccessorPolicy = default_accessor_policy<T>>
 using mdspan =
-    std::experimental::mdspan<T, Extents, LayoutPolicy, AccessorPolicy>;
+    MDSPAN_IMPL_STANDARD_NAMESPACE::mdspan<T, Extents, LayoutPolicy, AccessorPolicy>;
 #endif
 
 

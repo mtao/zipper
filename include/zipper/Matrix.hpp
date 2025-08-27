@@ -152,7 +152,7 @@ template <typename ValueType, index_type Rows, index_type Cols, bool RowMajor>
 struct detail::ViewTraits<Matrix<ValueType, Rows, Cols, RowMajor>>
     : public detail::ViewTraits<zipper::storage::PlainObjectStorage<
           ValueType, zipper::extents<Rows, Cols>,
-          std::conditional_t<RowMajor, std::experimental::layout_left,
-                             std::experimental::layout_right>>> {};
+          std::conditional_t<RowMajor, storage::layout_left,
+                             storage::layout_right>>> {};
 }  // namespace zipper::views
 #endif

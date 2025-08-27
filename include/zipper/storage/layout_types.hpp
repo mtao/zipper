@@ -9,8 +9,8 @@ namespace zipper::storage {
 using layout_right = std::layout_right;
 using layout_left = std::layout_left;
 #else
-using layout_right = std::experimental::layout_right;
-using layout_left = std::experimental::layout_left;
+using layout_right = MDSPAN_IMPL_STANDARD_NAMESPACE::layout_right;
+using layout_left = MDSPAN_IMPL_STANDARD_NAMESPACE::layout_left;
 #endif
 
 // row major ~ layout_right

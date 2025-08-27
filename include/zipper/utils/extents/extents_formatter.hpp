@@ -24,7 +24,7 @@
 #if defined(__cpp_lib_mdspan)
 namespace std{
 #else
-namespace std::experimental {
+namespace MDSPAN_IMPL_STANDARD_NAMESPACE {
 #endif
 template <typename index_type, index_type... Extents>
 std::string format_as(const extents<index_type, Extents...>& foo) {
@@ -39,7 +39,7 @@ std::string format_as(const extents<index_type, Extents...>& foo) {
 #if defined(__cpp_lib_mdspan)
 }  // namespace std
 #else
-}  // namespace std::experimental
+}  // namespace MDSPAN_IMPL_STANDARD_NAMESPACE
 #endif
 
 #endif

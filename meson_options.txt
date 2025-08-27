@@ -1,2 +1,3 @@
 option('testing', type: 'boolean', value: false, description: 'enable unit testing')
 option('examples', type: 'boolean', value: false, description: 'enable example targets')
+option('use_conan', type: 'boolean', value: false, description: 'use conan to fetch dependencies')

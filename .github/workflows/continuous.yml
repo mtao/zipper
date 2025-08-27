@@ -73,10 +73,10 @@ jobs:
           conan profile detect
 
       - name: Conan dependencies
-        run: conan install . --output-folder=build --build=missing --profile:all=${{ matrix.build }} # prepare conan
+        run: conan install . --output-folder=build/conan --build=missing --profile:all=${{ matrix.build }} # prepare conan
 
       - name: Configure Project
-        run: meson setup --native-file build/conan_meson_native.ini . build
+        run: meson setup --native-file build/conan/conan_meson_native.ini . build
         env:
           CC: gcc
 
