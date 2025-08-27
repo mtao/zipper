@@ -9,7 +9,7 @@ fmt_dep = dependency('fmt')
 
 spdlog_dep = dependency('spdlog')
 
-if option('use_conan')
+if get_option('use_conan')
   mdspan_dep = dependency('mdspan')
 else
   mdspan_proj = subproject('mdspan')

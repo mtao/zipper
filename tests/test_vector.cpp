@@ -40,9 +40,9 @@ TEST_CASE("test_deductions", "[vector][storage][dense]") {
     CHECK(x(1) == 1);
     CHECK(x(2) == 2);
     x = a;
-    CHECK(x(0) == 2);
-    CHECK(x(1) == 4);
-    CHECK(x(2) == 6);
+    CHECK(x(0) == 0);
+    CHECK(x(1) == 2);
+    CHECK(x(2) == 4);
 
 
     VectorBase y = Y;
@@ -50,9 +50,9 @@ TEST_CASE("test_deductions", "[vector][storage][dense]") {
     CHECK(y(1) == 5);
     CHECK(y(2) == 7);
     y = a;
-    CHECK(y(0) == 2);
-    CHECK(y(1) == 4);
-    CHECK(y(2) == 6);
+    CHECK(y(0) == 0);
+    CHECK(y(1) == 2);
+    CHECK(y(2) == 4);
 #if defined(__cpp_lib_span_initializer_list)
     VectorBase z = {1,2,3};
     CHECK(z(0) == 1);
