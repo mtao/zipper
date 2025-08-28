@@ -36,8 +36,8 @@ jobs:
           - image: 'macos-15'
             os: 'osx'
             compiler: 
-              cc: "$(brew --prefix llvm@18)/bin/clang"
-              cxx: "$(brew --prefix llvm@18)/bin/clang++"
+              cc: "clang"
+              cxx: "clang++"
 
     env:
       CC: ${{ matrix.platform.compiler.cc }}
