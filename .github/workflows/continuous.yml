@@ -33,11 +33,11 @@ jobs:
             compiler: 
               cc: "gcc-14"
               cxx: "g++-14"
-                #- image: 'macos-15'
-                #  os: 'osx'
-                #  compiler: 
-                #    cc: "clang"
-                #    cxx: "clang++"
+          - image: 'macos-15'
+            os: 'osx'
+            compiler: 
+              cc: "clang"
+              cxx: "clang++"
 
     env:
       CC: ${{ matrix.platform.compiler.cc }}
@@ -52,13 +52,27 @@ jobs:
         with:
           python-version: '3.x'
 
+      - name: Set up Homebrew
+        if: matrix.platform.os == 'osx'
+        id: set-up-homebrew
+        uses: Homebrew/actions/setup-homebrew@main
+
       - name: Update Apt
         if: matrix.platform.os == 'linux'
         run: sudo apt-get update
 
+      - name: Install brew dependencies
+        if: matrix.platform.os == 'osx'
+        run: brew update
+
       - name: Install apt dependencies
         if: matrix.platform.os == 'linux'
-        run: sudo apt-get install -y libfmt-dev libspdlog-dev
+        run: sudo apt-get install -y libfmt-dev
+
+
+      - name: Install brew dependencies
+        if: matrix.platform.os == 'osx'
+        run: brew install fmt
 
       - name: Install python dependencies
         run: python -m pip install meson==${{ matrix.meson_version }} ninja
