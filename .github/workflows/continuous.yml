@@ -22,7 +22,7 @@ on: [push]
 jobs:
   deps:
     name: Build and Test on ${{ matrix.platform.image }}-${{ matrix.build }}
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.platform.image }}
     strategy:
       matrix:
         meson_version: ["1.7.2"] #["1.2.0", "1.3.0", "1.4.0"]
