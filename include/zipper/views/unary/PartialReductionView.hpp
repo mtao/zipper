@@ -116,7 +116,7 @@ class PartialReductionView
 
     template <typename... Args>
     value_type coeff(Args&&... idxs) const {
-        zipper::utils::extents::indices_in_range(extents(), idxs...);
+        zipper::utils::extents::indices_in_range(this->extents(), idxs...);
         return _coeff(
             std::make_integer_sequence<rank_type,
                                        child_extents_type::rank()>{},

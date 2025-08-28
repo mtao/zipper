@@ -104,7 +104,7 @@ class PartialTraceView
 
     template <typename... Args>
     value_type coeff(Args&&... idxs) const {
-        zipper::utils::extents::indices_in_range(extents(), idxs...);
+        zipper::utils::extents::indices_in_range(this->extents(), idxs...);
         if constexpr (sizeof...(Indices) == 0) {
             return view().coeff(std::forward<Args>(idxs)...);
         } else {
