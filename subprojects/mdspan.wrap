@@ -5,4 +5,4 @@ method = cmake
 
 
 [provide]
-mdspan-0.6.0 = mdspan_dep
+mdspan = mdspan_dep

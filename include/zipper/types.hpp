@@ -14,7 +14,7 @@
 #if defined(__cpp_lib_mdspan)
 #include <mdspan>
 #else
-#include <mdspan/mdspan>
+#include <mdspan/mdspan.hpp>
 #endif
 #pragma GCC diagnostic pop
 
