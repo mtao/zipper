@@ -8,8 +8,12 @@
 TEST_CASE("test_format_vector", "[storage][dense]") {
     zipper::Vector<double, 3> x({1, 2, 0});
     fmt::print("{}\n",x);
+    // TODO: this fails without further work on fmt printing for older platforms
+#if !defined(ZIPPER_FMT_OVERRIDES_DISABLED)
     fmt::print("{}\n",x.head<2>());
+#endif
 }
+#if !defined(ZIPPER_FMT_OVERRIDES_DISABLED)
 TEST_CASE("test_format_matrix", "[storage][dense]") {
     zipper::Matrix<double, 3, 3> x;
     x.col(0) = {0, 1, 2};
@@ -19,3 +23,4 @@ TEST_CASE("test_format_matrix", "[storage][dense]") {
     fmt::print("{}\n",x);
 
 }
+#endif

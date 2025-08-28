@@ -33,14 +33,13 @@ template <rank_type N>
 using dextents = std::dextents<index_type, N>;
 struct full_extent_t {};
 template <typename OffsetType, typename ExtentType, typename StrideType>
-    struct strided_slice {
-        OffsetType offset;
-        ExtentType extent;
-        StrideType stride;
-    };
+struct strided_slice {
+    OffsetType offset;
+    ExtentType extent;
+    StrideType stride;
+};
 template <typename OffsetType, typename ExtentType, typename StrideType>
-using slice_type =
-    strided_slice<OffsetType, ExtentType, StrideType>;
+using slice_type = strided_slice<OffsetType, ExtentType, StrideType>;
 using default_layout_policy = std::layout_right;
 template <typename T>
 using default_accessor_policy = std::default_accessor<T>;
@@ -48,8 +47,7 @@ using default_accessor_policy = std::default_accessor<T>;
 template <typename T, typename Extents,
           typename LayoutPolicy = default_layout_policy,
           typename AccessorPolicy = default_accessor_policy<T>>
-using mdspan =
-    std::mdspan<T, Extents, LayoutPolicy, AccessorPolicy>;
+using mdspan = std::mdspan<T, Extents, LayoutPolicy, AccessorPolicy>;
 #else
 using extents = MDSPAN_IMPL_STANDARD_NAMESPACE::extents<index_type, Extents...>;
 // fully dynamic extents
@@ -60,28 +58,28 @@ using full_extent_type = MDSPAN_IMPL_STANDARD_NAMESPACE::full_extent_t;
 
 template <typename OffsetType, typename ExtentType, typename StrideType>
 using strided_slice =
-    MDSPAN_IMPL_STANDARD_NAMESPACE::strided_slice<OffsetType, ExtentType, StrideType>;
+    MDSPAN_IMPL_STANDARD_NAMESPACE::strided_slice<OffsetType, ExtentType,
+                                                  StrideType>;
 
 template <typename OffsetType, typename ExtentType, typename StrideType>
 using slice_type = strided_slice<OffsetType, ExtentType, StrideType>;
 using default_layout_policy = MDSPAN_IMPL_STANDARD_NAMESPACE::layout_right;
 template <typename T>
-using default_accessor_policy = MDSPAN_IMPL_STANDARD_NAMESPACE::default_accessor<T>;
+using default_accessor_policy =
+    MDSPAN_IMPL_STANDARD_NAMESPACE::default_accessor<T>;
 
 template <typename T, typename Extents,
           typename LayoutPolicy = default_layout_policy,
           typename AccessorPolicy = default_accessor_policy<T>>
-using mdspan =
-    MDSPAN_IMPL_STANDARD_NAMESPACE::mdspan<T, Extents, LayoutPolicy, AccessorPolicy>;
+using mdspan = MDSPAN_IMPL_STANDARD_NAMESPACE::mdspan<T, Extents, LayoutPolicy,
+                                                      AccessorPolicy>;
 #endif
-
 
 // helper so users can pass in arguments to get extents
 template <concepts::IndexLike... Args>
 auto create_dextents(const Args&... args) {
     return dextents<sizeof...(Args)>(args...);
 }
-
 
 template <typename T, T v>
 struct constant {
@@ -101,7 +99,6 @@ using static_rank_t = std::integral_constant<rank_type, N>;
 //
 // template <rank_type N>
 // constexpr static static_rank_t<N> static_rank = {};
-
 
 template <typename OffsetType, typename ExtentType, typename StrideType>
 using slice_t = slice_type<OffsetType, ExtentType, StrideType>;
