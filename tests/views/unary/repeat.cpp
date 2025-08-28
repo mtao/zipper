@@ -13,10 +13,10 @@ TEST_CASE("test_repeat_view", "[views][unary]") {
 
         auto l =
             views::unary::RepeatView<zipper::views::unary::RepeatMode::Left, 1,
-                                     decltype(a)::view_type>(a.view());
+                                     typename decltype(a)::view_type>(a.view());
         auto r =
             views::unary::RepeatView<zipper::views::unary::RepeatMode::Right, 1,
-                                     decltype(a)::view_type>(a.view());
+                                     typename decltype(a)::view_type>(a.view());
         for (index_type j = 0; j < a.extent(0); ++j) {
             for (index_type k = 0; k < 100; ++k) {
                 CHECK(l(k, j) == a(j));
@@ -30,10 +30,10 @@ TEST_CASE("test_repeat_view", "[views][unary]") {
 
         auto l =
             views::unary::RepeatView<zipper::views::unary::RepeatMode::Left, 2,
-                                     decltype(a)::view_type>(a.view());
+                                     typename decltype(a)::view_type>(a.view());
         auto r =
             views::unary::RepeatView<zipper::views::unary::RepeatMode::Right, 2,
-                                     decltype(a)::view_type>(a.view());
+                                     typename decltype(a)::view_type>(a.view());
         for (index_type j = 0; j < a.extent(0); ++j) {
             for (index_type k = 0; k < a.extent(1); ++k) {
                 for (index_type jj = 0; jj < 100; ++jj) {
