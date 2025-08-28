@@ -10,10 +10,11 @@ TEST_CASE("test_repeat_view", "[views][unary]") {
     {
 
         // This depends on P1814R0 ( CTAD for aggregates and aliases )
-#if defined(__cpp_deduction_guides) && __cplusplus >= 201907L
-        Array a = views::nullary::uniform_random_view<double>(extents<5>{});
-#else
+//#if defined(__cpp_deduction_guides) && __cplusplus >= 201907L
+#if defined(ZIPPER_DONT_USE_ALIAS_CTAD)
         Array_ a = views::nullary::uniform_random_view<double>(extents<5>{});
+#else
+        Array a = views::nullary::uniform_random_view<double>(extents<5>{});
 #endif
         REQUIRE(a.extents() == extents<5>{});
 
@@ -31,10 +32,10 @@ TEST_CASE("test_repeat_view", "[views][unary]") {
         }
     }
     {
-#if defined(__cpp_deduction_guides) && __cplusplus >= 201907L
+#if defined(ZIPPER_DONT_USE_ALIAS_CTAD)
         Array_ a = views::nullary::uniform_random_view<double>(extents<5, 3>{});
 #else
-        Array_a = views::nullary::uniform_random_view<double>(extents<5, 3>{});
+        Array_ a = views::nullary::uniform_random_view<double>(extents<5, 3>{});
 #endif
         REQUIRE(a.extents() == extents<5, 3>{});
 

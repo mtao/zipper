@@ -66,7 +66,7 @@ jobs:
 
       - name: Install apt dependencies
         if: matrix.platform.os == 'linux'
-        run: sudo apt-get install -y libfmt-dev catch2
+        run: sudo apt-get install -y libfmt-dev catch2 librange-v3-dev
 
 
       - name: Install brew dependencies

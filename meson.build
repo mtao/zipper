@@ -29,6 +29,19 @@ if not fmt_compiles
   compile_args += '-DZIPPER_FMT_OVERRIDES_DISABLED'
 endif
 
+alias_ctad_code = '''template <typename A> struct B {B(A) {}};
+template <typename A> B(A) -> B<A>;
+template <typename A> using C = B<A>;
+void f() {
+  C c(int{});
+}
+'''
+
+alias_ctad_compiles = cpp_compiler.compiles(alias_ctad_code, name : 'aliased_CTAD')
+if not alias_ctad_compiles
+  compile_args += '-DZIPPER_DONT_USE_ALIAS_CTAD'
+endif
+
 if not cpp_compiler.has_define('__cpp_lib_mdspan')
   message('current version of mdspan is insufficient, fetching dependency')
   if get_option('use_conan')
@@ -41,13 +54,16 @@ if not cpp_compiler.has_define('__cpp_lib_mdspan')
 endif
 
 
-if get_option('use_conan')
-  range_v3_dep = dependency('range-v3')
-else
-  range_v3_proj = subproject('range-v3')
-  range_v3_dep = range_v3_proj.get_variable('range_v3_dep')
-  required_deps += range_v3_dep
+range_v3_dep = dependency('range-v3', required: false)
+if not range_v3_dep.found()
+  if get_option('use_conan')
+    range_v3_dep = dependency('range-v3')
+  else
+    range_v3_proj = subproject('range-v3')
+    range_v3_dep = range_v3_proj.get_variable('range_v3_dep')
+  endif
 endif
+required_deps += range_v3_dep
 
 
 sources = []
