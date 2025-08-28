@@ -1,9 +1,10 @@
 name: Zipper Continuous Integration
 
-on:
-  push:
-    branches:
-      - main
+on: [push]
+#on:
+#  push:
+#    branches:
+#      - main
   #  paths:
   #    - "**.c"
   #    - "**.h"
