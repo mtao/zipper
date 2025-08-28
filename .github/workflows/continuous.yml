@@ -28,11 +28,13 @@ jobs:
         os: [ubuntu-latest] # [ubuntu-latest, macos-latest, windows-latest]
         meson_version: ["1.7.2"] #["1.2.0", "1.3.0", "1.4.0"]
         build: ['debug'] #build: ['debug','release']
-        compiler: [["gcc-14","g++-14"]]
+        compiler: 
+          - cc: "gcc-14"
+            cxx: "g++-14"
 
     env:
-      CC: ${{ matrix.compiler[0] }}
-      CXX: ${{ matrix.compiler[1] }}
+      CC: ${{ matrix.compiler.cc }}
+      CXX: ${{ matrix.compiler.cxx }}
 
     steps:
       - name: Checkout code
