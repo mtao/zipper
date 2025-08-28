@@ -34,7 +34,13 @@ if not cpp_compiler.has_define('__cpp_lib_mdspan')
   required_deps += mdspan_dep
 endif
 
-# range_v3_dep = dependency('range-v3')
+
+if get_option('use_conan')
+  range_v3_dep = dependency('range-v3')
+else
+  range_v3_proj = subproject('range-v3')
+  range_v3_dep = range_v3_proj.get_variable('range_v3_dep')
+endif
 
 
 sources = []
