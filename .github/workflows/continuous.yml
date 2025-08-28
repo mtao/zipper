@@ -31,7 +31,7 @@ jobs:
         compiler: [["gcc-14","g++-14"]]
 
     env:
-      CXX: ${{ matrix.compiler[0] }}
+      CC: ${{ matrix.compiler[0] }}
       CXX: ${{ matrix.compiler[1] }}
 
     steps:
