@@ -17,6 +17,9 @@
 #endif
 #include <fmt/format.h>
 #pragma GCC diagnostic pop
+#if defined(ZIPPER_FMT_OVERRIDES_DISABLED)
+#include "zipper/utils/extents/as_array.hpp"
+#endif
 
 
 #include "zipper/utils/extents/extents_formatter.hpp"
@@ -88,7 +91,14 @@ class OperationView
         if (!valid_input_extents(a.extents(), b.extents())) {
             throw std::runtime_error(
                 fmt::format("OperationView between {} and {} is invalid",
+#if defined(ZIPPER_FMT_OVERRIDES_DISABLED)
+                            zipper::utils::extents::as_array(a.extents())
+                            ,
+                            zipper::utils::extents::as_array(b.extents())
+                    ));
+#else
                             a.extents(), b.extents()));
+#endif
         }
     }
     OperationView(const A &a, const B &b, const Operation &op = {})
@@ -97,7 +107,14 @@ class OperationView
         if (!valid_input_extents(a.extents(), b.extents())) {
             throw std::runtime_error(
                 fmt::format("OperationView between {} and {} is invalid",
+#if defined(ZIPPER_FMT_OVERRIDES_DISABLED)
+                            zipper::utils::extents::as_array(a.extents())
+                            ,
+                            zipper::utils::extents::as_array(b.extents())
+                    ));
+#else
                             a.extents(), b.extents()));
+#endif
         }
     }
 
