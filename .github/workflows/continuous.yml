@@ -21,13 +21,13 @@ on: [push]
 
 jobs:
   deps:
-    name: Build and Test on ${{ matrix.os }} with Meson v${{ matrix.meson_version }}
+    name: Build and Test on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest] # [ubuntu-latest, macos-latest, windows-latest]
         meson_version: ["1.7.2"] #["1.2.0", "1.3.0", "1.4.0"]
-        build: ['debug'] #build: ['debug','release']
+        build: ['debug','release']
         compiler: 
           - cc: "gcc-14"
             cxx: "g++-14"

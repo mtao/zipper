@@ -40,6 +40,7 @@ if get_option('use_conan')
 else
   range_v3_proj = subproject('range-v3')
   range_v3_dep = range_v3_proj.get_variable('range_v3_dep')
+  required_deps += range_v3_dep
 endif
 
 
