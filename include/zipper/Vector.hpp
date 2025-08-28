@@ -74,22 +74,22 @@ class Vector
         : Base(extents_type(l.size())) {
         std::ranges::copy(l, begin());
     }
-    template <typename T>
-    Vector& operator=(const std::initializer_list<T>& l)
-        requires(extents_traits::is_static)
-    {
-        assert(l.size() == extent(0));
-        std::ranges::copy(l, begin());
-        return *this;
-    }
-    template <typename T>
-    Vector& operator=(const std::initializer_list<T>& l)
-        requires(extents_traits::is_dynamic)
-    {
-        view().resize(extents_type(l.size()));
-        std::ranges::copy(l, begin());
-        return *this;
-    }
+    //template <typename T>
+    //Vector& operator=(const std::initializer_list<T>& l)
+    //    requires(extents_traits::is_static)
+    //{
+    //    assert(l.size() == extent(0));
+    //    std::ranges::copy(l, begin());
+    //    return *this;
+    //}
+    //template <typename T>
+    //Vector& operator=(const std::initializer_list<T>& l)
+    //    requires(extents_traits::is_dynamic)
+    //{
+    //    view().resize(extents_type(l.size()));
+    //    std::ranges::copy(l, begin());
+    //    return *this;
+    //}
 
     auto begin() { return view().begin(); }
     auto end() { return view().end(); }
