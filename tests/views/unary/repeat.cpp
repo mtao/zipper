@@ -8,7 +8,13 @@
 using namespace zipper;
 TEST_CASE("test_repeat_view", "[views][unary]") {
     {
+
+        // This depends on P1814R0 ( CTAD for aggregates and aliases )
+#if defined(__cpp_deduction_guides)
         Array a = views::nullary::uniform_random_view<double>(extents<5>{});
+#else
+        Array_ a = views::nullary::uniform_random_view<double>(extents<5>{});
+#endif
         REQUIRE(a.extents() == extents<5>{});
 
         auto l =
@@ -25,7 +31,11 @@ TEST_CASE("test_repeat_view", "[views][unary]") {
         }
     }
     {
-        Array a = views::nullary::uniform_random_view<double>(extents<5, 3>{});
+#if defined(__cpp_deduction_guides)
+        Array_ a = views::nullary::uniform_random_view<double>(extents<5, 3>{});
+#else
+        Array_a = views::nullary::uniform_random_view<double>(extents<5, 3>{});
+#endif
         REQUIRE(a.extents() == extents<5, 3>{});
 
         auto l =
