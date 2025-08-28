@@ -18,8 +18,10 @@
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 #pragma GCC diagnostic pop
-
+#include "as_array.hpp"
 #include "zipper/types.hpp"
+
+namespace zipper::utils::extents {}
 
 #if defined(__cpp_lib_mdspan)
 namespace std {
@@ -28,12 +30,8 @@ namespace MDSPAN_IMPL_STANDARD_NAMESPACE {
 #endif
 template <typename index_type, index_type... Extents>
 std::string format_as(const extents<index_type, Extents...>& foo) {
-    auto f = [foo]<std::size_t... N>(std::index_sequence<N...>) {
-        return std::make_tuple(foo.extent(N)...);
-    };
-    return fmt::format(
-        "extents({})",
-        fmt::join(f(std::make_index_sequence<sizeof...(Extents)>{}), ","));
+    return fmt::format("extents({})",
+                       fmt::join(zipper::utils::extents::as_array(foo), ","));
 }
 // this last macro is just to prevent clang-format from changing the comment
 // when committing on different machines
