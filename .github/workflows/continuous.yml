@@ -38,6 +38,8 @@ jobs:
             compiler: 
               cc: "clang"
               cxx: "clang++"
+                # cc: "$(brew --prefix llvm@18)/bin/clang"
+                # cxx: "$(brew --prefix llvm@18)/bin/clang++"
 
     env:
       CC: ${{ matrix.platform.compiler.cc }}
