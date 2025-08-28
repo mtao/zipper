@@ -11,7 +11,7 @@ namespace detail {
 template <typename T>
 struct pow {
     constexpr auto operator()(const T& a, const T& b) const {
-        return std::pow<T>(a, b);
+        return std::pow<std::decay_t<T>>(a, b);
     }
 };
 }  // namespace detail
