@@ -27,17 +27,17 @@ jobs:
       matrix:
         meson_version: ["1.7.2"] #["1.2.0", "1.3.0", "1.4.0"]
         build: ['debug','release']
-      platform:
-        - image: 'ubuntu-24.04'
-          os: 'linux'
-          compiler: 
-            cc: "gcc-14"
-            cxx: "g++-14"
-              #- image: 'macos-15'
-              #  os: 'osx'
-              #  compiler: 
-              #    cc: "clang"
-              #    cxx: "clang++"
+        platform:
+          - image: 'ubuntu-24.04'
+            os: 'linux'
+            compiler: 
+              cc: "gcc-14"
+              cxx: "g++-14"
+                #- image: 'macos-15'
+                #  os: 'osx'
+                #  compiler: 
+                #    cc: "clang"
+                #    cxx: "clang++"
 
     env:
       CC: ${{ matrix.platform.compiler.cc }}
