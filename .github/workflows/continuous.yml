@@ -21,7 +21,7 @@ on: [push]
 
 jobs:
   deps:
-    name: Build and Test on ${{ matrix.os }}
+    name: Build and Test on ${{ matrix.os }}-${{ matrix.build }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:

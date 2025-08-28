@@ -18,7 +18,6 @@
 #include <fmt/format.h>
 #pragma GCC diagnostic pop
 
-// #include <format>
 
 #include "zipper/utils/extents/extents_formatter.hpp"
 namespace zipper::views {
