@@ -22,7 +22,7 @@ struct A {
 TEST_CASE("test_vector_struct", "[matrix][storage][dense]") {
 
     A a;
-    a.x = {3,4,1};
+    a.x = {3.0,4.0,1.0};
     A b = a;
     CHECK(b.x == a.x);
 
