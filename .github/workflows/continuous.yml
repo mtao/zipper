@@ -55,7 +55,7 @@ jobs:
         run: python -m pip install meson==${{ matrix.meson_version }} ninja
 
       - name: Configure Project
-        run: meson setup . build
+        run: meson setup . build -Dtesting=true -Dexamples=true
         #run: meson setup --native-file build/conan/conan_meson_native.ini . build
         env:
           CC: gcc
