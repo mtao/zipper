@@ -40,7 +40,7 @@ jobs:
       - name: Linux dependencies
         run: | 
           sudo apt-get update
-          sudo apt-get install -y libfmt-dev libspdlog-dev
+          sudo apt-get install -y libfmt-dev libspdlog-dev gcc-14
       - name: Install python dependencies
         run: python -m pip install meson==${{ matrix.meson_version }} ninja
 
