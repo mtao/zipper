@@ -37,9 +37,9 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Linux dependencies
-        run: | 
-          sudo apt-get update
+      - name: Update Apt
+        run: sudo apt-get update
+      - name: Install apt dependencies
           sudo apt-get install -y libfmt-dev libspdlog-dev gcc-14
       - name: Install python dependencies
         run: python -m pip install meson==${{ matrix.meson_version }} ninja
