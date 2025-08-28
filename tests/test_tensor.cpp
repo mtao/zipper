@@ -38,7 +38,7 @@ void print(auto const& M) {
         for (zipper::index_type j = 0; j < M.extent(0); ++j) {
             for (zipper::index_type k = 0; k < M.extent(1); ++k) {
                 for (zipper::index_type l = 0; l < M.extent(2); ++l) {
-                    spdlog::info("{} {} {} / {} {} {}", j, k, l, M.extents().static_extent(0),M.extents().static_extent(1),M.extents().static_extent(2));
+                    //fmt::print("{} {} {} / {} {} {}\n", j, k, l, M.extents().static_extent(0),M.extents().static_extent(1),M.extents().static_extent(2));
                     std::cout << M(j, k, l) << " ";
                 }
                 std::cout << std::endl;
@@ -68,7 +68,7 @@ TEST_CASE("test_tensor_product", "[storage][dense]") {
 
     zipper::Tensor<double, 3, 3, 3> J =
         zipper::views::nullary::ConstantView<double>{6};
-    spdlog::info("Constant tensor from infinite view");
+    //fmt::print("Constant tensor from infinite view\n");
     print(J);
 
     M = zipper::views::nullary::normal_random_infinite_view<double>(0, 1);
@@ -81,9 +81,9 @@ TEST_CASE("test_tensor_product", "[storage][dense]") {
     x(1) = 5;
     x(2) = 9;
 
-    spdlog::info("Prod of matrix vector");
+    //fmt::print("Prod of matrix vector\n");
     print(M * x);
-    spdlog::info("Prod of matrix Matrix identity");
+    //fmt::print("Prod of matrix Matrix identity\n");
     print(I * M);
     auto IM = I * M;
     static_assert(decltype(I)::extents_type::rank() == 2);
@@ -137,20 +137,20 @@ TEST_CASE("test_form_product", "[storage][tensor]") {
 
     spdlog::warn("Identity matrix products");
     auto E = (D0*E0).eval();
-    spdlog::info("E extents: {} {}", E.extents(), double(E));
+    fmt::print("E extents: {} {}\n", E.extents(), double(E));
 
-    spdlog::info("{} {} {}", 
+    fmt::print("{} {} {}\n", 
             double(D0*E0),
             double(D1*E0),
             double(D2*E0));
 
-    spdlog::info("{} {} {}", 
+    fmt::print("{} {} {}\n", 
             double(D0*E1),
             double(D1*E1),
             double(D2*E1));
 
 
-    spdlog::info("{} {} {}", 
+    fmt::print("{} {} {}\n", 
             double(D0*E2),
             double(D1*E2),
             double(D2*E2));
@@ -185,7 +185,7 @@ TEST_CASE("test_form_product", "[storage][tensor]") {
     print(AB);
     spdlog::warn("Form:");
     print(XY);
-    spdlog::info("Contracted should be: {} got {}",
+    fmt::print("Contracted should be: {} got {}\n",
             double(y.as_form() * b.as_tensor()) * 
             double(x.as_form() * c.as_tensor())
             ,double(XY * AB));
@@ -194,11 +194,11 @@ TEST_CASE("test_form_product", "[storage][tensor]") {
     print(XY * a);
     spdlog::warn("PRODUCT PRODUCT  should be near 0:");
     double M = ((XY * O).eval() * O).eval();
-    spdlog::info("Otput: {}", M);
+    fmt::print("Otput: {}\n", M);
 
     spdlog::warn("PRODUCT PRODUCT  should be otherwise:");
     double M2 = ((XY * O).eval() * T).eval();
-    spdlog::info("Otput: {}", M2);
+    fmt::print("Otput: {}\n", M2);
     //print();
 
 
@@ -212,7 +212,7 @@ TEST_CASE("test_form_product", "[storage][tensor]") {
     spdlog::warn("Form:");
     print(XYZ);
 
-    spdlog::info("Contracted should be: {} got {}",
+    fmt::print("Contracted should be: {} got {}\n",
             double(z.as_form() * a.as_tensor()) * 
             double(y.as_form() * b.as_tensor()) * 
             double(x.as_form() * c.as_tensor())

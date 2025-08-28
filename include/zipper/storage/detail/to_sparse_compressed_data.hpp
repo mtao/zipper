@@ -12,7 +12,7 @@
 #pragma GCC diagnostic ignored "-Wmultiple-inheritance"
 #pragma GCC diagnostic ignored "-Wabi-tag"
 #endif
-#include <spdlog/spdlog.h>
+//#include <spdlog/spdlog.h>
 #pragma GCC diagnostic pop
 
 #include "SparseCompressedData.hpp"
@@ -24,10 +24,11 @@ template <bool ReverseIndices = false, typename ValueType = double,
 SparseCompressedData<ValueType, Extents::rank() - 1> to_sparse_compressed_data(
     const SparseCoordinateAccessor<ValueType, Extents>& e) {
     if (!e.is_compressed()) {
-        spdlog::debug(
-            "Converting SparseCoordinateAccessor to SpasreCompressedData "
-            "without compressing the sparse coordinate data first, creating a "
-            "copy to compress internally");
+        // TODO: decide what to do with this sort of warning
+        //spdlog::debug(
+        //    "Converting SparseCoordinateAccessor to SpasreCompressedData "
+        //    "without compressing the sparse coordinate data first, creating a "
+        //    "copy to compress internally");
         SparseCoordinateAccessor<ValueType, Extents> e2 = e;
         e2.compress();
         return to_sparse_compressed_data(e2);

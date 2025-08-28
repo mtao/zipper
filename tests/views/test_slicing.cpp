@@ -41,7 +41,7 @@ void print(zipper::concepts::VectorBaseDerived auto const& M) {
 }  // namespace
    //
 TEST_CASE("test_matrix_slice_shapes", "[extents][matrix][slice]") {
-    spdlog::info("Manipulating MN: ");
+    //fmt::print("Manipulating MN: \n");
     zipper::MatrixBase RN(zipper::views::nullary::normal_random_view<double>(
         zipper::extents<4, 5>{}, 0, 20));
     zipper::Matrix MN = RN;
@@ -65,7 +65,7 @@ TEST_CASE("test_matrix_slice_shapes", "[extents][matrix][slice]") {
         using ST = std::decay_t<decltype(slice.view())>;
         using T = ST::slice_storage_type;
 
-        static_assert(std::is_same_v<zipper::full_extent_type,
+        static_assert(std::is_same_v<zipper::full_extent_t,
                                      std::tuple_element_t<1, T>::type>);
 
         static_assert(
@@ -78,7 +78,7 @@ TEST_CASE("test_matrix_slice_shapes", "[extents][matrix][slice]") {
         static_assert(zipper::concepts::IndexLike<std::tuple_element_t<0, T>::type>);
         static_assert(!zipper::concepts::IndexLike<std::tuple_element_t<1, T>::type>);
 
-        static_assert(std::is_same_v<zipper::full_extent_type,
+        static_assert(std::is_same_v<zipper::full_extent_t,
                                      std::tuple_element_t<1, T>::type>);
         static_assert(ST::actionable_indices.size() == 2);
         static_assert(ST::actionable_indices[0] == std::dynamic_extent);
@@ -91,12 +91,12 @@ TEST_CASE("test_matrix_slice_shapes", "[extents][matrix][slice]") {
         REQUIRE(4 == slice.view().get_index<1>(4));
     }
     {
-        auto slice = MN.slice<zipper::full_extent_type,
+        auto slice = MN.slice<zipper::full_extent_t,
                               std::integral_constant<zipper::index_type, 1>>();
         using ST = std::decay_t<decltype(slice.view())>;
         using T = ST::slice_storage_type;
 
-        static_assert(std::is_same_v<zipper::full_extent_type,
+        static_assert(std::is_same_v<zipper::full_extent_t,
                                      std::tuple_element_t<0, T>::type>);
 
         static_assert(
@@ -109,7 +109,7 @@ TEST_CASE("test_matrix_slice_shapes", "[extents][matrix][slice]") {
         static_assert(zipper::concepts::IndexLike<std::tuple_element_t<1, T>::type>);
         static_assert(!zipper::concepts::IndexLike<std::tuple_element_t<0, T>::type>);
 
-        static_assert(std::is_same_v<zipper::full_extent_type,
+        static_assert(std::is_same_v<zipper::full_extent_t,
                                      std::tuple_element_t<0, T>::type>);
         static_assert(ST::actionable_indices.size() == 2);
         static_assert(ST::actionable_indices[1] == std::dynamic_extent);
@@ -122,7 +122,7 @@ TEST_CASE("test_matrix_slice_shapes", "[extents][matrix][slice]") {
 }
 
 TEST_CASE("test_matrix_slicing", "[extents][matrix][slice]") {
-    spdlog::info("Manipulating MN: ");
+    //fmt::print("Manipulating MN: \n");
     zipper::MatrixBase RN(zipper::views::nullary::normal_random_view<double>(
         zipper::extents<4, 4>{}, 0, 20));
 
@@ -134,13 +134,13 @@ TEST_CASE("test_matrix_slicing", "[extents][matrix][slice]") {
 
     REQUIRE(MN.extents() == full_slice.extents());
     REQUIRE(full_sliceD.extents() == full_slice.extents());
-    spdlog::info("MN");
+    //fmt::print("MN\n");
     print(MN);
-    spdlog::info("full slice");
+    //fmt::print("full slice\n");
     print(MN.slice<zipper::full_extent_t, zipper::full_extent_t>());
-    spdlog::info("full slice");
+    //fmt::print("full slice\n");
     print(MN.slice<zipper::full_extent_t, zipper::full_extent_t>());
-    spdlog::info("are same");
+    //fmt::print("are same\n");
     print(
         (MN.slice<zipper::full_extent_t, zipper::full_extent_t>().as_array() ==
          MN.as_array()));
@@ -298,7 +298,7 @@ TEST_CASE("test_vector_slice_assignment", "[extents][vector][slice]") {
 }
 
 TEST_CASE("test_partial_slice", "[extents][tensor][slice]") {
-    spdlog::info("Manipulating MN: ");
+    //fmt::print("Manipulating MN: \n");
 }
 
 TEST_CASE("test_span_array_access", "[vector][storage][dense][span]") {

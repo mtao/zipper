@@ -251,14 +251,14 @@ TEST_CASE("test_identity2", "[matrix][vector][lift]") {
     x(2) = 9;
     auto colMat = x.swizzle<zipper::MatrixBase, 0, std::dynamic_extent>();
     auto rowMat = x.swizzle<zipper::MatrixBase, std::dynamic_extent, 0>();
-    spdlog::info("Vector x is: {}");
+    //fmt::print("Vector x is: {}\n");
     REQUIRE(x.extents().rank() == 1);
     REQUIRE(x.extent(0) == 3);
     CHECK(x(0) == 2);
     CHECK(x(1) == 5);
     CHECK(x(2) == 9);
     print(x);
-    spdlog::info("Vector x as colmat:");
+    //fmt::print("Vector x as colmat:\n");
     REQUIRE(colMat.extents().rank() == 2);
     REQUIRE(colMat.extent(0) == 3);
     REQUIRE(colMat.extent(1) == 1);
@@ -267,7 +267,7 @@ TEST_CASE("test_identity2", "[matrix][vector][lift]") {
     CHECK(colMat(1, 0) == 5);
     CHECK(colMat(2, 0) == 9);
     print(colMat);
-    spdlog::info("Vector x as rowmat:");
+    //fmt::print("Vector x as rowmat:\n");
     REQUIRE(rowMat.extents().rank() == 2);
     REQUIRE(rowMat.extent(0) == 1);
     REQUIRE(rowMat.extent(1) == 3);
@@ -309,7 +309,7 @@ TEST_CASE("test_rowwise_colwise_matrix", "[matrix][storage][dense]") {
     zipper::Matrix<double, 3, 5> N;
     N = zipper::views::nullary::uniform_random_view<double>(
         zipper::extents<3, 5>{}, -1, 1);
-    spdlog::info("Random matrix n:");
+    //fmt::print("Random matrix n:\n");
     print(N);
 
     {
@@ -328,7 +328,7 @@ TEST_CASE("test_partial_trace_matrix", "[matrix][storage][dense]") {
     zipper::Matrix<double, 3, 3> N;
     N = zipper::views::nullary::uniform_random_view<double>(
         zipper::extents<3, 3>{}, -1, 1);
-    spdlog::info("Random matrix n:");
+    //fmt::print("Random matrix n:\n");
     print(N);
 
     N.diagonal() = zipper::views::nullary::ConstantView<double, 3>(0.0);
@@ -367,7 +367,7 @@ TEST_CASE("test_partial_trace_matrix", "[matrix][storage][dense]") {
     //     zipper::views::unary::PartialTraceView<std::decay_t<decltype(N.view())>,
     //                                         0>(N.view());
 
-    // spdlog::info("slice first row  of n:");
+    // fmt::print("slice first row  of n:\n");
     // print(first_row_trace);
     // print(N.row(0));
     // CHECK(first_row_trace == N.row(0));
@@ -375,7 +375,7 @@ TEST_CASE("test_partial_trace_matrix", "[matrix][storage][dense]") {
     // zipper::VectorBase first_col_trace =
     //     zipper::views::unary::PartialTraceView<std::decay_t<decltype(N.view())>,
     //                                         1>(N.view());
-    // spdlog::info("slice first col of n:");
+    // fmt::print("slice first col of n:\n");
     // print(first_col_trace);
     // print(N.col(0));
 
@@ -566,7 +566,7 @@ TEST_CASE("test_all_extents", "[storage][dense]") {
         zipper::Matrix<double, 3, std::dynamic_extent>::view_type, 1,
 0>(M.view());
 
-    spdlog::info("M swizzled");
+    fmt::print("M swizzled\n");
     print(swizzled);
 
     std::cout << "M.T * M" << std::endl;
@@ -593,21 +593,21 @@ TEST_CASE("test_all_extents", "[storage][dense]") {
     M2 = R;
     print(M2);
 
-    spdlog::info("and again");
+    fmt::print("and again\n");
     M2 = R;
     print(M2);
 
-    spdlog::info("Integral stuff should come out");
+    fmt::print("Integral stuff should come out\n");
     zipper::MatrixBase RI(zipper::views::nullary::uniform_random_view<int>(
         zipper::extents<4, 4>{}, 0, 40));
     M2 = RI.cast<double>();
     print(M2);
 
-    spdlog::info("and again");
+    fmt::print("and again\n");
     M2 = RI.cast<double>();
     print(M2);
 
-    spdlog::info("Normally distributed: ");
+    fmt::print("Normally distributed: \n");
     zipper::MatrixBase RN(zipper::views::nullary::normal_random_view<double>(
         zipper::extents<4, 4>{}, 0, 20));
     zipper::Matrix MN = RN;
@@ -615,7 +615,7 @@ TEST_CASE("test_all_extents", "[storage][dense]") {
     // CHECK(M2 == M2d);
 
     for (int j = 0; j < 10; ++j) {
-        spdlog::info("power trial {}", j);
+        fmt::print("power trial {}\n", j);
 
         auto N = zipper::index_type((1 + j) * 10);
         zipper::Matrix At = zipper::views::nullary::uniform_random_view<double>(
@@ -628,12 +628,12 @@ TEST_CASE("test_all_extents", "[storage][dense]") {
             // todo: assignment with copied data in case of aliasing
             x = (A * x).eval().normalized();
         }
-        spdlog::info("x {}", x.extent(0));
+        fmt::print("x {}\n", x.extent(0));
         print(x);
-        spdlog::info("Ax {} {}", A.extent(0), A.extent(1));
+        fmt::print("Ax {} {}\n", A.extent(0), A.extent(1));
         print(A * x);
         double e = (A * x).norm();
-        spdlog::info("Eigenvalue {}", e);
+        fmt::print("Eigenvalue {}\n", e);
         print(e * x);
         std::cout << std::endl;
         std::cout << std::endl;

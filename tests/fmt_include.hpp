@@ -14,6 +14,7 @@
 #pragma GCC diagnostic ignored "-Wmultiple-inheritance"
 #endif
 
+#include <fmt/format.h>
 #include <fmt/ranges.h>
-#include <spdlog/spdlog.h>
+//#include <spdlog/spdlog.h>
 #pragma GCC diagnostic pop

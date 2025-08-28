@@ -18,8 +18,8 @@ TEST_CASE("test_storage", "[storage][dense]") {
         double, zipper::extents<4, zipper::dynamic_extent>>
         b(zipper::extents<4, zipper::dynamic_extent>{4});
 
-    spdlog::info(
-        "A size: {} {} {}", a.accessor().container().size(),
+    fmt::print(
+        "A size: {} {} {}\n", a.accessor().container().size(),
         decltype(a)::extents_traits::static_size,
         zipper::detail::ExtentsTraits<zipper::extents<4, 4>>::static_size);
     auto bs = b.as_std_span();
@@ -39,7 +39,7 @@ TEST_CASE("test_storage", "[storage][dense]") {
     for (zipper::index_type j = 0; j < a.extent(0); ++j) {
         for (zipper::index_type k = 0; k < a.extent(1); ++k) {
             double v = b(j, k);
-            spdlog::warn("{} {} {}", j, k, v);
+            fmt::print("{} {} {}\n", j, k, v);
             a(j, k) = b(j, k);
         }
     }
@@ -65,7 +65,7 @@ TEST_CASE("test_storage", "[storage][dense]") {
 
     for (zipper::index_type j = 0; j < av.extent(0); ++j) {
         for (zipper::index_type k = 0; k < av.extent(1); ++k) {
-            spdlog::warn("{} {} {}", j, k, av(j, k));
+            fmt::print("{} {} {}\n", j, k, av(j, k));
         }
     }
 
@@ -74,7 +74,7 @@ TEST_CASE("test_storage", "[storage][dense]") {
 
     for (zipper::index_type j = 0; j < pv.extent(0); ++j) {
         for (zipper::index_type k = 0; k < pv.extent(1); ++k) {
-            spdlog::warn("{} {} {}", j, k, pv(j, k));
+            fmt::print("{} {} {}\n", j, k, pv(j, k));
         }
     }
 
@@ -97,7 +97,7 @@ TEST_CASE("test_storage", "[storage][dense]") {
     }
 
     b.assign(pv);
-    spdlog::info("B extent: {}", b.extent(1));
+    fmt::print("B extent: {}\n", b.extent(1));
     for (zipper::index_type j = 0; j < b.extent(0); ++j) {
         for (zipper::index_type k = 0; k < b.extent(1); ++k) {
             fmt::print("{} ", b(j, k));

@@ -54,7 +54,7 @@ TEST_CASE("test_deductions", "[vector][storage][dense]") {
     CHECK(y(1) == 2);
     CHECK(y(2) == 4);
 #if defined(__cpp_lib_span_initializer_list)
-    VectorBase z = {1,2,3};
+    VectorBase z(std::array{1,2,3});
     CHECK(z(0) == 1);
     CHECK(z(1) == 2);
     CHECK(z(2) == 3);

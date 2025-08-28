@@ -20,14 +20,14 @@ TEST_CASE("test_array_minmax", "[array][storage][dense]") {
     y(0,1) = -2;
     y(1,1) = 3;
 
-    auto z = min(x,y);
+    auto z = zipper::min(x,y);
 
     CHECK(z(0,0) == 0);
     CHECK(z(1,0) == 0);
     CHECK(z(0,1) == -2);
     CHECK(z(1,1) == 3);
 
-    auto v = max(x,y);
+    auto v = zipper::max(x,y);
 
     CHECK(v(0,0) == 1);
     CHECK(v(1,0) == 1);

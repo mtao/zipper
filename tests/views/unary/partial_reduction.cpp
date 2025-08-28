@@ -166,7 +166,7 @@ TEST_CASE("test_partial_sum", "[views][unary]") {
         auto pr = views::unary::PartialReductionView<
             decltype(v), views::reductions::Trace, 1, 2>(v);
 
-        spdlog::info("Partial reduction");
+        fmt::print("Partial reduction\n");
         print2(pr);
 
         ArrayBase ar(pr);

@@ -42,7 +42,7 @@ TEST_CASE("test_determinant", "[matrix][storage][dense]") {
         Matrix<double, std::dynamic_extent, std::dynamic_extent> A =
             views::nullary::IdentityView<double, std::dynamic_extent,
                                          std::dynamic_extent>(j, j);
-        spdlog::info("{}", A.extent(0), A.extent(1));
+        //fmt::print("{} {}\n", A.extent(0), A.extent(1));
         CHECK(views::reductions::Determinant(A.view())() == 1);
     }
 }
