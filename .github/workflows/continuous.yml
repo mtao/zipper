@@ -52,13 +52,15 @@ jobs:
         with:
           python-version: '3.x'
 
+      - name: Set up Homebrew
+        if: matrix.platform.os == 'osx'
+        id: set-up-homebrew
+        uses: Homebrew/actions/setup-homebrew@main
+
       - name: Update Apt
         if: matrix.platform.os == 'linux'
         run: sudo apt-get update
 
-      - name: Update brew 
-        if: matrix.platform.os == 'osx'
-        run: brew update
 
       - name: Install apt dependencies
         if: matrix.platform.os == 'linux'
