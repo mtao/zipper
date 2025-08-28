@@ -36,8 +36,8 @@ jobs:
           - image: 'macos-15'
             os: 'osx'
             compiler: 
-              cc: "clang"
-              cxx: "clang++"
+              cc: "$(brew --prefix llvm@18)/bin/clang"
+              cxx: "$(brew --prefix llvm@18)/bin/clang++"
 
     env:
       CC: ${{ matrix.platform.compiler.cc }}
@@ -52,16 +52,11 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Set up Homebrew
-        if: matrix.platform.os == 'osx'
-        id: set-up-homebrew
-        uses: Homebrew/actions/setup-homebrew@main
-
       - name: Update Apt
         if: matrix.platform.os == 'linux'
         run: sudo apt-get update
 
-      - name: Install brew dependencies
+      - name: Update brew 
         if: matrix.platform.os == 'osx'
         run: brew update
 
