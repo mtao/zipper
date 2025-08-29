@@ -214,7 +214,7 @@ TEST_CASE("test_constexpr_arithmetic_mix", "[detail][constexpr_arithmetic]") {
         CHECK(IR(R24) == 24);
 
 #if defined(ZIPPER_DONT_USE_ALIAS_CTAD)
-        CA<IC<24> C24(IC<24>{});
+        CA<IC<24>> C24(IC<24>{});
 #else
         CA C24(IC<24>{});
 #endif
@@ -245,7 +245,7 @@ TEST_CASE("test_constexpr_arithmetic_mix", "[detail][constexpr_arithmetic]") {
         CHECK(IR(R8) == 8);
 
 #if defined(ZIPPER_DONT_USE_ALIAS_CTAD)
-        CA<IC<7> C24(IC<7>{});
+        CA<IC<7>> C7(IC<7>{});
 #else
         CA C7(IC<7>{});
 #endif
