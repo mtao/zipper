@@ -71,11 +71,19 @@ TEST_CASE("test_constexpr_arithmetic_binops",
 
 TEST_CASE("test_constexpr_arithmetic_runtime",
           "[detail][constexpr_arithmetic]") {
+#if defined(ZIPPER_DONT_USE_ALIAS_CTAD)
+    CA<zipper::index_type> R3(3);
+    CA<zipper::index_type> R4(4);
+    CA<zipper::index_type> R6(6);
+    CA<zipper::index_type> R12(12);
+    CA<zipper::index_type> RD(std::dynamic_extent);
+#else
     CA R3(3);
     CA R4(4);
     CA R6(6);
     CA R12(12);
     CA RD(std::dynamic_extent);
+#endif
 
     static_assert(std::is_same_v<std::decay_t<decltype(R3)>, CA<IR>>);
     static_assert(std::is_same_v<std::decay_t<decltype(R4)>, CA<IR>>);
@@ -116,11 +124,19 @@ TEST_CASE("test_constexpr_arithmetic_runtime",
 }
 TEST_CASE("test_constexpr_arithmetic_compiletime",
           "[detail][constexpr_arithmetic]") {
+#if defined(ZIPPER_DONT_USE_ALIAS_CTAD)
+    CA<IC<3>> R3(IC<3>{});
+    CA<IC<4>> R4(IC<4>{});
+    CA<IC<6>> R6(IC<6>{});
+    CA<IC<12>> R12(IC<12>{});
+    CA<IC<std::dynamic_extent>> RD(IC<std::dynamic_extent>{});
+#else
     CA R3(IC<3>{});
     CA R4(IC<4>{});
     CA R6(IC<6>{});
     CA R12(IC<12>{});
     CA RD(IC<std::dynamic_extent>{});
+#endif
 
     static_assert(std::is_same_v<std::decay_t<decltype(R3)>, CA<IC<3>>>);
     static_assert(std::is_same_v<std::decay_t<decltype(R4)>, CA<IC<4>>>);
@@ -160,6 +176,18 @@ TEST_CASE("test_constexpr_arithmetic_compiletime",
 }
 
 TEST_CASE("test_constexpr_arithmetic_mix", "[detail][constexpr_arithmetic]") {
+#if defined(ZIPPER_DONT_USE_ALIAS_CTAD)
+    CA<zipper::index_type> R3(3);
+    CA<zipper::index_type> R4(4);
+    CA<zipper::index_type> R6(6);
+    CA<zipper::index_type> R12(12);
+    CA<zipper::index_type> RD(std::dynamic_extent);
+    CA<IC<3>> C3(IC<3>{});
+    CA<IC<4>> C4(IC<4>{});
+    CA<IC<6>> C6(IC<6>{});
+    CA<IC<12>> C12(IC<12>{});
+    CA<IC<std::dynamic_extent>> CD(IC<std::dynamic_extent>{});
+#else
     CA R3(3);
     CA R4(4);
     CA R6(6);
@@ -170,6 +198,7 @@ TEST_CASE("test_constexpr_arithmetic_mix", "[detail][constexpr_arithmetic]") {
     CA C6(IC<6>{});
     CA C12(IC<12>{});
     CA CD(IC<std::dynamic_extent>{});
+#endif
 
     {
         auto R7 = C3 + R4;
@@ -184,7 +213,11 @@ TEST_CASE("test_constexpr_arithmetic_mix", "[detail][constexpr_arithmetic]") {
         static_assert(std::is_same_v<std::decay_t<decltype(R24)>, CA<IR>>);
         CHECK(IR(R24) == 24);
 
+#if defined(ZIPPER_DONT_USE_ALIAS_CTAD)
+        CA<IC<24> C24(IC<24>{});
+#else
         CA C24(IC<24>{});
+#endif
         auto R8 = C24 / R3;
         static_assert(std::is_same_v<std::decay_t<decltype(R8)>, CA<IR>>);
         CHECK(IR(R8) == 8);
@@ -211,7 +244,11 @@ TEST_CASE("test_constexpr_arithmetic_mix", "[detail][constexpr_arithmetic]") {
         static_assert(std::is_same_v<std::decay_t<decltype(R8)>, CA<IR>>);
         CHECK(IR(R8) == 8);
 
+#if defined(ZIPPER_DONT_USE_ALIAS_CTAD)
+        CA<IC<7> C24(IC<7>{});
+#else
         CA C7(IC<7>{});
+#endif
         auto R5 = R12 % C7;
         static_assert(std::is_same_v<std::decay_t<decltype(R5)>, CA<IR>>);
         CHECK(IR(R5) == 5);
