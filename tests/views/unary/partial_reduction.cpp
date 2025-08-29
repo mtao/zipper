@@ -172,8 +172,8 @@ TEST_CASE("test_partial_sum", "[views][unary]") {
         ArrayBase ar(pr);
         ArrayBase c(C.view());
 
-        fmt::print("{}\n",ar);
-        fmt::print("{}\n",c);
+        //fmt::print("{}\n",ar);
+        //fmt::print("{}\n",c);
         // TODO: this could/should be equal right?
         CHECK((ar - c).norm() < 1e-15);
     }
