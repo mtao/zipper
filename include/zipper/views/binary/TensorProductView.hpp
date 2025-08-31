@@ -7,7 +7,8 @@
 
 namespace zipper::views {
 namespace binary {
-template <zipper::concepts::QualifiedViewDerived A, zipper::concepts::QualifiedViewDerived B>
+template <zipper::concepts::QualifiedViewDerived A,
+          zipper::concepts::QualifiedViewDerived B>
 class TensorProductView;
 
 namespace detail {
@@ -34,8 +35,9 @@ struct tensor_coeffwise_extents_values<extents<A...>, extents<B...>> {
         using AEI = a_extents_traits::dynamic_indices_helper;
         using BEI = b_extents_traits::dynamic_indices_helper;
 
-        constexpr static auto ADI = AEI::get_dynamic_indices();
-        constexpr static auto BDI = BEI::get_dynamic_indices();
+        constexpr static auto ADI = AEI::dynamic_indices;
+        constexpr static auto BDI = BEI::dynamic_indices;
+
 
         return product_extents_type(a.extent(ADI[N])..., b.extent(BDI[M])...);
     }
@@ -44,8 +46,10 @@ struct tensor_coeffwise_extents_values<extents<A...>, extents<B...>> {
                                                 const extents<B...>& b) {
         return merge(
             a, b,
-            std::make_integer_sequence<rank_type, rank_type(sizeof...(A))>{},
-            std::make_integer_sequence<rank_type, rank_type(sizeof...(B))>{});
+            std::make_integer_sequence<rank_type, a_extents_type::rank_dynamic()>{},
+            std::make_integer_sequence<rank_type, b_extents_type::rank_dynamic()>{}
+
+            );
     }
 };
 
@@ -78,7 +82,8 @@ struct detail::ViewTraits<binary::TensorProductView<A, B>>
 };
 
 namespace binary {
-template <zipper::concepts::QualifiedViewDerived A, zipper::concepts::QualifiedViewDerived B>
+template <zipper::concepts::QualifiedViewDerived A,
+          zipper::concepts::QualifiedViewDerived B>
 class TensorProductView : public BinaryViewBase<TensorProductView<A, B>, A, B> {
    public:
     using self_type = TensorProductView<A, B>;
