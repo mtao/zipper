@@ -1,6 +1,8 @@
 
 #if !defined(ZIPPER_UTILS_EXTENTS_IS_CUBIC_HPP)
 #define ZIPPER_UTILS_EXTENTS_IS_CUBIC_HPP
+#include <optional>
+
 #include "zipper/concepts/ExtentsType.hpp"
 #include "zipper/detail/ExtentsTraits.hpp"
 #include "zipper/detail/pack_index.hpp"
@@ -57,6 +59,21 @@ constexpr bool is_cubic(std::integer_sequence<rank_type, N...> n) {
 
         }
 */
+
+template <zipper::concepts::ExtentsType Ext>
+constexpr std::optional<index_type> size_if_cubic(const Ext& e) {
+    if constexpr (Ext::rank_dynamic() == 0) {
+        if constexpr (is_cubic<Ext>()) {
+            return detail::max_dim<Ext>();
+        } else {
+            return {};
+        }
+    } else {
+        if (is_cubic(e)) {
+            return detail::max_dim(e);
+        }
+    }
+}
 template <zipper::concepts::ExtentsType Ext>
 constexpr bool is_cubic() {
     return detail::is_cubic<Ext>(
