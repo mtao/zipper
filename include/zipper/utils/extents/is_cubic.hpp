@@ -63,7 +63,7 @@ constexpr bool is_cubic(std::integer_sequence<rank_type, N...> n) {
 template <zipper::concepts::ExtentsType Ext>
 constexpr std::optional<index_type> size_if_cubic(const Ext& e) {
     if constexpr (Ext::rank_dynamic() == 0) {
-        if constexpr (is_cubic<Ext>()) {
+        if constexpr (detail::is_cubic<Ext>()) {
             return detail::max_dim<Ext>();
         } else {
             return {};

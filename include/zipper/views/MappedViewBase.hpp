@@ -38,7 +38,7 @@ class MappedViewBase : public ViewBase<Derived_> {
     void resize_extents(const E2& e)
         requires(extents_traits::template is_convertable_from<E2>())
     {
-        m_mapping = mapping_type(zipper::utils::extents::convert_extents<extents_type>(e));
+        m_mapping = mapping_type(extents_traits::convert_from(e));
     }
 
    protected:

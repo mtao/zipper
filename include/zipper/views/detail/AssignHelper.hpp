@@ -65,7 +65,7 @@ void AssignHelper<From, To>::assign(const From& from, To& to) {
         !assigning_from_infinite && ToTraits::is_resizable;
     if constexpr (FromTraits::is_coefficient_consistent) {
         if constexpr (should_resize) {
-            to.resize(from.extents());
+            to.resize(to_extents_traits::convert_from(from.extents()));
         } else if constexpr (to_extents_traits::is_dynamic &&
                              !assigning_from_infinite) {
             assert(to.extents() == from.extents());
@@ -79,7 +79,7 @@ void AssignHelper<From, To>::assign(const From& from, To& to) {
 
         AssignHelper<From, POS>::assign_direct(from, pos);
         if constexpr (should_resize) {
-            to.resize(from.extents());
+        to.resize(to_extents_traits::convert_from(from.extents()));
         }
         AssignHelper<POS, To>::assign_direct(pos, to);
     }
