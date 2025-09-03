@@ -21,11 +21,12 @@ class Vector
     using extents_traits = detail::ExtentsTraits<extents_type>;
     using Base::extent;
     using Base::extents;
+    constexpr static bool is_static = extents_traits::is_static;
 
     using span_type =
         VectorBase<storage::SpanStorage<ValueType, zipper::extents<Rows>>>;
-    using const_span_type =
-        VectorBase<storage::SpanStorage<const ValueType, zipper::extents<Rows>>>;
+    using const_span_type = VectorBase<
+        storage::SpanStorage<const ValueType, zipper::extents<Rows>>>;
 
     Vector() = default;
     Vector(const Vector& o) = default;
@@ -51,7 +52,6 @@ class Vector
         assert(rows == extent(0));
     }
 
-
     template <index_type R2>
     Vector(const Vector<value_type, R2>& other) : Base(other.view()) {}
 
@@ -74,22 +74,37 @@ class Vector
         : Base(extents_type(l.size())) {
         std::ranges::copy(l, begin());
     }
-    //template <typename T>
-    //Vector& operator=(const std::initializer_list<T>& l)
-    //    requires(extents_traits::is_static)
+
+    span_type as_span() {
+        if constexpr (is_static) {
+            return span_type(view().as_std_span());
+        } else {
+            return span_type(view().as_std_span(), extents());
+        }
+    }
+    const_span_type as_span() const {
+        if constexpr (is_static) {
+            return const_span_type(view().as_std_span());
+        } else {
+            return const_span_type(view().as_std_span(), extents());
+        }
+    }
+    // template <typename T>
+    // Vector& operator=(const std::initializer_list<T>& l)
+    //     requires(extents_traits::is_static)
     //{
-    //    assert(l.size() == extent(0));
-    //    std::ranges::copy(l, begin());
-    //    return *this;
-    //}
-    //template <typename T>
-    //Vector& operator=(const std::initializer_list<T>& l)
-    //    requires(extents_traits::is_dynamic)
+    //     assert(l.size() == extent(0));
+    //     std::ranges::copy(l, begin());
+    //     return *this;
+    // }
+    // template <typename T>
+    // Vector& operator=(const std::initializer_list<T>& l)
+    //     requires(extents_traits::is_dynamic)
     //{
-    //    view().resize(extents_type(l.size()));
-    //    std::ranges::copy(l, begin());
-    //    return *this;
-    //}
+    //     view().resize(extents_type(l.size()));
+    //     std::ranges::copy(l, begin());
+    //     return *this;
+    // }
 
     auto begin() { return view().begin(); }
     auto end() { return view().end(); }
@@ -103,11 +118,11 @@ template <typename T>
 using VectorX = Vector<T, dynamic_extent>;
 
 template <concepts::VectorViewDerived MB>
-Vector(const MB& o)
-    -> Vector<std::decay_t<typename MB::value_type>, MB::extents_type::static_extent(0)>;
+Vector(const MB& o) -> Vector<std::decay_t<typename MB::value_type>,
+                              MB::extents_type::static_extent(0)>;
 template <concepts::VectorBaseDerived MB>
-Vector(const MB& o)
-    -> Vector<std::decay_t<typename MB::value_type>, MB::extents_type::static_extent(0)>;
+Vector(const MB& o) -> Vector<std::decay_t<typename MB::value_type>,
+                              MB::extents_type::static_extent(0)>;
 }  // namespace zipper
 
 namespace zipper::views {

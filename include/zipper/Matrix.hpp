@@ -33,6 +33,7 @@ class Matrix
     using const_span_type = MatrixBase<storage::SpanStorage<
         const ValueType, zipper::extents<Rows, Cols>, layout_type>>;
     using Base::transpose;
+    constexpr static bool is_static = extents_traits::is_static;
 
     Matrix()
         // requires(extents_traits::is_static)
@@ -68,6 +69,21 @@ class Matrix
         for (index_type j = 0; j < l.size(); ++j, ++it) {
             assert(it->size() == extent(1));
             row(j) = *it;
+        }
+    }
+
+    span_type as_span() {
+        if constexpr (is_static) {
+            return span_type(view().as_std_span());
+        } else {
+            return span_type(view().as_std_span(), extents());
+        }
+    }
+    const_span_type as_span() const {
+        if constexpr (is_static) {
+            return const_span_type(view().as_std_span());
+        } else {
+            return const_span_type(view().as_std_span(), extents());
         }
     }
 

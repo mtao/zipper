@@ -528,6 +528,30 @@ TEST_CASE("test_blocks", "[matrix][storage][dense]") {
         }
     }
 }
+
+TEST_CASE("test_span", "[matrix][storage][dense]") {
+    zipper::Matrix<zipper::index_type, 3, 6> C;
+    zipper::Matrix<zipper::index_type, 3, std::dynamic_extent>
+        RC( 6);
+    zipper::Matrix<zipper::index_type, std::dynamic_extent, std::dynamic_extent>
+        R(3, 6);
+
+    auto CS = C.as_span();
+    auto RCS = RC.as_span();
+    auto RS = R.as_span();
+
+    REQUIRE(CS.extents() == C.extents());
+    REQUIRE(RS.extents() == R.extents());
+    REQUIRE(RCS.extents() == RC.extents());
+
+    for(zipper::index_type j = 0; j < 3; ++j) {
+    for(zipper::index_type k = 0; k < 6; ++k) {
+        CHECK(&C(j,k) == &CS(j,k));
+        CHECK(&RC(j,k) == &RCS(j,k));
+        CHECK(&R(j,k) == &RS(j,k));
+    }
+    }
+}
 /*
 TEST_CASE("test_all_extents", "[storage][dense]") {
 

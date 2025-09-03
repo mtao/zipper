@@ -170,3 +170,20 @@ TEST_CASE("slicing", "[vector][storage][dense]") {
 struct A {
     zipper::Vector<double, 3> x;
 };
+
+TEST_CASE("test_span", "[vector][storage][dense]") {
+    zipper::Vector<zipper::index_type, 3> C;
+    zipper::Vector<zipper::index_type, std::dynamic_extent>
+        R(3);
+
+    auto CS = C.as_span();
+    auto RS = R.as_span();
+
+    REQUIRE(CS.extents() == C.extents());
+    REQUIRE(RS.extents() == R.extents());
+
+    for(zipper::index_type j = 0; j < 3; ++j) {
+        CHECK(&C(j) == &CS(j));
+        CHECK(&R(j) == &RS(j));
+    }
+}
