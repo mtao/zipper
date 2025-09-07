@@ -3,25 +3,29 @@
 
 #include <array>
 #include <zipper/types.hpp>
+#include <span>
 
 namespace zipper::storage {
-template <typename ValueType, std::size_t N_>
+template <typename ElementType, std::size_t N_>
 class StaticDenseData {
     // TODO: clean up downstream logic to not require this hack
     constexpr static std::size_t N = std::max<std::size_t>(
         N_, 1);  // if we have empty extents we have a scalar
 
    public:
-    using value_type = ValueType;
-    using storage_type = std::array<value_type, N>;
+    using element_type = ElementType;
+    using value_type = std::remove_cv_t<ElementType>;
+    using storage_type = std::array<element_type, N>;
+    StaticDenseData() = default;
+    StaticDenseData(storage_type data) : m_data(std::move(data)) {}
     constexpr static index_type static_size = N;
 
     constexpr static auto size() -> std::size_t { return N; }
-    value_type coeff(index_type i) const { return m_data[i]; }
-    value_type& coeff_ref(index_type i) { return m_data[i]; }
-    const value_type& const_coeff_ref(index_type i) const { return m_data[i]; }
-    value_type* data() { return m_data.data(); }
-    const value_type* data() const { return m_data.data(); }
+    element_type coeff(index_type i) const { return m_data[i]; }
+    element_type& coeff_ref(index_type i) { return m_data[i]; }
+    const element_type& const_coeff_ref(index_type i) const { return m_data[i]; }
+    element_type* data() { return m_data.data(); }
+    const element_type* data() const { return m_data.data(); }
 
     const auto& container() const { return m_data; }
     auto& container() { return m_data; }
@@ -35,8 +39,8 @@ class StaticDenseData {
     auto cbegin() const -> const_iterator_type { return m_data.begin(); }
     auto cend() const -> const_iterator_type { return m_data.end(); }
 
-    std::span<value_type, static_size> as_std_span() { return container(); }
-    std::span<const value_type, static_size> as_std_span() const {
+    std::span<element_type, static_size> as_std_span() { return container(); }
+    std::span<const element_type, static_size> as_std_span() const {
         return container();
     }
 

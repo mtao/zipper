@@ -5,7 +5,7 @@
 #include <zipper/Vector.hpp>
 #include <zipper/VectorBase.hpp>
 
-#include "catch_include.hpp"
+#include "../catch_include.hpp"
 using namespace zipper;
 TEST_CASE("test_vector_span", "[vector][storage][dense][span]") {
     std::vector<int> vec = {2, 3};

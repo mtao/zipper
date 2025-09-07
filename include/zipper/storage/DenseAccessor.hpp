@@ -29,6 +29,7 @@ class DenseAccessor
     using traits = views::detail::ViewTraits<self_type>;
     using data_type = DataType;
     using value_type = DataType::value_type;
+    using element_type = DataType::element_type;
     using extents_type = Extents;
     using extents_traits = typename zipper::detail::ExtentsTraits<extents_type>;
     constexpr static bool IsStatic =
@@ -37,7 +38,9 @@ class DenseAccessor
     constexpr static bool data_is_static =
         data_type::static_size != std::dynamic_extent;
 
-    using span_type = DenseAccessor<SpanData<value_type, DataType::static_size>,
+    using span_type = DenseAccessor<SpanData<element_type, DataType::static_size>,
+                                    Extents, LayoutPolicy, AccessorPolicy>;
+    using const_span_type = DenseAccessor<SpanData<const element_type, DataType::static_size>,
                                     Extents, LayoutPolicy, AccessorPolicy>;
 
     const data_type& linear_access() const { return m_data; }
@@ -81,12 +84,15 @@ class DenseAccessor
             return span_type(linear_access().as_std_span(), extents());
         }
     }
-    const span_type as_span() const {
+    const const_span_type as_const_span() const {
         if constexpr (IsStatic) {
-            return span_type(linear_access().as_std_span());
+            return const_span_type(linear_access().as_std_span());
         } else {
-            return span_type(linear_access().as_std_span(), extents());
+            return const_span_type(linear_access().as_std_span(), extents());
         }
+    }
+    const const_span_type as_span() const {
+        return as_const_span();
     }
 
     template <zipper::concepts::ExtentsType E2>

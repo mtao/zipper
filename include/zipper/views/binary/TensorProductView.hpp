@@ -35,8 +35,11 @@ struct tensor_coeffwise_extents_values<extents<A...>, extents<B...>> {
         using AEI = a_extents_traits::dynamic_indices_helper;
         using BEI = b_extents_traits::dynamic_indices_helper;
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
         constexpr static auto ADI = AEI::dynamic_indices;
         constexpr static auto BDI = BEI::dynamic_indices;
+#pragma GCC diagnostic pop
 
 
         return product_extents_type(a.extent(ADI[N])..., b.extent(BDI[M])...);

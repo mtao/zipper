@@ -11,7 +11,7 @@ test_hello_world = executable('test_hello_world', ['test_hello_world.cpp', 'test
 test('hello world', test_hello_world)
 
 
-base_class_sources = ['test_span.cpp', 'test_vector.cpp','test_matrix.cpp', 'test_tensor.cpp', 'test_array.cpp']
+base_class_sources = [ 'test_vector.cpp','test_matrix.cpp', 'test_tensor.cpp', 'test_array.cpp']
 test_base_classes = executable('test_base_classes', base_class_sources, dependencies: [zipper_test_dep])
 test('base_classes', test_base_classes)
 
