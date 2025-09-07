@@ -48,9 +48,7 @@ class MatrixBase : public ZipperBase<MatrixBase, View> {
     auto eval() const { return Matrix(*this); }
 
     template <concepts::MatrixBaseDerived Other>
-    MatrixBase(const Other& other)
-        requires(view_traits::is_writable)
-        : MatrixBase(other.view()) {}
+    MatrixBase(const Other& other) : MatrixBase(other.view()) {}
 
     MatrixBase& operator=(concepts::MatrixBaseDerived auto const& v) {
         return operator=(v.view());

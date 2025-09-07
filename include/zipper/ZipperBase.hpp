@@ -75,8 +75,8 @@ class ZipperBase {
     }
 
     template <typename... Args>
-    ZipperBase(Args&&... args)
-        : m_view(std::forward<Args>(args)...) {}
+        requires(!(concepts::ZipperBaseDerived<Args> && ...))
+    ZipperBase(Args&&... args) : m_view(std::forward<Args>(args)...) {}
 
     template <concepts::ViewDerived Other>
     Derived& operator=(const Other& other)

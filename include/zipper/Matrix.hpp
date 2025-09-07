@@ -79,12 +79,15 @@ class Matrix
             return span_type(view().as_std_span(), extents());
         }
     }
-    const_span_type as_span() const {
+    const_span_type as_const_span() const {
         if constexpr (is_static) {
             return const_span_type(view().as_std_span());
         } else {
             return const_span_type(view().as_std_span(), extents());
         }
+    }
+    const_span_type as_span() const {
+        return as_const_span();
     }
 
     Matrix(index_type dyn_size)

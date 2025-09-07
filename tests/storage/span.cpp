@@ -45,6 +45,16 @@ TEST_CASE("test_vector_span", "[vector][storage][dense][span]") {
     CHECK(y[0] == 3);
     CHECK(y[1] == 4);
 
+    {
+        Vector x = v;
+        auto a = x.as_span();
+        auto b = x.as_const_span();
+        CHECK((a == b));
+
+        zipper::Vector<int, 2>::const_span_type d = a;
+        CHECK((a == d));
+    }
+
     // this last case WOULD be very cool, but seems to not work due to a parse
     // limitation in type deductions? In particular, gcc at least seems to
     // really want y to be the name of a variable of type VectorBase
@@ -73,6 +83,16 @@ TEST_CASE("test_matrix_span", "[matrix][storage][dense][span]") {
     CHECK(M(1, 1) == 3);
 
     CHECK((M == Md));
+
+    {
+        Matrix m = M;
+        auto a = m.as_span();
+        auto b = m.as_const_span();
+        CHECK((a == b));
+
+        zipper::Matrix<int, 2, 2>::const_span_type d = a;
+        CHECK((a == d));
+    }
 
     // this last case WOULD be very cool, but seems to not work due to a parse
     // limitation in type deductions? In particular, gcc at least seems to

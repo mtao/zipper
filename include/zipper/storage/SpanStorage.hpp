@@ -19,7 +19,8 @@ class SpanStorage
     : public views::nullary::DenseStorageViewBase<
           SpanStorage<ElementType, Extents, LayoutPolicy, AccessorPolicy>> {
    public:
-    using self_type = SpanStorage<ElementType, Extents, LayoutPolicy, AccessorPolicy>;
+    using self_type =
+        SpanStorage<ElementType, Extents, LayoutPolicy, AccessorPolicy>;
     using ParentType = views::nullary::DenseStorageViewBase<self_type>;
     using traits = views::detail::ViewTraits<self_type>;
     using value_type = typename traits::value_type;
@@ -55,18 +56,36 @@ class SpanStorage
         requires(IsStatic)
         : ParentType(), m_accessor(s) {}
 
-    //SpanStorage(const std::span<value_type, std_span_type& s, const extents_type& extents)
-    //    requires(!IsStatic)
-    //    : ParentType(extents), m_accessor(s) {}
+    SpanStorage(const std::span<value_type, extents_traits::static_size>& s,
+                const extents_type& extents)
+        requires(!IsStatic && !std::same_as<element_type, value_type>)
+        : ParentType(extents), m_accessor(s) {}
 
-    //SpanStorage(const std_span_type& s)
-    //    requires(IsStatic)
-    //    : ParentType(), m_accessor(s) {}
+    SpanStorage(const std::span<value_type, extents_traits::static_size>& s)
+        requires(IsStatic && !std::same_as<element_type, value_type>)
+        : ParentType(), m_accessor(s) {}
+
+    template <typename AP>
+    SpanStorage(const SpanStorage<value_type, Extents, LayoutPolicy, AP>& s)
+        requires(!IsStatic && !std::same_as<element_type, value_type>)
+        : SpanStorage(s.accessor().as_std_span(), s.extents()) {}
+    template <typename AP>
+    SpanStorage(const SpanStorage<value_type, Extents, LayoutPolicy, AP>& s)
+        requires(IsStatic && !std::same_as<element_type, value_type>)
+        : SpanStorage(s.accessor().as_std_span()) {}
+
+    // SpanStorage(const std::span<value_type, std_span_type& s, const
+    // extents_type& extents)
+    //     requires(!IsStatic)
+    //     : ParentType(extents), m_accessor(s) {}
+
+    // SpanStorage(const std_span_type& s)
+    //     requires(IsStatic)
+    //     : ParentType(), m_accessor(s) {}
 
     SpanStorage(element_type* s)
         requires(IsStatic)
-        : ParentType(), m_accessor(std_span_type(s,std_span_type::extent)) {}
-
+        : ParentType(), m_accessor(std_span_type(s, std_span_type::extent)) {}
 
     SpanStorage(const std_span_type& s)
         requires(!IsStatic && extents_type::rank() == 1)

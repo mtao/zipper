@@ -14,10 +14,18 @@ class SpanData {
 
     SpanData(const std_span_type& s) : m_data(s) {}
 
-    constexpr auto size() const noexcept -> std::size_t { return m_data.size(); }
+    SpanData(const std::span<value_type, N>& s)
+        requires(!std::same_as<element_type, value_type>)
+        : m_data(s) {}
+
+    constexpr auto size() const noexcept -> std::size_t {
+        return m_data.size();
+    }
     element_type coeff(index_type i) const { return m_data[i]; }
     element_type& coeff_ref(index_type i) { return m_data[i]; }
-    const element_type& const_coeff_ref(index_type i) const { return m_data[i]; }
+    const element_type& const_coeff_ref(index_type i) const {
+        return m_data[i];
+    }
     element_type* data() noexcept { return m_data.data(); }
     const element_type* data() const noexcept { return m_data.data(); }
 
@@ -38,9 +46,13 @@ class SpanData {
 #endif
     auto begin() noexcept -> iterator_type { return m_data.begin(); }
     auto end() noexcept -> iterator_type { return m_data.end(); }
-    auto begin() const noexcept -> const_iterator_type { return m_data.begin(); }
+    auto begin() const noexcept -> const_iterator_type {
+        return m_data.begin();
+    }
     auto end() const noexcept -> const_iterator_type { return m_data.end(); }
-    auto cbegin() const noexcept -> const_iterator_type { return m_data.begin(); }
+    auto cbegin() const noexcept -> const_iterator_type {
+        return m_data.begin();
+    }
     auto cend() const noexcept -> const_iterator_type { return m_data.end(); }
 
    private:
