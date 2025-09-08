@@ -44,9 +44,10 @@ class Matrix
         requires(extents_traits::is_static)
     {
         assert(l.size() == extent(0));
-        for (index_type j = 0; j < l.size(); ++j) {
-            assert(l[j].size() == extent(1));
-            l.row(j) = l[j];
+        auto it = l.begin();
+        for (index_type j = 0; j < l.size(); ++j, ++it) {
+            assert(it->size() == extent(1));
+            row(j) = *it;
         }
     }
     template <typename T>

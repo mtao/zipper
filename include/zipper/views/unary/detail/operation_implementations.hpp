@@ -9,7 +9,7 @@ template <template <typename,zipper::concepts::QualifiedViewDerived, bool> class
           template <typename> class BaseType,zipper::concepts::QualifiedViewDerived View,
           typename Scalar>
 auto operation_implementation(View& lhs, const Scalar& rhs) {
-    using OpType = Op<Scalar, View, true>;
+    using OpType = Op<std::decay_t<Scalar>, View, true>;
     return BaseType<OpType>(OpType(lhs, rhs, {}));
 }
 template <template <typename,zipper::concepts::QualifiedViewDerived, bool> class Op,
