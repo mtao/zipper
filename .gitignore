@@ -36,9 +36,10 @@
 
 compile_commands.json
 
-subprojects/*/
 
 build*
 
 # meson wrap likes to add this file
 .meson-subproject-wrap-hash.txt
+subprojects/.wraplock
+subprojects/*/
