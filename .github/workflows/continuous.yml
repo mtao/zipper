@@ -59,22 +59,10 @@ jobs:
         id: set-up-homebrew
         uses: Homebrew/actions/setup-homebrew@main
 
-      - name: Update Apt
-        if: matrix.platform.os == 'linux'
-        run: sudo apt-get update
 
+      - name: Install dependencies
+        run: bash .github/scripts/dependencies.sh -o ${{ matrix.platform.os }} -m ${{ matrix.meson_version }}
 
-      - name: Install apt dependencies
-        if: matrix.platform.os == 'linux'
-        run: sudo apt-get install -y libfmt-dev catch2 librange-v3-dev
-
-
-      - name: Install brew dependencies
-        if: matrix.platform.os == 'osx'
-        run: brew install fmt catch2 range-v3
-
-      - name: Install python dependencies
-        run: python -m pip install meson==${{ matrix.meson_version }} ninja
 
       - name: Configure Project
         run: meson setup . build -Dtesting=true -Dexamples=true
