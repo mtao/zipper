@@ -1,13 +1,8 @@
 #if !defined(ZIPPER_CONCEPTS_STL_HPP)
 #define ZIPPER_CONCEPTS_STL_HPP
 #include <tuple>
-#pragma GCC diagnostic push
-#if defined(__clang__)
-#pragma GCC diagnostic ignored "-Wdeprecated-literal-operator"
-#endif
-#pragma GCC diagnostic ignored "-Wold-style-cast"
-#include <range/v3/utility/common_tuple.hpp>
-#pragma GCC diagnostic pop
+#include <pair>
+#include <array>
 
 
 namespace zipper::concepts {
@@ -17,8 +12,6 @@ namespace detail {
 
     template<typename... Types>
     struct is_stl_tuple<std::tuple<Types...>> : public std::true_type {};
-    template<typename... Types>
-    struct is_stl_tuple<ranges::common_tuple<Types...>> : public std::true_type {};
 
     template<typename>
     struct is_stl_pair : public std::false_type {};

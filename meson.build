@@ -54,16 +54,16 @@ if not cpp_compiler.has_define('__cpp_lib_mdspan')
 endif
 
 
-range_v3_dep = dependency('range-v3', required: false)
-if not range_v3_dep.found()
-  if get_option('use_ranges_subproject')
-    ranges_v3_proj = subproject('ranges-v3')
-    ranges_v3_dep = ranges-v3_proj.get_variable('ranges-v3_dep')
-  else
-    ranges_v3_dep = dependency('ranges-v3')
-  endif
-endif
-required_deps += range_v3_dep
+#range_v3_dep = dependency('range-v3', required: false)
+#if not range_v3_dep.found()
+#  if get_option('use_ranges_subproject')
+#    ranges_v3_proj = subproject('ranges-v3')
+#    ranges_v3_dep = ranges-v3_proj.get_variable('ranges-v3_dep')
+#  else
+#    ranges_v3_dep = dependency('ranges-v3')
+#  endif
+#endif
+#required_deps += range_v3_dep
 
 
 sources = []
