@@ -1,7 +1,6 @@
 #if !defined(ZIPPER_CONCEPTS_STL_HPP)
 #define ZIPPER_CONCEPTS_STL_HPP
 #include <tuple>
-#include <pair>
 #include <array>
 
 
