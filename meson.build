@@ -44,11 +44,11 @@ endif
 
 if not cpp_compiler.has_define('__cpp_lib_mdspan')
   message('current version of mdspan is insufficient, fetching dependency')
-  if get_option('use_conan')
-    mdspan_dep = dependency('mdspan')
-  else
+  if get_option('use_mdspan_subproject')
     mdspan_proj = subproject('mdspan')
     mdspan_dep = mdspan_proj.get_variable('mdspan_dep')
+  else
+    mdspan_dep = dependency('mdspan')
   endif
   required_deps += mdspan_dep
 endif
@@ -56,11 +56,11 @@ endif
 
 range_v3_dep = dependency('range-v3', required: false)
 if not range_v3_dep.found()
-  if get_option('use_conan')
-    range_v3_dep = dependency('range-v3')
+  if get_option('use_ranges_subproject')
+    ranges_v3_proj = subproject('ranges-v3')
+    ranges_v3_dep = ranges-v3_proj.get_variable('ranges-v3_dep')
   else
-    range_v3_proj = subproject('range-v3')
-    range_v3_dep = range_v3_proj.get_variable('range_v3_dep')
+    ranges_v3_dep = dependency('ranges-v3')
   endif
 endif
 required_deps += range_v3_dep

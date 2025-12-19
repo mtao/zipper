@@ -1,3 +1,4 @@
 option('testing', type: 'boolean', value: false, description: 'enable unit testing')
 option('examples', type: 'boolean', value: false, description: 'enable example targets')
-option('use_conan', type: 'boolean', value: false, description: 'use conan to fetch dependencies')
+option('use_mdspan_subproject', type: 'boolean', value: true, description: 'use mdspan from a subproject')
+option('use_ranges_subproject', type: 'boolean', value: true, description: 'use ranges from a subproject')
