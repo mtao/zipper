@@ -54,11 +54,11 @@ class TensorBase : public ZipperBase<TensorBase, View> {
 
     template <concepts::TensorBaseDerived Other>
     TensorBase(const Other& other)
-        requires(view_type::is_writable)
+        requires(view_traits::is_writable)
         : TensorBase(other.view()) {}
     template <concepts::TensorBaseDerived Other>
     TensorBase& operator=(const Other& other)
-        requires(view_type::is_writable)
+        requires(view_traits::is_writable)
     {
         return operator=(other.view());
     }
