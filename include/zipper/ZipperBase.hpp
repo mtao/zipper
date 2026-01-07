@@ -19,221 +19,216 @@ namespace zipper {
 template <template <concepts::QualifiedViewDerived> typename DerivedT,
           concepts::QualifiedViewDerived View>
 class ZipperBase {
-   public:
-    ZipperBase()
-        requires(std::is_default_constructible_v<View>)
-        : m_view() {}
-    using Derived = DerivedT<View>;
-    const Derived& derived() const {
-        return static_cast<const Derived&>(*this);
-    }
-    Derived& derived() { return static_cast<Derived&>(*this); }
+public:
+  ZipperBase()
+    requires(std::is_default_constructible_v<View>)
+      : m_view() {}
+  using Derived = DerivedT<View>;
+  auto derived() const -> const Derived & {
+    return static_cast<const Derived &>(*this);
+  }
+  auto derived() -> Derived & { return static_cast<Derived &>(*this); }
 
-    using view_type = std::decay_t<View>;
-    using view_traits = views::detail::ViewTraits<view_type>;
+  using view_type = std::decay_t<View>;
+  using view_traits = views::detail::ViewTraits<view_type>;
 
-    constexpr static bool is_const = std::is_const_v<View>;
-    constexpr static bool is_writable = view_traits::is_writable && !is_const;
-    using value_type = typename view_traits::value_type;
-    using extents_type = typename view_traits::extents_type;
-    using extents_traits = detail::ExtentsTraits<extents_type>;
+  constexpr static bool is_const = std::is_const_v<View>;
+  constexpr static bool is_writable = view_traits::is_writable && !is_const;
+  using value_type = typename view_traits::value_type;
+  using extents_type = typename view_traits::extents_type;
+  using extents_traits = detail::ExtentsTraits<extents_type>;
 
-    const View& view() const { return m_view; }
-    View& view() { return m_view; }
-    const extents_type& extents() const { return view().extents(); }
-    constexpr index_type extent(rank_type i) const { return m_view.extent(i); }
-    static constexpr index_type static_extent(rank_type i) {
-        return View::static_extent(i);
-    }
-    // template <typename... Args>
-    // ZipperBase(Args&&... v) : m_view(std::forward<Args>(v)...) {}
+  auto view() const -> const View & { return m_view; }
+  auto view() -> View & { return m_view; }
+  auto extents() const -> const extents_type & { return view().extents(); }
+  [[nodiscard]] constexpr auto extent(rank_type i) const -> index_type {
+    return m_view.extent(i);
+  }
+  static constexpr auto static_extent(rank_type i) -> index_type {
+    return View::static_extent(i);
+  }
+  // template <typename... Args>
+  // ZipperBase(Args&&... v) : m_view(std::forward<Args>(v)...) {}
 
-    ZipperBase(view_type&& v) : m_view(std::forward<View>(v)) {}
-    ZipperBase(Derived&& v) : ZipperBase(std::move(v.view())) {}
-    ZipperBase(ZipperBase&& v) = default;
+  ZipperBase(view_type &&v) : m_view(std::forward<View>(v)) {}
+  ZipperBase(Derived &&v) : ZipperBase(std::move(v.view())) {}
+  ZipperBase(ZipperBase &&v) = default;
 
-    ZipperBase(const Derived& v) : ZipperBase(v.view()) {}
-    ZipperBase(const view_type& v) : m_view(v) {}
-    ZipperBase(const ZipperBase& v) = default;
-    // Derived& operator=(concepts::ViewDerived auto const& v) {
-    //     m_view = v;
-    //     return derived();
-    // }
+  ZipperBase(const Derived &v) : ZipperBase(v.view()) {}
+  ZipperBase(const view_type &v) : m_view(v) {}
+  ZipperBase(const ZipperBase &v) = default;
+  // Derived& operator=(concepts::ViewDerived auto const& v) {
+  //     m_view = v;
+  //     return derived();
+  // }
 
-    operator value_type() const
-        requires(extents_type::rank() == 0)
-    {
-        return (*this)();
-    }
+  operator value_type() const
+    requires(extents_type::rank() == 0)
+  {
+    return (*this)();
+  }
 
-    template <concepts::ViewDerived Other>
-    ZipperBase(const Other& other)
-        requires(is_writable && zipper::utils::extents::assignable_extents_v<
-                                    typename Other::extents_type, extents_type>)
-        : m_view(extents_traits::convert_from(other.extents())) {
-        m_view.assign(other);
-    }
+  template <concepts::ViewDerived Other>
+  ZipperBase(const Other &other)
+    requires(is_writable && zipper::utils::extents::assignable_extents_v<
+                                typename Other::extents_type, extents_type>)
+      : m_view(extents_traits::convert_from(other.extents())) {
+    m_view.assign(other);
+  }
 
-    template <typename... Args>
-        requires(!(concepts::ZipperBaseDerived<Args> && ...))
-    ZipperBase(Args&&... args) : m_view(std::forward<Args>(args)...) {}
+  template <typename... Args>
+    requires(!(concepts::ZipperBaseDerived<Args> && ...))
+  ZipperBase(Args &&...args) : m_view(std::forward<Args>(args)...) {}
 
-    template <concepts::ViewDerived Other>
-    Derived& operator=(const Other& other)
-        requires(is_writable && zipper::utils::extents::assignable_extents_v<
-                                    typename Other::extents_type, extents_type>)
-    {
-        m_view.assign(other);
+  template <concepts::ViewDerived Other>
+  auto operator=(const Other &other) -> Derived &
+    requires(is_writable && zipper::utils::extents::assignable_extents_v<
+                                typename Other::extents_type, extents_type>)
+  {
+    m_view.assign(other);
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Weffc++"
-        return derived();
+    return derived();
 #pragma GCC diagnostic pop
-    }
-    template <concepts::ViewDerived Other>
-    Derived& operator=(Other&& other)
-        requires(is_writable && zipper::utils::extents::assignable_extents_v<
-                                    typename Other::extents_type, extents_type>)
-    {
-        m_view.assign(other);
+  }
+  template <concepts::ViewDerived Other>
+  auto operator=(Other &&other) -> Derived &
+    requires(is_writable && zipper::utils::extents::assignable_extents_v<
+                                typename Other::extents_type, extents_type>)
+  {
+    m_view.assign(other);
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Weffc++"
-        return derived();
+    return derived();
 #pragma GCC diagnostic pop
-    }
+  }
 
-    template <concepts::ZipperBaseDerived Other>
-    Derived& operator+=(const Other& other)
-        requires(is_writable)
-    {
-        *this = *this + other;
+  template <concepts::ZipperBaseDerived Other>
+  auto operator+=(const Other &other) -> Derived &
+    requires(is_writable)
+  {
+    *this = *this + other;
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Weffc++"
-        return derived();
+    return derived();
 #pragma GCC diagnostic pop
-    }
-    template <concepts::ZipperBaseDerived Other>
-    Derived& operator-=(const Other& other)
-        requires(is_writable)
-    {
-        *this = *this - other;
+  }
+  template <concepts::ZipperBaseDerived Other>
+  auto operator-=(const Other &other) -> Derived &
+    requires(is_writable)
+  {
+    *this = *this - other;
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Weffc++"
-        return derived();
+    return derived();
 #pragma GCC diagnostic pop
-    }
-    Derived& operator*=(const value_type& other)
-        requires(is_writable)
-    {
-        *this = other * *this;
+  }
+  auto operator*=(const value_type &other) -> Derived &
+    requires(is_writable)
+  {
+    *this = other * *this;
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Weffc++"
-        return derived();
+    return derived();
 #pragma GCC diagnostic pop
-    }
-    Derived& operator/=(const value_type& other)
-        requires(is_writable)
-    {
-        *this = *this / other;
+  }
+  auto operator/=(const value_type &other) -> Derived &
+    requires(is_writable)
+  {
+    *this = *this / other;
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Weffc++"
-        return derived();
+    return derived();
 #pragma GCC diagnostic pop
-    }
+  }
 
-    template <typename OpType>
-        requires(views::unary::concepts::ScalarOperation<value_type, OpType>)
+  template <typename OpType>
+    requires(views::unary::concepts::ScalarOperation<value_type, OpType>)
 
-    auto unary_expr(const OpType& op) const {
-        using V = views::unary::OperationView<const view_type, OpType>;
-        return DerivedT<V>(V(view(), op));
-    }
+  auto unary_expr(const OpType &op) const {
+    using V = views::unary::OperationView<const view_type, OpType>;
+    return DerivedT<V>(V(view(), op));
+  }
 
-    template <template <typename> typename BaseType = DerivedT,
-              rank_type... ranks>
-    auto swizzle() const {
-        using V = views::unary::SwizzleView<const view_type, ranks...>;
-        return BaseType<V>(V(view()));
-    }
-    template <typename T>
-    auto cast() const {
-        using V = views::unary::CastView<T, const view_type>;
+  template <template <typename> typename BaseType = DerivedT,
+            rank_type... ranks>
+  auto swizzle() const {
+    using V = views::unary::SwizzleView<const view_type, ranks...>;
+    return BaseType<V>(V(view()));
+  }
+  template <typename T> auto cast() const {
+    using V = views::unary::CastView<T, const view_type>;
 
-        return DerivedT<V>(V(view()));
-    }
+    return DerivedT<V>(V(view()));
+  }
 
-    template <typename... Args>
-    auto operator()(Args&&... idxs) -> decltype(auto)
-        requires(view_traits::is_writable)
-    {
-        return view()(filter_args(std::forward<Args>(idxs))...);
-    }
-    template <typename... Args>
-    auto operator()(Args&&... idxs) const -> decltype(auto)
+  template <typename... Args>
+  auto operator()(Args &&...idxs) -> decltype(auto)
+    requires(view_traits::is_writable)
+  {
+    return view()(filter_args(std::forward<Args>(idxs))...);
+  }
+  template <typename... Args>
+  auto operator()(Args &&...idxs) const -> decltype(auto)
 
-    {
-        return view()(filter_args(std::forward<Args>(idxs))...);
-    }
+  {
+    return view()(filter_args(std::forward<Args>(idxs))...);
+  }
 
-    // pads left with dummy dimensions
-    template <rank_type Count = 1,
-              template <typename> typename BaseType = DerivedT>
-    auto repeat_left() const {
-        using V = views::unary::RepeatView<views::unary::RepeatMode::Left,
-                                           Count, const view_type>;
-        return BaseType<V>(V(view()));
-    }
-    template <rank_type Count = 1,
-              template <typename> typename BaseType = DerivedT>
-    auto repeat_right() const {
-        using V = views::unary::RepeatView<views::unary::RepeatMode::Right,
-                                           Count, const view_type>;
-        return BaseType<V>(V(view()));
-    }
+  // pads left with dummy dimensions
+  template <rank_type Count = 1,
+            template <typename> typename BaseType = DerivedT>
+  auto repeat_left() const {
+    using V = views::unary::RepeatView<views::unary::RepeatMode::Left, Count,
+                                       const view_type>;
+    return BaseType<V>(V(view()));
+  }
+  template <rank_type Count = 1,
+            template <typename> typename BaseType = DerivedT>
+  auto repeat_right() const {
+    using V = views::unary::RepeatView<views::unary::RepeatMode::Right, Count,
+                                       const view_type>;
+    return BaseType<V>(V(view()));
+  }
 
-   protected:
-    // slicing has fairly dimension specific effects for most derived types,
-    // so we will just return the view and let base class return things
-    template <concepts::SliceLike... Slices>
-    auto slice_view(Slices&&... slices) const {
-        using my_view_type =
-            views::unary::SliceView<const view_type, std::decay_t<Slices>...>;
+protected:
+  // slicing has fairly dimension specific effects for most derived types,
+  // so we will just return the view and let base class return things
+  template <concepts::SliceLike... Slices>
+  auto slice_view(Slices &&...slices) const {
+    using my_view_type =
+        views::unary::SliceView<const view_type, std::decay_t<Slices>...>;
 
-        return my_view_type(view(),
-                            filter_args(std::forward<Slices>(slices))...);
-    }
+    return my_view_type(view(), filter_args(std::forward<Slices>(slices))...);
+  }
 
-    template <concepts::SliceLike... Slices>
-    auto slice_view() const {
-        using my_view_type =
-            views::unary::SliceView<const view_type, std::decay_t<Slices>...>;
-        return my_view_type(view(), Slices{}...);
-    }
+  template <concepts::SliceLike... Slices> auto slice_view() const {
+    using my_view_type =
+        views::unary::SliceView<const view_type, std::decay_t<Slices>...>;
+    return my_view_type(view(), Slices{}...);
+  }
 
-    template <concepts::SliceLike... Slices>
-    auto slice_view(Slices&&... slices) {
-        using my_view_type =
-            views::unary::SliceView<view_type, std::decay_t<Slices>...>;
-        return my_view_type(view(),
-                            filter_args(std::forward<Slices>(slices))...);
-    }
-    template <concepts::SliceLike... Slices>
-    auto slice_view() {
-        using my_view_type =
-            views::unary::SliceView<view_type, std::decay_t<Slices>...>;
-        return my_view_type(view(), Slices{}...);
-    }
+  template <concepts::SliceLike... Slices> auto slice_view(Slices &&...slices) {
+    using my_view_type =
+        views::unary::SliceView<view_type, std::decay_t<Slices>...>;
+    return my_view_type(view(), filter_args(std::forward<Slices>(slices))...);
+  }
+  template <concepts::SliceLike... Slices> auto slice_view() {
+    using my_view_type =
+        views::unary::SliceView<view_type, std::decay_t<Slices>...>;
+    return my_view_type(view(), Slices{}...);
+  }
 
-   public:
-   private:
-    template <typename T>
-    static auto filter_args(T&& v) -> decltype(auto) {
-        if constexpr (concepts::ZipperBaseDerived<std::decay_t<T>>) {
-            return v.view();
-        } else {
-            return std::forward<T>(v);
-        }
+public:
+private:
+  template <typename T> static auto filter_args(T &&v) -> decltype(auto) {
+    if constexpr (concepts::ZipperBaseDerived<std::decay_t<T>>) {
+      return v.view();
+    } else {
+      return std::forward<T>(v);
     }
-    View m_view;
+  }
+  View m_view;
 };
 
 // TODO: figure out how to activate common declarations here rather than within
@@ -284,6 +279,6 @@ class ZipperBase {
 // View2> bool operator!=(View1 const& lhs, View2 const& rhs) {
 //     return (lhs.as_array() != rhs.as_array()).any();
 // }
-}  // namespace zipper
+} // namespace zipper
 
 #endif
