@@ -1,36 +1,24 @@
 #if !defined(ZIPPER_CONCEPTS_MATRIXBASE_DERIVED_HPP)
 #define ZIPPER_CONCEPTS_MATRIXBASE_DERIVED_HPP
-#include <concepts>
-#include <type_traits>
+#include "ViewDerived.hpp"
+#include "ZipperBaseDerived.hpp"
 
-#include "MatrixViewDerived.hpp"
-
-namespace zipper {
-template <concepts::QualifiedViewDerived T>
-class MatrixBase;
-template <typename T, index_type R, index_type C, bool RowMajor = true>
-class Matrix;
-}  // namespace zipper
+// namespace zipper
 namespace zipper::concepts {
 namespace detail {
-template <typename>
-struct IsMatrix : std::false_type {};
-template <typename T, index_type R, index_type C, bool RowMajor>
-struct IsMatrix<Matrix<T, R, C, RowMajor>> : std::true_type {};
+template <typename> struct MatrixBaseDerived : std::false_type {};
 
-template <typename>
-struct IsMatrixBase : std::false_type {};
-template <typename T>
-struct IsMatrixBase<MatrixBase<T>> : std::true_type {};
+template <typename View>
+  requires(MatrixBaseDerived<View>::value)
+struct ZipperBaseDerived<View> : std::true_type {};
 
-template <typename T>
-concept MatrixBaseDerived =
-    (concepts::MatrixViewDerived<T> &&
-     std::derived_from<T, zipper::MatrixBase<T>>) ||
-    detail::IsMatrix<T>::value || detail::IsMatrixBase<T>::value;
-}  // namespace detail
+} // namespace detail
 
 template <typename T>
 concept MatrixBaseDerived = detail::MatrixBaseDerived<std::decay_t<T>>;
-}  // namespace zipper::concepts
+
+template <typename T>
+concept FormLike = (concepts::QualifiedViewDerived<T> &&
+                    detail::MatrixBaseDerived<std::remove_cvref_t<T>>::value);
+} // namespace zipper::concepts
 #endif

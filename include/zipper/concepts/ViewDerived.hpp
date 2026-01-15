@@ -3,8 +3,7 @@
 #include <concepts>
 
 namespace zipper::views {
-template <typename T>
-class ViewBase;
+template <typename T> class ViewBase;
 }
 namespace zipper::concepts {
 
@@ -13,7 +12,7 @@ concept ViewDerived = std::derived_from<T, zipper::views::ViewBase<T>> ||
                       std::derived_from<T, zipper::views::ViewBase<const T>>;
 
 template <typename T>
-concept QualifiedViewDerived = ViewDerived<std::decay_t<T>>;
+concept QualifiedViewDerived = ViewDerived<std::remove_cvref_t<T>>;
 
-}  // namespace zipper::concepts
+} // namespace zipper::concepts
 #endif
