@@ -1,17 +1,15 @@
-project('zipper', 'cpp',
-  version : '0.1',
-  default_options : ['warning_level=3', 'cpp_std=c++26'])
+project(
+  'zipper',
+  'cpp',
+  version: '0.1',
+  default_options: ['warning_level=3', 'cpp_std=c++26'],
+)
 
 required_deps = []
 
-
-
-
 cpp_compiler = meson.get_compiler('cpp')
 
-
 compile_args = []
-
 
 if not cpp_compiler.has_define('__cpp_lib_format_ranges')
   message('current version of std::format is insufficient, fetching dependency')
@@ -24,7 +22,7 @@ fmt_code = '''#include <format>
 std::string func(int a, int b) { std::format("{}",std::tuple(a,b); }
 '''
 
-fmt_compiles = cpp_compiler.compiles(fmt_code, name : 'std::format(ranges)')
+fmt_compiles = cpp_compiler.compiles(fmt_code, name: 'std::format(ranges)')
 if not fmt_compiles
   compile_args += '-DZIPPER_FMT_OVERRIDES_DISABLED'
 endif
@@ -37,7 +35,7 @@ void f() {
 }
 '''
 
-alias_ctad_compiles = cpp_compiler.compiles(alias_ctad_code, name : 'aliased_CTAD')
+alias_ctad_compiles = cpp_compiler.compiles(alias_ctad_code, name: 'aliased_CTAD')
 if not alias_ctad_compiles
   compile_args += '-DZIPPER_DONT_USE_ALIAS_CTAD'
 endif
@@ -53,7 +51,6 @@ if not cpp_compiler.has_define('__cpp_lib_mdspan')
   required_deps += mdspan_dep
 endif
 
-
 #range_v3_dep = dependency('range-v3', required: false)
 #if not range_v3_dep.found()
 #  if get_option('use_ranges_subproject')
@@ -65,13 +62,15 @@ endif
 #endif
 #required_deps += range_v3_dep
 
-
 sources = []
 
 include_dirs = [include_directories('include')]
 
-zipper_dep = declare_dependency(dependencies: required_deps, include_directories: include_dirs, compile_args: compile_args)
-
+zipper_dep = declare_dependency(
+  dependencies: required_deps,
+  include_directories: include_dirs,
+  compile_args: compile_args,
+)
 
 if get_option('testing')
   subdir('tests')
