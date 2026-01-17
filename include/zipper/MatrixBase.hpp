@@ -18,6 +18,9 @@
 
 namespace zipper {
 template <concepts::QualifiedViewDerived View> class ArrayBase;
+template <typename ValueType, index_type Rows, index_type Cols,
+          bool RowMajor = true>
+class Matrix;
 
 // template <concepts::MatrixViewDerived View>
 template <concepts::QualifiedViewDerived View>

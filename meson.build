@@ -75,6 +75,6 @@ zipper_dep = declare_dependency(
 if get_option('testing')
   subdir('tests')
 endif
-if get_option('examples')
-  subdir('examples')
-endif
+#if get_option('examples')
+#  subdir('examples')
+#endif

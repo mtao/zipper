@@ -18,7 +18,7 @@ template <typename T>
 concept MatrixBaseDerived = detail::MatrixBaseDerived<std::decay_t<T>>;
 
 template <typename T>
-concept FormLike = (concepts::QualifiedViewDerived<T> &&
-                    detail::MatrixBaseDerived<std::remove_cvref_t<T>>::value);
+concept MatrixLike = (concepts::QualifiedViewDerived<T> &&
+                      detail::MatrixBaseDerived<std::remove_cvref_t<T>>::value);
 } // namespace zipper::concepts
 #endif

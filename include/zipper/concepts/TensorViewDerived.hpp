@@ -5,14 +5,13 @@
 #include "ViewDerived.hpp"
 #include "zipper/types.hpp"
 namespace zipper::views::detail {
-template <typename T>
-struct ViewTraits;
+template <typename T> struct ViewTraits;
 }
 namespace zipper::concepts {
 
 template <typename T, zipper::rank_type rank>
-concept TensorViewDerived =
-    QualifiedViewDerived<T> &&
+concept TensorView =
+    QualifiedView<T> &&
     views::detail::ViewTraits<std::decay_t<T>>::extents_type::rank() == rank;
-}  // namespace zipper::concepts
+} // namespace zipper::concepts
 #endif

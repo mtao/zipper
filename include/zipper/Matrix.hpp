@@ -8,8 +8,8 @@
 #include "zipper/types.hpp"
 namespace zipper {
 
-template <typename ValueType, index_type Rows, index_type Cols,
-          bool RowMajor = true>
+// Default choice of RowMajor is defined in MatrixBase
+template <typename ValueType, index_type Rows, index_type Cols, bool RowMajor>
 class Matrix
     : public MatrixBase<
           storage::PlainObjectStorage<ValueType, zipper::extents<Rows, Cols>,

@@ -7,12 +7,15 @@ template <typename T> class ViewBase;
 }
 namespace zipper::concepts {
 
+/// Every view must be derived from either ViewBase via CRTP, with constness
+/// qualification to specify if it is a const type view
 template <typename T>
-concept ViewDerived = std::derived_from<T, zipper::views::ViewBase<T>> ||
-                      std::derived_from<T, zipper::views::ViewBase<const T>>;
+concept UnqualifiedView =
+    std::derived_from<T, zipper::views::ViewBase<T>> ||
+    std::derived_from<T, zipper::views::ViewBase<const T>>;
 
 template <typename T>
-concept QualifiedViewDerived = ViewDerived<std::remove_cvref_t<T>>;
+concept View = UnqualifiedView<std::remove_cvref_t<T>>;
 
 } // namespace zipper::concepts
 #endif
