@@ -1,183 +1,99 @@
-#if !defined(ZIPPER_VIEWS_VIEWBASE_HXX)
-#define ZIPPER_VIEWS_VIEWBASE_HXX
+#if !defined(ZIPPER_expression_EXPRESSIONBASE_HXX)
+#define ZIPPER_expression_EXPRESSIONBASE_HXX
 
-#include "ViewBase.hpp"
+#include "ExpressionBase.hpp"
 #include "zipper/utils/extents/indices_in_range.hpp"
+#include <functional>
 
-namespace zipper::views {
+namespace zipper::expression {
 
 template <typename Derived>
-template <concepts::IndexLike... Indices>
-auto ViewBase<Derived>::coeff(Indices &&...indices) const -> value_type {
+template <concepts::Index... Indices>
+auto ExpressionBase<Derived>::coeff(Indices &&...indices) const -> value_type {
   constexpr static rank_type size = sizeof...(Indices);
-  // rank 0 views act like scalar values
+  // rank 0 expression act like scalar values
   static_assert(rank == 0 || size == rank);
   return derived().coeff(std::forward<Indices>(indices)...);
 }
 template <typename Derived>
-template <concepts::IndexLike... Indices>
-auto ViewBase<Derived>::coeff_ref(Indices &&...indices) -> value_type &
-  requires(is_writable)
+template <concepts::Index... Indices>
+auto ExpressionBase<Derived>::coeff_ref(Indices &&...indices) -> value_type &
+  requires(is_plain_data)
 {
   constexpr static rank_type size = sizeof...(Indices);
-  // rank 0 views act like scalar values
+  // rank 0 expression act like scalar values
   static_assert(rank == 0 || size == rank);
   return derived().coeff_ref(std::forward<Indices>(indices)...);
 }
 
 template <typename Derived>
-template <concepts::IndexLike... Indices>
-auto ViewBase<Derived>::const_coeff_ref(Indices &&...indices) const
+template <concepts::Index... Indices>
+auto ExpressionBase<Derived>::const_coeff_ref(Indices &&...indices) const
     -> const value_type &
-  requires(is_writable)
+  requires(is_plain_data)
 {
   constexpr static rank_type size = sizeof...(Indices);
-  // rank 0 views act like scalar values
+  // rank 0 expression act like scalar values
   static_assert(rank == 0 || size == rank);
   return derived().const_coeff_ref(std::forward<Indices>(indices)...);
 }
 
 namespace unary {
-template <zipper::concepts::View ViewType,
-          zipper::concepts::SliceLike... Slices>
-class SliceView;
+template <zipper::concepts::Expression ExpressionType,
+          zipper::concepts::IndexSlice... Slices>
+class SliceExpression;
 }
 template <typename Derived>
-template <concepts::SliceLike... Slices>
-auto ViewBase<Derived>::access_slice(Slices &&...slices) const
-  requires(!zipper::concepts::IndexPackLike<Slices...>)
-{
-  return unary::SliceView<const Derived, std::decay_t<Slices>...>(
+template <concepts::IndexSlice... Slices>
+auto ExpressionBase<Derived>::const_access_slice(Slices &&...slices) const {
+  return unary::SliceExpression<const Derived, std::decay_t<Slices>...>(
       derived(), std::forward<Slices>(slices)...);
 }
 
 template <typename Derived>
-template <concepts::SliceLike... Slices>
-auto ViewBase<Derived>::access_slice(Slices &&...slices)
-  requires(!zipper::concepts::IndexPackLike<Slices...>)
-{
-  return unary::SliceView<Derived, std::decay_t<Slices>...>(
+template <concepts::IndexSlice... Slices>
+auto ExpressionBase<Derived>::access_slice(Slices &&...slices) {
+  return unary::SliceExpression<Derived, std::decay_t<Slices>...>(
       derived(), std::forward<Slices>(slices)...);
 }
 
 template <typename Derived>
-template <typename... Args>
-auto ViewBase<Derived>::operator()(Args &&...idxs) const -> decltype(auto)
+template <concepts::IndexArgument... Args>
+auto ExpressionBase<Derived>::operator()(Args &&...idxs) const -> decltype(auto)
 
 {
-  // if we have an infinite view
-  if constexpr (extents_type::rank() == 0) {
-    // if we have no args then we pass it in
-    if constexpr (zipper::concepts::SingleTuplePackLike<Args...>) {
-      decltype(auto) v = access_tuple(std::forward<Args>(idxs)...);
-      static_assert(!std::is_void_v<std::decay_t<decltype(v)>>);
-      return v;
-    } else {
-      decltype(auto) v = access_index_pack(std::forward<Args>(idxs)...);
-      static_assert(!std::is_void_v<std::decay_t<decltype(v)>>);
-      return v;
-    }
+  decltype(auto) v = const_access_pack(std::forward<Args>(idxs)...);
+  static_assert(!std::is_void_v<std::decay_t<decltype(v)>>);
+  return v;
+}
+template <typename Derived>
+template <concepts::IndexArgument... Args>
+auto ExpressionBase<Derived>::operator()(Args &&...idxs) -> decltype(auto)
+  requires(is_plain_data && !is_const)
 
-  } else if constexpr (sizeof...(Args) == 1 &&
-                       (zipper::concepts::ViewAccessTuple<std::decay_t<Args>> &&
-                        ...)) {
-    decltype(auto) v = access_tuple(std::forward<Args>(idxs)...);
-    static_assert(!std::is_void_v<std::decay_t<decltype(v)>>);
-    return v;
+{
+  decltype(auto) v = access_pack(std::forward<Args>(idxs)...);
+  static_assert(!std::is_void_v<std::decay_t<decltype(v)>>);
+  return v;
+}
+
+template <typename Derived>
+template <concepts::IndexArgument... Args>
+auto ExpressionBase<Derived>::const_access_pack(Args &&...idxs) const
+    -> decltype(auto)
+
+{
+  if constexpr (zipper::concepts::IndexPack<Args...>) {
+    return const_access_index_pack(std::forward<Args>(idxs)...);
   } else {
-    decltype(auto) v = access_pack(std::forward<Args>(idxs)...);
-    static_assert(!std::is_void_v<std::decay_t<decltype(v)>>);
-    return v;
-  }
-}
-template <typename Derived>
-template <typename... Args>
-auto ViewBase<Derived>::operator()(Args &&...idxs) -> decltype(auto)
-  requires(is_writable)
-
-{
-  if constexpr (extents_type::rank() == 0) {
-    if constexpr (sizeof...(Args) == 0) {
-      decltype(auto) v = access_index_pack();
-      static_assert(!std::is_void_v<std::decay_t<decltype(v)>>);
-      return v;
-    } else {
-      static_assert(sizeof...(Args) == 1);
-      static_assert((zipper::concepts::TupleLike<std::decay_t<Args>> && ...));
-
-      if constexpr (((std::tuple_size_v<std::decay_t<Args>> == 0) && ... &&
-                     true)) {
-        decltype(auto) v = access_index_pack();
-        static_assert(!std::is_void_v<std::decay_t<decltype(v)>>);
-        return v;
-      } else {
-        decltype(auto) v = access_tuple(std::forward<Args>(idxs)...);
-        static_assert(!std::is_void_v<std::decay_t<decltype(v)>>);
-        return v;
-      }
-    }
-
-  } else if constexpr (sizeof...(Args) == 1 &&
-                       (zipper::concepts::ViewAccessTuple<std::decay_t<Args>> &&
-                        ...)) {
-    decltype(auto) v = access_tuple(std::forward<Args>(idxs)...);
-    static_assert(!std::is_void_v<std::decay_t<decltype(v)>>);
-    return v;
-  } else {
-    decltype(auto) v = access_pack(std::forward<Args>(idxs)...);
-    static_assert(!std::is_void_v<std::decay_t<decltype(v)>>);
-    return v;
+    return const_access_slice(std::forward<Args>(idxs)...);
   }
 }
 
 template <typename Derived>
-template <typename... Args>
-auto ViewBase<Derived>::access_pack(Args &&...idxs) const -> decltype(auto)
-
-{
-  static_assert(
-      !(zipper::concepts::ViewAccessTuple<std::decay_t<Args>> && ...));
-  static_assert(!(zipper::concepts::TupleLike<std::decay_t<Args>> && ...));
-  // static_assert(zipper::concepts::IndexPackLike<Args...> ||
-  //               zipper::concepts::SlicePackLike<Args...>);
-  if constexpr (zipper::concepts::IndexPackLike<Args...>) {
-    return access_index_pack(std::forward<Args>(idxs)...);
-  } else if constexpr (zipper::concepts::SlicePackLike<Args...>) {
-    return access_slice(std::forward<Args>(idxs)...);
-  }
-}
-
-template <typename Derived>
-template <concepts::SliceLike... Args>
-auto ViewBase<Derived>::access_index_pack(Args &&...idxs) const
+template <concepts::Index... Args>
+auto ExpressionBase<Derived>::access_index_pack(Args &&...idxs)
     -> decltype(auto) {
-#if !defined(NDEBUG)
-  zipper::utils::extents::indices_in_range(extents(), idxs...);
-#endif
-  if constexpr (is_writable) {
-    return const_coeff_ref(std::forward<Args>(idxs)...);
-  } else {
-    return coeff(std::forward<Args>(idxs)...);
-  }
-}
-
-template <typename Derived>
-template <typename... Args>
-auto ViewBase<Derived>::access_pack(Args &&...idxs) -> decltype(auto)
-
-{
-  static_assert(zipper::concepts::IndexPackLike<Args...> ||
-                zipper::concepts::SlicePackLike<Args...>);
-  if constexpr (zipper::concepts::IndexPackLike<Args...>) {
-    return access_index_pack(std::forward<Args>(idxs)...);
-  } else if constexpr (zipper::concepts::SlicePackLike<Args...>) {
-    return access_slice(std::forward<Args>(idxs)...);
-  }
-}
-
-template <typename Derived>
-template <concepts::SliceLike... Args>
-auto ViewBase<Derived>::access_index_pack(Args &&...idxs) -> decltype(auto) {
 #if !defined(NDEBUG)
   zipper::utils::extents::indices_in_range(extents(), idxs...);
 #endif
@@ -185,31 +101,43 @@ auto ViewBase<Derived>::access_index_pack(Args &&...idxs) -> decltype(auto) {
 }
 
 template <typename Derived>
-template <zipper::concepts::ViewAccessTuple Tuple, std::size_t... N>
-auto ViewBase<Derived>::access_tuple(const Tuple &t,
-                                     std::index_sequence<N...>) const
+template <concepts::Index... Args>
+auto ExpressionBase<Derived>::const_access_index_pack(Args &&...idxs) const
     -> decltype(auto) {
-  return access_pack(std::get<N>(t)...);
-}
-template <typename Derived>
-template <zipper::concepts::ViewAccessTuple Tuple>
-auto ViewBase<Derived>::access_tuple(const Tuple &t) const -> decltype(auto) {
-  return access_tuple(
-      t, std::make_index_sequence<std::tuple_size_v<std::decay_t<Tuple>>>{});
+#if !defined(NDEBUG)
+  zipper::utils::extents::indices_in_range(extents(), idxs...);
+#endif
+  if constexpr (is_plain_data) {
+    return const_coeff_ref(std::forward<Args>(idxs)...);
+  } else {
+    return coeff(std::forward<Args>(idxs)...);
+  }
 }
 
 template <typename Derived>
-template <zipper::concepts::ViewAccessTuple Tuple, std::size_t... N>
-auto ViewBase<Derived>::access_tuple(const Tuple &t, std::index_sequence<N...>)
-    -> decltype(auto) {
-  return access_pack(std::get<N>(t)...);
-}
-template <typename Derived>
-template <zipper::concepts::ViewAccessTuple Tuple>
-auto ViewBase<Derived>::access_tuple(const Tuple &t) -> decltype(auto) {
-  return access_tuple(
-      t, std::make_index_sequence<std::tuple_size_v<std::decay_t<Tuple>>>{});
+template <concepts::IndexArgument... Args>
+auto ExpressionBase<Derived>::access_pack(Args &&...idxs) -> decltype(auto)
+
+{
+  if constexpr (zipper::concepts::IndexPack<Args...>) {
+    return access_index_pack(std::forward<Args>(idxs)...);
+  } else {
+    return access_slice(std::forward<Args>(idxs)...);
+  }
 }
 
-} // namespace zipper::views
+template <typename Derived>
+template <zipper::concepts::IndexArgumentPackTuple Tuple>
+auto ExpressionBase<Derived>::access_tuple(const Tuple &t) -> decltype(auto) {
+  return std::apply(std::bind_front(&ExpressionBase::access_pack, this), t);
+}
+template <typename Derived>
+template <zipper::concepts::IndexArgumentPackTuple Tuple>
+auto ExpressionBase<Derived>::const_access_tuple(const Tuple &t) const
+    -> decltype(auto) {
+  return std::apply(std::bind_front(&ExpressionBase::const_access_pack, this),
+                    t);
+}
+
+} // namespace zipper::expression
 #endif

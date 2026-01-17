@@ -1,17 +1,14 @@
-#if !defined(ZIPPER_VIEWS_VIEWBASE_HPP)
-#define ZIPPER_VIEWS_VIEWBASE_HPP
+#if !defined(ZIPPER_expression_EXPRESSIONBASE_HPP)
+#define ZIPPER_expression_EXPRESSIONBASE_HPP
 #include <type_traits>
 
-#include "detail/ViewTraits.hpp"
-#include "zipper/concepts/IndexPackLike.hpp"
-#include "zipper/concepts/SlicePackLike.hpp"
-#include "zipper/concepts/TupleLike.hpp"
-#include "zipper/concepts/ViewAccessTuple.hpp"
-#include "zipper/concepts/ViewDerived.hpp"
+#include "detail/ExpressionTraits.hpp"
+#include "zipper/concepts/Expression.hpp"
+#include "zipper/concepts/IndexArgument.hpp"
 #include "zipper/detail//ExtentsTraits.hpp"
 #include "zipper/types.hpp"
 
-namespace zipper::views {
+namespace zipper::expression {
 
 /** The CRTP base class for every zipper view
  *
@@ -19,99 +16,97 @@ namespace zipper::views {
  * - extents() -> extents_type
  * - extent(rank_type) -> index_type
  *   size() const -> index_type
- *   coeff(IndexLike...) const -> value_type;
+ *   coeff(Index...) const -> value_type;
  *
  * - operator(Args...) const -> const value_type&
  * - operator(Args...) const -> value_type&
  */
-template <typename Derived_> class ViewBase {
+template <typename Derived_> class ExpressionBase {
 public:
   using Derived = Derived_;
 
-  Derived &derived() { return static_cast<Derived &>(*this); }
-  const Derived &derived() const { return static_cast<const Derived &>(*this); }
+  auto derived() -> Derived & { return static_cast<Derived &>(*this); }
+  auto derived() const -> const Derived & {
+    return static_cast<const Derived &>(*this);
+  }
 
-  using traits = detail::ViewTraits<Derived>;
+  using traits = detail::ExpressionTraits<Derived>;
 
-  // if it's const then it's not writable
-  // static_assert(!traits::is_const || traits::is_writable);
   using extents_type = traits::extents_type;
   using value_type = traits::value_type;
   using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
   // view does not permute underlying value of indices, so coefficient-wise
   // operations are valid
-  constexpr static bool is_coefficient_consistent =
-      traits::is_coefficient_consistent;
-  constexpr static bool is_writable = traits::is_writable;
+  constexpr static bool is_alias_free = traits::is_alias_free;
+  constexpr static bool is_plain_data = traits::is_plain_data;
+  constexpr static bool is_const = traits::is_const;
   constexpr static rank_type rank = extents_type::rank();
+
   static_assert(extents_type::rank() >= 0);
   using array_type = std::array<index_type, rank>;
   // using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
 
-  constexpr index_type extent(rank_type i) const { return derived().extent(i); }
-  static consteval index_type static_extent(rank_type i) {
+  [[nodiscard]] constexpr auto extent(rank_type i) const -> index_type {
+    return derived().extent(i);
+  }
+  static consteval auto static_extent(rank_type i) -> index_type {
     return extents_type::static_extent(i);
   }
   constexpr auto extents() const -> const extents_type & {
     return derived().extents();
   }
 
-  constexpr size_t size() const { return extents_traits::size(extents()); }
+  [[nodiscard]] constexpr auto size() const -> size_t {
+    return extents_traits::size(extents());
+  }
 
 public:
-  template <concepts::IndexLike... Indices>
+  template <concepts::Index... Indices>
   auto coeff(Indices &&...indices) const -> value_type;
-  template <concepts::IndexLike... Indices>
+  template <concepts::Index... Indices>
   auto coeff_ref(Indices &&...indices) -> value_type &
-    requires(is_writable);
+    requires(is_plain_data);
 
-  template <concepts::IndexLike... Indices>
+  template <concepts::Index... Indices>
   auto const_coeff_ref(Indices &&...indices) const -> const value_type &
-    requires(is_writable);
+    requires(is_plain_data);
 
-  template <typename... Args>
+  /// Internally forwards to const_access_pack
+  template <concepts::IndexArgument... Args>
   auto operator()(Args &&...idxs) const -> decltype(auto);
 
-  template <typename... Args>
+  /// Primary access point, because it's mutable must support is_plain_data and
+  /// the underlying view is considered mutable
+  /// Internally forwards to access_pack
+  template <concepts::IndexArgument... Args>
   auto operator()(Args &&...idxs) -> decltype(auto)
-    requires(is_writable);
+    requires(is_plain_data && !is_const);
 
 private:
-  template <typename... Args>
-  auto access_pack(Args &&...idxs) const -> decltype(auto);
-
-  template <concepts::SliceLike... Args>
-  auto access_index_pack(Args &&...idxs) const -> decltype(auto);
-
-  template <typename... Args>
+  /// generic entrypoint for accessing values
+  template <concepts::IndexArgument... Args>
   auto access_pack(Args &&...idxs) -> decltype(auto);
+  template <concepts::IndexArgument... Args>
+  auto const_access_pack(Args &&...idxs) const -> decltype(auto);
 
-  template <concepts::SliceLike... Args>
+  template <concepts::Index... Args>
   auto access_index_pack(Args &&...idxs) -> decltype(auto);
+  template <concepts::Index... Args>
+  auto const_access_index_pack(Args &&...idxs) const -> decltype(auto);
 
-  template <concepts::SliceLike... Slices>
-  auto access_slice(Slices &&...slices) const
-    requires(!concepts::IndexPackLike<Slices...>);
+  template <concepts::IndexSlice... Slices>
+  auto access_slice(Slices &&...slices);
+  template <concepts::IndexSlice... Slices>
+  auto const_access_slice(Slices &&...slices) const;
 
-  template <concepts::ViewAccessTuple Tuple, std::size_t... N>
-  auto access_tuple(const Tuple &t, std::index_sequence<N...>) const
-      -> decltype(auto);
-  template <concepts::ViewAccessTuple Tuple>
-  auto access_tuple(const Tuple &t) const -> decltype(auto);
-
-  template <concepts::SliceLike... Slices>
-  auto access_slice(Slices &&...slices)
-    requires(!concepts::IndexPackLike<Slices...>);
-
-  template <concepts::ViewAccessTuple Tuple, std::size_t... N>
-  auto access_tuple(const Tuple &t, std::index_sequence<N...>)
-      -> decltype(auto);
-  template <concepts::ViewAccessTuple Tuple>
+  template <concepts::IndexArgumentPackTuple Tuple>
   auto access_tuple(const Tuple &t) -> decltype(auto);
+  template <concepts::IndexArgumentPackTuple Tuple>
+  auto const_access_tuple(const Tuple &t) const -> decltype(auto);
 };
 
-} // namespace zipper::views
-#if !defined(ZIPPER_VIEWS_VIEWBASE_HXX)
-#include "ViewBase.hxx"
+} // namespace zipper::expression
+#if !defined(ZIPPER_expression_EXPRESSIONBASE_HXX)
+#include "ExpressionBase.hxx"
 #endif
 #endif

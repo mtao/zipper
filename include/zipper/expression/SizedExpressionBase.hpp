@@ -1,15 +1,17 @@
-#if !defined(ZIPPER_VIEWS_DIMENSIONEDVIEWBASE_HPP)
-#define ZIPPER_VIEWS_DIMENSIONEDVIEWBASE_HPP
+#if !defined(ZIPPER_EXPRESSIONS_SIZEDEDEXPRESSIONBASE_HPP)
+#define ZIPPER_EXPRESSIONS_SIZEDEDEXPRESSIONBASE_HPP
 
-#include "ViewBase.hpp"
-namespace zipper::views {
+#include "ExpressionBase.hpp"
+namespace zipper::expression {
+
+/// An Expression that stores its own size
 template <typename Derived_>
-class DimensionedViewBase : public ViewBase<Derived_> {
+class SizedExpressionBase : public ExpressionBase<Derived_> {
 public:
   using Derived = Derived_;
-  using traits = detail::ViewTraits<Derived>;
+  using traits = detail::ExpressionTraits<Derived>;
 
-  using Base = ViewBase<Derived>;
+  using Base = ExpressionBase<Derived>;
   using value_type = traits::value_type;
   using extents_type = traits::extents_type;
   using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
@@ -18,11 +20,11 @@ public:
   auto derived() const -> const Derived & {
     return static_cast<const Derived &>(*this);
   }
-  constexpr DimensionedViewBase()
+  constexpr SizedExpressionBase()
     requires(IsStatic)
       : m_extents({}) {}
   template <typename... Args>
-  constexpr DimensionedViewBase(const extents_type &extents)
+  constexpr SizedExpressionBase(const extents_type &extents)
       : m_extents(extents) {}
 
   constexpr auto extents() const -> const extents_type & { return m_extents; }
@@ -38,5 +40,5 @@ protected:
 private:
   extents_type m_extents;
 };
-} // namespace zipper::views
+} // namespace zipper::expression
 #endif

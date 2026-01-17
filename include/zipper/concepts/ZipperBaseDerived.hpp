@@ -2,29 +2,20 @@
 #define ZIPPER_CONCEPTS_ZIPPERBASE_DERIVED_HPP
 #include <type_traits>
 
-#include "ViewDerived.hpp"
+#include "Expression.hpp"
 
 namespace zipper {
-template <template <concepts::QualifiedViewDerived> typename DerivedT,
-          concepts::QualifiedViewDerived View>
+template <template <concepts::QualifiedExpression> typename DerivedT,
+          concepts::QualifiedExpression Expression>
 class ZipperBase;
 } // namespace zipper
 namespace zipper::concepts {
 namespace detail {
 
 template <typename> struct ZipperBaseDerived : public std::false_type {};
-template <template <concepts::QualifiedViewDerived> typename DerivedT,
-          concepts::QualifiedViewDerived View>
-struct ZipperBaseDerived<ZipperBase<DerivedT, View>> : std::true_type {};
-
-template <concepts::VectorBaseDerived View>
-struct ZipperBaseDerived<View> : std::true_type {};
-template <concepts::MatrixBaseDerived View>
-struct ZipperBaseDerived<View> : std::true_type {};
-template <concepts::TensorBaseDerived View>
-struct ZipperBaseDerived<View> : std::true_type {};
-template <concepts::FormBaseDerived View>
-struct ZipperBaseDerived<View> : std::true_type {};
+template <template <concepts::QualifiedExpression> typename DerivedT,
+          concepts::QualifiedExpression Expression>
+struct ZipperBaseDerived<ZipperBase<DerivedT, Expression>> : std::true_type {};
 
 } // namespace detail
 

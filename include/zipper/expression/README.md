@@ -53,7 +53,9 @@ derives its extents. Every `Expression` has to satisfy
 - `rank() -> rank_type`
 - `extent(rank_type d) -> index_type`
 - `coeff(index_type... i) const -> value_type`
-In general `Expression`s cannot be written to
+In general `Expression`s do not have plain data (i.e values in stored in memory by [Eigen's parlance](https://libeigen.gitlab.io/eigen/docs-nightly/TopicClassHierarchy.html)), but there are a few like
+`MDArray`s or slices.
+and swizzles (like the transpose) of
 and if the expression has the `has_plain_data` trait then
 - `coeff_ref(index_type... i) const -> value_type&`
 - `const_coeff_ref(index_type... i) const -> value_type const&`

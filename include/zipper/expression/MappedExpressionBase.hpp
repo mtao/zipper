@@ -1,21 +1,22 @@
-#if !defined(ZIPPER_VIEWS_MAPPEDVIEWBASE_HPP)
-#define ZIPPER_VIEWS_MAPPEDVIEWBASE_HPP
+#if !defined(ZIPPER_expression_MAPPEDVIEWBASE_HPP)
+#define ZIPPER_expression_MAPPEDVIEWBASE_HPP
 
-#include "ViewBase.hpp"
-#include "detail/ViewTraits.hpp"
+#include "ExpressionBase.hpp"
+#include "detail/ExpressionTraits.hpp"
 #include "zipper/detail//ExtentsTraits.hpp"
 
-namespace zipper::views {
+namespace zipper::expression {
 
-template <typename Derived_> class MappedViewBase : public ViewBase<Derived_> {
+template <typename Derived_>
+class MappedExpressionBase : public ExpressionBase<Derived_> {
 public:
   using Derived = Derived_;
   auto derived() -> Derived & { return static_cast<Derived &>(*this); }
   auto derived() const -> const Derived & {
     return static_cast<const Derived &>(*this);
   }
-  using Base = ViewBase<Derived>;
-  using traits = detail::ViewTraits<Derived>;
+  using Base = ExpressionBase<Derived>;
+  using traits = detail::ExpressionTraits<Derived>;
   using Base::extent;
 
   using value_type = traits::value_type;
@@ -27,11 +28,11 @@ public:
   auto mapping() const -> const mapping_type & { return m_mapping; }
   auto extents() const -> const extents_type & { return mapping().extents(); }
 
-  MappedViewBase()
+  MappedExpressionBase()
       // requires(IsStatic):
       : m_mapping() {}
 
-  MappedViewBase(const extents_type &extents) : m_mapping(extents) {}
+  MappedExpressionBase(const extents_type &extents) : m_mapping(extents) {}
 
   template <concepts::ExtentsType E2>
   void resize_extents(const E2 &e)
@@ -41,10 +42,9 @@ public:
   }
 
 protected:
-  template <typename... Indices>
+  template <concepts::IndexArgument... Indices>
   auto get_index(Indices &&...indices) const -> index_type {
     static_assert((std::is_integral_v<std::decay_t<Indices>> && ...));
-    static_assert((!concepts::TupleLike<Indices> && ...));
 #if !defined(NDEBUG)
     assert(zipper::utils::extents::indices_in_range(extents(), indices...));
 #endif
@@ -78,5 +78,5 @@ private:
   mapping_type m_mapping;
 };
 
-} // namespace zipper::views
+} // namespace zipper::expression
 #endif

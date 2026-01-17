@@ -18,7 +18,7 @@
 #endif
 #pragma GCC diagnostic pop
 
-#include "concepts/IndexLike.hpp"
+#include "concepts/Index.hpp"
 
 namespace zipper {
 struct empty {};
@@ -29,20 +29,18 @@ template <index_type... Extents>
 #if defined(__cpp_lib_mdspan)
 using extents = std::extents<index_type, Extents...>;
 // fully dynamic extents
-template <rank_type N>
-using dextents = std::dextents<index_type, N>;
+template <rank_type N> using dextents = std::dextents<index_type, N>;
 struct full_extent_t {};
 template <typename OffsetType, typename ExtentType, typename StrideType>
 struct strided_slice {
-    OffsetType offset;
-    ExtentType extent;
-    StrideType stride;
+  OffsetType offset;
+  ExtentType extent;
+  StrideType stride;
 };
 template <typename OffsetType, typename ExtentType, typename StrideType>
 using slice_type = strided_slice<OffsetType, ExtentType, StrideType>;
 using default_layout_policy = std::layout_right;
-template <typename T>
-using default_accessor_policy = std::default_accessor<T>;
+template <typename T> using default_accessor_policy = std::default_accessor<T>;
 
 template <typename T, typename Extents,
           typename LayoutPolicy = default_layout_policy,
@@ -76,16 +74,14 @@ using mdspan = MDSPAN_IMPL_STANDARD_NAMESPACE::mdspan<T, Extents, LayoutPolicy,
 #endif
 
 // helper so users can pass in arguments to get extents
-template <concepts::IndexLike... Args>
-auto create_dextents(const Args&... args) {
-    return dextents<sizeof...(Args)>(args...);
+template <concepts::Index... Args> auto create_dextents(const Args &...args) {
+  return dextents<sizeof...(Args)>(args...);
 }
 
-template <typename T, T v>
-struct constant {
-    constexpr static T value = v;
-    constexpr operator T() const { return value; }
-    constexpr auto operator*() const -> T { return value; }
+template <typename T, T v> struct constant {
+  constexpr static T value = v;
+  constexpr operator T() const { return value; }
+  constexpr auto operator*() const -> T { return value; }
 };
 
 template <index_type N>
@@ -108,17 +104,17 @@ template <typename OffsetType = static_index_t<0>,
           typename StrideType = static_index_t<1>>
 inline auto slice(OffsetType start = {}, ExtentType size = {},
                   StrideType stride = {}) {
-    static_assert(concepts::IndexLike<OffsetType>);
-    using OT = std::conditional_t<std::is_integral_v<std::decay_t<OffsetType>>,
-                                  index_type, std::decay_t<OffsetType>>;
-    static_assert(concepts::IndexLike<OT>);
-    using ET = std::conditional_t<std::is_integral_v<std::decay_t<ExtentType>>,
-                                  index_type, std::decay_t<ExtentType>>;
-    static_assert(concepts::IndexLike<ET>);
-    using ST = std::conditional_t<std::is_integral_v<OffsetType>, index_type,
-                                  std::decay_t<StrideType>>;
-    static_assert(concepts::IndexLike<ST>);
-    return slice_t<OT, ET, ST>{OT(start), ET(size), ST(stride)};
+  static_assert(concepts::Index<OffsetType>);
+  using OT = std::conditional_t<std::is_integral_v<std::decay_t<OffsetType>>,
+                                index_type, std::decay_t<OffsetType>>;
+  static_assert(concepts::Index<OT>);
+  using ET = std::conditional_t<std::is_integral_v<std::decay_t<ExtentType>>,
+                                index_type, std::decay_t<ExtentType>>;
+  static_assert(concepts::Index<ET>);
+  using ST = std::conditional_t<std::is_integral_v<OffsetType>, index_type,
+                                std::decay_t<StrideType>>;
+  static_assert(concepts::Index<ST>);
+  return slice_t<OT, ET, ST>{OT(start), ET(size), ST(stride)};
 }
 
 template <index_type Offset, index_type Extent, index_type Stride = 1>
@@ -128,8 +124,8 @@ using static_slice_t = slice_t<std::integral_constant<index_type, Offset>,
 
 template <index_type Offset, index_type Extent, index_type Stride = 1>
 inline auto static_slice() {
-    return static_slice_t<Offset, Extent, Stride>{};
+  return static_slice_t<Offset, Extent, Stride>{};
 }
 
-}  // namespace zipper
+} // namespace zipper
 #endif
