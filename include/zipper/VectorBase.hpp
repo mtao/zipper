@@ -349,5 +349,11 @@ auto operator*(typename View::value_type const &lhs, View const &rhs) {
   return VectorBase<V>(V(lhs, rhs.view()));
 }
 
+namespace concepts {
+
+template <typename T>
+struct IsVectorBaseDerived<VectorBase<T>> : std::true_type {};
+} // namespace concepts
+
 } // namespace zipper
 #endif

@@ -1,19 +1,17 @@
-#
-
 #if !defined(ZIPPER_UTILS_EXTENTS_INDICES_IN_RANGE_HPP)
 #define ZIPPER_UTILS_EXTENTS_INDICES_IN_RANGE_HPP
 
-#include "zipper/concepts/ExtentsType.hpp"
+#include "zipper/concepts/Extents.hpp"
 #include "zipper/concepts/IndexArgument.hpp"
 #include "zipper/detail/slice_helpers.hpp"
 #include "zipper/types.hpp"
 
 namespace zipper::utils::extents {
 
-template <concepts::ExtentsType Extents, concepts::IndexArgument... Indices,
+template <concepts::Extents Extents, concepts::IndexArgument... Indices,
           rank_type... N>
-bool indices_in_range(std::integer_sequence<rank_type, N...>,
-                      const Extents &extents, const Indices &...i) {
+auto indices_in_range(std::integer_sequence<rank_type, N...>,
+                      const Extents &extents, const Indices &...i) -> bool {
   auto check = []<rank_type J, typename T>(std::integral_constant<rank_type, J>,
                                            const Extents &e,
                                            const T &index) -> bool {
@@ -47,8 +45,8 @@ bool indices_in_range(std::integer_sequence<rank_type, N...>,
   return (check(std::integral_constant<rank_type, N>{}, extents, i) && ...);
 }
 
-template <concepts::ExtentsType Extents, concepts::Index... Indices>
-bool indices_in_range(const Extents &e, const Indices &...i) {
+template <concepts::Extents Extents, concepts::Index... Indices>
+auto indices_in_range(const Extents &e, const Indices &...i) -> bool {
   if constexpr (Extents::rank() == 0) {
     return true;
   } else {

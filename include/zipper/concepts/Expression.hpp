@@ -1,5 +1,6 @@
 #if !defined(ZIPPER_CONCEPTS_EXPRESSION_HPP)
 #define ZIPPER_CONCEPTS_EXPRESSION_HPP
+#include "zipper/types.hpp"
 #include <concepts>
 
 namespace zipper::expression {
@@ -19,5 +20,9 @@ concept Expression = UnqualifiedExpression<std::remove_cvref_t<T>>;
 
 template <typename T>
 concept QualifiedExpression = UnqualifiedExpression<std::remove_cvref_t<T>>;
+
+/// Specifies something is a tensor with a particular rank
+template <typename T, zipper::rank_type rank>
+concept RankedExpression = Expression<T> && T::extents_type::rank() == rank;
 } // namespace zipper::concepts
 #endif

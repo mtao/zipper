@@ -2,7 +2,7 @@
 #define ZIPPER_CONCEPTS_TENSORVIEWDERIVED_HPP
 #include <type_traits>
 
-#include "ViewDerived.hpp"
+#include "Expression.hpp"
 #include "zipper/types.hpp"
 namespace zipper::views::detail {
 template <typename T> struct ViewTraits;

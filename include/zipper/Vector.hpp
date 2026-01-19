@@ -1,16 +1,14 @@
-#include "zipper/detail/ExtentsTraits.hpp"
 #if !defined(ZIPPER_VECTOR_HPP)
 #define ZIPPER_VECTOR_HPP
 
 #include "VectorBase.hpp"
-#include "storage/PlainObjectStorage.hpp"
+#include "zipper/expression/nullary/MDArray.hpp"
 #include "zipper/types.hpp"
 namespace zipper {
 
 template <typename ValueType, index_type Rows>
 class Vector
-    : public VectorBase<
-          storage::PlainObjectStorage<ValueType, zipper::extents<Rows>>> {
+    : public VectorBase<expression::nullary::MDArray<ValueType, Rows>> {
 public:
   using Base =
       VectorBase<storage::PlainObjectStorage<ValueType, zipper::extents<Rows>>>;
@@ -108,13 +106,11 @@ Vector(const MB &o) -> Vector<std::decay_t<typename MB::value_type>,
 template <concepts::VectorBaseDerived MB>
 Vector(const MB &o) -> Vector<std::decay_t<typename MB::value_type>,
                               MB::extents_type::static_extent(0)>;
-} // namespace zipper
-
-namespace zipper::views {
+namespace concepts {
 
 template <typename ValueType, index_type Rows>
-struct detail::ViewTraits<Vector<ValueType, Rows>>
-    : public detail::ViewTraits<
-          zipper::storage::PlainObjectStorage<ValueType, extents<Rows>>> {};
-} // namespace zipper::views
+struct IsVector<Vector<ValueType, Rows>> : std::true_type {};
+} // namespace concepts
+} // namespace zipper
+
 #endif

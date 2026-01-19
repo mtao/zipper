@@ -34,7 +34,7 @@ public:
 
   MappedExpressionBase(const extents_type &extents) : m_mapping(extents) {}
 
-  template <concepts::ExtentsType E2>
+  template <concepts::Extents E2>
   void resize_extents(const E2 &e)
     requires(extents_traits::template is_convertable_from<E2>())
   {
@@ -53,12 +53,12 @@ protected:
   }
 
 public:
-  template <typename... Indices>
+  template <concepts::Index... Indices>
   auto coeff(Indices &&...indices) const -> value_type {
     index_type idx = get_index(std::forward<Indices>(indices)...);
     return derived().coeff_linear(idx);
   }
-  template <typename... Indices>
+  template <concepts::Index... Indices>
   auto coeff_ref(Indices &&...indices) -> value_type &
     requires(traits::is_writable)
   {
@@ -66,7 +66,7 @@ public:
     return derived().coeff_ref_linear(idx);
   }
 
-  template <typename... Indices>
+  template <concepts::Index... Indices>
   auto const_coeff_ref(Indices &&...indices) const -> const value_type &
     requires(traits::is_writable)
   {

@@ -9,7 +9,7 @@
 
 namespace zipper::expression::nullary {
 // defaults are stored in MDSpan
-template <typename ValueType, typename Extents, typename LayoutPolicy,
+template <typename ValueType, concepts::Extents Extents, typename LayoutPolicy,
           typename AccessorPolicy>
 class MDArray : public expression::nullary::DenseStorageExpressionBase<
                     MDArray<ValueType, Extents, LayoutPolicy, AccessorPolicy>> {
@@ -69,7 +69,7 @@ public:
   MDArray(const extents_type &extents, Args &&...args)
       : ParentType(extents), m_accessor(std::forward<Args>(args)...) {}
 
-  template <zipper::concepts::ExtentsType E2>
+  template <zipper::concepts::Extents E2>
   void resize(const E2 &e)
     requires(extents_traits::template is_convertable_from<E2>() && !IsStatic)
   {
