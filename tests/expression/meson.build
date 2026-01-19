@@ -1,5 +1,5 @@
 subdir('nullary')
-# subdir('unary')
+subdir('unary')
 #
 #test_span = executable('test_span', 'test_span.cpp', dependencies: [zipper_test_dep])
 #test('span', test_span)
