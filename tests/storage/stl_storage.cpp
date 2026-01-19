@@ -1,5 +1,6 @@
 
-#include <zipper/storage/StlStorage.hpp>
+#include <zipper/expression/nullary/StlMDArray.hpp>
+#include <zipper/storage/StlStorageInfo.hpp>
 
 #include "../catch_include.hpp"
 
@@ -20,7 +21,7 @@ TEST_CASE("stl_storage_basic_types", "[data]") {
     static_assert(InfoType::static_extent<0>() == zipper::dynamic_extent);
 
     std::vector<double> x = {0, 1, 2};
-    zipper::storage::StlStorage storage(x);
+    zipper::expression::nullary::StlMDArray storage(x);
     auto e = storage.extents();
     static_assert(e.static_extent(0) == std::dynamic_extent);
     CHECK(e.extent(0) == 3);
@@ -52,7 +53,7 @@ TEST_CASE("stl_storage_basic_types", "[data]") {
     static_assert(InfoType::static_extent<0>() == 5);
 
     std::array<double, 3> x{{0, 1, 2}};
-    zipper::storage::StlStorage storage(x);
+    zipper::expression::nullary::StlMDArray storage(x);
     auto e = storage.extents();
     static_assert(e.static_extent(0) == 3);
     CHECK(e.extent(0) == 3);
@@ -88,7 +89,7 @@ TEST_CASE("stl_storage_basic_types", "[data]") {
 
     std::vector<std::array<double, 3>> x{{0, 1, 2}, {3, 4, 5}};
 
-    zipper::storage::StlStorage storage(x);
+    zipper::expression::nullary::StlMDArray storage(x);
     auto e = storage.extents();
     static_assert(decltype(e)::static_extent(0) == std::dynamic_extent);
     static_assert(decltype(e)::static_extent(1) == 3);
@@ -143,7 +144,7 @@ TEST_CASE("stl_storage_basic_types", "[data]") {
 
     std::array<std::vector<double>, 2> x{{{0, 1, 2}, {3, 4, 5}}};
 
-    zipper::storage::StlStorage storage(x);
+    zipper::expression::nullary::StlMDArray storage(x);
     auto e = storage.extents();
     static_assert(decltype(e)::static_extent(0) == 2);
     static_assert(decltype(e)::static_extent(1) == std::dynamic_extent);
@@ -187,7 +188,7 @@ TEST_CASE("stl_storage_basic_types", "[data]") {
 TEST_CASE("stl_storage_non_owning", "[data]") {
   {
     std::vector<double> x = {0, 1, 2};
-    auto storage = zipper::storage::get_non_owning_stl_storage(x);
+    auto storage = zipper::expression::nullary::get_non_owning_stl_storage(x);
     auto e = storage.extents();
     static_assert(e.static_extent(0) == std::dynamic_extent);
     CHECK(e.extent(0) == 3);
@@ -215,7 +216,7 @@ TEST_CASE("stl_storage_non_owning", "[data]") {
 
   {
     std::array<double, 3> x{{0, 1, 2}};
-    auto storage = zipper::storage::get_non_owning_stl_storage(x);
+    auto storage = zipper::expression::nullary::get_non_owning_stl_storage(x);
     auto e = storage.extents();
     static_assert(e.static_extent(0) == 3);
     CHECK(e.extent(0) == 3);
@@ -244,7 +245,7 @@ TEST_CASE("stl_storage_non_owning", "[data]") {
   {
     std::vector<std::array<double, 3>> x{{0, 1, 2}, {3, 4, 5}};
 
-    auto storage = zipper::storage::get_non_owning_stl_storage(x);
+    auto storage = zipper::expression::nullary::get_non_owning_stl_storage(x);
     auto e = storage.extents();
     static_assert(decltype(e)::static_extent(0) == std::dynamic_extent);
     static_assert(decltype(e)::static_extent(1) == 3);
@@ -295,7 +296,7 @@ TEST_CASE("stl_storage_non_owning", "[data]") {
   {
     std::array<std::vector<double>, 2> x{{{0, 1, 2}, {3, 4, 5}}};
 
-    auto storage = zipper::storage::get_non_owning_stl_storage(x);
+    auto storage = zipper::expression::nullary::get_non_owning_stl_storage(x);
     auto e = storage.extents();
     static_assert(decltype(e)::static_extent(0) == 2);
     static_assert(decltype(e)::static_extent(1) == std::dynamic_extent);
@@ -343,3 +344,5 @@ TEST_CASE("stl_storage_non_owning", "[data]") {
     CHECK(x[1][2] == 26);
   }
 }
+
+// TODO: test resizing vectors and how it affects the expression

@@ -1,53 +1,54 @@
-#if !defined(ZIPPER_STORAGE_PLAINOBJECTSTORAGE_HPP)
-#define ZIPPER_STORAGE_PLAINOBJECTSTORAGE_HPP
+#if !defined(ZIPPER_EXPRESSION_NULLARY_MDARRAY_HPP)
+#define ZIPPER_EXPRESSION_NULLARY_MDARRAY_HPP
 
-#include "DenseAccessor.hpp"
-#include "SpanStorage.hpp"
-#include "layout_types.hpp"
+#include "MDSpan.hpp"
 #include "zipper/detail//ExtentsTraits.hpp"
-#include "zipper/views/nullary/DenseStorageViewBase.hpp"
+#include "zipper/expression/nullary/DenseStorageExpressionBase.hpp"
+#include "zipper/storage/DenseData.hpp"
+#include "zipper/storage/layout_types.hpp"
 
-namespace zipper::storage {
-// defaults are stored in SpanStorage
+namespace zipper::expression::nullary {
+// defaults are stored in MDSpan
 template <typename ValueType, typename Extents, typename LayoutPolicy,
           typename AccessorPolicy>
-class PlainObjectStorage
-    : public views::nullary::DenseStorageViewBase<PlainObjectStorage<
-          ValueType, Extents, LayoutPolicy, AccessorPolicy>> {
+class MDArray : public expression::nullary::DenseStorageExpressionBase<
+                    MDArray<ValueType, Extents, LayoutPolicy, AccessorPolicy>> {
 public:
-  using ParentType = views::nullary::DenseStorageViewBase<
-      PlainObjectStorage<ValueType, Extents, LayoutPolicy, AccessorPolicy>>;
+  using self_type = MDArray<ValueType, Extents, LayoutPolicy, AccessorPolicy>;
+  using ParentType = DenseStorageExpressionBase<self_type>;
 
-  using value_type = ValueType;
+  using traits = expression::detail::ExpressionTraits<self_type>;
+  using value_type = typename traits::value_type;
+  using element_type = typename traits::element_type;
   using extents_type = Extents;
   using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
+
   constexpr static bool IsStatic = extents_traits::is_static;
 
-  using span_type =
-      SpanStorage<ValueType, Extents, LayoutPolicy, AccessorPolicy>;
+  using span_type = MDSpan<ValueType, Extents, LayoutPolicy, AccessorPolicy>;
+  MDArray() : ParentType(), m_accessor() {}
 
-  using accessor_type = DenseData<value_type, extents_traits::static_size>;
-  const accessor_type &accessor() const { return m_accessor; }
-  accessor_type &accessor() { return m_accessor; }
-  const accessor_type &linear_access() const { return m_accessor; }
-  accessor_type &linear_access() { return m_accessor; }
+  using accessor_type =
+      storage::DenseData<value_type, extents_traits::static_size>;
+  auto accessor() const -> const accessor_type & { return m_accessor; }
+  auto accessor() -> accessor_type & { return m_accessor; }
+  auto linear_access() const -> const accessor_type & { return m_accessor; }
+  auto linear_access() -> accessor_type & { return m_accessor; }
   using ParentType::assign;
 
-  PlainObjectStorage() : ParentType(), m_accessor() {}
+  MDArray(const MDArray &) = default;
+  MDArray(MDArray &&) = default;
+  auto operator=(const MDArray &) -> MDArray & = default;
+  auto operator=(MDArray &&) -> MDArray & = default;
 
-  PlainObjectStorage(const PlainObjectStorage &) = default;
-  PlainObjectStorage(PlainObjectStorage &&) = default;
-  PlainObjectStorage &operator=(const PlainObjectStorage &) = default;
-  PlainObjectStorage &operator=(PlainObjectStorage &&) = default;
-
-  PlainObjectStorage(const extents_type &extents)
+  MDArray(const extents_type &extents)
     requires(!IsStatic)
       : ParentType(extents), m_accessor(extents_traits::size(extents)) {}
-  PlainObjectStorage(const extents_type &extents)
+  MDArray(const extents_type &extents)
     requires(IsStatic)
       : ParentType(extents), m_accessor() {}
 
-  span_type as_span() {
+  auto as_span() -> span_type {
     if constexpr (IsStatic) {
       return span_type(accessor().as_std_span());
     } else {
@@ -55,7 +56,7 @@ public:
       return span_type(accessor().as_std_span(), e);
     }
   }
-  const span_type as_span() const {
+  auto as_span() const -> const span_type {
     if constexpr (IsStatic) {
       return span_type(accessor().as_std_span());
     } else {
@@ -65,7 +66,7 @@ public:
   }
 
   template <typename... Args>
-  PlainObjectStorage(const extents_type &extents, Args &&...args)
+  MDArray(const extents_type &extents, Args &&...args)
       : ParentType(extents), m_accessor(std::forward<Args>(args)...) {}
 
   template <zipper::concepts::ExtentsType E2>
@@ -87,16 +88,16 @@ private:
   accessor_type m_accessor;
 };
 
-} // namespace zipper::storage
-namespace zipper::views {
+} // namespace zipper::expression::nullary
+namespace zipper::expression {
 
 template <typename ValueType, typename Extents, typename LayoutPolicy,
           typename AccessorPolicy>
-struct detail::ViewTraits<zipper::storage::PlainObjectStorage<
+struct detail::ExpressionTraits<zipper::expression::nullary::MDArray<
     ValueType, Extents, LayoutPolicy, AccessorPolicy>>
-    : public detail::DefaultViewTraits<ValueType, Extents>
-/*: public detail::ViewTraits <
-  views::StorageViewBase<zipper::storage::PlainObjectStorage<
+    : public detail::DefaultExpressionTraits<ValueType, Extents>
+/*: public detail::ExpressionTraits <
+  expression::StorageExpressionBase<zipper::storage::MDArray<
       ValueType, Extents, LayoutPolicy, AccessorPolicy>> */
 {
   using value_type = ValueType;
@@ -112,5 +113,5 @@ struct detail::ViewTraits<zipper::storage::PlainObjectStorage<
   constexpr static bool is_coefficient_consistent = true;
   constexpr static bool is_resizable = extents_type::rank_dynamic() > 0;
 };
-} // namespace zipper::views
+} // namespace zipper::expression
 #endif

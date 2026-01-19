@@ -1,123 +1,41 @@
 
 #include <iostream>
 #include <span>
-#include <zipper/Matrix.hpp>
-#include <zipper/Vector.hpp>
-#include <zipper/VectorBase.hpp>
+#include <zipper/storage/SpanData.hpp>
 
 #include "../catch_include.hpp"
 using namespace zipper;
-TEST_CASE("test_vector_span", "[vector][storage][dense][span]") {
-    std::vector<int> vec = {2, 3};
-    VectorBase v = std::span<int, 2>(vec);
-    VectorBase v_const = std::span<const int, 2>(vec);
+TEST_CASE("test_span_1d", "[storage][dense][span]") {
+  std::vector<int> vec = {2, 3};
+  std::span<int, std::dynamic_extent> svec = vec;
+  storage::SpanData<int, zipper::dynamic_extent> v(svec);
+  storage::SpanData<const int, zipper::dynamic_extent> v_const(svec);
 
-    VectorBase v2 = vec;
+  storage::SpanData<int, 2> v2(svec);
+  storage::SpanData<const int, 2> v2_const(svec);
 
-    auto c = v_const.eval();
-    CHECK((c == v_const));
+  CHECK(v.coeff(0) == 2);
+  CHECK(v.coeff(1) == 3);
 
-    CHECK((v == v2));
+  std::array<int, 2> y;
+  storage::SpanData<int, 2> z(y);
+  storage::SpanData<const int, 2> z_const(y);
+  CHECK(y[0] == 2);
+  CHECK(y[1] == 3);
 
-    static_assert(v.static_extent(0) == 2);
-    REQUIRE(v.extent(0) == 2);
-    CHECK(v(0) == 2);
-    CHECK(v(1) == 3);
+  z.coeff_ref(0) = 3;
+  z.coeff_ref(1) = 4;
 
-    std::array<int, 2> y;
-    VectorBase z(y);
-    z = v.view();
-    CHECK(y[0] == 2);
-    CHECK(y[1] == 3);
+  CHECK(y[0] == 3);
+  CHECK(y[1] == 4);
 
-    z(0) = 3;
-    z(1) = 4;
+  z.coeff_ref(0) = 3;
+  z.coeff_ref(1) = 4;
 
-    CHECK(y[0] == 3);
-    CHECK(y[1] == 4);
-    z = v;
-    CHECK(y[0] == 2);
-    CHECK(y[1] == 3);
-
-    z(0) = 3;
-    z(1) = 4;
-
-    CHECK(y[0] == 3);
-    CHECK(y[1] == 4);
-
-    {
-        Vector x = v;
-        auto a = x.as_span();
-        auto b = x.as_const_span();
-        CHECK((a == b));
-
-        zipper::Vector<int, 2>::const_span_type d = a;
-        CHECK((a == d));
-    }
-
-    // this last case WOULD be very cool, but seems to not work due to a parse
-    // limitation in type deductions? In particular, gcc at least seems to
-    // really want y to be the name of a variable of type VectorBase
-    // VectorBase(y) = {4, 5};
-    // CHECK(v(0) == 2);
-    // CHECK(v(1) == 3);
-}
-TEST_CASE("test_matrix_span", "[matrix][storage][dense][span]") {
-    std::vector<int> vec = {0, 1, 2, 3};
-    zipper::Matrix<int, 2, 2>::span_type M = std::span<int, 4>(vec);
-    zipper::Matrix<int, std::dynamic_extent, std::dynamic_extent>::span_type Md(
-        std::span<int>(vec), zipper::create_dextents(2, 2));
-
-    static_assert(M.static_extent(0) == 2);
-    static_assert(M.static_extent(1) == 2);
-    static_assert(Md.static_extent(0) == std::dynamic_extent);
-    static_assert(Md.static_extent(1) == std::dynamic_extent);
-    REQUIRE(M.extent(0) == 2);
-    REQUIRE(M.extent(1) == 2);
-    REQUIRE(Md.extent(0) == 2);
-    REQUIRE(Md.extent(1) == 2);
-
-    CHECK(M(0, 0) == 0);
-    CHECK(M(0, 1) == 1);
-    CHECK(M(1, 0) == 2);
-    CHECK(M(1, 1) == 3);
-
-    CHECK((M == Md));
-
-    {
-        Matrix m = M;
-        auto a = m.as_span();
-        auto b = m.as_const_span();
-        CHECK((a == b));
-
-        zipper::Matrix<int, 2, 2>::const_span_type d = a;
-        CHECK((a == d));
-    }
-
-    // this last case WOULD be very cool, but seems to not work due to a parse
-    // limitation in type deductions? In particular, gcc at least seems to
-    // really want y to be the name of a variable of type VectorBase
-    // VectorBase(y) = {4, 5};
-    // CHECK(v(0) == 2);
-    // CHECK(v(1) == 3);
-}
-TEST_CASE("test_span_view", "[vector][storage][dense][span]") {
-    {
-        zipper::Vector<double, 3> x = {1, 2, 3};
-
-        VectorBase y = x.view().as_span();
-        CHECK(x == y);
-        VectorBase z = x.view().as_std_span();
-        CHECK(x == z);
-    }
-    {
-        zipper::Vector<double, std::dynamic_extent> x = {1, 2, 3};
-
-        static_assert(std::decay_t<decltype(x)>::extents_type::rank() == 1);
-
-        VectorBase y = x.view().as_span();
-        CHECK(x == y);
-        VectorBase z = x.view().as_std_span();
-        CHECK(x == z);
-    }
+  CHECK(y[0] == 3);
+  CHECK(y[1] == 4);
+  CHECK(z_const.coeff(0) == 3);
+  CHECK(z_const.coeff(1) == 4);
+  CHECK(z_const.const_coeff_ref(0) == 3);
+  CHECK(z_const.const_coeff_ref(1) == 4);
 }

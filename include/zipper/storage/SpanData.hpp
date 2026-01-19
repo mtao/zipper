@@ -5,59 +5,54 @@
 #include <zipper/types.hpp>
 namespace zipper::storage {
 template <typename ElementType, std::size_t N>
-class SpanData {
-   public:
-    using element_type = ElementType;
-    using value_type = std::remove_cv_t<ElementType>;
-    using std_span_type = std::span<element_type, N>;
-    constexpr static index_type static_size = N;
+class SpanData : public std::span<ElementType, N> {
+public:
+  using element_type = ElementType;
+  using value_type = std::remove_cv_t<ElementType>;
+  constexpr static bool is_const = std::is_const_v<element_type>;
+  using std_span_type = std::span<element_type, N>;
+  constexpr static index_type static_size = N;
 
-    SpanData(const std_span_type& s) : m_data(s) {}
+  using base_type = std_span_type;
+  using base_type::base_type;
+  // for some reason the above using statement didn't work for copy?
+  SpanData(const base_type &b) : base_type(b) {}
+  using base_type::size;
 
-    SpanData(const std::span<value_type, N>& s)
-        requires(!std::same_as<element_type, value_type>)
-        : m_data(s) {}
+  auto coeff(index_type i) const -> element_type {
+    return base_type::operator[](i);
+  }
+  auto coeff_ref(index_type i) -> value_type &
+    requires(!is_const)
+  {
+    return base_type::operator[](i);
+  }
+  auto const_coeff_ref(index_type i) const -> value_type const & {
+    return base_type::operator[](i);
+  }
 
-    constexpr auto size() const noexcept -> std::size_t {
-        return m_data.size();
-    }
-    element_type coeff(index_type i) const { return m_data[i]; }
-    element_type& coeff_ref(index_type i) { return m_data[i]; }
-    const element_type& const_coeff_ref(index_type i) const {
-        return m_data[i];
-    }
-    element_type* data() noexcept { return m_data.data(); }
-    const element_type* data() const noexcept { return m_data.data(); }
+  using base_type::data;
 
-    const auto& container() const { return m_data; }
-    auto& container() { return m_data; }
+  auto container() const -> const base_type & { return *this; }
+  auto container() -> base_type & { return *this; }
 
-    auto as_std_span() { return m_data; }
-    auto as_std_span() const { return m_data; }
+  auto as_std_span() -> base_type & { return *this; }
+  auto as_std_span() const -> base_type const & { return *this; }
 
-    // TODO: for cpp<23 iterator_type and const_iterator_type are different.
-    // feeling very lazy as this discrepency disappears with cpp23
+  using base_type::begin;
+  using base_type::cbegin;
+  using base_type::cend;
+  using base_type::end;
+  // TODO: for cpp<23 iterator_type and const_iterator_type are different.
+  // feeling very lazy as this discrepency disappears with cpp23
 #if defined(__cpp_lib_ranges_as_const)
-    using iterator_type = std_span_type::iterator;
-    using const_iterator_type = std_span_type::const_iterator;
+  using iterator_type = base_type::iterator;
+  using const_iterator_type = base_type::const_iterator;
 #else
-    using iterator_type = std_span_type::iterator;
-    using const_iterator_type = iterator_type;
+  using iterator_type = base_type::iterator;
+  using const_iterator_type = base_type::iterator;
 #endif
-    auto begin() noexcept -> iterator_type { return m_data.begin(); }
-    auto end() noexcept -> iterator_type { return m_data.end(); }
-    auto begin() const noexcept -> const_iterator_type {
-        return m_data.begin();
-    }
-    auto end() const noexcept -> const_iterator_type { return m_data.end(); }
-    auto cbegin() const noexcept -> const_iterator_type {
-        return m_data.begin();
-    }
-    auto cend() const noexcept -> const_iterator_type { return m_data.end(); }
-
-   private:
-    std_span_type m_data;
 };
 
-}  // namespace zipper::storage
+} // namespace zipper::storage
 #endif

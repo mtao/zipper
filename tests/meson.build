@@ -6,7 +6,7 @@ zipper_test_dep = declare_dependency(
 )
 
 subdir('views')
-# subdir('storage')
+subdir('storage')
 #subdir('utils')
 #subdir('detail')
 #

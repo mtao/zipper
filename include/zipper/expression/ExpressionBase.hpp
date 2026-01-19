@@ -1,6 +1,5 @@
 #if !defined(ZIPPER_expression_EXPRESSIONBASE_HPP)
 #define ZIPPER_expression_EXPRESSIONBASE_HPP
-#include <type_traits>
 
 #include "detail/ExpressionTraits.hpp"
 #include "zipper/concepts/Expression.hpp"
@@ -35,8 +34,8 @@ public:
   using extents_type = traits::extents_type;
   using value_type = traits::value_type;
   using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
-  // view does not permute underlying value of indices, so coefficient-wise
-  // operations are valid
+  // expression does not permute underlying value of indices, so
+  // coefficient-wise operations are valid
   constexpr static bool is_alias_free = traits::is_alias_free;
   constexpr static bool is_plain_data = traits::is_plain_data;
   constexpr static bool is_const = traits::is_const;
@@ -44,7 +43,6 @@ public:
 
   static_assert(extents_type::rank() >= 0);
   using array_type = std::array<index_type, rank>;
-  // using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
 
   [[nodiscard]] constexpr auto extent(rank_type i) const -> index_type {
     return derived().extent(i);
