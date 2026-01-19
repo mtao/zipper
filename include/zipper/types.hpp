@@ -1,5 +1,5 @@
-#if !defined(ZIPPER_DETAIL_TYPES_HPP)
-#define ZIPPER_DETAIL_TYPES_HPP
+#if !defined(ZIPPER_TYPES_HPP)
+#define ZIPPER_TYPES_HPP
 #include <cstddef>
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"

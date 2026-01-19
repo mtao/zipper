@@ -1,5 +1,5 @@
-#if !defined(ZIPPER_expression_NULLARY_RANDOMVIEW_HPP)
-#define ZIPPER_expression_NULLARY_RANDOMVIEW_HPP
+#if !defined(ZIPPER_EXPRESSION_NULLARY_RANDOM_HPP)
+#define ZIPPER_EXPRESSION_NULLARY_RANDOM_HPP
 
 #include <random>
 

@@ -1,6 +1,6 @@
 #include <algorithm>
-#if !defined(ZIPPER_STORAGE_SPARSEACCESSOR_HPP)
-#define ZIPPER_STORAGE_SPARSEACCESSOR_HPP
+#if !defined(ZIPPER_STORAGE_SPARSECOORDINATEACCESSOR_HPP)
+#define ZIPPER_STORAGE_SPARSECOORDINATEACCESSOR_HPP
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wtautological-compare"

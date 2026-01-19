@@ -1,6 +1,6 @@
 
-#if !defined(ZIPPER_DETAIL_ALL_TUPLE_SIZE_HPP)
-#define ZIPPER_DETAIL_ALL_TUPLE_SIZE_HPP
+#if !defined(ZIPPER_DETAIL_TUPLE_SIZE_HPP)
+#define ZIPPER_DETAIL_TUPLE_SIZE_HPP
 
 #include <tuple>
 

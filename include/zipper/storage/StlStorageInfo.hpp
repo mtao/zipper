@@ -1,5 +1,5 @@
-#if !defined(ZIPPER_STORAGE_STLStorage_HPP)
-#define ZIPPER_STORAGE_STLStorage_HPP
+#if !defined(ZIPPER_STORAGE_STLSTORAGEINFO_HPP)
+#define ZIPPER_STORAGE_STLSTORAGEINFO_HPP
 #include <array>
 #include <cassert>
 #include <vector>

@@ -1,5 +1,5 @@
-#if !defined(ZIPPER_EXPRESSION_UNARY_UNARY_HPP)
-#define ZIPPER_EXPRESSION_UNARY_UNARY_HPP
+#if !defined(ZIPPER_EXPRESSION_UNARY_UNARYEXPRESSIONBASE_HPP)
+#define ZIPPER_EXPRESSION_UNARY_UNARYEXPRESSIONBASE_HPP
 
 #include "zipper/concepts/Expression.hpp"
 #include "zipper/expression/ExpressionBase.hpp"

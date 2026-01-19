@@ -1,5 +1,5 @@
-#if !defined(ZIPPER_STORAGE_CONCEPTS_ACCESSOR_LIKE_HPP)
-#define ZIPPER_STORAGE_CONCEPTS_ACCESSOR_LIKE_HPP
+#if !defined(ZIPPER_STORAGE_CONCEPTS_ACCESSOR_HPP)
+#define ZIPPER_STORAGE_CONCEPTS_ACCESSOR_HPP
 #include <concepts>
 #include <cstdlib>
 #include <zipper/concepts/ExtentsType.hpp>

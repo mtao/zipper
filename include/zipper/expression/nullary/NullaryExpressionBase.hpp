@@ -1,5 +1,5 @@
-#if !defined(ZIPPER_expressionS_NULLARY_NULLARyExpression_HPP)
-#define ZIPPER_expressionS_NULLARY_NULLARyExpression_HPP
+#if !defined(ZIPPER_EXPRESSION_NULLARY_NULLARYEXPRESSIONBASE_HPP)
+#define ZIPPER_EXPRESSION_NULLARY_NULLARYEXPRESSIONBASE_HPP
 
 #include "zipper/expression/SizedExpressionBase.hpp"
 

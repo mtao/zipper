@@ -1,5 +1,5 @@
-#if !defined(ZIPPER_CONCEPTS_SLICE_HPP)
-#define ZIPPER_CONCEPTS_SLICE_HPP
+#if !defined(ZIPPER_CONCEPTS_INDEXSLICE_HPP)
+#define ZIPPER_CONCEPTS_INDEXSLICE_HPP
 #include "Expression.hpp"
 #include "Index.hpp"
 #include "zipper/types.hpp"

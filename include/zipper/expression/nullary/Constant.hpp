@@ -1,6 +1,6 @@
 
-#if !defined(ZIPPER_expression_NULLARY_CONSTANTVIEW_HPP)
-#define ZIPPER_expression_NULLARY_CONSTANTVIEW_HPP
+#if !defined(ZIPPER_EXPRESSION_NULLARY_CONSTANT_HPP)
+#define ZIPPER_EXPRESSION_NULLARY_CONSTANT_HPP
 
 #include "NullaryExpressionBase.hpp"
 

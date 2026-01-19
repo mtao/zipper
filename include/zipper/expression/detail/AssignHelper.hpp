@@ -1,5 +1,5 @@
-#if !defined(ZIPPER_expression_NULLARY_DETAIL_ASSIGN_HELPER_HPP)
-#define ZIPPER_expression_NULLARY_DETAIL_ASSIGN_HELPER_HPP
+#if !defined(ZIPPER_EXPRESSION_DETAIL_ASSIGNHELPER_HPP)
+#define ZIPPER_EXPRESSION_DETAIL_ASSIGNHELPER_HPP
 #include "zipper/concepts/Expression.hpp"
 #include "zipper/detail/ExtentsTraits.hpp"
 #include "zipper/expression/detail/ExpressionTraits.hpp"

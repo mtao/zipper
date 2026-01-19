@@ -1,5 +1,5 @@
-#if !defined(ZIPPER_STORAGE_CONCEPTS_DATA_LIKE_HPP)
-#define ZIPPER_STORAGE_CONCEPTS_DATA_LIKE_HPP
+#if !defined(ZIPPER_STORAGE_CONCEPTS_DATA_HPP)
+#define ZIPPER_STORAGE_CONCEPTS_DATA_HPP
 #include <concepts>
 #include <cstdlib>
 #include <zipper/types.hpp>

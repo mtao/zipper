@@ -1,5 +1,5 @@
-#if !defined(ZIPPER_CONCEPTS_EXPRESSION_DERIVED_HPP)
-#define ZIPPER_CONCEPTS_EXPRESSION_DERIVED_HPP
+#if !defined(ZIPPER_CONCEPTS_EXPRESSION_HPP)
+#define ZIPPER_CONCEPTS_EXPRESSION_HPP
 #include <concepts>
 
 namespace zipper::expression {

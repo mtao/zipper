@@ -1,5 +1,5 @@
-#if !defined(ZIPPER_expression_MAPPEDVIEWBASE_HPP)
-#define ZIPPER_expression_MAPPEDVIEWBASE_HPP
+#if !defined(ZIPPER_EXPRESSION_MAPPEDEXPRESSIONBASE_HPP)
+#define ZIPPER_EXPRESSION_MAPPEDEXPRESSIONBASE_HPP
 
 #include "ExpressionBase.hpp"
 #include "detail/ExpressionTraits.hpp"

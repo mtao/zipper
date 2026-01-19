@@ -1,5 +1,5 @@
-#if !defined(ZIPPER_EXPRESSION_UNARY_OPERATIONVIEW_HPP)
-#define ZIPPER_EXPRESSION_UNARY_OPERATIONVIEW_HPP
+#if !defined(ZIPPER_EXPRESSION_UNARY_OPERATION_HPP)
+#define ZIPPER_EXPRESSION_UNARY_OPERATION_HPP
 
 #include "UnaryExpressionBase.hpp"
 #include "concepts/ScalarOperation.hpp"
