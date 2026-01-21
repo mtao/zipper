@@ -18,7 +18,7 @@ auto ExpressionBase<Derived>::coeff(Indices &&...indices) const -> value_type {
 template <typename Derived>
 template <concepts::Index... Indices>
 auto ExpressionBase<Derived>::coeff_ref(Indices &&...indices) -> value_type &
-  requires(is_plain_data)
+  requires(is_assignable)
 {
   constexpr static rank_type size = sizeof...(Indices);
   // rank 0 expression act like scalar values
@@ -30,7 +30,7 @@ template <typename Derived>
 template <concepts::Index... Indices>
 auto ExpressionBase<Derived>::const_coeff_ref(Indices &&...indices) const
     -> const value_type &
-  requires(is_plain_data)
+  requires(is_assignable)
 {
   constexpr static rank_type size = sizeof...(Indices);
   // rank 0 expression act like scalar values
@@ -69,7 +69,7 @@ auto ExpressionBase<Derived>::operator()(Args &&...idxs) const -> decltype(auto)
 template <typename Derived>
 template <concepts::IndexArgument... Args>
 auto ExpressionBase<Derived>::operator()(Args &&...idxs) -> decltype(auto)
-  requires(is_plain_data && !is_const)
+  requires(is_assignable && !is_const)
 
 {
   decltype(auto) v = access_pack(std::forward<Args>(idxs)...);
@@ -107,7 +107,7 @@ auto ExpressionBase<Derived>::const_access_index_pack(Args &&...idxs) const
 #if !defined(NDEBUG)
   zipper::utils::extents::indices_in_range(extents(), idxs...);
 #endif
-  if constexpr (is_plain_data) {
+  if constexpr (is_assignable) {
     return const_coeff_ref(std::forward<Args>(idxs)...);
   } else {
     return coeff(std::forward<Args>(idxs)...);

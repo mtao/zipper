@@ -1,46 +1,47 @@
-#if !defined(ZIPPER_VIEWS_COEFFICIENTSUM_HPP)
-#define ZIPPER_VIEWS_COEFFICIENTSUM_HPP
+#if !defined(ZIPPER_expression_COEFFICIENTSUM_HPP)
+#define ZIPPER_expression_COEFFICIENTSUM_HPP
 
-#include "zipper/concepts/ViewDerived.hpp"
+#include "zipper/concepts/Expression.hpp"
+#include "zipper/expression/detail/ExpressionTraits.hpp"
 #include "zipper/utils/extents/all_extents_indices.hpp"
-#include "zipper/views/detail/ViewTraits.hpp"
 
-namespace zipper::views {
-namespace reductions {
+namespace zipper::expression::reductions {
 
-template <zipper::concepts::QualifiedViewDerived View>
+template <zipper::concepts::QualifiedExpression Expression>
 class CoefficientSum {
-   public:
-    using self_type = CoefficientSum<View>;
-    using view_type = View;
-    using view_traits =
-        zipper::views::detail::ViewTraits<view_type>;
-    using value_type = typename view_traits::value_type;
+public:
+  using self_type = CoefficientSum<Expression>;
+  using expression_type = Expression;
+  using expression_traits =
+      zipper::expression::detail::ExpressionTraits<expression_type>;
+  using value_type = typename expression_traits::value_type;
+  /// unqualified type of the underlying object
+  using element_type = typename expression_traits::element_type;
 
-    CoefficientSum(View& v) : m_view(v) {}
-    CoefficientSum(View&& v) : m_view(v) {}
+  CoefficientSum(Expression &v) : m_expression(v) {}
+  CoefficientSum(Expression &&v) : m_expression(v) {}
 
-    CoefficientSum(CoefficientSum&& v) = default;
-    CoefficientSum(const CoefficientSum& v) = default;
-    CoefficientSum& operator=(CoefficientSum&& v) = delete;
-    CoefficientSum& operator=(const CoefficientSum& v) = delete;
+  CoefficientSum(CoefficientSum &&v) = default;
+  CoefficientSum(const CoefficientSum &v) = default;
+  auto operator=(CoefficientSum &&v) -> CoefficientSum & = delete;
+  auto operator=(const CoefficientSum &v) -> CoefficientSum & = delete;
 
-    value_type operator()() const {
-        value_type v = 0.0;
-        for (const auto& i :
-             zipper::utils::extents::all_extents_indices(m_view.extents())) {
-            v += m_view(i);
-        }
-        return v;
+  auto operator()() const -> element_type {
+    element_type v = 0.0;
+    for (const auto &i :
+         zipper::utils::extents::all_extents_indices(m_expression.extents())) {
+      v += m_expression(i);
     }
+    return v;
+  }
 
-   private:
-    const View& m_view;
-};  // namespace unarytemplate<typenameA,typenameB>class AdditionView
+private:
+  const Expression &m_expression;
+}; // namespace unarytemplate<typenameA,typenameB>class AdditionExpression
 
-template <zipper::concepts::QualifiedViewDerived View>
-CoefficientSum(View&) -> CoefficientSum<View>;
+template <zipper::concepts::QualifiedExpression Expression>
+CoefficientSum(Expression &) -> CoefficientSum<Expression>;
 
-}  // namespace reductions
-}  // namespace zipper::views
+} // namespace zipper::expression::reductions
+
 #endif

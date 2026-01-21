@@ -4,10 +4,6 @@
 
 #include "Expression.hpp"
 
-namespace zipper {
-template <concepts::Expression T> class MatrixBase;
-template <typename T, index_type R> class Matrix;
-} // namespace zipper
 namespace zipper::concepts {
 namespace detail {
 template <typename> struct IsMatrixBaseDerived : std::false_type {};

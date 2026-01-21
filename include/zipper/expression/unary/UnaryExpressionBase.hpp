@@ -25,15 +25,15 @@ struct DefaultUnaryExpressionTraits
   constexpr static bool is_coefficient_consistent =
       base_traits::is_coefficient_consistent;
   constexpr static bool is_value_based = true;
-  constexpr static bool is_writable = base_traits::is_writable && !is_const;
+  constexpr static bool is_assignable = base_traits::is_assignable && !is_const;
 
   constexpr static bool is_rvalue_reference = std::is_rvalue_reference_v<Child>;
   constexpr static bool is_lvalue_reference = std::is_lvalue_reference_v<Child>;
   using child_type_ = std::decay_t<Child>;
   using child_type_refed =
       std::conditional<is_lvalue_reference, child_type_ &, child_type_>;
-  using child_type =
-      std::conditional_t<is_writable, child_type_refed, const child_type_refed>;
+  using child_type = std::conditional_t<is_assignable, child_type_refed,
+                                        const child_type_refed>;
 };
 } // namespace detail
 
@@ -56,9 +56,9 @@ public:
   using Base::extent;
   constexpr static bool is_value_based = traits::is_value_based;
   constexpr static bool is_const = traits::is_const;
-  constexpr static bool is_writable = traits::is_writable;
+  constexpr static bool is_assignable = traits::is_assignable;
   using child_type =
-      std::conditional_t<is_writable, ChildType, const ChildType>;
+      std::conditional_t<is_assignable, ChildType, const ChildType>;
   // using child_type = typename traits::child_type;
 
   auto derived() -> Derived & { return static_cast<Derived &>(*this); }

@@ -19,6 +19,7 @@ public:
 
   using traits = expression::detail::ExpressionTraits<self_type>;
   using value_type = typename traits::value_type;
+  /// Type of the underlying variable (should be seomthing like remove_cvref_t
   using element_type = typename traits::element_type;
   using extents_type = Extents;
   using extents_traits = zipper::detail::ExtentsTraits<extents_type>;

@@ -7,7 +7,13 @@
 #include "../../fmt_include.hpp"
 
 TEST_CASE("test_vector_scalar", "[vector][unary][scalar_arithmetic]") {
-  zipper::Vector<double, 3> x{0.5, 1.5, 2.5};
+  zipper::expression::nullary::MDArray<double, zipper::extents<3>,
+                                       zipper::storage::layout_left,
+                                       zipper::default_accessor_policy<double>>
+      x;
+  x(0) = 0.5;
+  x(1) = 1.5;
+  x(2) = 2.5;
 
   {
     auto y = 3 * x;

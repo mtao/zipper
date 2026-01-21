@@ -18,7 +18,7 @@ template <typename T, index_type... Indices>
 struct detail::ExpressionTraits<nullary::Identity<T, Indices...>>
     : public nullary::detail::DefaultNullaryExpressionTraits<T, Indices...> {
 
-  constexpr static bool is_plain_data = false;
+  constexpr static bool is_assignable = false;
 
   using base_type =
       SizedExpressionBase<typename nullary::Identity<T, Indices...>>;

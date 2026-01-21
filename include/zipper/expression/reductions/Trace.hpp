@@ -1,41 +1,40 @@
-#if !defined(ZIPPER_VIEWS_TRACE_HPP)
-#define ZIPPER_VIEWS_TRACE_HPP
+#if !defined(ZIPPER_expression_TRACE_HPP)
+#define ZIPPER_expression_TRACE_HPP
 
-#include "zipper/concepts/ViewDerived.hpp"
-#include "zipper/views/detail/ViewTraits.hpp"
-#include "zipper/views/reductions/CoefficientSum.hpp"
-#include "zipper/views/unary/DiagonalView.hpp"
+#include "zipper/concepts/Expression.hpp"
+#include "zipper/expression/detail/ExpressionTraits.hpp"
+#include "zipper/expression/reductions/CoefficientSum.hpp"
+#include "zipper/expression/unary/Diagonal.hpp"
 
-namespace zipper::views {
+namespace zipper::expression {
 namespace reductions {
 
-template <zipper::concepts::QualifiedViewDerived View>
-class Trace {
-   public:
-    using self_type = Trace<View>;
-    using view_type = View;
-    using view_traits =
-        zipper::views::detail::ViewTraits<view_type>;
-    using value_type = typename view_traits::value_type;
+template <zipper::concepts::QualifiedExpression Expression> class Trace {
+public:
+  using self_type = Trace<Expression>;
+  using expression_type = Expression;
+  using Expression_traits =
+      zipper::expression::detail::ExpressionTraits<expression_type>;
+  using value_type = typename Expression_traits::value_type;
 
-    Trace(View& v) : m_view(v) {}
-    Trace(View&& v) : m_view(v) {}
+  Trace(Expression &v) : m_Expression(v) {}
+  Trace(Expression &&v) : m_Expression(v) {}
 
-    Trace(Trace&& v) = default;
-    Trace(const Trace& v) = default;
+  Trace(Trace &&v) = default;
+  Trace(const Trace &v) = default;
 
-    value_type operator()() const {
-        return reductions::CoefficientSum(
-            unary::DiagonalView<const view_type>(m_view))();
-    }
+  value_type operator()() const {
+    return reductions::CoefficientSum(
+        unary::Diagonal<const expression_type>(m_Expression))();
+  }
 
-   private:
-    View& m_view;
+private:
+  Expression &m_Expression;
 };
 
-template <zipper::concepts::QualifiedViewDerived View>
-Trace(View&) -> Trace<View>;
+template <zipper::concepts::QualifiedExpression Expression>
+Trace(Expression &) -> Trace<Expression>;
 
-}  // namespace reductions
-}  // namespace zipper::views
+} // namespace reductions
+} // namespace zipper::expression
 #endif

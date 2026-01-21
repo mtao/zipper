@@ -947,3 +947,19 @@ TEST_CASE("test_span_view", "[vector][storage][dense][span]") {
     CHECK(x == z);
   }
 }
+TEST_CASE("test_matrix_scalar", "[matrix][unary][scalar_arithmetic]") {
+  zipper::Matrix<double, 1, 3> x{{0.5, 1.5, 2.5}};
+
+  {
+    auto y = 3 * x;
+    CHECK(y(0, 0) == 1.5);
+    CHECK(y(0, 1) == 4.5);
+    CHECK(y(0, 2) == 7.5);
+  }
+  {
+    auto y = x.as_array() + 1;
+    CHECK(y(0, 0) == 1.5);
+    CHECK(y(0, 1) == 2.5);
+    CHECK(y(0, 2) == 3.5);
+  }
+}

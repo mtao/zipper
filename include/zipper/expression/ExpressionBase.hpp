@@ -36,8 +36,8 @@ public:
   using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
   // expression does not permute underlying value of indices, so
   // coefficient-wise operations are valid
-  constexpr static bool is_alias_free = traits::is_alias_free;
-  constexpr static bool is_plain_data = traits::is_plain_data;
+  constexpr static bool is_alias_free = traits::is_alias_free();
+  constexpr static bool is_assignable = traits::is_assignable();
   constexpr static bool is_const = traits::is_const;
   constexpr static rank_type rank = extents_type::rank();
 
@@ -63,22 +63,22 @@ public:
   auto coeff(Indices &&...indices) const -> value_type;
   template <concepts::Index... Indices>
   auto coeff_ref(Indices &&...indices) -> value_type &
-    requires(is_plain_data);
+    requires(is_assignable);
 
   template <concepts::Index... Indices>
   auto const_coeff_ref(Indices &&...indices) const -> const value_type &
-    requires(is_plain_data);
+    requires(is_assignable);
 
   /// Internally forwards to const_access_pack
   template <concepts::IndexArgument... Args>
   auto operator()(Args &&...idxs) const -> decltype(auto);
 
-  /// Primary access point, because it's mutable must support is_plain_data and
+  /// Primary access point, because it's mutable must support is_assignable and
   /// the underlying view is considered mutable
   /// Internally forwards to access_pack
   template <concepts::IndexArgument... Args>
   auto operator()(Args &&...idxs) -> decltype(auto)
-    requires(is_plain_data && !is_const);
+    requires(is_assignable && !is_const);
 
 private:
   /// generic entrypoint for accessing values

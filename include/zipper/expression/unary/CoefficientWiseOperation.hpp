@@ -2,7 +2,8 @@
 #define ZIPPER_EXPRESSION_UNARY_COEFFICIENTWISE_OPERATION_HPP
 
 #include "UnaryExpressionBase.hpp"
-#include "concepts/ScalarOperation.hpp"
+// TODO: perhaps switch back to using scalaroperation concept
+// #include "concepts/ScalarOperation.hpp"
 #include "zipper/expression/detail/ExpressionTraits.hpp"
 
 namespace zipper::expression {

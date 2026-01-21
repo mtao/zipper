@@ -3,33 +3,32 @@
 
 #include "ZipperBase.hpp"
 #include "as.hpp"
-#include "concepts/MatrixBaseDerived.hpp"
-#include "concepts/MatrixViewDerived.hpp"
-#include "concepts/VectorBaseDerived.hpp"
-#include "zipper/concepts/IndexLike.hpp"
+#include "concepts/Index.hpp"
+#include "concepts/Matrix.hpp"
+#include "concepts/Vector.hpp"
 #include "zipper/types.hpp"
 //
-#include "views/binary/MatrixProductView.hpp"
-#include "views/binary/MatrixVectorProductView.hpp"
-#include "views/reductions/Trace.hpp"
+#include "expression/binary/MatrixProduct.hpp"
+#include "expression/binary/MatrixVectorProduct.hpp"
+#include "expression/reductions/Trace.hpp"
 #include "zipper/detail/PartialReductionDispatcher.hpp"
 #include "zipper/detail/constexpr_arithmetic.hpp"
 #include "zipper/detail/extents/get_extent.hpp"
 
 namespace zipper {
-template <concepts::QualifiedViewDerived View> class ArrayBase;
+template <concepts::Expression View> class ArrayBase;
 template <typename ValueType, index_type Rows, index_type Cols,
           bool RowMajor = true>
 class Matrix;
 
 // template <concepts::MatrixViewDerived View>
-template <concepts::QualifiedViewDerived View>
+template <concepts::Expression View>
 class MatrixBase : public ZipperBase<MatrixBase, View> {
 public:
   MatrixBase() = default;
 
   using view_type = View;
-  using view_traits = views::detail::ViewTraits<View>;
+  using view_traits = expression::detail::ViewTraits<View>;
   using value_type = view_traits::value_type;
   using extents_type = view_traits::extents_type;
   using extents_traits = detail::ExtentsTraits<extents_type>;
@@ -80,7 +79,7 @@ public:
   auto as_array() const { return zipper::as_array(*this); }
 
   auto trace() const -> value_type {
-    return views::reductions::Trace(view())();
+    return expression::reductions::Trace(view())();
   }
 
   template <typename... Args>
@@ -189,10 +188,10 @@ public:
   }
 
   auto diagonal() const {
-    return VectorBase<views::unary::DiagonalView<const view_type>>(view());
+    return VectorBase<expression::unary::DiagonalView<const view_type>>(view());
   }
   auto diagonal() {
-    return VectorBase<views::unary::DiagonalView<view_type>>(view());
+    return VectorBase<expression::unary::DiagonalView<view_type>>(view());
   }
 
   template <rank_type... ranks> auto swizzle() const {
@@ -336,31 +335,29 @@ auto operator!=(View1 const &lhs, View2 const &rhs) {
 
 template <concepts::MatrixBaseDerived View1, concepts::MatrixBaseDerived View2>
 auto operator*(View1 const &lhs, View2 const &rhs) {
-  using V = views::binary::MatrixProductView<const typename View1::view_type,
-                                             const typename View2::view_type>;
+  using V =
+      expression::binary::MatrixProductView<const typename View1::view_type,
+                                            const typename View2::view_type>;
   return MatrixBase<V>(V(lhs.view(), rhs.view()));
 }
 
 template <concepts::MatrixBaseDerived View>
 auto operator*(View const &lhs, typename View::value_type const &rhs) {
-  using V =
-      views::unary::ScalarMultipliesView<typename View::value_type,
-                                         const typename View::view_type, true>;
+  using V = expression::unary::ScalarMultipliesView<
+      typename View::value_type, const typename View::view_type, true>;
   return MatrixBase<V>(V(lhs.view(), rhs));
 }
 template <concepts::MatrixBaseDerived View>
 auto operator*(typename View::value_type const &lhs, View const &rhs) {
-  using V =
-      views::unary::ScalarMultipliesView<typename View::value_type,
-                                         const typename View::view_type, false>;
+  using V = expression::unary::ScalarMultipliesView<
+      typename View::value_type, const typename View::view_type, false>;
   return MatrixBase<V>(V(lhs, rhs.view()));
 }
 
 template <concepts::MatrixBaseDerived View1, concepts::VectorBaseDerived View2>
 auto operator*(View1 const &lhs, View2 const &rhs) {
-  using V =
-      views::binary::MatrixVectorProductView<const typename View1::view_type,
-                                             const typename View2::view_type>;
+  using V = expression::binary::MatrixVectorProductView<
+      const typename View1::view_type, const typename View2::view_type>;
 
   return VectorBase<V>(V(lhs.view(), rhs.view()));
 }

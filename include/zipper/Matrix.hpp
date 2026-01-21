@@ -1,9 +1,11 @@
 #if !defined(ZIPPER_MATRIX_HPP)
 #define ZIPPER_MATRIX_HPP
 
+#include "concepts/Matrix.hpp"
+#include "expression/nullary/MDArray.hpp"
+#include "storage/layout_types.hpp"
+//
 #include "MatrixBase.hpp"
-#include "concepts/MatrixBaseDerived.hpp"
-#include "storage/PlainObjectStorage.hpp"
 #include "storage/SpanStorage.hpp"
 #include "zipper/types.hpp"
 namespace zipper {
@@ -12,15 +14,18 @@ namespace zipper {
 template <typename ValueType, index_type Rows, index_type Cols, bool RowMajor>
 class Matrix
     : public MatrixBase<
-          storage::PlainObjectStorage<ValueType, zipper::extents<Rows, Cols>,
-                                      storage::matrix_layout<RowMajor>>> {
+          expression::nullary::MDArray<ValueType, zipper::extents<Rows, Cols>,
+                                       storage::matrix_layout<RowMajor>,
+                                       default_accessor_policy<ValueType>>> {
 public:
   using layout_type = storage::matrix_layout<RowMajor>;
-  using Base = MatrixBase<storage::PlainObjectStorage<
-      ValueType, zipper::extents<Rows, Cols>, layout_type>>;
+  using expression_type =
+      expression::nullary::MDArray<ValueType, zipper::extents<Rows, Cols>,
+                                   storage::matrix_layout<RowMajor>,
+                                   default_accessor_policy<ValueType>>;
+  using Base = MatrixBase<expression_type>;
 
-  using Base::view;
-  using view_type = Base::view_type;
+  using Base::expression;
   using value_type = Base::value_type;
   using extents_type = Base::extents_type;
   using Base::col;
@@ -28,11 +33,16 @@ public:
   using Base::extents;
   using Base::row;
   using extents_traits = detail::ExtentsTraits<extents_type>;
-  using span_type =
-      MatrixBase<storage::SpanStorage<ValueType, zipper::extents<Rows, Cols>,
-                                      layout_type>>;
-  using const_span_type = MatrixBase<storage::SpanStorage<
-      const ValueType, zipper::extents<Rows, Cols>, layout_type>>;
+  using span_expression_type =
+      expression::nullary::MDSpan<ValueType, zipper::extents<Rows, Cols>,
+                                  storage::matrix_layout<RowMajor>,
+                                  default_accessor_policy<ValueType>>;
+  using const_span_expression_type =
+      expression::nullary::MDSpan<const ValueType, zipper::extents<Rows, Cols>,
+                                  storage::matrix_layout<RowMajor>,
+                                  default_accessor_policy<ValueType>>;
+  using span_type = MatrixBase<span_expression_type>;
+  using const_span_type = MatrixBase<const_span_expression_type>;
   using Base::transpose;
   constexpr static bool is_static = extents_traits::is_static;
 
@@ -76,16 +86,16 @@ public:
 
   auto as_span() -> span_type {
     if constexpr (is_static) {
-      return span_type(view().as_std_span());
+      return span_type(expression().as_std_span());
     } else {
-      return span_type(view().as_std_span(), extents());
+      return span_type(expression().as_std_span(), extents());
     }
   }
   auto as_const_span() const -> const_span_type {
     if constexpr (is_static) {
-      return const_span_type(view().as_std_span());
+      return const_span_type(expression().as_std_span());
     } else {
-      return const_span_type(view().as_std_span(), extents());
+      return const_span_type(expression().as_std_span(), extents());
     }
   }
   auto as_span() const -> const_span_type { return as_const_span(); }
@@ -116,67 +126,43 @@ public:
     assert(cols == extent(1));
   }
 
-  template <concepts::MatrixBaseDerived Other>
+  template <concepts::Matrix Other> Matrix(const Other &other) : Base(other) {}
+
+  template <concepts::Expression Other>
   Matrix(const Other &other) : Base(other) {}
 
-  template <concepts::ViewDerived Other>
-  Matrix(const Other &other) : Base(other) {}
+  Matrix(const Matrix &other) : Base(other.expression()) {}
 
-  Matrix(const Matrix &other) : Base(other.view()) {}
   template <index_type R2, index_type C2>
-  Matrix(const Matrix<value_type, R2, C2> &other) : Base(other.view()) {}
-  // template <concepts::MatrixViewDerived Other>
-  // Matrix(const Other& other) : Base(other) {}
-  // template <concepts::MatrixBaseDerived Other>
-  // Matrix(const Other& other) : Base(other) {}
-  // template <concepts::ViewDerived Other>
-  // Matrix(const Other& other) : Base(other) {}
-  // template <typename... Args>
-  // Matrix(Args&&... args)
-  //     requires(concepts::IndexPackLike<Args...>)
-  //     : Base(zipper::extents<Rows, Cols>(std::forward<Args>(args)...)) {}
-  // template <index_type... indices>
-  // Matrix(const zipper::extents<indices...>& e) : Base(e) {}
+  Matrix(const Matrix<value_type, R2, C2> &other) : Base(other.expression()) {}
+
   using Base::operator=;
   auto operator=(Matrix &&other) -> Matrix & {
-    Base::operator=(std::move(other.view()));
+    Base::operator=(std::move(other.expression()));
     return *this;
   }
 
   auto operator=(const Matrix &other) -> Matrix & {
-    Base::operator=(other.view());
+    Base::operator=(other.expression());
     return *this;
   }
   template <index_type R2, index_type C2>
   auto operator=(const Matrix<value_type, R2, C2> &other) -> Matrix & {
-    Base::operator=(other.view());
+    Base::operator=(other.expression());
     return *this;
   }
 };
-template <concepts::MatrixViewDerived MB>
-Matrix(const MB &o) -> Matrix<std::decay_t<typename MB::value_type>,
-                              MB::extents_type::static_extent(0),
-                              MB::extents_type::static_extent(1)>;
-
-template <concepts::MatrixBaseDerived MB>
+template <concepts::Matrix MB>
 Matrix(const MB &o) -> Matrix<std::decay_t<typename MB::value_type>,
                               MB::extents_type::static_extent(0),
                               MB::extents_type::static_extent(1)>;
 
 namespace concepts::detail {
 template <typename T, index_type R, index_type C, bool RowMajor>
-struct MatrixBaseDerived<Matrix<T, R, C, RowMajor>> : std::true_type {};
+struct IsMatrixBaseDerived<zipper::Matrix<T, R, C, RowMajor>> : std::true_type {
+};
 
 } // namespace concepts::detail
 } // namespace zipper
 
-namespace zipper::views {
-
-template <typename ValueType, index_type Rows, index_type Cols, bool RowMajor>
-struct detail::ViewTraits<Matrix<ValueType, Rows, Cols, RowMajor>>
-    : public detail::ViewTraits<zipper::storage::PlainObjectStorage<
-          ValueType, zipper::extents<Rows, Cols>,
-          std::conditional_t<RowMajor, storage::layout_left,
-                             storage::layout_right>>> {};
-} // namespace zipper::views
 #endif
