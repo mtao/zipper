@@ -30,15 +30,20 @@ public:
   }
 
   using traits = detail::ExpressionTraits<Derived>;
+  constexpr static detail::AccessFeatures access_features =
+      traits::access_features;
+  constexpr static detail::ShapeFeatures shape_features =
+      traits::shape_features;
 
   using extents_type = traits::extents_type;
   using value_type = traits::value_type;
   using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
   // expression does not permute underlying value of indices, so
   // coefficient-wise operations are valid
-  constexpr static bool is_alias_free = traits::is_alias_free();
-  constexpr static bool is_assignable = traits::is_assignable();
   constexpr static bool is_const = traits::is_const;
+  constexpr static bool is_alias_free = access_features.is_alias_free;
+  constexpr static bool is_assignable =
+      access_features.is_reference && !access_features.is_const;
   constexpr static rank_type rank = extents_type::rank();
 
   static_assert(extents_type::rank() >= 0);

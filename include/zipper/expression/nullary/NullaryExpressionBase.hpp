@@ -1,25 +1,9 @@
 #if !defined(ZIPPER_EXPRESSION_NULLARY_NULLARYEXPRESSIONBASE_HPP)
 #define ZIPPER_EXPRESSION_NULLARY_NULLARYEXPRESSIONBASE_HPP
 
-#include "zipper/expression/SizedExpressionBase.hpp"
+#include "zipper/types.hpp"
 
 namespace zipper::expression::nullary {
-
-namespace detail {
-template <typename T, index_type... Indices>
-struct DefaultNullaryExpressionTraits
-    : public expression::detail::DefaultExpressionTraits<T,
-                                                         extents<Indices...>> {
-  constexpr static bool is_coefficient_consistent = true;
-  constexpr static bool is_value_based = true;
-  constexpr static bool is_assignable = false;
-  constexpr static bool is_plain_data = false;
-
-  // to pass a base type to the NullaryExpressionBase
-  // template <typename Derived> using base_type = SizedExpressionBase<Derived>;
-};
-
-} // namespace detail
 
 template <typename Derived, typename T, index_type... Indices>
 class NullaryExpressionBase

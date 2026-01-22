@@ -1,4 +1,3 @@
-
 #include <iostream>
 
 #include "../../catch_include.hpp"
@@ -7,8 +6,6 @@
 #include <zipper/expression/nullary/Identity.hpp>
 #include <zipper/expression/unary/Cast.hpp>
 #include <zipper/utils/format.hpp>
-
-// #include <zipper/Vector.hpp>
 
 using namespace zipper;
 

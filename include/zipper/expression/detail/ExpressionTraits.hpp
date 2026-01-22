@@ -1,6 +1,7 @@
 #if !defined(ZIPPER_EXPRESSION_DETAIL_EXPRESSIONTRAITS_HPP)
 #define ZIPPER_EXPRESSION_DETAIL_EXPRESSIONTRAITS_HPP
 #include "zipper/concepts/Extents.hpp"
+#include "zipper/detail/ExtentsTraits.hpp"
 #include "zipper/types.hpp"
 
 namespace zipper::expression::detail {
@@ -30,14 +31,13 @@ struct AccessFeatures {
   }
 };
 
-template <concepts::Extents Extents> struct ShapeFeatures {
-  /// whether the underlying expression is explicitly resizable
+struct ShapeFeatures {
+  /// whether we can resize the expression if it has dynamic indices
   bool is_resizable = false;
-  using extents_type = Extents;
 };
 template <typename T, concepts::Extents Extents,
           AccessFeatures AF = AccessFeatures::from_type<T>(),
-          ShapeFeatures<Extents> SF = {}>
+          ShapeFeatures SF = ShapeFeatures{}>
 
 struct BasicExpressionTraits {
   /// Value-qualified type
@@ -45,9 +45,12 @@ struct BasicExpressionTraits {
   /// unqualified type of th
   using element_type = std::remove_cvref_t<T>;
 
+  using extents_type = Extents;
+  using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
+
   /// coallesces  traits
   constexpr static AccessFeatures access_features = AF;
-  constexpr static ShapeFeatures<Extents> shape_features = SF;
+  constexpr static ShapeFeatures shape_features = SF;
 
   consteval auto is_const_valued() -> bool { return access_features.is_const; }
   consteval auto is_reference_valued() -> bool {
@@ -64,6 +67,8 @@ struct BasicExpressionTraits {
     return access_features.is_alias_free;
   }
 };
+
+template <typename T> struct ExpressionTraits;
 
 /// This concept is designed for debug / testing that an extents traits is
 /// reasonable
