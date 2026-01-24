@@ -18,6 +18,14 @@ public:
   using base_type::base_type;
   // for some reason the above using statement didn't work for copy?
   SpanData(const base_type &b) : base_type(b) {}
+
+  /*
+  template <typename ET, std::size_t M>
+  SpanData(const std::span<ET, M> &o)
+    requires(M != N && M == std::dynamic_extent)
+      : std_span_type(o) {}
+  */
+  template <typename T> SpanData(const T &) {}
   using base_type::size;
 
   auto coeff(index_type i) const -> element_type {
