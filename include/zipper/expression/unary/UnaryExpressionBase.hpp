@@ -3,7 +3,6 @@
 
 #include "zipper/concepts/Expression.hpp"
 #include "zipper/expression/ExpressionBase.hpp"
-#include "zipper/expression/SizedExpressionBase.hpp"
 
 namespace zipper::expression::unary {
 
@@ -17,9 +16,6 @@ struct DefaultUnaryExpressionTraits
   constexpr static bool holds_extents = _holds_extents;
   constexpr static bool is_const = std::is_const_v<Child>;
   template <typename Derived>
-  using base_type =
-      std::conditional_t<holds_extents, SizedExpressionBase<Derived>,
-                         ExpressionBase<Derived>>;
   using base_traits = expression::detail::ExpressionTraits<Child>;
   using base_value_type = base_traits::value_type;
   constexpr static bool is_coefficient_consistent =

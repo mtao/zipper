@@ -3,6 +3,8 @@ catch2_with_main_dep = dependency('catch2-with-main')
 zipper_test_dep = declare_dependency(
   dependencies: [zipper_dep, catch2_with_main_dep],
   compile_args: ['-Wno-padded', '-Wno-float-equal'],
+  include_directories: ['.'],
+
 )
 
 subdir('expression')

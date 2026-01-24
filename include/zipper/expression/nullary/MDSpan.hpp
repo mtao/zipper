@@ -1,17 +1,22 @@
 #if !defined(ZIPPER_EXPRESSION_NULLARY_MDSPAN_HPP)
 #define ZIPPER_EXPRESSION_NULLARY_MDSPAN_HPP
 
-#include "DenseStorageExpressionBase.hpp"
+#include "LinearLayoutExpression.hpp"
 #include "zipper/detail//ExtentsTraits.hpp"
 #include "zipper/storage/SpanData.hpp"
 #include "zipper/storage/layout_types.hpp"
 
 namespace zipper::expression::nullary {
+
 template <typename ElementType, typename Extents,
           typename LayoutPolicy = default_layout_policy,
           typename AccessorPolicy = default_accessor_policy<ElementType>>
-class PlainObjectStorage;
-
+class MDSpan
+    : public LinearLayoutExpression<
+          storage::SpanData<
+              ElementType, zipper::detail::ExtentsTraits<Extents>::static_size>,
+          Extents, LayoutPolicy, AccessorPolicy> {};
+/*
 template <typename ElementType, typename Extents,
           typename LayoutPolicy = default_layout_policy,
           typename AccessorPolicy = default_accessor_policy<ElementType>>
@@ -47,19 +52,18 @@ public:
   auto operator=(MDSpan &&) -> MDSpan & = delete;
 
   MDSpan(const std_span_type &s, const extents_type &extents)
-    requires(!IsStatic)
+    requires(!IsStatic && std::same_as<element_type, value_type>)
       : ParentType(extents), m_accessor(s) {}
 
-  MDSpan(const std_span_type &s)
-    requires(IsStatic)
-      : ParentType(), m_accessor(s) {}
-
-  MDSpan(const std::span<value_type, extents_traits::static_size> &s,
+  MDSpan(const std::span<element_type, extents_type::rank> &s,
          const extents_type &extents)
     requires(!IsStatic && !std::same_as<element_type, value_type>)
       : ParentType(extents), m_accessor(s) {}
 
-  MDSpan(const std::span<value_type, extents_traits::static_size> &s)
+  MDSpan(const std_span_type &s)
+    requires(IsStatic && std::same_as<element_type, value_type>)
+      : ParentType(), m_accessor(s) {}
+  MDSpan(const std::span<value_type, extents_traits::rank> &s)
     requires(IsStatic && !std::same_as<element_type, value_type>)
       : ParentType(), m_accessor(s) {}
 
@@ -96,23 +100,34 @@ template <typename ElementType, typename Extents, typename LayoutPolicy,
           typename AccessorPolicy>
 struct detail::ExpressionTraits<
     nullary::MDSpan<ElementType, Extents, LayoutPolicy, AccessorPolicy>>
-    : public detail::DefaultExpressionTraits<ElementType, Extents>
-/*: public detail::ExpressionTraits <
-  views::StorageExpressionBase<zipper::storage::MDSpan<
-      ElementType, Extents, LayoutPolicy, AccessorPolicy>> */
-{
-  using element_type = ElementType;
-  using value_type = std::remove_cv_t<ElementType>;
-  constexpr static bool is_const = std::is_const_v<ElementType>;
-  using extents_type = Extents;
-  using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
+    : public BasicExpressionTraits<ElementType, Extents,
+                                   expression::detail::AccessFeatures{
+                                       .is_const = std::is_const_v<ElementType>,
+                                       .is_reference = true,
+                                       .is_alias_free = true},
+                                   expression::detail::ShapeFeatures{
+                                       .is_resizable = false}> {
+
+  using BaseTraits =
+      BasicExpressionTraits<ElementType, Extents,
+                            expression::detail::AccessFeatures{
+                                .is_const = std::is_const_v<ElementType>,
+                                .is_reference = true,
+                                .is_alias_free = true},
+                            expression::detail::ShapeFeatures{.is_resizable =
+                                                                  false}>;
+
+  using extents_traits = BaseTraits::extents_traits;
+  using extents_type = BaseTraits::extents_type;
   using value_accessor_type =
       storage::SpanData<ElementType, extents_traits::static_size>;
   using layout_policy = LayoutPolicy;
   using accessor_policy = AccessorPolicy;
   using mapping_type = typename layout_policy::template mapping<extents_type>;
-  constexpr static bool is_writable = !is_const;
-  constexpr static bool is_coefficient_consistent = true;
 };
-} // namespace zipper::expression
+
+
+ */
+} // namespace zipper::expression::nullary
+
 #endif

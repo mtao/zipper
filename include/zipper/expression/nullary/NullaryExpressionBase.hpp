@@ -1,49 +1,39 @@
 #if !defined(ZIPPER_EXPRESSION_NULLARY_NULLARYEXPRESSIONBASE_HPP)
 #define ZIPPER_EXPRESSION_NULLARY_NULLARYEXPRESSIONBASE_HPP
 
+#include "zipper/expression/ExpressionBase.hpp"
 #include "zipper/types.hpp"
+#include <spdlog/spdlog.h>
 
 namespace zipper::expression::nullary {
 
-template <typename Derived, typename T, index_type... Indices>
-class NullaryExpressionBase
-    : public expression::detail::template ExpressionTraits<Derived>::base_type {
+/// Helper class for nullary expressions to wrap a little get_value() entrypoint
+template <typename Derived>
+class NullaryExpressionBase : public ExpressionBase<Derived> {
 public:
-  using self_type = NullaryExpressionBase<Derived, T, Indices...>;
+  using expression_base = ExpressionBase<Derived>;
+  using self_type = NullaryExpressionBase<Derived>;
   using traits = zipper::expression::detail::ExpressionTraits<Derived>;
   using extents_type = traits::extents_type;
-  using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
+  using extents_traits = traits::extents_traits;
   using value_type = traits::value_type;
   constexpr static bool is_static = extents_traits::is_static;
-  constexpr static bool is_coefficient_consistent =
-      traits::is_coefficient_consistent;
-  constexpr static bool is_value_based = traits::is_value_based;
-  using Base = traits ::base_type;
-  using Base::extent;
+  constexpr static expression::detail::AccessFeatures access_features =
+      expression_base::access_features;
 
   auto derived() -> Derived & { return static_cast<Derived &>(*this); }
   auto derived() const -> const Derived & {
     return static_cast<const Derived &>(*this);
   }
 
-  constexpr NullaryExpressionBase(const NullaryExpressionBase &) = default;
-  constexpr NullaryExpressionBase(NullaryExpressionBase &&) = default;
-  constexpr NullaryExpressionBase()
-    requires(is_static)
-  = default;
-
-  constexpr NullaryExpressionBase(const extents_type &e) : Base(e) {}
-
-  constexpr auto get_value() const -> value_type
-    requires(is_value_based)
-  {
-    return derived().get_value();
+  static_assert(!concepts::Extents<value_type>);
+  constexpr auto get_value() const -> value_type {
+    value_type v = derived().get_value();
+    return v;
   }
 
-  template <typename... Args>
-  constexpr auto coeff(Args &&...) const -> value_type
-    requires(is_value_based)
-  {
+  template <concepts::Index... Args>
+  constexpr auto coeff(Args &&...) const -> value_type {
     return get_value();
   }
 };

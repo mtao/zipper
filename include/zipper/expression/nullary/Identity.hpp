@@ -7,23 +7,8 @@
 #include "zipper/detail/make_integer_range_sequence.hpp"
 #include "zipper/detail/merge_integer_sequence.hpp"
 #include "zipper/detail/pack_index.hpp"
-#include "zipper/expression/SizedExpressionBase.hpp"
 
 namespace zipper::expression {
-namespace nullary {
-template <typename T, index_type... Indices> class Identity;
-
-}
-template <typename T, index_type... Indices>
-struct detail::ExpressionTraits<nullary::Identity<T, Indices...>>
-    : public nullary::detail::DefaultNullaryExpressionTraits<T, Indices...> {
-
-  constexpr static bool is_assignable = false;
-
-  using base_type =
-      SizedExpressionBase<typename nullary::Identity<T, Indices...>>;
-};
-
 namespace nullary {
 
 namespace detail {
@@ -47,24 +32,30 @@ indicesAllSame(zipper::concepts::IndexPackTuple auto const &t) -> bool {
 } // namespace detail
 
 template <typename T, index_type... Indices>
-class Identity
-    : public NullaryExpressionBase<Identity<T, Indices...>, T, Indices...> {
+class Identity : public ExpressionBase<Identity<T, Indices...>>,
+                 public zipper::extents<Indices...> {
 public:
   using self_type = Identity<T, Indices...>;
+  using nullary_base_type = NullaryExpressionBase<self_type>;
+
   using traits = zipper::expression::detail::ExpressionTraits<self_type>;
   using extents_type = traits::extents_type;
-  using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
+  using extents_traits = traits::extents_traits;
   using value_type = traits::value_type;
 
-  using Base = NullaryExpressionBase<Identity<T, Indices...>, T, Indices...>;
-  Identity()
-    requires(extents_traits::is_static)
-  = default;
+  using extents_type::extent;
+  using extents_type::extents;
+  using extents_type::rank;
+  auto extents() const -> const extents_type & { return *this; }
+
   Identity(const Identity &) = default;
   Identity(Identity &&) = default;
   auto operator=(const Identity &) -> Identity & = default;
   auto operator=(Identity &&) -> Identity & = default;
-  Identity(const extents_type &e) : Base(e) {}
+  Identity()
+    requires(extents_traits::is_static)
+  = default;
+  Identity(const extents_type &e) : extents_type(e) {}
 
   template <concepts::Index... Args>
   Identity(Args &&...args)
@@ -102,7 +93,15 @@ private:
     }
   }
 };
-
 } // namespace nullary
+
+template <typename T, index_type... Indices>
+struct detail::ExpressionTraits<nullary::Identity<T, Indices...>>
+    : public BasicExpressionTraits<
+          T, zipper::extents<Indices...>,
+          expression::detail::AccessFeatures{
+              .is_const = false, .is_reference = false, .is_alias_free = true},
+          expression::detail::ShapeFeatures{.is_resizable = true}> {};
 } // namespace zipper::expression
+
 #endif

@@ -36,14 +36,13 @@ public:
       traits::shape_features;
 
   using extents_type = traits::extents_type;
-  using value_type = traits::value_type;
-  using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
+  using extents_traits = traits::extents_traits;
   // expression does not permute underlying value of indices, so
   // coefficient-wise operations are valid
-  constexpr static bool is_const = traits::is_const;
+  using value_type = traits::value_type;
+  constexpr static bool is_const_valued = access_features.is_const;
   constexpr static bool is_alias_free = access_features.is_alias_free;
-  constexpr static bool is_assignable =
-      access_features.is_reference && !access_features.is_const;
+  constexpr static bool is_assignable = traits::is_assignable();
   constexpr static rank_type rank = extents_type::rank();
 
   static_assert(extents_type::rank() >= 0);
@@ -55,8 +54,13 @@ public:
   static consteval auto static_extent(rank_type i) -> index_type {
     return extents_type::static_extent(i);
   }
-  constexpr auto extents() const -> const extents_type & {
-    return derived().extents();
+  constexpr auto extents() const -> decltype(auto) {
+    auto &&r = derived().extents();
+    // accepts any sort of qualification as long as the return type is
+    // convertible to a extents_type
+    static_assert(
+        std::is_same_v<std::remove_cvref_t<decltype(r)>, extents_type>);
+    return r;
   }
 
   [[nodiscard]] constexpr auto size() const -> size_t {
@@ -68,11 +72,11 @@ public:
   auto coeff(Indices &&...indices) const -> value_type;
   template <concepts::Index... Indices>
   auto coeff_ref(Indices &&...indices) -> value_type &
-    requires(is_assignable);
+    requires(traits::is_referrable() && !traits::is_const_valued());
 
   template <concepts::Index... Indices>
   auto const_coeff_ref(Indices &&...indices) const -> const value_type &
-    requires(is_assignable);
+    requires(traits::is_referrable());
 
   /// Internally forwards to const_access_pack
   template <concepts::IndexArgument... Args>
@@ -83,7 +87,7 @@ public:
   /// Internally forwards to access_pack
   template <concepts::IndexArgument... Args>
   auto operator()(Args &&...idxs) -> decltype(auto)
-    requires(is_assignable && !is_const);
+    requires(is_assignable && !is_const_valued);
 
 private:
   /// generic entrypoint for accessing values

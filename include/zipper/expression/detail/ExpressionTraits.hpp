@@ -2,39 +2,13 @@
 #define ZIPPER_EXPRESSION_DETAIL_EXPRESSIONTRAITS_HPP
 #include "zipper/concepts/Extents.hpp"
 #include "zipper/detail/ExtentsTraits.hpp"
+#include "zipper/detail/Features.hpp"
 #include "zipper/types.hpp"
 
 namespace zipper::expression::detail {
-struct AccessFeatures {
-  /// Is the underlying value mutable / const
-  bool is_const = false;
-  /// Is the underlying type a reference type
-  bool is_reference = false;
-  /// can modifying one element modify another element in the span
-  bool is_alias_free = false;
-  template <typename ValueType>
-  constexpr static auto from_type() -> AccessFeatures {
-    return {
-        .is_const = std::is_const_v<ValueType>,
-        .is_reference = std::is_reference_v<ValueType>,
-        // if the input
-        // type is a ref then we can be pretty sure it can't prevent aliasing
-        .is_alias_free = !std::is_reference_v<ValueType>};
-  }
 
-  constexpr auto operator||(AccessFeatures o) -> AccessFeatures {
-    return AccessFeatures{
-        .is_const = is_const || o.is_const,
-        .is_reference = is_reference || o.is_reference,
-        .is_alias_free = is_alias_free || o.is_alias_free,
-    };
-  }
-};
-
-struct ShapeFeatures {
-  /// whether we can resize the expression if it has dynamic indices
-  bool is_resizable = false;
-};
+using AccessFeatures = zipper::detail::AccessFeatures;
+using ShapeFeatures = zipper::detail::ShapeFeatures;
 template <typename T, concepts::Extents Extents,
           AccessFeatures AF = AccessFeatures::from_type<T>(),
           ShapeFeatures SF = ShapeFeatures{}>
@@ -52,17 +26,21 @@ struct BasicExpressionTraits {
   constexpr static AccessFeatures access_features = AF;
   constexpr static ShapeFeatures shape_features = SF;
 
-  consteval auto is_const_valued() -> bool { return access_features.is_const; }
-  consteval auto is_reference_valued() -> bool {
+  consteval static auto is_const_valued() -> bool {
+    return access_features.is_const;
+  }
+  consteval static auto is_reference_valued() -> bool {
     return access_features.is_reference;
   }
-  consteval auto is_assignable() -> bool {
+  consteval static auto is_assignable() -> bool {
     return !is_const_valued() && is_reference_valued();
   }
-  consteval auto is_referrable() -> bool {
+  consteval static auto is_referrable() -> bool {
     return access_features.is_reference;
   }
-  consteval auto is_resizable() -> bool { return shape_features.is_resizable; }
+  consteval static auto is_resizable() -> bool {
+    return shape_features.is_resizable;
+  }
   consteval auto is_alias_free() -> bool {
     return access_features.is_alias_free;
   }
