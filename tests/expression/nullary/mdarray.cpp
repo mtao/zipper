@@ -2,11 +2,18 @@
 #include <zipper/expression/nullary/MDArray.hpp>
 using namespace zipper::expression::nullary;
 using namespace zipper;
-TEST_CASE("test_random", "[expression][nullary]") {
-  auto a = MDArray<double>(create_dextents(3));
-  auto b = MDArray<double>(extents<2, 3>{});
-  auto c = MDArray<double>();
+TEST_CASE("test_mdarray", "[expression][nullary]") {
+  auto a = MDArray<double, zipper::extents<zipper::dynamic_extent>>(
+      create_dextents(3));
+  auto b = MDArray<double, extents<2, 3>>{};
+  auto c = MDArray<double, extents<>>();
 
+  const auto &mpa = a.mapping();
+  const auto &mpb = b.mapping();
+  int x = mpa(3);
+  int y = mpb(3, 5);
+
+  static_assert(a.extents().rank() == 1);
   REQUIRE(a.extents().rank() == 1);
   CHECK(a.extent(0) == 3);
   REQUIRE(b.extents().rank() == 2);

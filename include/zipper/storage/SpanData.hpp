@@ -25,7 +25,6 @@ public:
     requires(M != N && M == std::dynamic_extent)
       : std_span_type(o) {}
   */
-  template <typename T> SpanData(const T &) {}
   using base_type::size;
 
   auto coeff(index_type i) const -> element_type {

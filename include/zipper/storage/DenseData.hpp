@@ -1,6 +1,7 @@
 #if !defined(ZIPPER_STORAGE_DENSEDATA_HPP)
 #define ZIPPER_STORAGE_DENSEDATA_HPP
 #include "DynamicDenseData.hpp"
+#include "LinearAccessorTraits.hpp"
 #include "StaticDenseData.hpp"
 #include "zipper/detail//ExtentsTraits.hpp"
 
@@ -87,6 +88,13 @@ public:
 private:
   storage_type m_data;
 };
+template <typename ElementType, std::size_t N>
+struct LinearAccessorTraits<DenseData<ElementType, N>>
+    : public BasicLinearAccessorTraits<
+          AccessFeatures{.is_const = std::is_const_v<ElementType>,
+                         .is_reference = true,
+                         .is_alias_free = true},
+          ShapeFeatures{.is_resizable = N == zipper::dynamic_extent}> {};
 } // namespace zipper::storage
 
 #endif

@@ -15,7 +15,14 @@ class MDSpan
     : public LinearLayoutExpression<
           storage::SpanData<
               ElementType, zipper::detail::ExtentsTraits<Extents>::static_size>,
-          Extents, LayoutPolicy, AccessorPolicy> {};
+          Extents, LayoutPolicy, AccessorPolicy> {
+
+  using base_type = LinearLayoutExpression<
+      storage::SpanData<ElementType,
+                        zipper::detail::ExtentsTraits<Extents>::static_size>,
+      Extents, LayoutPolicy, AccessorPolicy>;
+  using base_type::base_type;
+};
 } // namespace zipper::expression::nullary
 
 #endif

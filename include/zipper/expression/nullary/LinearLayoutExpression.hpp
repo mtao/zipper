@@ -59,21 +59,22 @@ public:
       -> LinearLayoutExpression & = default;
 
   LinearLayoutExpression(const extents_type &extents = {})
-      : LinearLayoutExpression({}, extents) {}
+    requires(std::is_default_constructible_v<linear_accessor_type>)
+      : LinearLayoutExpression(linear_accessor_type{}, extents) {}
 
   // Constructor just forwards everything to the linear accessor. If a dynamic
   // sized attribute is used then linear access must come with extents
-  template <typename T>
-  LinearLayoutExpression(T &&linear_access, const extents_type &extents)
+
+  LinearLayoutExpression(const linear_accessor_type &linear_access,
+                         const extents_type &extents)
       : m_linear_accessor(linear_access), m_mapping(extents) {}
+  //: m_linear_accessor(linear_access), m_mapping(extents) {}
 
   /// Constructor for static extents might want to skip putting an extents
   /// member
-  template <typename T>
-  LinearLayoutExpression(T &&linear_access)
+  LinearLayoutExpression(linear_accessor_type const &linear_access)
     requires(extents_traits::is_static)
-      : LinearLayoutExpression(std::forward<T>(linear_access), extents_type{}) {
-  }
+      : LinearLayoutExpression(linear_access, extents_type{}) {}
 
   template <concepts::Extents E2>
   void resize_extents(const E2 &e)

@@ -13,13 +13,12 @@ class Constant : public NullaryExpressionBase<Constant<T, Indices...>>,
 public:
   using self_type = Constant<T, Indices...>;
   using traits = zipper::expression::detail::ExpressionTraits<self_type>;
-  using extents_type = traits::extents_type;
-  using extents_traits = traits::extents_traits;
-  using value_type = traits::value_type;
+  using extents_type = typename traits::extents_type;
+  using extents_traits = typename traits::extents_traits;
+  using value_type = typename traits::value_type;
   using nullary_base_type = NullaryExpressionBase<self_type>;
 
   using extents_type::extent;
-  using extents_type::extents;
   using extents_type::rank;
   auto extents() const -> const extents_type & { return *this; }
 
