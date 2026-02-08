@@ -10,33 +10,33 @@
 namespace zipper::expression::unary {
 
 template <zipper::concepts::Expression Expression>
-using NegateExpression =
-    Operation<Expression,
+using Negate =
+    CoefficientWiseOperation<Expression,
               std::negate<typename zipper::expression::detail::ExpressionTraits<
                   Expression>::value_type>>;
 
 template <zipper::concepts::Expression Expression>
-using LogicalNotExpression =
-    Operation<Expression,
+using LogicalNot =
+    CoefficientWiseOperation<Expression,
               std::logical_not<typename zipper::expression::detail::
                                    ExpressionTraits<Expression>::value_type>>;
 
 template <zipper::concepts::Expression Expression>
-using BitNotExpression =
-    Operation<Expression,
+using BitNot =
+    CoefficientWiseOperation<Expression,
               std::bit_not<typename zipper::expression::detail::
                                ExpressionTraits<Expression>::value_type>>;
 
 template <typename Scalar, zipper::concepts::Expression Expression,
           bool ScalarOnRight>
-using ScalarPlusExpression = ScalarOperation<
+using ScalarPlus = ScalarOperation<
     Expression,
     std::plus<std::common_type_t<Scalar, typename Expression::value_type>>,
     Scalar, ScalarOnRight>;
 
 template <typename Scalar, zipper::concepts::Expression Expression,
           bool ScalarOnRight>
-using ScalarMinusExpression = ScalarOperation<
+using ScalarMinus = ScalarOperation<
     Expression,
     std::minus<std::common_type_t<Scalar, typename Expression::value_type>>,
     Scalar, ScalarOnRight>;
@@ -44,15 +44,15 @@ using ScalarMinusExpression = ScalarOperation<
 // coeff-wise product preserves zero-ness
 template <typename Scalar, zipper::concepts::Expression Expression,
           bool ScalarOnRight>
-using ScalarMultipliesExpression =
+using ScalarMultiplies =
     ScalarOperation<Expression,
                     std::multiplies<std::common_type_t<
                         Scalar, typename Expression::value_type>>,
-                    Scalar, ScalarOnRight, true>;
+                    Scalar, ScalarOnRight>;
 
 template <typename Scalar, zipper::concepts::Expression Expression,
           bool ScalarOnRight>
-using ScalarDividesExpression = ScalarOperation<
+using ScalarDivides = ScalarOperation<
     Expression,
     std::divides<std::common_type_t<Scalar, typename Expression::value_type>>,
     Scalar, ScalarOnRight>;
@@ -60,21 +60,21 @@ using ScalarDividesExpression = ScalarOperation<
 // modulus preserves zero if the modulus is on the right
 template <typename Scalar, zipper::concepts::Expression Expression,
           bool ScalarOnRight>
-using ScalarModulusExpression = ScalarOperation<
+using ScalarModulus = ScalarOperation<
     Expression,
     std::modulus<std::common_type_t<Scalar, typename Expression::value_type>>,
-    Scalar, ScalarOnRight, ScalarOnRight>;
+    Scalar, ScalarOnRight>;
 
 template <typename Scalar, zipper::concepts::Expression Expression,
           bool ScalarOnRight>
-using ScalarEqualsToExpression = ScalarOperation<
+using ScalarEqualsTo = ScalarOperation<
     Expression,
     std::equal_to<std::common_type_t<Scalar, typename Expression::value_type>>,
     Scalar, ScalarOnRight>;
 
 template <typename Scalar, zipper::concepts::Expression Expression,
           bool ScalarOnRight>
-using ScalarNotEqualsToExpression =
+using ScalarNotEqualsTo =
     ScalarOperation<Expression,
                     std::not_equal_to<std::common_type_t<
                         Scalar, typename Expression::value_type>>,
@@ -82,21 +82,21 @@ using ScalarNotEqualsToExpression =
 
 template <typename Scalar, zipper::concepts::Expression Expression,
           bool ScalarOnRight>
-using ScalarGreaterExpression = ScalarOperation<
+using ScalarGreater = ScalarOperation<
     Expression,
     std::greater<std::common_type_t<Scalar, typename Expression::value_type>>,
     Scalar, ScalarOnRight>;
 
 template <typename Scalar, zipper::concepts::Expression Expression,
           bool ScalarOnRight>
-using ScalarLessExpression = ScalarOperation<
+using ScalarLess = ScalarOperation<
     Expression,
     std::less<std::common_type_t<Scalar, typename Expression::value_type>>,
     Scalar, ScalarOnRight>;
 
 template <typename Scalar, zipper::concepts::Expression Expression,
           bool ScalarOnRight>
-using ScalarGreaterEqualExpression =
+using ScalarGreaterEqual =
     ScalarOperation<Expression,
                     std::greater_equal<std::common_type_t<
                         Scalar, typename Expression::value_type>>,
@@ -104,7 +104,7 @@ using ScalarGreaterEqualExpression =
 
 template <typename Scalar, zipper::concepts::Expression Expression,
           bool ScalarOnRight>
-using ScalarLessEqualExpression =
+using ScalarLessEqual =
     ScalarOperation<Expression,
                     std::less_equal<std::common_type_t<
                         Scalar, typename Expression::value_type>>,
@@ -113,15 +113,15 @@ using ScalarLessEqualExpression =
 // logical and preserves false
 template <typename Scalar, zipper::concepts::Expression Expression,
           bool ScalarOnRight>
-using ScalarLogicalAndExpression =
+using ScalarLogicalAnd =
     ScalarOperation<Expression,
                     std::logical_and<std::common_type_t<
                         Scalar, typename Expression::value_type>>,
-                    Scalar, ScalarOnRight, true>;
+                    Scalar, ScalarOnRight>;
 
 template <typename Scalar, zipper::concepts::Expression Expression,
           bool ScalarOnRight>
-using ScalarLogicalOrExpression =
+using ScalarLogicalOr =
     ScalarOperation<Expression,
                     std::logical_or<std::common_type_t<
                         Scalar, typename Expression::value_type>>,
@@ -129,21 +129,21 @@ using ScalarLogicalOrExpression =
 
 template <typename Scalar, zipper::concepts::Expression Expression,
           bool ScalarOnRight>
-using ScalarBitAndExpression = ScalarOperation<
+using ScalarBitAnd = ScalarOperation<
     Expression,
     std::bit_and<std::common_type_t<Scalar, typename Expression::value_type>>,
     Scalar, ScalarOnRight>;
 
 template <typename Scalar, zipper::concepts::Expression Expression,
           bool ScalarOnRight>
-using ScalarBitOrExpression = ScalarOperation<
+using ScalarBitOr = ScalarOperation<
     Expression,
     std::bit_or<std::common_type_t<Scalar, typename Expression::value_type>>,
     Scalar, ScalarOnRight>;
 
 template <typename Scalar, zipper::concepts::Expression Expression,
           bool ScalarOnRight>
-using ScalarBitXorExpression = ScalarOperation<
+using ScalarBitXor = ScalarOperation<
     Expression,
     std::bit_xor<std::common_type_t<Scalar, typename Expression::value_type>>,
     Scalar, ScalarOnRight>;

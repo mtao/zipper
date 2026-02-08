@@ -7,8 +7,8 @@
 #include <zipper/expression/nullary/Identity.hpp>
 #include <zipper/expression/nullary/Random.hpp>
 #include <zipper/expression/nullary/Unit.hpp>
-#include <zipper/expression/unary/PartialTraceView.hpp>
-#include <zipper/expression/unary/SwizzleView.hpp>
+#include <zipper/expression/unary/PartialTrace.hpp>
+#include <zipper/expression/unary/Swizzle.hpp>
 
 #include "catch_include.hpp"
 // #include <zipper/Vector.hpp>

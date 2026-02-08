@@ -6,7 +6,7 @@
 #include <zipper/expression/nullary/Constant.hpp>
 #include <zipper/expression/nullary/Random.hpp>
 #include <zipper/expression/nullary/Unit.hpp>
-#include <zipper/expression/unary/HomogeneousView.hpp>
+#include <zipper/expression/unary/Homogeneous.hpp>
 
 TEST_CASE("test_homogeneous", "[vector][homogeneous]") {
     zipper::Vector a = zipper::expression::nullary::unit_vector<double, 3, 0>();

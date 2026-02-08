@@ -1,25 +1,32 @@
 #if !defined(ZIPPER_AS_HPP)
 #define ZIPPER_AS_HPP
-#include "concepts/ZipperBaseDerived.hpp"
+#include "concepts/Zipper.hpp"
 
 namespace zipper {
+
+// Forward declarations of Base types used by AS_IMPL
+template <concepts::Expression T> class ArrayBase;
+template <concepts::Expression T> class VectorBase;
+template <concepts::Expression T> class MatrixBase;
+template <concepts::Expression T> class FormBase;
+template <concepts::Expression T> class TensorBase;
 
 // As functions for each basic type
 
 #define AS_IMPL(NAME_LOWER, NAME_UPPER)                                        \
-  template <concepts::ZipperBaseDerived ZipperDerived>                         \
+  template <concepts::Zipper ZipperDerived>                         \
   auto as_##NAME_LOWER(ZipperDerived &v) {                                     \
-    using View = ZipperDerived::view_type;                                     \
-    constexpr static bool is_const =                                           \
-        ZipperDerived::view_type::traits::is_writable ||                       \
+    using Expr = typename ZipperDerived::expression_type;                      \
+    constexpr static bool make_const =                                         \
+        !ZipperDerived::expression_traits::is_writable ||                      \
         std::is_const_v<ZipperDerived>;                                        \
-    using ViewC = std::conditional_t<is_const, const View, View>;              \
-    return NAME_UPPER##Base<ViewC &>(v.view());                                \
+    using ExprC = std::conditional_t<make_const, const Expr, Expr>;            \
+    return NAME_UPPER##Base<ExprC &>(v.expression());                          \
   }                                                                            \
-  template <concepts::ZipperBaseDerived ZipperDerived>                         \
+  template <concepts::Zipper ZipperDerived>                         \
   auto as_##NAME_LOWER(const ZipperDerived &v) {                               \
-    using View = ZipperDerived::view_type;                                     \
-    return NAME_UPPER##Base<const View>(v.view());                             \
+    using Expr = typename ZipperDerived::expression_type;                      \
+    return NAME_UPPER##Base<const Expr>(v.expression());                       \
   }
 
 AS_IMPL(array, Array)

@@ -5,11 +5,13 @@
 #include "concepts/IndexArgument.hpp"
 #include "concepts/Zipper.hpp"
 #include "expression/unary/Cast.hpp"
+#include "expression/unary/CoefficientWiseOperation.hpp"
+#include "expression/unary/concepts/ScalarOperation.hpp"
 #include "zipper/detail/ExtentsTraits.hpp"
 #include "zipper/expression/detail/ExpressionTraits.hpp"
-#include "expression/unary/RepeatView.hpp"
-#include "expression/unary/SliceView.hpp"
-#include "expression/unary/SwizzleView.hpp"
+#include "expression/unary/Repeat.hpp"
+#include "expression/unary/Slice.hpp"
+#include "expression/unary/Swizzle.hpp"
 #include "zipper/types.hpp"
 
 namespace zipper {
@@ -145,16 +147,14 @@ public:
 #pragma GCC diagnostic pop
   }
 
-  // template <typename OpType>
-  //   requires(expression::unary::concepts::ScalarOperation<value_type,
-  //   OpType>)
-
-  // auto unary_expr(const OpType &op) const {
-  //   using V =
-  //       expression::unary::OperationExpression<const expression_type,
-  //       OpType>;
-  //   return DerivedT<V>(V(expression(), op));
-  // }
+  template <typename OpType>
+    requires(expression::unary::concepts::ScalarOperation<value_type, OpType>)
+  auto unary_expr(const OpType &op) const {
+    using V =
+        expression::unary::CoefficientWiseOperation<const expression_type,
+                                                     OpType>;
+    return DerivedT<V>(V(expression(), op));
+  }
 
   template <template <typename> typename BaseType = DerivedT,
             rank_type... ranks>

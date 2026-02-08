@@ -1,21 +1,15 @@
 #include <iostream>
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
-#include <zipper/views/nullary/ConstantView.hpp>
-#include <zipper/views/nullary/IdentityView.hpp>
-#include <zipper/views/nullary/RandomView.hpp>
-#include <zipper/views/nullary/UnitView.hpp>
-#include <zipper/views/reductions/Determinant.hpp>
-#include <zipper/views/unary/PartialTraceView.hpp>
-#include <zipper/views/unary/SwizzleView.hpp>
+#include <zipper/expression/nullary/Identity.hpp>
+#include <zipper/expression/reductions/Determinant.hpp>
 
 #include "../../catch_include.hpp"
 #include "../../fmt_include.hpp"
-// #include <zipper/Vector.hpp>
 
 namespace {
 
-void print(zipper::concepts::MatrixBaseDerived auto const& M) {
+void print(zipper::concepts::Matrix auto const& M) {
     for (zipper::index_type j = 0; j < M.extent(0); ++j) {
         for (zipper::index_type k = 0; k < M.extent(1); ++k) {
             std::cout << M(j, k) << " ";
@@ -23,7 +17,7 @@ void print(zipper::concepts::MatrixBaseDerived auto const& M) {
         std::cout << std::endl;
     }
 }
-void print(zipper::concepts::VectorBaseDerived auto const& M) {
+void print(zipper::concepts::Vector auto const& M) {
     for (zipper::index_type j = 0; j < M.extent(0); ++j) {
         std::cout << M(j) << " ";
     }
@@ -34,15 +28,15 @@ void print(zipper::concepts::VectorBaseDerived auto const& M) {
 using namespace zipper;
 TEST_CASE("test_determinant", "[matrix][storage][dense]") {
     {
-        Matrix<double, 3, 3> A = views::nullary::IdentityView<double, 3, 3>();
+        Matrix<double, 3, 3> A = expression::nullary::Identity<double, 3, 3>();
 
-        CHECK(views::reductions::Determinant(A.view())() == 1);
+        CHECK(expression::reductions::Determinant(A.expression())() == 1);
     }
     for (int j = 2; j < 10; ++j) {
         Matrix<double, std::dynamic_extent, std::dynamic_extent> A =
-            views::nullary::IdentityView<double, std::dynamic_extent,
+            expression::nullary::Identity<double, std::dynamic_extent,
                                          std::dynamic_extent>(j, j);
         //fmt::print("{} {}\n", A.extent(0), A.extent(1));
-        CHECK(views::reductions::Determinant(A.view())() == 1);
+        CHECK(expression::reductions::Determinant(A.expression())() == 1);
     }
 }

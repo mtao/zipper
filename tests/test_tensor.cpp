@@ -1,19 +1,19 @@
 
 
-#include <zipper/views/unary/PartialTraceView.hpp>
+#include <zipper/expression/unary/PartialTrace.hpp>
 
 #include "fmt_include.hpp"
 #include "catch_include.hpp"
-#include <zipper/views/nullary/UnitView.hpp>
+#include <zipper/expression/nullary/Unit.hpp>
 #include <iostream>
 #include <zipper/Tensor.hpp>
 #include <zipper/Vector.hpp>
 #include <zipper/MatrixBase.hpp>
 #include <zipper/FormBase.hpp>
-#include <zipper/views/nullary/ConstantView.hpp>
-#include <zipper/views/nullary/IdentityView.hpp>
-#include <zipper/views/nullary/RandomView.hpp>
-#include <zipper/views/unary/SwizzleView.hpp>
+#include <zipper/expression/nullary/Constant.hpp>
+#include <zipper/expression/nullary/Identity.hpp>
+#include <zipper/expression/nullary/Random.hpp>
+#include <zipper/expression/unary/Swizzle.hpp>
 // #include <zipper/Vector.hpp>
 
 namespace {
@@ -62,18 +62,18 @@ void print(auto const& M) {
 }
 }  // namespace
 TEST_CASE("test_tensor_product", "[storage][dense]") {
-    zipper::Tensor<double, 3, 3> I = zipper::views::nullary::IdentityView<double>{};
+    zipper::Tensor<double, 3, 3> I = zipper::expression::nullary::Identity<double>{};
     zipper::Tensor<double, 3, std::dynamic_extent> M(3);
     zipper::Tensor<double, 3> x;
 
     zipper::Tensor<double, 3, 3, 3> J =
-        zipper::views::nullary::ConstantView<double>{6};
+        zipper::expression::nullary::Constant<double>{6};
     //fmt::print("Constant tensor from infinite view\n");
     print(J);
 
-    M = zipper::views::nullary::normal_random_infinite_view<double>(0, 1);
+    M = zipper::expression::nullary::normal_random_infinite_view<double>(0, 1);
 
-    x = zipper::views::nullary::normal_random_infinite_view<double>(10, 1);
+    x = zipper::expression::nullary::normal_random_infinite_view<double>(10, 1);
 
     print(M);
 

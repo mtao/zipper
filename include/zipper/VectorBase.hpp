@@ -14,7 +14,7 @@
 #include "expression/reductions/CoefficientSum.hpp"
 #include "expression/reductions/LpNorm.hpp"
 #include "expression/reductions/LpNormPowered.hpp"
-#include "expression/unary/HomogeneousView.hpp"
+#include "expression/unary/Homogeneous.hpp"
 
 namespace zipper {
 template <typename ValueType, index_type Rows> class Vector;

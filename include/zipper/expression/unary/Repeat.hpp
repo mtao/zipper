@@ -1,20 +1,20 @@
 
-#if !defined(ZIPPER_VIEWS_UNARY_REPEATVIEW_HPP)
-#define ZIPPER_VIEWS_UNARY_REPEATVIEW_HPP
+#if !defined(ZIPPER_EXPRESSION_UNARY_REPEATVIEW_HPP)
+#define ZIPPER_EXPRESSION_UNARY_REPEATVIEW_HPP
 
-#include "UnaryViewBase.hpp"
-#include "zipper/concepts/ExtentsType.hpp"
-#include "zipper/views/binary/TensorProductView.hpp"
+#include "UnaryExpressionBase.hpp"
+#include "zipper/concepts/Extents.hpp"
+#include "zipper/expression/binary/TensorProduct.hpp"
 
-namespace zipper::views {
+namespace zipper::expression {
 namespace unary {
 enum class RepeatMode { Left, Right };
 template <RepeatMode Mode, rank_type Count,
-          zipper::concepts::QualifiedViewDerived Child>
-class RepeatView;
+          zipper::concepts::QualifiedExpression Child>
+class Repeat;
 
-namespace detail {
-template <RepeatMode Mode, rank_type Count, zipper::concepts::ExtentsType ET>
+namespace _detail_repeat {
+template <RepeatMode Mode, rank_type Count, zipper::concepts::Extents ET>
 struct RepeatHelper {
     template <size_t... I>
     constexpr static auto make_repeat_extents_type(
@@ -29,10 +29,10 @@ struct RepeatHelper {
         std::conditional_t<Mode == RepeatMode::Left, repeat_extents_type, ET>;
     using right_extents_type =
         std::conditional_t<Mode == RepeatMode::Right, repeat_extents_type, ET>;
-    static_assert(zipper::concepts::ExtentsType<left_extents_type>);
-    static_assert(zipper::concepts::ExtentsType<right_extents_type>);
+    static_assert(zipper::concepts::Extents<left_extents_type>);
+    static_assert(zipper::concepts::Extents<right_extents_type>);
     using tensor_type =
-        typename views::binary::detail::tensor_coeffwise_extents_values<
+        typename binary::_detail_tensor::tensor_coeffwise_extents_values<
             left_extents_type, right_extents_type>;
 
     using extents_type = typename tensor_type::product_extents_type;
@@ -47,20 +47,38 @@ struct RepeatHelper {
         }
     }
 };
-}  // namespace detail
+}  // namespace _detail_repeat
 
 }  // namespace unary
 template <unary::RepeatMode Mode, rank_type Count,
-          zipper::concepts::QualifiedViewDerived Child>
-struct detail::ViewTraits<unary::RepeatView<Mode, Count, Child>>
-    : public zipper::views::unary::detail::DefaultUnaryViewTraits<Child, true> {
-    using BaseTraits = views::detail::ViewTraits<Child>;
-    using base_extents_type = typename BaseTraits ::extents_type;
+          zipper::concepts::QualifiedExpression Child>
+struct detail::ExpressionTraits<unary::Repeat<Mode, Count, Child>>
+    : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<Child, true> {
+    using BaseTraits = expression::detail::ExpressionTraits<Child>;
+    using base_extents_type = typename BaseTraits::extents_type;
     constexpr static bool is_writable = false;
     constexpr static bool is_coefficient_consistent = true;
     constexpr static bool is_value_based = false;
+    // Repeat re-indexes but has no coeff_ref — not referrable or assignable
+    constexpr static zipper::detail::AccessFeatures access_features = {
+        .is_const = true,
+        .is_reference = false,
+        .is_alias_free = BaseTraits::access_features.is_alias_free,
+    };
+    consteval static auto is_const_valued() -> bool {
+      return access_features.is_const;
+    }
+    consteval static auto is_reference_valued() -> bool {
+      return access_features.is_reference;
+    }
+    consteval static auto is_assignable() -> bool {
+      return !is_const_valued() && is_reference_valued();
+    }
+    consteval static auto is_referrable() -> bool {
+      return access_features.is_reference;
+    }
     using helper_type =
-        unary::detail::RepeatHelper<Mode, Count,
+        unary::_detail_repeat::RepeatHelper<Mode, Count,
                                     typename BaseTraits::extents_type>;
     using extents_type = helper_type::extents_type;
     constexpr static rank_type base_rank = helper_type::base_rank;
@@ -72,14 +90,14 @@ struct detail::ViewTraits<unary::RepeatView<Mode, Count, Child>>
 };
 namespace unary {
 template <RepeatMode Mode, rank_type Count,
-          zipper::concepts::QualifiedViewDerived Child>
-class RepeatView : public UnaryViewBase<RepeatView<Mode, Count, Child>, Child> {
+          zipper::concepts::QualifiedExpression Child>
+class Repeat : public UnaryExpressionBase<Repeat<Mode, Count, Child>, Child> {
     //
 
    public:
-    using self_type = RepeatView<Mode, Count, Child>;
-    using Base = UnaryViewBase<RepeatView<Mode, Count, Child>, Child>;
-    using traits = zipper::views::detail::ViewTraits<self_type>;
+    using self_type = Repeat<Mode, Count, Child>;
+    using Base = UnaryExpressionBase<Repeat<Mode, Count, Child>, Child>;
+    using traits = zipper::expression::detail::ExpressionTraits<self_type>;
     using extents_type = traits::extents_type;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
     constexpr static bool is_static = extents_traits::is_static;
@@ -87,17 +105,17 @@ class RepeatView : public UnaryViewBase<RepeatView<Mode, Count, Child>, Child> {
     constexpr static rank_type base_rank = traits::base_rank;
     constexpr static rank_type pad_offset = traits::offset_rank;
 
-    RepeatView(const Child& a)
+    Repeat(const Child& a)
         requires(is_static)
         : Base(a) {}
-    RepeatView(const Child& a)
+    Repeat(const Child& a)
         requires(!is_static)
         : Base(a, traits::make_extents(a.extents())) {}
-    using Base::view;
+    using Base::expression;
     template <typename... Args, rank_type... ranks>
     auto get_value(std::integer_sequence<rank_type, ranks...>,
                    Args&&... args) const -> decltype(auto) {
-        return view()(zipper::detail::pack_index<ranks + pad_offset>(
+        return expression()(zipper::detail::pack_index<ranks + pad_offset>(
             std::forward<Args>(args)...)...);
     }
     template <typename... Args>
@@ -107,10 +125,7 @@ class RepeatView : public UnaryViewBase<RepeatView<Mode, Count, Child>, Child> {
     }
 };
 
-// template <unary::RepeatMode Mode, rank_type Count,
-//           zipper::concepts::QualifiedViewDerived Child>
-// RepeatView(const Child& c) -> RepeatView<Mode, Count, Child>;
 }  // namespace unary
-}  // namespace zipper::views
+}  // namespace zipper::expression
 
 #endif

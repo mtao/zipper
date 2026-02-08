@@ -3,7 +3,6 @@
 
 #include "UnaryExpressionBase.hpp"
 #include "zipper/concepts/Expression.hpp"
-#include "zipper/expression/SizedExpressionBase.hpp"
 #include "zipper/expression/detail/AssignHelper.hpp"
 
 namespace zipper::expression {
@@ -15,13 +14,13 @@ template <zipper::concepts::QualifiedExpression ExpressionType> class Diagonal;
 template <zipper::concepts::QualifiedExpression ExpressionType>
 struct detail::ExpressionTraits<unary::Diagonal<ExpressionType>>
     : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<
-          ExpressionType> {
+          ExpressionType, true> {
   using Base = detail::ExpressionTraits<ExpressionType>;
   using value_type = Base::value_type;
   using base_extents_type = Base::extents_type;
   using base_extents_traits = zipper::detail::ExtentsTraits<base_extents_type>;
   constexpr static bool is_coefficient_consistent = false;
-  constexpr static bool is_assignable = true;
+  constexpr static bool is_value_based = false;
 
   //
   template <std::size_t... Indices>
@@ -78,19 +77,16 @@ public:
   using value_type = traits::value_type;
   using Base = UnaryExpressionBase<self_type, ExpressionType>;
   using Base::extent;
-  using Base::view;
-  using view_traits = traits::Base;
-  using view_extents_type = view_traits::extents_type;
+  using Base::expression;
+  using child_traits = traits::Base;
+  using child_extents_type = child_traits::extents_type;
   using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
 
   constexpr static bool holds_extents = traits::holds_extents;
   static_assert(holds_extents);
 
-  constexpr static std::array<rank_type, view_extents_type::rank()>
-      actionable_indices = traits::actionable_indices;
-
-  Diagonal(const Diagonal &o) : Diagonal(o.view()) {}
-  Diagonal(Diagonal &&o) : Diagonal(o.view()) {}
+  Diagonal(const Diagonal &o) : Diagonal(o.expression()) {}
+  Diagonal(Diagonal &&o) : Diagonal(o.expression()) {}
 
   auto operator=(const Diagonal &) -> Diagonal & = delete;
   auto operator=(Diagonal &&) -> Diagonal & = delete;
@@ -106,50 +102,50 @@ public:
   template <zipper::concepts::IndexPackTuple T, rank_type... ranks>
   auto _coeff(const T &idxs, std::integer_sequence<rank_type, ranks...>) const
       -> value_type {
-    return view().coeff(get_index<ranks>(idxs)...);
+    return expression().coeff(get_index<ranks>(idxs)...);
   }
   template <zipper::concepts::IndexPackTuple T, rank_type... ranks>
   auto _coeff_ref(const T &idxs, std::integer_sequence<rank_type, ranks...>)
       -> value_type &
-    requires(traits::is_writable)
+    requires(traits::is_assignable())
   {
-    return view().coeff_ref(get_index<ranks>(idxs)...);
+    return expression().coeff_ref(get_index<ranks>(idxs)...);
   }
 
   template <zipper::concepts::IndexPackTuple T, rank_type... ranks>
   auto _const_coeff_ref(const T &idxs,
                         std::integer_sequence<rank_type, ranks...>) const
       -> const value_type &
-    requires(traits::is_writable)
+    requires(traits::is_referrable())
   {
-    return view().const_coeff_ref(get_index<ranks>(idxs)...);
+    return expression().const_coeff_ref(get_index<ranks>(idxs)...);
   }
 
   template <typename... Args> auto coeff(Args &&...idxs) const -> value_type {
     return _coeff(
         std::make_tuple(std::forward<Args>(idxs)...),
-        std::make_integer_sequence<rank_type, view_extents_type::rank()>{});
+        std::make_integer_sequence<rank_type, child_extents_type::rank()>{});
   }
   template <typename... Args>
   auto coeff_ref(Args &&...idxs) -> value_type &
-    requires(traits::is_writable)
+    requires(traits::is_assignable())
   {
     return _coeff_ref(
         std::make_tuple(std::forward<Args>(idxs)...),
-        std::make_integer_sequence<rank_type, view_extents_type::rank()>{});
+        std::make_integer_sequence<rank_type, child_extents_type::rank()>{});
   }
   template <typename... Args>
   auto const_coeff_ref(Args &&...idxs) const -> const value_type &
-    requires(traits::is_writable)
+    requires(traits::is_referrable())
   {
     return _const_coeff_ref(
         std::make_tuple(std::forward<Args>(idxs)...),
-        std::make_integer_sequence<rank_type, view_extents_type::rank()>{});
+        std::make_integer_sequence<rank_type, child_extents_type::rank()>{});
   }
 
   template <zipper::concepts::Expression V>
   void assign(const V &v)
-    requires(traits::is_writable &&
+    requires(traits::is_assignable() &&
              extents_traits::template is_convertable_from<
                  typename zipper::expression::detail::ExpressionTraits<
                      V>::extents_type>())

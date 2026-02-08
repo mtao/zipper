@@ -20,7 +20,26 @@ struct detail::ExpressionTraits<
   using value_type = decltype(std::declval<Operation>()(
       std::declval<typename ChildTraits::value_type>(),
       std::declval<Scalar>()));
-  constexpr static bool is_writable = false;
+  // ScalarOperation computes values on the fly — not referrable or assignable
+  constexpr static zipper::detail::AccessFeatures access_features = {
+      .is_const = true,
+      .is_reference = false,
+      .is_alias_free = ChildTraits::access_features.is_alias_free,
+  };
+  consteval static auto is_const_valued() -> bool {
+    return access_features.is_const;
+  }
+  consteval static auto is_reference_valued() -> bool {
+    return access_features.is_reference;
+  }
+  consteval static auto is_assignable() -> bool {
+    return !is_const_valued() && is_reference_valued();
+  }
+  consteval static auto is_referrable() -> bool {
+    return access_features.is_reference;
+  }
+
+  constexpr static bool is_writable = is_assignable();
 };
 
 namespace unary {
@@ -36,7 +55,7 @@ public:
   using value_type = traits::value_type;
 
   using Base = UnaryExpressionBase<self_type, Child>;
-  using Base::view;
+  using Base::expression;
 
   ScalarOperation(Child &a, const Scalar &b, const Operation &op = {})
     requires(ScalarOnRight)

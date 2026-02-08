@@ -3,7 +3,7 @@
 #include "zipper/concepts/Expression.hpp"
 #include "zipper/expression/reductions/CoefficientSum.hpp"
 #include "zipper/expression/reductions/LpNorm.hpp"
-#include "zipper/expression/unary/PartialReductionView.hpp"
+#include "zipper/expression/unary/PartialReduction.hpp"
 
 namespace zipper::expression::unary::detail {
 

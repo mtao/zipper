@@ -16,8 +16,8 @@
 //
 ////
 #include "detail/extents/static_extents_to_integral_sequence.hpp"
-#include "expression/unary/AbsView.hpp"
-#include "expression/unary/ScalarPowerView.hpp"
+#include "expression/unary/Abs.hpp"
+#include "expression/unary/ScalarPower.hpp"
 #include "expression/unary/detail/operation_implementations.hpp"
 #include "zipper/detail/declare_operations.hpp"
 #include "zipper/expression/binary/ArithmeticExpressions.hpp"

@@ -1,38 +1,33 @@
 #include "catch_include.hpp"
 
+#include "zipper/concepts/Zipper.hpp"
 #include "zipper/detail/declare_operations.hpp"
-#include "zipper/views/binary/ArithmeticViews.hpp"
-#include "zipper/views/nullary/ConstantView.hpp"
-#include "zipper/views/unary/ScalarArithmeticViews.hpp"
-#include "zipper/views/reductions/All.hpp"
+#include "zipper/expression/binary/ArithmeticExpressions.hpp"
+#include "zipper/expression/nullary/Constant.hpp"
+#include "zipper/expression/unary/ScalarArithmetic.hpp"
+#include "zipper/expression/reductions/All.hpp"
 
 namespace zipper {
-template <concepts::QualifiedViewDerived View>
+template <concepts::QualifiedExpression View>
 class TestBase {
    public:
-    using value_type = View::value_type;
-    using view_type = View;
+    using expression_type = std::decay_t<View>;
+    using value_type = typename expression::detail::ExpressionTraits<expression_type>::value_type;
     TestBase() = default;
-    TestBase(View&& v) : m_view(v) {}
+    TestBase(View&& v) : m_expression(v) {}
 
-    View m_view;
+    View m_expression;
 
-    View& view() { return m_view; }
-    const View& view() const { return m_view; }
+    View& expression() { return m_expression; }
+    const View& expression() const { return m_expression; }
 };
-namespace concepts {
-namespace detail {
-template <typename>
-struct IsTestBase : std::false_type {};
+namespace concepts::detail {
 
+// Make TestBase satisfy concepts::Zipper via IsZipperBase
 template <typename T>
-struct IsTestBase<TestBase<T>> : std::true_type {};
-}  // namespace detail
-template <typename T>
-concept TestBaseDerived =
-    std::derived_from<T, TestBase<T>> || detail::IsTestBase<T>::value;
-;
-}  // namespace concepts
+struct IsZipperBase<TestBase<T>> : std::true_type {};
+
+}  // namespace concepts::detail
 UNARY_DECLARATION(TestBase, LogicalNot, operator!)
 UNARY_DECLARATION(TestBase, BitNot, operator~)
 UNARY_DECLARATION(TestBase, Negate, operator-)
@@ -80,14 +75,14 @@ BINARY_DECLARATION(TestBase, BitXor, operator^)
 }  // namespace zipper
 
 TEST_CASE("TestOpMacros", "[macros]") {
-    zipper::TestBase<zipper::views::nullary::ConstantView<double, 5>> A(5);
+    zipper::TestBase<zipper::expression::nullary::Constant<double, 5>> A(5);
     -A;
     2 - (double(5) * A);
-    zipper::TestBase<zipper::views::nullary::ConstantView<double, 5>> B(4);
-    zipper::TestBase<zipper::views::nullary::ConstantView<bool, 5>> C(true);
+    zipper::TestBase<zipper::expression::nullary::Constant<double, 5>> B(4);
+    zipper::TestBase<zipper::expression::nullary::Constant<bool, 5>> C(true);
 
-    CHECK(zipper::views::reductions::All(((A * B) == 20.0).view())());
-    CHECK(zipper::views::reductions::All(((A > 4.0) == C).view())());
-    CHECK(zipper::views::reductions::All(((A < 4.0) == C).view())());
-    CHECK(zipper::views::reductions::All((!((A < 4.0) != C)).view())());
+    CHECK(zipper::expression::reductions::All(((A * B) == 20.0).expression())());
+    CHECK(zipper::expression::reductions::All(((A > 4.0) == C).expression())());
+    CHECK(zipper::expression::reductions::All(((A >= 5.0) == C).expression())());
+    CHECK(zipper::expression::reductions::All((!((A < 4.0) == C)).expression())());
 }
