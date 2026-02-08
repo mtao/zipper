@@ -32,9 +32,6 @@ void print(zipper::concepts::Vector auto const &M) {
 } // namespace
   //
 using namespace zipper;
-// TODO: test_deductions requires VectorBase deduction guides from std::vector/std::array
-// which don't work now that SpanStorage has been replaced by MDSpan
-#if 0
 TEST_CASE("test_deductions", "[vector][storage][dense]") {
   Vector<double, 3> a{{0, 2, 4}};
   std::vector<double> X{0, 1, 2};
@@ -63,7 +60,6 @@ TEST_CASE("test_deductions", "[vector][storage][dense]") {
   CHECK(z(2) == 3);
 #endif
 }
-#endif
 
 TEST_CASE("test_dot", "[matrix][storage][dense]") {
   Vector<double, 3> a{{0, 2, 4}};
@@ -190,9 +186,6 @@ TEST_CASE("test_span", "[vector][storage][dense]") {
     CHECK(&R(j) == &RS(j));
   }
 }
-// TODO: test_vector_span requires VectorBase deduction guides from std::span/std::vector/std::array
-// which don't work now that SpanStorage has been replaced by MDSpan
-#if 0
 TEST_CASE("test_vector_span", "[vector][storage][dense][span]") {
   std::vector<int> vec = {2, 3};
   VectorBase v = std::span<int, 2>(vec);
@@ -248,7 +241,6 @@ TEST_CASE("test_vector_span", "[vector][storage][dense][span]") {
   // CHECK(v(0) == 2);
   // CHECK(v(1) == 3);
 }
-#endif
 TEST_CASE("test_vector_scalar", "[vector][unary][scalar_arithmetic]") {
   zipper::Vector<double, 3> x{0.5, 1.5, 2.5};
 

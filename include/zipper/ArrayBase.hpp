@@ -16,6 +16,7 @@
 //
 ////
 #include "detail/extents/static_extents_to_integral_sequence.hpp"
+#include "expression/nullary/MDSpan.hpp"
 #include "expression/unary/Abs.hpp"
 #include "expression/unary/ScalarPower.hpp"
 #include "expression/unary/detail/operation_implementations.hpp"
@@ -179,13 +180,11 @@ template <concepts::Expression Expr>
 ArrayBase(Expr &&) -> ArrayBase<Expr>;
 template <concepts::Expression Expr>
 ArrayBase(const Expr &) -> ArrayBase<Expr>;
-// NOTE: SpanStorage deduction guides commented out - SpanStorage has been removed.
-// template <class T, std::size_t Size = std::dynamic_extent>
-// ArrayBase(std::span<T, Size> s)
-//     -> ArrayBase<storage::SpanStorage<T, zipper::extents<Size>>>;
-// template <class T, std::size_t Size = std::dynamic_extent>
-// ArrayBase(std::span<const T, Size> s)
-//     -> ArrayBase<storage::SpanStorage<T, zipper::extents<Size>>>;
+
+// Deduction guide from std::mdspan
+template <typename T, typename Extents, typename Layout, typename Accessor>
+ArrayBase(zipper::mdspan<T, Extents, Layout, Accessor>) -> ArrayBase<
+    expression::nullary::MDSpan<T, Extents, Layout, Accessor>>;
 
 UNARY_DECLARATION(ArrayBase, LogicalNot, operator!)
 UNARY_DECLARATION(ArrayBase, BitNot, operator~)

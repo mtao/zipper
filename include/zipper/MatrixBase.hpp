@@ -12,6 +12,7 @@
 //
 #include "expression/binary/MatrixProduct.hpp"
 #include "expression/binary/MatrixVectorProduct.hpp"
+#include "expression/nullary/MDSpan.hpp"
 #include "expression/reductions/Trace.hpp"
 #include "expression/unary/Diagonal.hpp"
 #include "expression/unary/ScalarArithmetic.hpp"
@@ -319,6 +320,11 @@ template <concepts::Expression Expr>
 MatrixBase(Expr &&) -> MatrixBase<Expr>;
 template <concepts::Expression Expr>
 MatrixBase(const Expr &) -> MatrixBase<Expr>;
+
+// Deduction guide from std::mdspan
+template <typename T, typename Extents, typename Layout, typename Accessor>
+MatrixBase(zipper::mdspan<T, Extents, Layout, Accessor>) -> MatrixBase<
+    expression::nullary::MDSpan<T, Extents, Layout, Accessor>>;
 
 UNARY_DECLARATION(MatrixBase, LogicalNot, operator!)
 UNARY_DECLARATION(MatrixBase, BitNot, operator~)

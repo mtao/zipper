@@ -4,6 +4,7 @@
 #include "ZipperBase.hpp"
 #include "concepts/Tensor.hpp"
 #include "detail/extents/static_extents_to_integral_sequence.hpp"
+#include "expression/nullary/MDSpan.hpp"
 #include "zipper/detail/declare_operations.hpp"
 #include "zipper/expression/binary/ArithmeticExpressions.hpp"
 #include "zipper/expression/binary/TensorProduct.hpp"
@@ -83,13 +84,10 @@ TensorBase(Expr &&) -> TensorBase<Expr>;
 template <concepts::Expression Expr>
 TensorBase(const Expr &) -> TensorBase<Expr>;
 
-// NOTE: SpanStorage deduction guides commented out - SpanStorage has been removed.
-// template <class T, std::size_t Size = std::dynamic_extent>
-// TensorBase(const std::span<T, Size> &s)
-//     -> TensorBase<storage::SpanStorage<T, zipper::extents<Size>>>;
-// template <class T, std::size_t Size = std::dynamic_extent>
-// TensorBase(std::span<const T, Size> &s)
-//     -> TensorBase<storage::SpanStorage<const T, zipper::extents<Size>>>;
+// Deduction guide from std::mdspan
+template <typename T, typename Extents, typename Layout, typename Accessor>
+TensorBase(zipper::mdspan<T, Extents, Layout, Accessor>) -> TensorBase<
+    expression::nullary::MDSpan<T, Extents, Layout, Accessor>>;
 
 UNARY_DECLARATION(TensorBase, LogicalNot, operator!)
 UNARY_DECLARATION(TensorBase, BitNot, operator~)

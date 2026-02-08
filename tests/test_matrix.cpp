@@ -783,8 +783,8 @@ TEST_CASE("test_matrix_span", "[matrix][storage][dense][span]") {
   // CHECK(v(0) == 2);
   // CHECK(v(1) == 3);
 }
-#if 0 // Requires VectorBase deduction guides from span - not yet implemented
 TEST_CASE("test_span_view", "[vector][storage][dense][span]") {
+  using zipper::VectorBase;
   {
     zipper::Vector<double, 3> x = {1, 2, 3};
 
@@ -804,7 +804,6 @@ TEST_CASE("test_span_view", "[vector][storage][dense][span]") {
     CHECK(x == z);
   }
 }
-#endif
 TEST_CASE("test_matrix_scalar", "[matrix][unary][scalar_arithmetic]") {
   zipper::Matrix<double, 1, 3> x{{0.5, 1.5, 2.5}};
 

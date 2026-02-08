@@ -6,8 +6,8 @@ test_storage = executable(
     'accessor.cpp',
     'dense.cpp',
     'sparse_coordinate_accessor.cpp',
-    #'sparse_compressed_data.cpp',
-    #'stl_storage.cpp',
+    'sparse_compressed_data.cpp',
+    'stl_storage.cpp',
   ],
   dependencies: [zipper_test_dep],
 )

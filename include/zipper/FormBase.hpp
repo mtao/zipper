@@ -8,6 +8,7 @@
 #include "concepts/Vector.hpp"
 #include "concepts/detail/IsZipperBase.hpp"
 #include "detail/extents/static_extents_to_integral_sequence.hpp"
+#include "expression/nullary/MDSpan.hpp"
 #include "zipper/detail/declare_operations.hpp"
 #include "zipper/expression/binary/ArithmeticExpressions.hpp"
 #include "zipper/expression/binary/FormTensorProduct.hpp"
@@ -110,6 +111,11 @@ template <concepts::Expression Expr>
 FormBase(Expr &&) -> FormBase<Expr>;
 template <concepts::Expression Expr>
 FormBase(const Expr &) -> FormBase<Expr>;
+
+// Deduction guide from std::mdspan
+template <typename T, typename Extents, typename Layout, typename Accessor>
+FormBase(zipper::mdspan<T, Extents, Layout, Accessor>) -> FormBase<
+    expression::nullary::MDSpan<T, Extents, Layout, Accessor>>;
 
 UNARY_DECLARATION(FormBase, LogicalNot, operator!)
 UNARY_DECLARATION(FormBase, BitNot, operator~)

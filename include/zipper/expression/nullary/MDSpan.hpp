@@ -87,6 +87,29 @@ public:
              extents_type::rank() == 1)
       : MDSpan(std::span<ElementType, std::dynamic_extent>(vec)) {}
 
+  /// Constructor from std::mdspan (or zipper::mdspan)
+  /// Constructs from a data pointer + extents taken from the mdspan.
+  template <typename OtherLayout, typename OtherAccessor>
+  MDSpan(zipper::mdspan<ElementType, Extents, OtherLayout, OtherAccessor> m)
+      : base_type(
+            typename base_type::linear_accessor_type(
+                std::span<ElementType, extents_traits::static_size>(
+                    m.data_handle(), extents_traits::size(m.extents()))),
+            m.extents()) {}
+
+  /// Constructor from std::mdspan with const element type conversion
+  template <typename OtherElementType, typename OtherLayout, typename OtherAccessor>
+  MDSpan(zipper::mdspan<OtherElementType, Extents, OtherLayout, OtherAccessor> m)
+    requires(std::is_const_v<ElementType> &&
+             !std::is_const_v<OtherElementType> &&
+             std::is_same_v<std::remove_cv_t<ElementType>,
+                            std::remove_cv_t<OtherElementType>>)
+      : base_type(
+            typename base_type::linear_accessor_type(
+                std::span<ElementType, extents_traits::static_size>(
+                    m.data_handle(), extents_traits::size(m.extents()))),
+            m.extents()) {}
+
   template <concepts::Expression V>
   void assign(const V &v)
     requires(!std::is_const_v<ElementType> &&

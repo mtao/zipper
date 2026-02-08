@@ -276,6 +276,11 @@ VectorBase(Expr &&) -> VectorBase<Expr>;
 template <concepts::Expression Expr>
 VectorBase(const Expr &) -> VectorBase<Expr>;
 
+// Deduction guide from std::mdspan
+template <typename T, typename Extents, typename Layout, typename Accessor>
+VectorBase(zipper::mdspan<T, Extents, Layout, Accessor>) -> VectorBase<
+    expression::nullary::MDSpan<T, Extents, Layout, Accessor>>;
+
 // Deduction guides from std::span
 template <typename T, std::size_t N>
 VectorBase(std::span<T, N>) -> VectorBase<
