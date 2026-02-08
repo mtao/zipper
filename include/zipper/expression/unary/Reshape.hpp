@@ -124,6 +124,26 @@ public:
         std::make_integer_sequence<rank_type, child_extents_type::rank()>{});
   }
 
+  template <typename... Args>
+  auto const_coeff_ref(Args &&...indices) const -> const value_type &
+    requires(traits::is_referrable())
+  {
+    index_type linear = m_new_mapping(static_cast<index_type>(indices)...);
+    return const_coeff_ref_from_linear(
+        linear,
+        std::make_integer_sequence<rank_type, child_extents_type::rank()>{});
+  }
+
+  template <typename... Args>
+  auto coeff_ref(Args &&...indices) -> value_type &
+    requires(traits::is_assignable())
+  {
+    index_type linear = m_new_mapping(static_cast<index_type>(indices)...);
+    return coeff_ref_from_linear(
+        linear,
+        std::make_integer_sequence<rank_type, child_extents_type::rank()>{});
+  }
+
 private:
   template <rank_type... Ranks>
   auto coeff_from_linear(index_type linear,
@@ -132,6 +152,24 @@ private:
     auto child_indices =
         _detail_reshape::unravel_index(linear, expression().extents());
     return expression().coeff(child_indices[Ranks]...);
+  }
+
+  template <rank_type... Ranks>
+  auto const_coeff_ref_from_linear(
+      index_type linear,
+      std::integer_sequence<rank_type, Ranks...>) const -> const value_type & {
+    auto child_indices =
+        _detail_reshape::unravel_index(linear, expression().extents());
+    return expression().const_coeff_ref(child_indices[Ranks]...);
+  }
+
+  template <rank_type... Ranks>
+  auto coeff_ref_from_linear(index_type linear,
+                             std::integer_sequence<rank_type, Ranks...>)
+      -> value_type & {
+    auto child_indices =
+        _detail_reshape::unravel_index(linear, expression().extents());
+    return expression().coeff_ref(child_indices[Ranks]...);
   }
 
   extents_type m_extents;

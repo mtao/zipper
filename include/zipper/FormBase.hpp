@@ -111,11 +111,6 @@ FormBase(Expr &&) -> FormBase<Expr>;
 template <concepts::Expression Expr>
 FormBase(const Expr &) -> FormBase<Expr>;
 
-// NOTE: SpanStorage deduction guides commented out - SpanStorage has been removed.
-// template <class T, std::size_t Size = std::dynamic_extent>
-// FormBase(const std::span<T, Size> &s)
-//     -> FormBase<storage::SpanStorage<T, zipper::extents<Size>>>;
-
 UNARY_DECLARATION(FormBase, LogicalNot, operator!)
 UNARY_DECLARATION(FormBase, BitNot, operator~)
 UNARY_DECLARATION(FormBase, Negate, operator-)

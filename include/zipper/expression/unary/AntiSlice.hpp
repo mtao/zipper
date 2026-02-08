@@ -150,26 +150,7 @@ class AntiSliceView
             return start + v * stride;
         }
     }
-    /*
-    template <rank_type K>
-    index_type get_index(concepts::TupleLike auto const& a) const {
-        // const auto& s = std::get<K>(m_slices);
-        const auto& s = std::get<K>(m_slices);
-        if constexpr (zipper::detail::is_integral_constant_v<
-                          std::decay_t<decltype(s)>>) {
-            return s;
-        } else if constexpr (std::is_integral_v<std::decay_t<decltype(s)>>) {
-            return s;
-        } else {
-            constexpr index_type start = std::experimental::detail::first_of(s);
-            constexpr index_type stride =
-                std::experimental::detail::stride_of(s);
 
-            const auto& v = std::get<actionable_indices[K]>(a);
-            return start + v * stride;
-        }
-    }
-    */
 
     template <typename... Args, rank_type... ranks>
     auto _coeff(std::integer_sequence<rank_type, ranks...>,
@@ -187,32 +168,6 @@ class AntiSliceView
         return view().const_coeff_ref(get_index<ranks>(idxs...)...);
     }
 
-    /*
-    template <zipper::concepts::TupleLike T, rank_type... ranks>
-    auto _const_coeff_ref(const T& idxs,
-                          std::integer_sequence<rank_type, ranks...>) const
-        -> const value_type& requires(traits::is_writable) {
-            return view().const_coeff_ref(get_index<ranks>(idxs)...);
-        }
-
-    template <zipper::concepts::TupleLike T, rank_type... ranks>
-    auto _coeff(const T& idxs, std::integer_sequence<rank_type, ranks...>) const
-        -> value_type {
-        return view().coeff(get_index<ranks>(idxs)...);
-    }
-    template <zipper::concepts::TupleLike T, rank_type... ranks>
-    auto _coeff_ref(const T& idxs, std::integer_sequence<rank_type, ranks...>)
-        -> value_type& requires(traits::is_writable) {
-            return view().coeff_ref(get_index<ranks>(idxs)...);
-        }
-
-    template <zipper::concepts::TupleLike T, rank_type... ranks>
-    auto _const_coeff_ref(const T& idxs,
-                          std::integer_sequence<rank_type, ranks...>) const
-        -> const value_type& requires(traits::is_writable) {
-            return view().const_coeff_ref(get_index<ranks>(idxs)...);
-        }
-    */
 
     template <typename... Args>
     value_type coeff(Args&&... idxs) const {

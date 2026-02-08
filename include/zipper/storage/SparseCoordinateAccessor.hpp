@@ -183,37 +183,11 @@ private:
   auto index_lexicographic_compare(size_t a, Indices &&...indices) const
       -> std::strong_ordering {
     return get_multiindex(a) <=> std::tie(indices...);
-    /*
-    for(size_t j = 0; j < rank(); ++j) {
-        const index_type ai = m_indices[j][a];
-        const index_type bi = m_indices[j][b];
-        auto cmp = ai <=> bi;
-        if(cmp == 0) {
-            continue;
-        } else {
-            return cmp;
-        }
-    }
-    return std::strong_ordering::equal;
-    */
   }
 
   [[nodiscard]] auto index_lexicographic_compare(size_t a, size_t b) const
       -> std::strong_ordering {
     return get_multiindex(a) <=> get_multiindex(b);
-    /*
-    for(size_t j = 0; j < rank(); ++j) {
-        const index_type ai = m_indices[j][a];
-        const index_type bi = m_indices[j][b];
-        auto cmp = ai <=> bi;
-        if(cmp == 0) {
-            continue;
-        } else {
-            return cmp;
-        }
-    }
-    return std::strong_ordering::equal;
-    */
   }
   template <rank_type... N, typename... Indices>
     requires(sizeof...(Indices) == rank())
@@ -362,11 +336,7 @@ namespace zipper::expression {
 template <typename ValueType, typename Extents>
 struct detail::ExpressionTraits<
     zipper::storage::SparseCoordinateAccessor<ValueType, Extents>>
-    : public detail::DefaultExpressionTraits<ValueType, Extents>
-/*: public detail::ExpressionTraits <
-  expression::StorageExpressionBase<zipper::storage::SparseCoordinateStorage<
-      ValueType, Extents, LayoutPolicy, AccessorPolicy>> */
-{
+    : public detail::DefaultExpressionTraits<ValueType, Extents> {
   using value_type = ValueType;
   using extents_type = Extents;
   constexpr static bool is_writable = true;
