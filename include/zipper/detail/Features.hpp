@@ -28,6 +28,10 @@ struct AccessFeatures {
         .is_alias_free = is_alias_free || o.is_alias_free,
     };
   }
+
+  [[nodiscard]] constexpr auto is_assignable() const -> bool {
+    return !is_const && is_reference;
+  }
 };
 
 struct ShapeFeatures {
