@@ -4,6 +4,7 @@
 #include "LinearLayoutExpression.hpp"
 #include "MDSpan.hpp"
 #include "zipper/detail//ExtentsTraits.hpp"
+#include "zipper/expression/detail/AssignHelper.hpp"
 #include "zipper/storage/DenseData.hpp"
 #include "zipper/storage/layout_types.hpp"
 
@@ -15,12 +16,14 @@ class MDArray
     : public LinearLayoutExpression<
           storage::DenseData<
               ElementType, zipper::detail::ExtentsTraits<Extents>::static_size>,
-          Extents, LayoutPolicy, AccessorPolicy> {
+          Extents, LayoutPolicy, AccessorPolicy,
+          MDArray<ElementType, Extents, LayoutPolicy, AccessorPolicy>> {
 
   using base_type = LinearLayoutExpression<
       storage::DenseData<ElementType,
                          zipper::detail::ExtentsTraits<Extents>::static_size>,
-      Extents, LayoutPolicy, AccessorPolicy>;
+      Extents, LayoutPolicy, AccessorPolicy,
+      MDArray<ElementType, Extents, LayoutPolicy, AccessorPolicy>>;
   using base_type::base_type;
   /*
   // defaults are stored in MDSpan
@@ -40,11 +43,22 @@ class MDArray
 
 
   */
-  using extents_traits = typename base_type::extents_traits;
-  using extents_type = typename base_type::extents_type;
-  constexpr static bool IsStatic = extents_traits::is_static;
+
+  constexpr static bool IsStatic = base_type::extents_traits::is_static;
   using span_type = MDSpan<ElementType, Extents, LayoutPolicy, AccessorPolicy>;
+public:
+  using typename base_type::extents_traits;
+  using typename base_type::extents_type;
   using base_type::linear_accessor;
+  using self_type = MDArray<ElementType, Extents, LayoutPolicy, AccessorPolicy>;
+
+  template <concepts::Expression V>
+  void assign(const V &v)
+    requires(zipper::utils::extents::assignable_extents_v<
+                typename V::extents_type, extents_type>)
+  {
+    expression::detail::AssignHelper<V, self_type>::assign(v, *this);
+  }
   /*
     MDArray() : ParentType(), m_accessor() {}
 
@@ -115,28 +129,19 @@ class MDArray
 };
 
 } // namespace zipper::expression::nullary
-/*
-namespace zipper::expression {
 
-template <typename ValueType, typename Extents, typename LayoutPolicy,
+namespace zipper::expression {
+/// ExpressionTraits for MDArray forwards to the LinearLayoutExpression traits,
+/// since MDArray is a thin owning wrapper around LinearLayoutExpression.
+template <typename ElementType, typename Extents, typename LayoutPolicy,
           typename AccessorPolicy>
-struct detail::ExpressionTraits<zipper::expression::nullary::MDArray<
-    ValueType, Extents, LayoutPolicy, AccessorPolicy>>
-    : public detail::DefaultExpressionTraits<ValueType, Extents>
-{
-  using value_type = ValueType;
-  using extents_type = Extents;
-  using extents_traits = typename zipper::detail::ExtentsTraits<extents_type>;
-  using value_accessor_type =
-      storage::DenseData<ValueType, extents_traits::static_size>;
-  using layout_policy = LayoutPolicy;
-  using accessor_policy = AccessorPolicy;
-  using mapping_type = typename layout_policy::template mapping<extents_type>;
-  constexpr static bool is_const = false;
-  constexpr static bool is_writable = true;
-  constexpr static bool is_coefficient_consistent = true;
-  constexpr static bool is_resizable = extents_type::rank_dynamic() > 0;
+struct detail::ExpressionTraits<nullary::MDArray<
+    ElementType, Extents, LayoutPolicy, AccessorPolicy>>
+    : public detail::ExpressionTraits<nullary::LinearLayoutExpression<
+          storage::DenseData<ElementType,
+                             zipper::detail::ExtentsTraits<Extents>::static_size>,
+          Extents, LayoutPolicy, AccessorPolicy,
+          nullary::MDArray<ElementType, Extents, LayoutPolicy, AccessorPolicy>>> {
 };
-} // namespace zipper::expression::nullary
-*/
+} // namespace zipper::expression
 #endif

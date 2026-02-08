@@ -1,5 +1,5 @@
-#if !defined(ZIPPER_EXPRESSION_DETAIL_EXPRESSION_TYPE_HPP)
-#define ZIPPER_EXPRESSION_DETAIL_EXPRESSION_TYPE_HPP
+#if !defined(ZIPPER_EXPRESSION_DETAIL_EXPRESSION_TYPE_HELPER_HPP)
+#define ZIPPER_EXPRESSION_DETAIL_EXPRESSION_TYPE_HELPER_HPP
 #include "zipper/concepts/Expression.hpp"
 namespace zipper::expression::detail {
 template <typename T>

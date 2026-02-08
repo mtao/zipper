@@ -87,9 +87,4 @@ template <typename A, typename B>
 intersect_nonzeros(const A& a, const B& b) -> intersect_nonzeros<A, B>;
 
 }  // namespace zipper::expression::detail
-
-// backward compatibility
-namespace zipper::views::detail {
-using zipper::expression::detail::intersect_nonzeros;
-}  // namespace zipper::views::detail
 #endif

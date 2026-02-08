@@ -3,6 +3,7 @@
 
 #include "LinearLayoutExpression.hpp"
 #include "zipper/detail//ExtentsTraits.hpp"
+#include "zipper/expression/detail/AssignHelper.hpp"
 #include "zipper/storage/SpanData.hpp"
 #include "zipper/storage/layout_types.hpp"
 
@@ -15,14 +16,43 @@ class MDSpan
     : public LinearLayoutExpression<
           storage::SpanData<
               ElementType, zipper::detail::ExtentsTraits<Extents>::static_size>,
-          Extents, LayoutPolicy, AccessorPolicy> {
+          Extents, LayoutPolicy, AccessorPolicy,
+          MDSpan<ElementType, Extents, LayoutPolicy, AccessorPolicy>> {
 
   using base_type = LinearLayoutExpression<
       storage::SpanData<ElementType,
                         zipper::detail::ExtentsTraits<Extents>::static_size>,
-      Extents, LayoutPolicy, AccessorPolicy>;
+      Extents, LayoutPolicy, AccessorPolicy,
+      MDSpan<ElementType, Extents, LayoutPolicy, AccessorPolicy>>;
   using base_type::base_type;
+
+public:
+  using self_type = MDSpan<ElementType, Extents, LayoutPolicy, AccessorPolicy>;
+  using extents_type = Extents;
+
+  template <concepts::Expression V>
+  void assign(const V &v)
+    requires(!std::is_const_v<ElementType> &&
+             zipper::utils::extents::assignable_extents_v<
+                 typename V::extents_type, extents_type>)
+  {
+    expression::detail::AssignHelper<V, self_type>::assign(v, *this);
+  }
 };
 } // namespace zipper::expression::nullary
+
+namespace zipper::expression {
+/// ExpressionTraits for MDSpan forwards to the LinearLayoutExpression traits.
+template <typename ElementType, typename Extents, typename LayoutPolicy,
+          typename AccessorPolicy>
+struct detail::ExpressionTraits<nullary::MDSpan<
+    ElementType, Extents, LayoutPolicy, AccessorPolicy>>
+    : public detail::ExpressionTraits<nullary::LinearLayoutExpression<
+          storage::SpanData<ElementType,
+                            zipper::detail::ExtentsTraits<Extents>::static_size>,
+          Extents, LayoutPolicy, AccessorPolicy,
+          nullary::MDSpan<ElementType, Extents, LayoutPolicy, AccessorPolicy>>> {
+};
+} // namespace zipper::expression
 
 #endif
