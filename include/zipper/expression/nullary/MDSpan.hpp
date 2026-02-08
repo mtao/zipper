@@ -44,7 +44,8 @@ public:
              !std::is_const_v<OtherElementType> &&
              std::is_same_v<std::remove_cv_t<ElementType>,
                             std::remove_cv_t<OtherElementType>>)
-      : base_type(other) {}
+      : base_type(typename base_type::linear_accessor_type(other.linear_accessor()),
+                  other.extents()) {}
 
   /// Constructor from std::span with matching static extent
   template <std::size_t N>

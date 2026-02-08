@@ -46,7 +46,7 @@ public:
     if constexpr (IsStatic) {
       return span_type(linear_accessor().as_std_span());
     } else {
-      const extents_type &e = extents();
+      const extents_type &e = this->extents();
       return span_type(linear_accessor().as_std_span(), e);
     }
   }
@@ -54,7 +54,7 @@ public:
     if constexpr (IsStatic) {
       return span_type(linear_accessor().as_std_span());
     } else {
-      const extents_type &e = extents();
+      const extents_type &e = this->extents();
       return span_type(linear_accessor().as_std_span(), e);
     }
   }
