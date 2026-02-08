@@ -25,23 +25,7 @@
 #include "zipper/concepts/Expression.hpp"
 #include "zipper/types.hpp"
 
-// template <zipper::concepts::MatrixBaseDerived Mat>
-// auto format_as(Mat const& M) {
-//     return 0;
-// }
 namespace zipper {
-
-// auto format_as(auto const& M) { return fmt::format("{}", M.view()); }
-// template <typename T, zipper::index_type N>
-// auto format_as(
-//    const zipper::storage::PlainObjectStorage<T, zipper::extents<N>>& v) {
-//    return fmt::format("{}", v.as_std_span());
-//}
-// template <typename T, zipper::index_type N>
-// auto format_as(const zipper::storage::SpanStorage<T, zipper::extents<N>>& v)
-// {
-//    return fmt::format("{}", v.as_std_span());
-//}
 
 template <zipper::concepts::Expression ZType> auto format_as_(ZType const &M) {
   constexpr static zipper::rank_type rank = ZType::extents_type::rank();
@@ -71,30 +55,7 @@ template <zipper::concepts::Expression ZType> auto format_as_(ZType const &M) {
     return fmt::format("[{}]", fmt::join(fmts, ";"));
   }
 }
-// template <zipper::concepts::ZipperBaseDerived ZType>
-// auto format_as(ZType const& M) {
-//     return format_as_(static_cast<typename ZType::Base&>(M));
-// }
-// template <zipper::concepts::Expression ZType>
-//  requires(
-//      !std::is_same_v<ZType, Vector<typename ZType::value_type,
-//                                    ZType::extents_type::static_extent(0)>>)
-// auto format_as(ZType const &M) {
-//  return format_as_(M);
-//}
-// template <zipper::concepts::MatrixBaseDerived ZType>
-// auto format_as(ZType const& M) {
-//     return format_as_(M);
-// }
-//  template <typename T, index_type R>
-//  auto format_as(Vector<T, R> const& M) {
-//     return fmt::format("Hi {}", M.extents());
-//     // return format_as_(M);
-// }
-//  template <typename T, index_type R, index_type C>
-//  auto format_as(Matrix<T, R, C> const& M) {
-//     return format_as_(M);
-// }
+
 } // namespace zipper
 
 #endif

@@ -1,5 +1,4 @@
 
-
 #include "catch_include.hpp"
 #include <zipper/detail/constexpr_arithmetic.hpp>
 

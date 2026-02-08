@@ -9,8 +9,8 @@
 #include <zipper/expression/nullary/Constant.hpp>
 #include <zipper/expression/nullary/Identity.hpp>
 #include <zipper/expression/nullary/Random.hpp>
-#include <zipper/expression/unary/PartialTraceView.hpp>
-#include <zipper/expression/unary/SwizzleView.hpp>
+#include <zipper/expression/unary/PartialTrace.hpp>
+#include <zipper/expression/unary/Swizzle.hpp>
 
 #include "catch_include.hpp"
 #include "fmt_include.hpp"
@@ -110,7 +110,7 @@ TEST_CASE("test_assignment", "[matrix][storage][dense]") {
 
 TEST_CASE("test_matrix_eval", "[matrix][storage][dense]") {
   zipper::Matrix<double, 3, 5> N =
-      zipper::expression::nullary::uniform_random_view<double>({});
+      zipper::expression::nullary::uniform_random<double>({});
 
   auto x = (N * 2).eval();
   auto v = N.as_array();
@@ -224,7 +224,7 @@ TEST_CASE("test_identity", "[matrix][identity]") {
                                            std::dynamic_extent>{20, 20}));
 
   zipper::Matrix<double, 3, 3> M =
-      zipper::expression::nullary::uniform_random_view<double>(
+      zipper::expression::nullary::uniform_random<double>(
           zipper::extents<3, 3>{}, 0, 5);
 
   zipper::Matrix<double, 3, 3> MI = I * M;
@@ -280,7 +280,7 @@ TEST_CASE("test_identity2", "[matrix][vector][lift]") {
 
 TEST_CASE("test_trace", "[matrix][storage][dense]") {
   zipper::Matrix<double, 3, 3> N;
-  N = zipper::expression::nullary::uniform_random_view<double>(
+  N = zipper::expression::nullary::uniform_random<double>(
       zipper::extents<3, 3>{}, -1, 1);
   N.diagonal() = zipper::expression::nullary::Constant<double, 3>(0.0);
   CHECK(N.trace() == 0);
@@ -308,7 +308,7 @@ TEST_CASE("test_trace", "[matrix][storage][dense]") {
 
 TEST_CASE("test_rowwise_colwise_matrix", "[matrix][storage][dense]") {
   zipper::Matrix<double, 3, 5> N;
-  N = zipper::expression::nullary::uniform_random_view<double>(
+  N = zipper::expression::nullary::uniform_random<double>(
       zipper::extents<3, 5>{}, -1, 1);
   // fmt::print("Random matrix n:\n");
   print(N);
@@ -327,7 +327,7 @@ TEST_CASE("test_rowwise_colwise_matrix", "[matrix][storage][dense]") {
 
 TEST_CASE("test_partial_trace_matrix", "[matrix][storage][dense]") {
   zipper::Matrix<double, 3, 3> N;
-  N = zipper::expression::nullary::uniform_random_view<double>(
+  N = zipper::expression::nullary::uniform_random<double>(
       zipper::extents<3, 3>{}, -1, 1);
   // fmt::print("Random matrix n:\n");
   print(N);
@@ -609,7 +609,7 @@ TEST_CASE("test_all_extents", "[storage][dense]") {
 
     std::random_device rd;
 
-    zipper::MatrixBase R = zipper::expression::nullary::uniform_random_view<double>(
+    zipper::MatrixBase R = zipper::expression::nullary::uniform_random<double>(
         zipper::extents<4, 4>{}, -1, 1);
 
     M2 = R;
@@ -620,7 +620,7 @@ TEST_CASE("test_all_extents", "[storage][dense]") {
     print(M2);
 
     fmt::print("Integral stuff should come out\n");
-    zipper::MatrixBase RI(zipper::expression::nullary::uniform_random_view<int>(
+    zipper::MatrixBase RI(zipper::expression::nullary::uniform_random<int>(
         zipper::extents<4, 4>{}, 0, 40));
     M2 = RI.cast<double>();
     print(M2);
@@ -640,10 +640,10 @@ TEST_CASE("test_all_extents", "[storage][dense]") {
         fmt::print("power trial {}\n", j);
 
         auto N = zipper::index_type((1 + j) * 10);
-        zipper::Matrix At = zipper::expression::nullary::uniform_random_view<double>(
+        zipper::Matrix At = zipper::expression::nullary::uniform_random<double>(
             zipper::create_dextents(N, N), -1, 1);
         zipper::Matrix A = At.transpose() * At;
-        zipper::Vector x = zipper::expression::nullary::uniform_random_view<double>(
+        zipper::Vector x = zipper::expression::nullary::uniform_random<double>(
             zipper::create_dextents(N), -1, 1);
 
         for (int k = 0; k < j * 20; ++k) {
@@ -722,7 +722,7 @@ TEST_CASE("test_matrix_inverse", "[matrix][storage][dense]") {
   }
   for (int j = 0; j < 10; ++j) {
     zipper::Matrix<double, 2, 2> M =
-        zipper::expression::nullary::uniform_random_view<double>({});
+        zipper::expression::nullary::uniform_random<double>({});
     auto Inv = zipper::utils::inverse(M);
 
     zipper::MatrixBase I = zipper::expression::nullary::Identity<double, 2, 2>();
@@ -735,7 +735,7 @@ TEST_CASE("test_matrix_inverse", "[matrix][storage][dense]") {
   }
   for (int j = 0; j < 10; ++j) {
     zipper::Matrix<double, 3, 3> M =
-        zipper::expression::nullary::uniform_random_view<double>({});
+        zipper::expression::nullary::uniform_random<double>({});
     auto Inv = zipper::utils::inverse(M);
 
     zipper::MatrixBase I = zipper::expression::nullary::Identity<double, 3, 3>();
@@ -750,7 +750,7 @@ TEST_CASE("test_matrix_inverse", "[matrix][storage][dense]") {
 TEST_CASE("test_matrix_transpose", "[matrix][storage][dense]") {
   {
     zipper::Matrix<double, 4, 4> I =
-        zipper::expression::nullary::uniform_random_view<double>({});
+        zipper::expression::nullary::uniform_random<double>({});
 
     auto I2 = I.transpose();
     auto I3 = I.transpose().eval();
@@ -763,7 +763,7 @@ TEST_CASE("test_matrix_transpose", "[matrix][storage][dense]") {
     }
 
     zipper::Vector<double, 4> V =
-        zipper::expression::nullary::uniform_random_view<double>({});
+        zipper::expression::nullary::uniform_random<double>({});
     auto R1 = (I2 * V);
     auto R2 = (I2 * V).eval();
     auto R3 = (I3 * V).eval();
@@ -772,7 +772,7 @@ TEST_CASE("test_matrix_transpose", "[matrix][storage][dense]") {
   }
   {
     zipper::Matrix<double, std::dynamic_extent, std::dynamic_extent> I =
-        zipper::expression::nullary::uniform_random_view<double>(
+        zipper::expression::nullary::uniform_random<double>(
             zipper::create_dextents(3, 3));
 
     auto I2 = I.transpose();
@@ -784,7 +784,7 @@ TEST_CASE("test_matrix_transpose", "[matrix][storage][dense]") {
       }
     }
     zipper::Vector<double, 3> V =
-        zipper::expression::nullary::uniform_random_view<double>({});
+        zipper::expression::nullary::uniform_random<double>({});
     auto R1 = (I2 * V);
     auto R2 = (I2 * V).eval();
     auto R3 = (I3 * V).eval();
@@ -794,7 +794,7 @@ TEST_CASE("test_matrix_transpose", "[matrix][storage][dense]") {
 
   {
     zipper::Matrix<double, 4, 4> I =
-        zipper::expression::nullary::uniform_random_view<double>({});
+        zipper::expression::nullary::uniform_random<double>({});
     const auto S =
         I.slice(zipper::static_slice<0, 3>(), zipper::static_slice<0, 3>());
 
@@ -810,7 +810,7 @@ TEST_CASE("test_matrix_transpose", "[matrix][storage][dense]") {
   }
   {
     const zipper::Matrix<double, 4, 4> I =
-        zipper::expression::nullary::uniform_random_view<double>({});
+        zipper::expression::nullary::uniform_random<double>({});
     const auto S =
         I.slice(zipper::static_slice<0, 3>(), zipper::static_slice<0, 3>());
 
@@ -845,7 +845,7 @@ TEST_CASE("test_matrix_transpose", "[matrix][storage][dense]") {
   }
   {
     zipper::Matrix<double, std::dynamic_extent, std::dynamic_extent> I =
-        zipper::expression::nullary::uniform_random_view<double>(
+        zipper::expression::nullary::uniform_random<double>(
             zipper::create_dextents(5, 5));
     const auto S =
         I.slice(zipper::static_slice<0, 3>(), zipper::static_slice<0, 3>());

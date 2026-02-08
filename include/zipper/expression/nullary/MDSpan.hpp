@@ -2,7 +2,7 @@
 #define ZIPPER_EXPRESSION_NULLARY_MDSPAN_HPP
 
 #include "LinearLayoutExpression.hpp"
-#include "zipper/detail//ExtentsTraits.hpp"
+#include "zipper/detail/ExtentsTraits.hpp"
 #include "zipper/expression/detail/AssignHelper.hpp"
 #include "zipper/storage/SpanData.hpp"
 #include "zipper/storage/layout_types.hpp"
@@ -29,6 +29,17 @@ class MDSpan
 public:
   using self_type = MDSpan<ElementType, Extents, LayoutPolicy, AccessorPolicy>;
   using extents_type = Extents;
+
+  /// Converting constructor: allows MDSpan<T,...> → MDSpan<const T,...>
+  template <typename OtherElementType, typename OtherLayoutPolicy,
+            typename OtherAccessorPolicy>
+  MDSpan(const MDSpan<OtherElementType, Extents, OtherLayoutPolicy,
+                      OtherAccessorPolicy> &other)
+    requires(std::is_const_v<ElementType> &&
+             !std::is_const_v<OtherElementType> &&
+             std::is_same_v<std::remove_cv_t<ElementType>,
+                            std::remove_cv_t<OtherElementType>>)
+      : base_type(other) {}
 
   template <concepts::Expression V>
   void assign(const V &v)

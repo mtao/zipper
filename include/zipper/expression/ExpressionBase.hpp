@@ -4,12 +4,12 @@
 #include "detail/ExpressionTraits.hpp"
 #include "zipper/concepts/Expression.hpp"
 #include "zipper/concepts/IndexArgument.hpp"
-#include "zipper/detail//ExtentsTraits.hpp"
+#include "zipper/detail/ExtentsTraits.hpp"
 #include "zipper/types.hpp"
 
 namespace zipper::expression {
 
-/** The CRTP base class for every zipper view
+/** The CRTP base class for every zipper expression
  *
  * ## Extents
  * - extents() -> extents_type
@@ -83,7 +83,7 @@ public:
   auto operator()(Args &&...idxs) const -> decltype(auto);
 
   /// Primary access point, because it's mutable must support is_assignable and
-  /// the underlying view is considered mutable
+  /// the underlying expression is considered mutable
   /// Internally forwards to access_pack
   template <concepts::IndexArgument... Args>
   auto operator()(Args &&...idxs) -> decltype(auto)

@@ -3,24 +3,28 @@
 #include "catch_include.hpp"
 #include "fmt_include.hpp"
 
-#include <zipper/storage/PlainObjectStorage.hpp>
-#include <zipper/views/binary/ArithmeticViews.hpp>
-#include <zipper/views/binary/MatrixProductView.hpp>
-#include <zipper/views/unary/CastView.hpp>
-#include <zipper/views/unary/ScalarArithmeticViews.hpp>
+#include <zipper/concepts/Matrix.hpp>
+#include <zipper/expression/nullary/MDArray.hpp>
+#include <zipper/expression/binary/ArithmeticExpressions.hpp>
+#include <zipper/expression/binary/MatrixProduct.hpp>
+#include <zipper/expression/unary/Cast.hpp>
+#include <zipper/expression/unary/ScalarArithmetic.hpp>
 
 
 TEST_CASE("test_storage", "[storage][dense]") {
-    zipper::storage::PlainObjectStorage<double, zipper::extents<4, 4>> a;
+    using namespace zipper::expression;
+
+    // Create two 4x4 MDArrays
+    nullary::MDArray<double, zipper::extents<4, 4>> a;
+    using a_type = decltype(a);
 
     auto as = a.as_std_span();
-    zipper::storage::PlainObjectStorage<
-        double, zipper::extents<4, zipper::dynamic_extent>>
+    nullary::MDArray<double, zipper::extents<4, zipper::dynamic_extent>>
         b(zipper::extents<4, zipper::dynamic_extent>{4});
 
     fmt::print(
-        "A size: {} {} {}\n", a.accessor().container().size(),
-        decltype(a)::extents_traits::static_size,
+        "A size: {} {} {}\n", a.linear_accessor().container().size(),
+        a_type::extents_traits::static_size,
         zipper::detail::ExtentsTraits<zipper::extents<4, 4>>::static_size);
     auto bs = b.as_std_span();
 
@@ -29,7 +33,6 @@ TEST_CASE("test_storage", "[storage][dense]") {
         for (auto& v : bs) {
             v = j++;
         }
-        // this warning seems more an issue with fmt and print than me
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-overflow"
         fmt::print("{}\n", bs);
@@ -43,15 +46,13 @@ TEST_CASE("test_storage", "[storage][dense]") {
             a(j, k) = b(j, k);
         }
     }
-        // this warning seems more an issue with fmt and print than me
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-overflow"
     fmt::print("{}\n", as);
 #pragma GCC diagnostic pop
 
-    zipper::views::unary::ScalarMultipliesView<double, decltype(a), false> spv(
-        2.0, a);
-    // zipper::views::binary::AdditionView av(a,b);
+    // ScalarMultiplies: 2.0 * a
+    unary::ScalarMultiplies<double, decltype(a), false> spv(2.0, a);
 
     for (zipper::index_type j = 0; j < spv.extent(0); ++j) {
         for (zipper::index_type k = 0; k < spv.extent(1); ++k) {
@@ -60,8 +61,8 @@ TEST_CASE("test_storage", "[storage][dense]") {
         fmt::print("\n");
     }
 
-    // TODO: deduction guides should remove templating but clang is unhappy
-    zipper::views::binary::PlusView<decltype(a), decltype(b)> av(a, b);
+    // Binary Plus: a + b
+    binary::Plus<decltype(a), decltype(b)> av(a, b);
 
     for (zipper::index_type j = 0; j < av.extent(0); ++j) {
         for (zipper::index_type k = 0; k < av.extent(1); ++k) {
@@ -69,8 +70,8 @@ TEST_CASE("test_storage", "[storage][dense]") {
         }
     }
 
-    // TODO: deduction guides should remove templating but clang is unhappy
-    zipper::views::binary::MultipliesView<decltype(a), decltype(a)> pv(a, a);
+    // Binary Multiplies (element-wise): a * a
+    binary::Multiplies<decltype(a), decltype(a)> pv(a, a);
 
     for (zipper::index_type j = 0; j < pv.extent(0); ++j) {
         for (zipper::index_type k = 0; k < pv.extent(1); ++k) {
@@ -78,8 +79,9 @@ TEST_CASE("test_storage", "[storage][dense]") {
         }
     }
 
-    static_assert(zipper::concepts::MatrixViewDerived<decltype(a)>);
-    zipper::views::binary::MatrixProductView mv(a, a);
+    // MatrixProduct: a * a
+    static_assert(zipper::concepts::MatrixExpression<decltype(a)>);
+    binary::MatrixProduct mv(a, a);
 
     for (zipper::index_type j = 0; j < mv.extent(0); ++j) {
         for (zipper::index_type k = 0; k < mv.extent(1); ++k) {
@@ -87,7 +89,9 @@ TEST_CASE("test_storage", "[storage][dense]") {
         }
         fmt::print("\n");
     }
-    auto cv = zipper::views::unary::cast<int>(a);
+
+    // Cast: double -> int
+    auto cv = unary::cast<int>(a);
 
     for (zipper::index_type j = 0; j < cv.extent(0); ++j) {
         for (zipper::index_type k = 0; k < cv.extent(1); ++k) {
@@ -96,6 +100,7 @@ TEST_CASE("test_storage", "[storage][dense]") {
         fmt::print("\n");
     }
 
+    // Assign from expression
     b.assign(pv);
     fmt::print("B extent: {}\n", b.extent(1));
     for (zipper::index_type j = 0; j < b.extent(0); ++j) {

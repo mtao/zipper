@@ -8,8 +8,8 @@ template <typename T> class ExpressionBase;
 }
 namespace zipper::concepts {
 
-/// Every view must be derived from either ExpressionBase via CRTP, with
-/// constness qualification to specify if it is a const type view
+/// Every expression must be derived from ExpressionBase via CRTP, with
+/// constness qualification to specify if it is a const expression
 template <typename T>
 concept UnqualifiedExpression =
     std::derived_from<T, zipper::expression::ExpressionBase<T>> ||

@@ -5,9 +5,9 @@
 #include <zipper/expression/nullary/Random.hpp>
 
 TEST_CASE("test_head_tail", "[vector][homogeneous]") {
-    zipper::Vector a = zipper::expression::nullary::uniform_random_view<double>(
+    zipper::Vector a = zipper::expression::nullary::uniform_random<double>(
         zipper::extents<3>{});
-    zipper::Vector b = zipper::expression::nullary::uniform_random_view<double>(
+    zipper::Vector b = zipper::expression::nullary::uniform_random<double>(
         zipper::create_dextents(3));
 
     auto c = a.head<2>();

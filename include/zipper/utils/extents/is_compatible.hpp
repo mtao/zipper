@@ -48,24 +48,10 @@ constexpr bool is_compatible(std::integer_sequence<index_type, Indices...> idxs,
 }
 
 }  // namespace detail
-//
-//
-/*
-    template <zipper::concepts::Extents Ext,zipper::concepts::Extents
-   Ext2> requires(Ext2::rank() == Ext::rank()) constexpr bool
-   is_compatible(const Ext& target_ext, const Ext2& ext) { using traits =
-   typename zipper::detail::ExtentsTraits<Ext>;
 
-            return traits::is_convertable_from(ext);
-
-
-        }
-*/
 template <index_type... Indices, zipper::concepts::Extents Ext>
     requires(sizeof...(Indices) == Ext::rank() && Ext::rank_dynamic() == 0)
 constexpr bool is_compatible() {
-    // using traits = typename zipper::detail::ExtentsTraits<Ext>;
-
     return detail::is_compatible<false, Ext>(
         std::integer_sequence<index_type, Indices...>{},
         std::make_integer_sequence<rank_type, Ext::rank()>{});
@@ -74,8 +60,6 @@ constexpr bool is_compatible() {
 template <index_type... Indices, zipper::concepts::Extents Ext>
     requires(sizeof...(Indices) == Ext::rank() && Ext::rank_dynamic() == 0)
 constexpr bool is_compatible(const Ext&) {
-    // using traits = typename zipper::detail::ExtentsTraits<Ext>;
-
     return detail::is_compatible<false, Ext>(
         std::integer_sequence<index_type, Indices...>{},
         std::make_integer_sequence<rank_type, Ext::rank()>{});
@@ -84,8 +68,6 @@ constexpr bool is_compatible(const Ext&) {
 template <index_type... Indices, zipper::concepts::Extents Ext>
     requires(sizeof...(Indices) == Ext::rank() && Ext::rank_dynamic() != 0)
 bool is_compatible(const Ext& ext) {
-    // using traits = typename zipper::detail::ExtentsTraits<Ext>;
-
     return detail::is_compatible(
         ext, std::integer_sequence<index_type, Indices...>{},
         std::make_integer_sequence<rank_type, Ext::rank()>{});

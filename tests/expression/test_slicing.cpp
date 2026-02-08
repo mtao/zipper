@@ -6,16 +6,15 @@
 #include <zipper/VectorBase.hpp>
 #include <zipper/detail/extents/dynamic_extents_indices.hpp>
 #include <zipper/detail/extents/swizzle_extents.hpp>
-#include <zipper/storage/PlainObjectStorage.hpp>
 #include <zipper/types.hpp>
-#include <zipper/views/nullary/ConstantView.hpp>
-#include <zipper/views/nullary/RandomView.hpp>
+#include <zipper/expression/nullary/Constant.hpp>
+#include <zipper/expression/nullary/Random.hpp>
 
 #include "../catch_include.hpp"
 #include "../fmt_include.hpp"
 
 namespace {
-void print(zipper::concepts::ArrayBaseDerived auto const& M) {
+void print(zipper::concepts::Matrix auto const& M) {
     for (zipper::index_type j = 0; j < M.extent(0); ++j) {
         for (zipper::index_type k = 0; k < M.extent(1); ++k) {
             std::cout << M(j, k) << " ";
@@ -23,8 +22,7 @@ void print(zipper::concepts::ArrayBaseDerived auto const& M) {
         std::cout << std::endl;
     }
 }
-
-void print(zipper::concepts::MatrixBaseDerived auto const& M) {
+void print(zipper::concepts::Array auto const& M) {
     for (zipper::index_type j = 0; j < M.extent(0); ++j) {
         for (zipper::index_type k = 0; k < M.extent(1); ++k) {
             std::cout << M(j, k) << " ";
@@ -32,7 +30,7 @@ void print(zipper::concepts::MatrixBaseDerived auto const& M) {
         std::cout << std::endl;
     }
 }
-void print(zipper::concepts::VectorBaseDerived auto const& M) {
+void print(zipper::concepts::Vector auto const& M) {
     for (zipper::index_type j = 0; j < M.extent(0); ++j) {
         std::cout << M(j) << " ";
     }
@@ -42,27 +40,27 @@ void print(zipper::concepts::VectorBaseDerived auto const& M) {
    //
 TEST_CASE("test_matrix_slice_shapes", "[extents][matrix][slice]") {
     //fmt::print("Manipulating MN: \n");
-    zipper::MatrixBase RN(zipper::views::nullary::normal_random_view<double>(
+    zipper::MatrixBase RN(zipper::expression::nullary::normal_random<double>(
         zipper::extents<4, 5>{}, 0, 20));
     zipper::Matrix MN = RN;
     {
         auto full_slice =
             MN.slice<zipper::full_extent_t, zipper::full_extent_t>();
 
-        using ST = std::decay_t<decltype(full_slice.view())>;
+        using ST = std::decay_t<decltype(full_slice.expression())>;
         static_assert(ST::actionable_indices.size() == 2);
         static_assert(ST::actionable_indices[0] == 0);
         static_assert(ST::actionable_indices[1] == 1);
 
         static_assert(std::is_same_v<ST::extents_type, zipper::extents<4, 5>>);
 
-        REQUIRE(3 == full_slice.view().get_index<0>(3, 4));
-        REQUIRE(4 == full_slice.view().get_index<1>(3, 4));
+        REQUIRE(3 == full_slice.expression().get_index<0>(3, 4));
+        REQUIRE(4 == full_slice.expression().get_index<1>(3, 4));
     }
     {
         auto slice = MN.slice<std::integral_constant<zipper::index_type, 1>,
                               zipper::full_extent_t>();
-        using ST = std::decay_t<decltype(slice.view())>;
+        using ST = std::decay_t<decltype(slice.expression())>;
         using T = ST::slice_storage_type;
 
         static_assert(std::is_same_v<zipper::full_extent_t,
@@ -72,11 +70,11 @@ TEST_CASE("test_matrix_slice_shapes", "[extents][matrix][slice]") {
             std::is_same_v<std::integral_constant<zipper::index_type, 1>,
                            std::tuple_element_t<0, T>::type>);
 
-        static_assert(zipper::concepts::SliceLike<std::tuple_element_t<0, T>::type>);
-        static_assert(zipper::concepts::SliceLike<std::tuple_element_t<1, T>::type>);
+        static_assert(zipper::concepts::IndexSlice<std::tuple_element_t<0, T>::type>);
+        static_assert(zipper::concepts::IndexSlice<std::tuple_element_t<1, T>::type>);
 
-        static_assert(zipper::concepts::IndexLike<std::tuple_element_t<0, T>::type>);
-        static_assert(!zipper::concepts::IndexLike<std::tuple_element_t<1, T>::type>);
+        static_assert(zipper::concepts::Index<std::tuple_element_t<0, T>::type>);
+        static_assert(!zipper::concepts::Index<std::tuple_element_t<1, T>::type>);
 
         static_assert(std::is_same_v<zipper::full_extent_t,
                                      std::tuple_element_t<1, T>::type>);
@@ -87,13 +85,13 @@ TEST_CASE("test_matrix_slice_shapes", "[extents][matrix][slice]") {
         static_assert(ST::extents_type::static_extent(0) == 5);
         static_assert(std::is_same_v<ST::extents_type, zipper::extents<5>>);
 
-        REQUIRE(1 == slice.view().get_index<0>(4));
-        REQUIRE(4 == slice.view().get_index<1>(4));
+        REQUIRE(1 == slice.expression().get_index<0>(4));
+        REQUIRE(4 == slice.expression().get_index<1>(4));
     }
     {
         auto slice = MN.slice<zipper::full_extent_t,
                               std::integral_constant<zipper::index_type, 1>>();
-        using ST = std::decay_t<decltype(slice.view())>;
+        using ST = std::decay_t<decltype(slice.expression())>;
         using T = ST::slice_storage_type;
 
         static_assert(std::is_same_v<zipper::full_extent_t,
@@ -103,11 +101,11 @@ TEST_CASE("test_matrix_slice_shapes", "[extents][matrix][slice]") {
             std::is_same_v<std::integral_constant<zipper::index_type, 1>,
                            std::tuple_element_t<1, T>::type>);
 
-        static_assert(zipper::concepts::SliceLike<std::tuple_element_t<0, T>::type>);
-        static_assert(zipper::concepts::SliceLike<std::tuple_element_t<1, T>::type>);
+        static_assert(zipper::concepts::IndexSlice<std::tuple_element_t<0, T>::type>);
+        static_assert(zipper::concepts::IndexSlice<std::tuple_element_t<1, T>::type>);
 
-        static_assert(zipper::concepts::IndexLike<std::tuple_element_t<1, T>::type>);
-        static_assert(!zipper::concepts::IndexLike<std::tuple_element_t<0, T>::type>);
+        static_assert(zipper::concepts::Index<std::tuple_element_t<1, T>::type>);
+        static_assert(!zipper::concepts::Index<std::tuple_element_t<0, T>::type>);
 
         static_assert(std::is_same_v<zipper::full_extent_t,
                                      std::tuple_element_t<0, T>::type>);
@@ -116,14 +114,14 @@ TEST_CASE("test_matrix_slice_shapes", "[extents][matrix][slice]") {
         static_assert(ST::actionable_indices[0] == 0);
         static_assert(std::is_same_v<ST::extents_type, zipper::extents<4>>);
 
-        REQUIRE(1 == slice.view().get_index<1>(4));
-        REQUIRE(4 == slice.view().get_index<0>(4));
+        REQUIRE(1 == slice.expression().get_index<1>(4));
+        REQUIRE(4 == slice.expression().get_index<0>(4));
     }
 }
 
 TEST_CASE("test_matrix_slicing", "[extents][matrix][slice]") {
     //fmt::print("Manipulating MN: \n");
-    zipper::MatrixBase RN(zipper::views::nullary::normal_random_view<double>(
+    zipper::MatrixBase RN(zipper::expression::nullary::normal_random<double>(
         zipper::extents<4, 4>{}, 0, 20));
 
     zipper::Matrix MN = RN;
@@ -168,8 +166,10 @@ TEST_CASE("test_matrix_slicing", "[extents][matrix][slice]") {
             static_assert(std::is_integral_v<std::decay_t<decltype(b)>>);
             CHECK(S(a, b) == MN(a + 1, b));
             CHECK(SD(a, b) == S(a, b));
-        }
     }
+    }
+
+
 
     auto slice = MN.slice<std::integral_constant<zipper::index_type, 1>,
                           zipper::full_extent_t>();
@@ -206,8 +206,8 @@ TEST_CASE("test_matrix_slicing", "[extents][matrix][slice]") {
     CHECK(104000 == MND(1, 2));
     CHECK(100003 == MND(1, 3));
 
-    slice = zipper::views::nullary::ConstantView<double>(3.4);
-    sliceD = zipper::views::nullary::ConstantView<double>(3.4);
+    slice = zipper::expression::nullary::Constant<double>(3.4);
+    sliceD = zipper::expression::nullary::Constant<double>(3.4);
     CHECK(3.4 == MN(1, 0));
     CHECK(3.4 == MN(1, 1));
     CHECK(3.4 == MN(1, 2));
@@ -290,7 +290,7 @@ TEST_CASE("test_vector_slice_assignment", "[extents][vector][slice]") {
 
     x(3) = 2;
 
-    x.head<3>() = zipper::views::nullary::ConstantView<double>(1);
+    x.head<3>() = zipper::expression::nullary::Constant<double>(1);
     CHECK(x(0) == 1);
     CHECK(x(1) == 1);
     CHECK(x(2) == 1);
@@ -301,6 +301,9 @@ TEST_CASE("test_partial_slice", "[extents][tensor][slice]") {
     //fmt::print("Manipulating MN: \n");
 }
 
+// test_span_array_access uses std::array/std::vector which already satisfy IndexSlice.
+// test_span_view_access uses Vector<index_type> which satisfies IndexSlice
+// via the IsZipperBase specialization in IndexSlice.hpp.
 TEST_CASE("test_span_array_access", "[vector][storage][dense][span]") {
     {
         zipper::Vector<double, 3> x = {1, 2, 3};

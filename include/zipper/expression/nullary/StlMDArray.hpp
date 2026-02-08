@@ -78,11 +78,7 @@ struct detail::ExpressionTraits<zipper::expression::nullary::StlMDArray<S>>
     : public detail::DefaultExpressionTraits<
           typename zipper::storage::StlStorageInfo<std::decay_t<S>>::value_type,
           typename zipper::storage::StlStorageInfo<
-              std::decay_t<S>>::extents_type>
-/*: public detail::ExpressionTraits <
-  views::StorageExpressionBase<zipper::storage::SpanStorage<
-      ValueType, Extents, LayoutPolicy, AccessorPolicy>> */
-{
+              std::decay_t<S>>::extents_type> {
   using StlType = std::decay_t<S>;
   using value_type =
       typename zipper::storage::StlStorageInfo<StlType>::value_type;

@@ -35,7 +35,7 @@ struct ExtentsSwizzler {
 
         return r2;
     }
-    // swizzling can support dimensions that don't exist in the child view to
+    // swizzling can support dimensions that don't exist in the child expression to
     // lift to higher order tensors (like making a vector a matrix) this keeps
     // track of which indices are ok or not
     constexpr static std::array<rank_type, valid_indices_rank>

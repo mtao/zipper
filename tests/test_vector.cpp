@@ -76,9 +76,9 @@ TEST_CASE("test_dot", "[matrix][storage][dense]") {
   // Vector c = (*a.as_form()).as_vector();
   Vector c = a;  // placeholder until Hodge star is implemented
 
-  Vector<double, 3> e0 = expression::nullary::unit_vector<double, 3>(0);
-  Vector<double, 3> e1 = expression::nullary::unit_vector<double>(3, 1);
-  Vector<double, 3> e2 = expression::nullary::unit_vector<double, 3, 2>();
+  VectorBase e0 = expression::nullary::unit_vector<double, 3>(0);
+  VectorBase e1 = expression::nullary::unit_vector<double>(3, 1);
+  VectorBase e2 = expression::nullary::unit_vector<double, 3, 2>();
 
   CHECK(a.dot(e0) == 0);
   CHECK(a.dot(e1) == 2);

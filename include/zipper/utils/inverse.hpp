@@ -78,7 +78,7 @@ auto inverse(const D& d) {
     } else if (zipper::utils::extents::is_compatible<3, 3>(extents)) {
         return detail::inverse3d(d);
     }
-    // TODO: implement a general inverse view perhaps?
+    // TODO: implement a general inverse expression perhaps?
     throw std::runtime_error("Not implemented");
 }
 }  // namespace zipper::utils

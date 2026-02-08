@@ -3,7 +3,7 @@
 #include "DynamicDenseData.hpp"
 #include "LinearAccessorTraits.hpp"
 #include "StaticDenseData.hpp"
-#include "zipper/detail//ExtentsTraits.hpp"
+#include "zipper/detail/ExtentsTraits.hpp"
 
 #include <array>
 #include <zipper/types.hpp>

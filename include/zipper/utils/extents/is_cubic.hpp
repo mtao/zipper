@@ -46,19 +46,6 @@ constexpr bool is_cubic(std::integer_sequence<rank_type, N...> n) {
 }
 
 }  // namespace detail
-//
-//
-/*
-    template <zipper::concepts::Extents Ext,zipper::concepts::Extents
-   Ext2> requires(Ext2::rank() == Ext::rank()) constexpr bool
-   is_cubic(const Ext& target_ext, const Ext2& ext) { using traits =
-   typename zipper::detail::ExtentsTraits<Ext>;
-
-            return traits::is_convertable_from(ext);
-
-
-        }
-*/
 
 template <zipper::concepts::Extents Ext>
 constexpr std::optional<index_type> size_if_cubic(const Ext& e) {

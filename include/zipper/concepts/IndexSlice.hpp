@@ -2,6 +2,7 @@
 #define ZIPPER_CONCEPTS_INDEXSLICE_HPP
 #include "Expression.hpp"
 #include "Index.hpp"
+#include "detail/IsZipperBase.hpp"
 #include "zipper/types.hpp"
 #include <array>
 #include <vector>
@@ -31,12 +32,20 @@ template <zipper::concepts::Expression Expression>
            Index<typename Expression::value_type>)
 struct is_index_slice<Expression> : public std::true_type {};
 
+/// ZipperBase-derived types (e.g. Vector<index_type>) that wrap a rank-1
+/// expression with Index value_type are also valid index slices
+template <typename T>
+  requires(IsZipperBase<T>::value &&
+           T::extents_type::rank() == 1 &&
+           Index<typename T::value_type>)
+struct is_index_slice<T> : public std::true_type {};
+
 } // namespace detail
 
 /// An argument for indices that can store more than one value in a single
-/// dimension of a MDArray
+/// dimension of a MDArray. Single indices also count as degenerate slices.
 template <typename T>
-concept IndexSlice = detail::is_index_slice<std::decay_t<T>>::value;
+concept IndexSlice = Index<std::decay_t<T>> || detail::is_index_slice<std::decay_t<T>>::value;
 
 } // namespace zipper::concepts
 #endif

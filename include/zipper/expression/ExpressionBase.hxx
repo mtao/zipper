@@ -40,20 +40,20 @@ auto ExpressionBase<Derived>::const_coeff_ref(Indices &&...indices) const
 
 namespace unary {
 template <zipper::concepts::Expression ExpressionType,
-          zipper::concepts::IndexSlice... Slices>
-class SliceExpression;
+          typename... Slices>
+class Slice;
 }
 template <typename Derived>
 template <concepts::IndexSlice... Slices>
 auto ExpressionBase<Derived>::const_access_slice(Slices &&...slices) const {
-  return unary::SliceExpression<const Derived, std::decay_t<Slices>...>(
+  return unary::Slice<const Derived, std::decay_t<Slices>...>(
       derived(), std::forward<Slices>(slices)...);
 }
 
 template <typename Derived>
 template <concepts::IndexSlice... Slices>
 auto ExpressionBase<Derived>::access_slice(Slices &&...slices) {
-  return unary::SliceExpression<Derived, std::decay_t<Slices>...>(
+  return unary::Slice<Derived, std::decay_t<Slices>...>(
       derived(), std::forward<Slices>(slices)...);
 }
 

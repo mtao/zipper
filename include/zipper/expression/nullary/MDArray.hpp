@@ -3,7 +3,7 @@
 
 #include "LinearLayoutExpression.hpp"
 #include "MDSpan.hpp"
-#include "zipper/detail//ExtentsTraits.hpp"
+#include "zipper/detail/ExtentsTraits.hpp"
 #include "zipper/expression/detail/AssignHelper.hpp"
 #include "zipper/storage/DenseData.hpp"
 #include "zipper/storage/layout_types.hpp"
@@ -25,24 +25,6 @@ class MDArray
       Extents, LayoutPolicy, AccessorPolicy,
       MDArray<ElementType, Extents, LayoutPolicy, AccessorPolicy>>;
   using base_type::base_type;
-  /*
-  // defaults are stored in MDSpan
-  template <typename ValueType, concepts::Extents Extents, typename
-  LayoutPolicy, typename AccessorPolicy> class MDArray : public
-  expression::nullary::DenseStorageExpressionBase< MDArray<ValueType, Extents,
-  LayoutPolicy, AccessorPolicy>> { public: using self_type = MDArray<ValueType,
-  Extents, LayoutPolicy, AccessorPolicy>; using ParentType =
-  DenseStorageExpressionBase<self_type>;
-
-    using traits = expression::detail::ExpressionTraits<self_type>;
-    using value_type = typename traits::value_type;
-    /// Type of the underlying variable (should be seomthing like remove_cvref_t
-    using element_type = typename traits::element_type;
-    using extents_type = Extents;
-    using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
-
-
-  */
 
   constexpr static bool IsStatic = base_type::extents_traits::is_static;
   using span_type = MDSpan<ElementType, Extents, LayoutPolicy, AccessorPolicy>;
@@ -59,30 +41,7 @@ public:
   {
     expression::detail::AssignHelper<V, self_type>::assign(v, *this);
   }
-  /*
-    MDArray() : ParentType(), m_accessor() {}
 
-    using accessor_type =
-        storage::DenseData<value_type, extents_traits::static_size>;
-    auto accessor() const -> const accessor_type & { return m_accessor; }
-    auto accessor() -> accessor_type & { return m_accessor; }
-    auto linear_access() const -> const accessor_type & { return m_accessor; }
-    auto linear_access() -> accessor_type & { return m_accessor; }
-    using ParentType::assign;
-
-    MDArray(const MDArray &) = default;
-    MDArray(MDArray &&) = default;
-    auto operator=(const MDArray &) -> MDArray & = default;
-    auto operator=(MDArray &&) -> MDArray & = default;
-
-    MDArray(const extents_type &extents)
-      requires(!IsStatic)
-        : ParentType(extents), m_accessor(extents_traits::size(extents)) {}
-    MDArray(const extents_type &extents)
-      requires(IsStatic)
-        : ParentType(extents), m_accessor() {}
-
-  */
   auto as_span() -> span_type {
     if constexpr (IsStatic) {
       return span_type(linear_accessor().as_std_span());
@@ -100,12 +59,6 @@ public:
     }
   }
 
-  /*
-    template <typename... Args>
-    MDArray(const extents_type &extents, Args &&...args)
-        : ParentType(extents), m_accessor(std::forward<Args>(args)...) {}
-
-  */
   template <zipper::concepts::Extents E2>
   void resize(const E2 &e)
     requires(extents_traits::template is_convertable_from<E2>() && !IsStatic)
@@ -115,17 +68,6 @@ public:
     linear_accessor().container().resize(
         zipper::detail::ExtentsTraits<E2>::size(e));
   }
-  /*
-    using iterator_type = accessor_type::iterator_type;
-    using const_iterator_type = accessor_type::const_iterator_type;
-    auto begin() { return m_accessor.begin(); }
-    auto end() { return m_accessor.end(); }
-    auto begin() const { return m_accessor.begin(); }
-    auto end() const { return m_accessor.end(); }
-
-  private:
-    accessor_type m_accessor;
-    */
 };
 
 } // namespace zipper::expression::nullary

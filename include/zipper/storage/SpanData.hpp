@@ -19,12 +19,14 @@ public:
   // for some reason the above using statement didn't work for copy?
   SpanData(const base_type &b) : base_type(b) {}
 
-  /*
-  template <typename ET, std::size_t M>
-  SpanData(const std::span<ET, M> &o)
-    requires(M != N && M == std::dynamic_extent)
-      : std_span_type(o) {}
-  */
+  /// Converting constructor: allows SpanData<T, N> → SpanData<const T, N>
+  template <typename OtherElementType, std::size_t M>
+  SpanData(const SpanData<OtherElementType, M> &other)
+    requires(is_const && !std::is_const_v<OtherElementType> &&
+             std::is_same_v<value_type, std::remove_cv_t<OtherElementType>> &&
+             (N == M || N == std::dynamic_extent))
+      : base_type(other) {}
+
   using base_type::size;
 
   auto coeff(index_type i) const -> element_type {
