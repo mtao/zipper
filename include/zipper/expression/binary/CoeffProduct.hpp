@@ -1,34 +1,31 @@
+#if !defined(ZIPPER_EXPRESSION_BINARY_COEFFPRODUCT_HPP)
+#define ZIPPER_EXPRESSION_BINARY_COEFFPRODUCT_HPP
 
-
-#if !defined(ZIPPER_VIEWS_BINARY_COEFFPRODUCTVIEW_HPP)
-#define ZIPPER_VIEWS_BINARY_COEFFPRODUCTVIEW_HPP
-
-#include "BinaryViewBase.hpp"
+#include "BinaryExpressionBase.hpp"
 #include "detail/CoeffWiseTraits.hpp"
-#include "zipper/concepts/ViewDerived.hpp"
-#include "zipper/views/DimensionedViewBase.hpp"
+#include "zipper/concepts/Expression.hpp"
 
-namespace zipper::views {
+namespace zipper::expression {
 namespace binary {
-template <zipper::concepts::ViewDerived A, zipper::concepts::ViewDerived B>
-class CoeffProductView;
+template <zipper::concepts::Expression A, zipper::concepts::Expression B>
+class CoeffProduct;
 
 }
-template <typename A, typename B>
-struct detail::ViewTraits<binary::CoeffProductView<A, B>>
-    : public binary::detail::DefaultBinaryViewTraits<A, B> {
-    using Base = detail::ViewTraits<A>;
+template <concepts::Expression A, concepts::Expression B>
+struct detail::ExpressionTraits<binary::CoeffProduct<A, B>>
+    : public binary::detail::DefaultBinaryExpressionTraits<A, B> {
+    using Base = detail::ExpressionTraits<A>;
     using extents_type = typename Base::extents_type;
 };
 
 namespace binary {
-    // Per-coefficient product (i.e A(x,y,z) * B(x,y,z))
-template <zipper::concepts::ViewDerived A, zipper::concepts::ViewDerived B>
-class CoeffProductView : public BinaryViewBase<CoeffProductView<A, B>, A, B> {
+// Per-coefficient product (i.e A(x,y,z) * B(x,y,z))
+template <zipper::concepts::Expression A, zipper::concepts::Expression B>
+class CoeffProduct : public BinaryExpressionBase<CoeffProduct<A, B>, const A, const B> {
    public:
-    using self_type = CoeffProductView<A, B>;
-    using traits = zipper::views::detail::ViewTraits<self_type>;
-    using Base = BinaryViewBase<self_type, A, B>;
+    using self_type = CoeffProduct<A, B>;
+    using traits = zipper::expression::detail::ExpressionTraits<self_type>;
+    using Base = BinaryExpressionBase<self_type, const A, const B>;
     using Base::Base;
     using Base::extent;
     using Base::extents;
@@ -37,7 +34,7 @@ class CoeffProductView : public BinaryViewBase<CoeffProductView<A, B>, A, B> {
     using extents_type = traits::extents_type;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
 
-    CoeffProductView(const A& a, const B& b)
+    CoeffProduct(const A& a, const B& b)
         requires(!extents_traits::is_static)
         : Base(a, b, a.extents()) {}
 
@@ -45,11 +42,11 @@ class CoeffProductView : public BinaryViewBase<CoeffProductView<A, B>, A, B> {
     auto coeff(Args&&... idxs) const {
         return lhs()(idxs...) * rhs()(idxs...);
     }
+};
 
-};  // namespace binarytemplate<typenameA,typenameB>class CoeffProductView
+template <zipper::concepts::Expression A, zipper::concepts::Expression B>
+CoeffProduct(const A& a, const B& b) -> CoeffProduct<A, B>;
 
-template <zipper::concepts::ViewDerived A, zipper::concepts::ViewDerived B>
-CoeffProductView(const A& a, const B& b) -> CoeffProductView<A, B>;
 }  // namespace binary
-}  // namespace zipper::views
+}  // namespace zipper::expression
 #endif

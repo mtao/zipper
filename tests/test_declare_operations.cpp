@@ -8,18 +8,18 @@
 #include "zipper/expression/reductions/All.hpp"
 
 namespace zipper {
-template <concepts::QualifiedExpression View>
+template <concepts::QualifiedExpression Expr>
 class TestBase {
    public:
-    using expression_type = std::decay_t<View>;
+    using expression_type = std::decay_t<Expr>;
     using value_type = typename expression::detail::ExpressionTraits<expression_type>::value_type;
     TestBase() = default;
-    TestBase(View&& v) : m_expression(v) {}
+    TestBase(Expr&& v) : m_expression(v) {}
 
-    View m_expression;
+    Expr m_expression;
 
-    View& expression() { return m_expression; }
-    const View& expression() const { return m_expression; }
+    Expr& expression() { return m_expression; }
+    const Expr& expression() const { return m_expression; }
 };
 namespace concepts::detail {
 

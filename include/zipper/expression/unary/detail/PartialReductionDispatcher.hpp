@@ -19,13 +19,13 @@ class PartialReductionDispatcher {
     template <index_type P = 2>
     auto norm() const {
         using holder = reductions::detail::lp_norm_holder<P>;
-        return holder::template reduction_view<ExprType,
+        return holder::template reduction<ExprType,
                                                Indices...>(m_expression);
     }
     template <index_type P = 2>
     auto norm_powered() const {
         using holder = reductions::detail::lp_norm_powered_holder<P>;
-        return holder::template reduction_view<ExprType,
+        return holder::template reduction<ExprType,
                                                Indices...>(m_expression);
     }
 

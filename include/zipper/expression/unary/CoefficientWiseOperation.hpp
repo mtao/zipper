@@ -30,6 +30,27 @@ struct expression::detail::ExpressionTraits<
   using child_traits = ExpressionTraits<Child>;
   using value_type = std::decay_t<decltype(std::declval<Op>()(
       std::declval<typename child_traits::value_type>()))>;
+  // CoefficientWiseOperation computes values on the fly — not referrable or
+  // assignable
+  constexpr static zipper::detail::AccessFeatures access_features = {
+      .is_const = true,
+      .is_reference = false,
+      .is_alias_free = child_traits::access_features.is_alias_free,
+  };
+  consteval static auto is_const_valued() -> bool {
+    return access_features.is_const;
+  }
+  consteval static auto is_reference_valued() -> bool {
+    return access_features.is_reference;
+  }
+  consteval static auto is_assignable() -> bool {
+    return !is_const_valued() && is_reference_valued();
+  }
+  consteval static auto is_referrable() -> bool {
+    return access_features.is_reference;
+  }
+
+  constexpr static bool is_writable = is_assignable();
 };
 
 // represents a coefficient-wise transformation of an underlyng expression

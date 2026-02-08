@@ -71,9 +71,9 @@ TEST_CASE("test_tensor_product", "[storage][dense]") {
     //fmt::print("Constant tensor from infinite view\n");
     print(J);
 
-    M = zipper::expression::nullary::normal_random_infinite_view<double>(0, 1);
+    M = zipper::expression::nullary::normal_random_infinite<double>(0, 1);
 
-    x = zipper::expression::nullary::normal_random_infinite_view<double>(10, 1);
+    x = zipper::expression::nullary::normal_random_infinite<double>(10, 1);
 
     print(M);
 
@@ -101,10 +101,10 @@ TEST_CASE("test_tensor_product", "[storage][dense]") {
 TEST_CASE("test_product", "[storage][tensor]") {
     zipper::Tensor<double, 3, 3> I = zipper::views::nullary::IdentityView<double>{};
     zipper::Tensor<double, 3, 3> M =
-        zipper::views::nullary::normal_random_infinite_view<double>(0, 1);
+        zipper::views::nullary::normal_random_infinite<double>(0, 1);
 
     zipper::Tensor<double, 3, 3> N =
-        zipper::views::nullary::normal_random_infinite_view<double>(0, 1);
+        zipper::views::nullary::normal_random_infinite<double>(0, 1);
 
 
     zipper::MatrixBase mM = M.view();
@@ -160,18 +160,18 @@ TEST_CASE("test_form_product", "[storage][tensor]") {
     T(1) = 1;
     T(2) = 1;
     zipper::Vector<double,3> a = 
-        zipper::views::nullary::normal_random_infinite_view<double>(0, 1);
+        zipper::views::nullary::normal_random_infinite<double>(0, 1);
     zipper::Vector<double,3> b = 
-        zipper::views::nullary::normal_random_infinite_view<double>(0, 1);
+        zipper::views::nullary::normal_random_infinite<double>(0, 1);
     zipper::Vector<double,3> c = 
-        zipper::views::nullary::normal_random_infinite_view<double>(0, 1);
+        zipper::views::nullary::normal_random_infinite<double>(0, 1);
 
     zipper::Vector<double,3> x = 
-        zipper::views::nullary::normal_random_infinite_view<double>(0, 1);
+        zipper::views::nullary::normal_random_infinite<double>(0, 1);
     zipper::Vector<double,3> y = 
-        zipper::views::nullary::normal_random_infinite_view<double>(0, 1);
+        zipper::views::nullary::normal_random_infinite<double>(0, 1);
     zipper::Vector<double,3> z = 
-        zipper::views::nullary::normal_random_infinite_view<double>(0, 1);
+        zipper::views::nullary::normal_random_infinite<double>(0, 1);
 
 
     spdlog::warn("Dot product {}", double(O.as_form() * O));

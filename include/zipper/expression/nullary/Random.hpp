@@ -10,35 +10,35 @@ namespace nullary {
 /// Uniform distribution
 template <typename T, typename Generator = std::default_random_engine,
           concepts::Extents Extents = zipper::extents<>>
-auto uniform_random_view(const Extents &extents = {}, const T &min = 0,
+auto uniform_random(const Extents &extents = {}, const T &min = 0,
                          const T &max = 1,
                          const Generator &g = Generator{
                              std::random_device{}()});
 
 template <typename T, typename Generator = std::default_random_engine,
           concepts::Extents Extents = zipper::extents<>>
-auto normal_random_view(const Extents &extents = {}, const T &mean = 0,
+auto normal_random(const Extents &extents = {}, const T &mean = 0,
                         const T &stddev = 1,
                         const Generator &g = Generator{std::random_device{}()});
 template <typename T, typename Generator = std::default_random_engine,
           index_type... Indices>
-auto uniform_random_infinite_view(const T &min = 0, const T &max = 1,
+auto uniform_random_infinite(const T &min = 0, const T &max = 1,
                                   const Generator &g = Generator{
                                       std::random_device{}()});
 
 template <typename T, typename Generator = std::default_random_engine>
-auto normal_random_infinite_view(const T &min = 0, const T &max = 1,
+auto normal_random_infinite(const T &min = 0, const T &max = 1,
                                  const Generator &g = Generator{
                                      std::random_device{}()});
 
 template <template <typename RT> typename Distribution, typename T,
           typename Generator = std::default_random_engine,
           concepts::Extents Extents = zipper::extents<>>
-auto random_view(const Extents &extents = {}, const Distribution<T> &d = {},
+auto make_random(const Extents &extents = {}, const Distribution<T> &d = {},
                  const Generator &g = Generator{std::random_device{}()});
 template <template <typename RT> typename Distribution, typename T,
           typename Generator = std::default_random_engine>
-auto random_infinite_view(const Distribution<T> &d = {},
+auto make_random_infinite(const Distribution<T> &d = {},
                           const Generator &g = Generator{
                               std::random_device{}()});
 
@@ -84,48 +84,48 @@ Random(const Distribution &, const Generator &, const Extents &)
 
 template <template <typename RT> typename Distribution, typename T,
           typename Generator, concepts::Extents Extents>
-auto random_view(const Extents &extents, const Distribution<T> &d,
+auto make_random(const Extents &extents, const Distribution<T> &d,
                  const Generator &g) {
   return Random<Distribution<T>, Generator, Extents>(extents, d, g);
 }
 template <template <typename RT> typename Distribution, typename T,
           typename Generator>
-auto random_infinite_view(const Distribution<T> &d, const Generator &g) {
+auto make_random_infinite(const Distribution<T> &d, const Generator &g) {
 
   return Random<Distribution<T>, Generator, zipper::extents<>>(d, g);
 }
 
 template <typename T, typename Generator, concepts::Extents Extents>
-auto uniform_random_view(const Extents &extents, const T &min, const T &max,
+auto uniform_random(const Extents &extents, const T &min, const T &max,
                          const Generator &g) {
   static_assert(std::is_arithmetic_v<T>);
   if constexpr (std::is_integral_v<T>) {
-    return random_view<std::uniform_int_distribution, T, Generator, Extents>(
+    return make_random<std::uniform_int_distribution, T, Generator, Extents>(
         extents, std::uniform_int_distribution<T>(min, max), g);
   } else if constexpr (std::is_floating_point_v<T>) {
-    return random_view<std::uniform_real_distribution, T, Generator, Extents>(
+    return make_random<std::uniform_real_distribution, T, Generator, Extents>(
         extents, std::uniform_real_distribution<T>(min, max), g);
   }
 }
 
 template <typename T, typename Generator, concepts::Extents Extents>
-auto normal_random_view(const Extents &extents, const T &mean, const T &stddev,
+auto normal_random(const Extents &extents, const T &mean, const T &stddev,
                         const Generator &g) {
   static_assert(std::is_floating_point_v<T>);
-  return random_view<std::normal_distribution, T, Generator, Extents>(
+  return make_random<std::normal_distribution, T, Generator, Extents>(
       extents, std::normal_distribution<T>(mean, stddev), g);
 }
 
 template <typename T, typename Generator>
-auto uniform_random_infinite_view(const T &min, const T &max,
+auto uniform_random_infinite(const T &min, const T &max,
                                   const Generator &g) {
-  return uniform_random_view<T, Generator>(zipper::extents<>{}, min, max, g);
+  return uniform_random<T, Generator>(zipper::extents<>{}, min, max, g);
 }
 
 template <typename T, typename Generator>
-auto normal_random_infinite_view(const T &mean, const T &stddev,
+auto normal_random_infinite(const T &mean, const T &stddev,
                                  const Generator &g) {
-  return normal_random_view<T, Generator>(zipper::extents<>{}, mean, stddev, g);
+  return normal_random<T, Generator>(zipper::extents<>{}, mean, stddev, g);
 }
 } // namespace nullary
 template <typename Distribution, typename Generator, concepts::Extents Extents>

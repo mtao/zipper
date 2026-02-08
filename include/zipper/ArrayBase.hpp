@@ -25,18 +25,18 @@
 
 namespace zipper {
 
-template <concepts::Expression View>
-class ArrayBase : public ZipperBase<ArrayBase, View> {
+template <concepts::Expression Expr>
+class ArrayBase : public ZipperBase<ArrayBase, Expr> {
 public:
   ArrayBase() = default;
 
-  using expression_type = std::decay_t<View>;
+  using expression_type = std::decay_t<Expr>;
   using expression_traits =
       expression::detail::ExpressionTraits<expression_type>;
   using value_type = typename expression_traits::value_type;
   using extents_type = typename expression_traits::extents_type;
   using extents_traits = detail::ExtentsTraits<extents_type>;
-  using Base = ZipperBase<ArrayBase, View>;
+  using Base = ZipperBase<ArrayBase, Expr>;
   using Base::Base;
   using Base::expression;
 
@@ -175,10 +175,10 @@ public:
   }
 };
 
-template <concepts::Expression View>
-ArrayBase(View &&view) -> ArrayBase<View>;
-template <concepts::Expression View>
-ArrayBase(const View &view) -> ArrayBase<View>;
+template <concepts::Expression Expr>
+ArrayBase(Expr &&) -> ArrayBase<Expr>;
+template <concepts::Expression Expr>
+ArrayBase(const Expr &) -> ArrayBase<Expr>;
 // NOTE: SpanStorage deduction guides commented out - SpanStorage has been removed.
 // template <class T, std::size_t Size = std::dynamic_extent>
 // ArrayBase(std::span<T, Size> s)
@@ -203,12 +203,7 @@ SCALAR_BINARY_DECLARATION(ArrayBase, Less, operator<)
 SCALAR_BINARY_DECLARATION(ArrayBase, GreaterEqual, operator>=)
 SCALAR_BINARY_DECLARATION(ArrayBase, LessEqual, operator<=)
 // GCC notes that these operators don't allow short circuiting, but that's ok
-// for our views
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Weffc++"
-SCALAR_BINARY_DECLARATION(ArrayBase, LogicalAnd, operator&&)
-SCALAR_BINARY_DECLARATION(ArrayBase, LogicalOr, operator||)
-#pragma GCC diagnostic pop
+// for our expressions
 SCALAR_BINARY_DECLARATION(ArrayBase, BitAnd, operator&)
 SCALAR_BINARY_DECLARATION(ArrayBase, BitOr, operator|)
 SCALAR_BINARY_DECLARATION(ArrayBase, BitXor, operator^)
@@ -226,12 +221,7 @@ BINARY_DECLARATION(ArrayBase, GreaterEqual, operator>=)
 BINARY_DECLARATION(ArrayBase, LessEqual, operator<=)
 
 // GCC notes that these operators don't allow short circuiting, but that's ok
-// for our views
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Weffc++"
-BINARY_DECLARATION(ArrayBase, LogicalAnd, operator&&)
-BINARY_DECLARATION(ArrayBase, LogicalOr, operator||)
-#pragma GCC diagnostic pop
+// for our expressions
 BINARY_DECLARATION(ArrayBase, BitAnd, operator&)
 BINARY_DECLARATION(ArrayBase, BitOr, operator|)
 BINARY_DECLARATION(ArrayBase, BitXor, operator^)

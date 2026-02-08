@@ -44,7 +44,7 @@ struct lp_norm_holder {
   };
   template <zipper::concepts::QualifiedExpression ExprType,
             rank_type... Indices>
-  static auto reduction_view(ExprType &expr) {
+  static auto reduction(ExprType &expr) {
     return unary::PartialReduction<ExprType, LpNorm, Indices...>(expr);
   }
 };

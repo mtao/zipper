@@ -11,10 +11,10 @@
 
 namespace zipper {
 
-template <concepts::Expression View>
-class TensorBase : public ZipperBase<TensorBase, View> {
+template <concepts::Expression Expr>
+class TensorBase : public ZipperBase<TensorBase, Expr> {
 public:
-  using Base = ZipperBase<TensorBase, View>;
+  using Base = ZipperBase<TensorBase, Expr>;
   TensorBase() = default;
 
   using expression_type = typename Base::expression_type;
@@ -78,10 +78,10 @@ public:
   }
 };
 
-template <concepts::Expression View>
-TensorBase(View &&view) -> TensorBase<View>;
-template <concepts::Expression View>
-TensorBase(const View &view) -> TensorBase<View>;
+template <concepts::Expression Expr>
+TensorBase(Expr &&) -> TensorBase<Expr>;
+template <concepts::Expression Expr>
+TensorBase(const Expr &) -> TensorBase<Expr>;
 
 // NOTE: SpanStorage deduction guides commented out - SpanStorage has been removed.
 // template <class T, std::size_t Size = std::dynamic_extent>
@@ -103,10 +103,10 @@ SCALAR_BINARY_DECLARATION(TensorBase, Divides, operator/)
 BINARY_DECLARATION(TensorBase, Plus, operator+)
 BINARY_DECLARATION(TensorBase, Minus, operator-)
 
-template <concepts::Tensor View1, concepts::Tensor View2>
-auto operator*(View1 const &lhs, View2 const &rhs) {
-  using V = expression::binary::TensorProduct<const typename View1::expression_type,
-                                              const typename View2::expression_type>;
+template <concepts::Tensor Expr1, concepts::Tensor Expr2>
+auto operator*(Expr1 const &lhs, Expr2 const &rhs) {
+  using V = expression::binary::TensorProduct<const typename Expr1::expression_type,
+                                              const typename Expr2::expression_type>;
   return TensorBase<V>(V(lhs.expression(), rhs.expression()));
 }
 

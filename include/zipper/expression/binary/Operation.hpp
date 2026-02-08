@@ -25,12 +25,12 @@
 namespace zipper::expression {
 namespace binary {
 template <zipper::concepts::QualifiedExpression A,
-          zipper::concepts::QualifiedExpression B, typename Operation>
-class OperationExpression;
+          zipper::concepts::QualifiedExpression B, typename Op>
+class Operation;
 
 }
-template <typename A, typename B, typename Operation>
-struct detail::ExpressionTraits<binary::OperationExpression<A, B, Operation>>
+template <concepts::QualifiedExpression A, concepts::QualifiedExpression B, typename Op>
+struct detail::ExpressionTraits<binary::Operation<A, B, Op>>
     : public binary::detail::DefaultBinaryExpressionTraits<A, B> {
   using ATraits = detail::ExpressionTraits<A>;
   using BTraits = detail::ExpressionTraits<B>;
@@ -38,19 +38,19 @@ struct detail::ExpressionTraits<binary::OperationExpression<A, B, Operation>>
       binary::detail::coeffwise_extents_values<typename ATraits::extents_type,
                                                typename BTraits::extents_type>;
   using extents_type = typename ConvertExtentsUtil::merged_extents_type;
-  using value_type = decltype(std::declval<Operation>()(
+  using value_type = decltype(std::declval<Op>()(
       std::declval<typename ATraits::value_type>(),
       std::declval<typename BTraits::value_type>()));
 };
 
 namespace binary {
 template <zipper::concepts::QualifiedExpression A,
-          zipper::concepts::QualifiedExpression B, typename Operation>
-class OperationExpression
-    : public BinaryExpressionBase<OperationExpression<A, B, Operation>, const A,
+          zipper::concepts::QualifiedExpression B, typename Op>
+class Operation
+    : public BinaryExpressionBase<Operation<A, B, Op>, const A,
                                   const B> {
 public:
-  using self_type = OperationExpression<A, B, Operation>;
+  using self_type = Operation<A, B, Op>;
   using traits = zipper::expression::detail::ExpressionTraits<self_type>;
   using extents_type = typename traits::extents_type;
   using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
@@ -85,12 +85,12 @@ public:
 
   using Base::lhs;
   using Base::rhs;
-  OperationExpression(const A &a, const B &b, const Operation &op = {})
+  Operation(const A &a, const B &b, const Op &op = {})
     requires(is_static)
       : Base(a, b), m_op(op) {
     if (!valid_input_extents(a.extents(), b.extents())) {
       throw std::runtime_error(
-          fmt::format("OperationExpression between {} and {} is invalid",
+          fmt::format("Operation between {} and {} is invalid",
 #if defined(ZIPPER_FMT_OVERRIDES_DISABLED)
                       zipper::utils::extents::as_array(a.extents()),
                       zipper::utils::extents::as_array(b.extents())));
@@ -99,12 +99,12 @@ public:
 #endif
     }
   }
-  OperationExpression(const A &a, const B &b, const Operation &op = {})
+  Operation(const A &a, const B &b, const Op &op = {})
     requires(!is_static)
       : Base(a, b, extents_traits::convert_from(a.extents())), m_op(op) {
     if (!valid_input_extents(a.extents(), b.extents())) {
       throw std::runtime_error(
-          fmt::format("OperationExpression between {} and {} is invalid",
+          fmt::format("Operation between {} and {} is invalid",
 #if defined(ZIPPER_FMT_OVERRIDES_DISABLED)
                       zipper::utils::extents::as_array(a.extents()),
                       zipper::utils::extents::as_array(b.extents())));
@@ -119,12 +119,12 @@ public:
   }
 
 private:
-  Operation m_op;
+  Op m_op;
 };
 template <zipper::concepts::QualifiedExpression A,
-          zipper::concepts::QualifiedExpression B, typename Operation>
-OperationExpression(const A &a, const B &b, const Operation &op)
-    -> OperationExpression<A, B, Operation>;
+          zipper::concepts::QualifiedExpression B, typename Op>
+Operation(const A &a, const B &b, const Op &op)
+    -> Operation<A, B, Op>;
 
 } // namespace binary
 } // namespace zipper::expression

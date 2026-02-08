@@ -1,17 +1,17 @@
-#if !defined(ZIPPER_VIEWS_BINARY_WEDGEPRODUCTVIEW_HPP)
-#define ZIPPER_VIEWS_BINARY_WEDGEPRODUCTVIEW_HPP
+#if !defined(ZIPPER_EXPRESSION_BINARY_WEDGEPRODUCT_HPP)
+#define ZIPPER_EXPRESSION_BINARY_WEDGEPRODUCT_HPP
 
-#include "BinaryViewBase.hpp"
-#include "zipper/concepts/ViewDerived.hpp"
+#include "BinaryExpressionBase.hpp"
+#include "zipper/concepts/Expression.hpp"
 #include "zipper/detail/pack_index.hpp"
 
-namespace zipper::views {
+namespace zipper::expression {
 namespace binary {
-template <zipper::concepts::ViewDerived A, zipper::concepts::ViewDerived B>
-class WedgeProductView;
+template <zipper::concepts::Expression A, zipper::concepts::Expression B>
+class WedgeProduct;
 
 }
-namespace detail {
+namespace _detail_wedge {
 
 template <typename A, typename B>
 struct wedge_coeffwise_extents_values;
@@ -50,16 +50,17 @@ struct wedge_coeffwise_extents_values<extents<A...>, extents<B...>> {
     }
 };
 
-}  // namespace detail
-template <typename A, typename B>
-struct detail::ViewTraits<binary::WedgeProductView<A, B>>
-    : public binary::detail::DefaultBinaryViewTraits<A, B> {
-    using ATraits = views::detail::ViewTraits<A>;
+}  // namespace _detail_wedge
+
+template <concepts::Expression A, concepts::Expression B>
+struct detail::ExpressionTraits<binary::WedgeProduct<A, B>>
+    : public binary::detail::DefaultBinaryExpressionTraits<A, B> {
+    using ATraits = detail::ExpressionTraits<A>;
     constexpr static rank_type lhs_rank = ATraits::extents_type::rank();
-    using BTraits = views::detail::ViewTraits<B>;
+    using BTraits = detail::ExpressionTraits<B>;
     constexpr static rank_type rhs_rank = BTraits::extents_type::rank();
     using CEV =
-        detail::wedge_coeffwise_extents_values<typename ATraits::extents_type,
+        _detail_wedge::wedge_coeffwise_extents_values<typename ATraits::extents_type,
                                                typename BTraits::extents_type>;
 
     static_assert(std::is_same_v<typename CEV::a_extents_type,
@@ -76,14 +77,14 @@ struct detail::ViewTraits<binary::WedgeProductView<A, B>>
 };
 
 namespace binary {
-template <zipper::concepts::ViewDerived A, zipper::concepts::ViewDerived B>
-class WedgeProductView : public BinaryViewBase<WedgeProductView<A, B>, A, B> {
+template <zipper::concepts::Expression A, zipper::concepts::Expression B>
+class WedgeProduct : public BinaryExpressionBase<WedgeProduct<A, B>, const A, const B> {
    public:
-    using self_type = WedgeProductView<A, B>;
-    using ViewBase<self_type>::operator();
-    using traits = zipper::views::detail::ViewTraits<self_type>;
+    using self_type = WedgeProduct<A, B>;
+    using Base = BinaryExpressionBase<self_type, const A, const B>;
+    using ExpressionBase = expression::ExpressionBase<self_type>;
+    using traits = zipper::expression::detail::ExpressionTraits<self_type>;
     using value_type = traits::value_type;
-    using Base = BinaryViewBase<self_type, A, B>;
     using Base::extent;
     using Base::lhs;
     using Base::rhs;
@@ -93,10 +94,10 @@ class WedgeProductView : public BinaryViewBase<WedgeProductView<A, B>, A, B> {
     using extents_type = traits::extents_type;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
 
-    WedgeProductView(const A& a, const B& b)
+    WedgeProduct(const A& a, const B& b)
         requires(extents_traits::is_static)
         : Base(a, b) {}
-    WedgeProductView(const A& a, const B& b)
+    WedgeProduct(const A& a, const B& b)
         requires(!extents_traits::is_static)
         : Base(a, b, traits::CEV::merge(a.extents(), b.extents())) {}
 
@@ -115,8 +116,6 @@ class WedgeProductView : public BinaryViewBase<WedgeProductView<A, B>, A, B> {
 
     template <typename... Args>
     value_type coeff(Args&&... args) const {
-        // rvalue type stuff will be forwarded but not moved except for in one
-        // place so forwarding twice shouldn't be an issue
         return lhs_value<false>(
                    std::make_integer_sequence<rank_type, lhs_rank>{},
                    std::forward<Args>(args)...) *
@@ -131,11 +130,11 @@ class WedgeProductView : public BinaryViewBase<WedgeProductView<A, B>, A, B> {
                          std::make_integer_sequence<rank_type, rhs_rank>{},
                          std::forward<Args>(args)...);
     }
+};
 
-};  // namespace binarytemplate<typenameA,typenameB>class WedgeProductView
+template <zipper::concepts::Expression A, zipper::concepts::Expression B>
+WedgeProduct(const A& a, const B& b) -> WedgeProduct<A, B>;
 
-template <zipper::concepts::ViewDerived A, zipper::concepts::ViewDerived B>
-WedgeProductView(const A& a, const B& b) -> WedgeProductView<A, B>;
 }  // namespace binary
-}  // namespace zipper::views
+}  // namespace zipper::expression
 #endif

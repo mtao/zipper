@@ -13,14 +13,14 @@
 namespace zipper::expression {
 namespace unary {
 template <zipper::concepts::QualifiedExpression ExprType,
-          template <typename> typename ReductionView, rank_type... Indices>
+          template <typename> typename Reduction, rank_type... Indices>
 class PartialReduction;
 
 }
 template <zipper::concepts::QualifiedExpression ExprType,
-          template <typename> typename ReductionView, rank_type... Indices>
+          template <typename> typename Reduction, rank_type... Indices>
 struct detail::ExpressionTraits<
-    unary::PartialReduction<ExprType, ReductionView, Indices...>>
+    unary::PartialReduction<ExprType, Reduction, Indices...>>
     : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<ExprType,
                                                                   true> {
     using Base = detail::ExpressionTraits<std::decay_t<ExprType>>;
@@ -58,12 +58,12 @@ struct detail::ExpressionTraits<
 namespace unary {
 // indices are the indices being reduced
 template <zipper::concepts::QualifiedExpression ExprType,
-          template <typename> typename ReductionView, rank_type... Indices>
+          template <typename> typename Reduction, rank_type... Indices>
 class PartialReduction
     : public UnaryExpressionBase<
-          PartialReduction<ExprType, ReductionView, Indices...>, ExprType> {
+          PartialReduction<ExprType, Reduction, Indices...>, ExprType> {
    public:
-    using self_type = PartialReduction<ExprType, ReductionView, Indices...>;
+    using self_type = PartialReduction<ExprType, Reduction, Indices...>;
     using traits = zipper::expression::detail::ExpressionTraits<self_type>;
     using extents_type = traits::extents_type;
     using value_type = traits::value_type;
@@ -116,7 +116,7 @@ class PartialReduction
             slice_type(expression(), get_index(std::integral_constant<rank_type, N>{},
                                          std::forward<Args>(idxs)...)...);
 
-        ReductionView<const slice_type> v(slice);
+        Reduction<const slice_type> v(slice);
         value_type val = v();
         return val;
     }

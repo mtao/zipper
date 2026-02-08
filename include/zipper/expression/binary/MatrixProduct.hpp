@@ -1,18 +1,18 @@
-#if !defined(ZIPPER_VIEWS_BINARY_MATRIXPRODUCTVIEW_HPP)
-#define ZIPPER_VIEWS_BINARY_MATRIXPRODUCTVIEW_HPP
+#if !defined(ZIPPER_EXPRESSION_BINARY_MATRIXPRODUCT_HPP)
+#define ZIPPER_EXPRESSION_BINARY_MATRIXPRODUCT_HPP
 
-#include "BinaryViewBase.hpp"
-#include "zipper/concepts/MatrixViewDerived.hpp"
-#include "zipper/views/DimensionedViewBase.hpp"
-#include "zipper/views/detail/intersect_nonzeros.hpp"
+#include "BinaryExpressionBase.hpp"
+#include "zipper/concepts/Expression.hpp"
+// #include "zipper/expression/detail/intersect_nonzeros.hpp"
 
-namespace zipper::views {
+namespace zipper::expression {
 namespace binary {
-template <zipper::concepts::MatrixViewDerived A, zipper::concepts::MatrixViewDerived B>
-class MatrixProductView;
+template <zipper::concepts::RankedExpression<2> A,
+          zipper::concepts::RankedExpression<2> B>
+class MatrixProduct;
 
 }
-namespace detail {
+namespace _detail_matprod {
 
 template <typename, typename>
 struct coeffwise_extents_values;
@@ -33,32 +33,33 @@ struct coeffwise_extents_values<extents<AR, AC>, extents<BR, BC>> {
         }
     }
 };
-}  // namespace detail
-template <zipper::concepts::MatrixViewDerived A, zipper::concepts::MatrixViewDerived B>
-struct detail::ViewTraits<binary::MatrixProductView<A, B>>
-    : public binary::detail::DefaultBinaryViewTraits<A, B>
-//: public binary::detail::MatrixWiseTraits<A, B> {
-//: public detail::ViewTraits<A> {
+}  // namespace _detail_matprod
+
+template <zipper::concepts::RankedExpression<2> A,
+          zipper::concepts::RankedExpression<2> B>
+struct detail::ExpressionTraits<binary::MatrixProduct<A, B>>
+    : public binary::detail::DefaultBinaryExpressionTraits<A, B>
 {
-    using ATraits = detail::ViewTraits<A>;
-    using BTraits = detail::ViewTraits<B>;
+    using ATraits = detail::ExpressionTraits<A>;
+    using BTraits = detail::ExpressionTraits<B>;
     using ConvertExtentsUtil =
-        coeffwise_extents_values<typename ATraits::extents_type,
-                                 typename BTraits::extents_type>;
+        _detail_matprod::coeffwise_extents_values<typename ATraits::extents_type,
+                                                  typename BTraits::extents_type>;
     using extents_type = typename ConvertExtentsUtil::product_extents_type;
     constexpr static bool is_coefficient_consistent = false;
     constexpr static bool is_value_based = false;
 };
 
 namespace binary {
-template <zipper::concepts::MatrixViewDerived A, zipper::concepts::MatrixViewDerived B>
-class MatrixProductView : public BinaryViewBase<MatrixProductView<A, B>, A, B> {
+template <zipper::concepts::RankedExpression<2> A,
+          zipper::concepts::RankedExpression<2> B>
+class MatrixProduct : public BinaryExpressionBase<MatrixProduct<A, B>, const A, const B> {
    public:
-    using self_type = MatrixProductView<A, B>;
-    using ViewBase<self_type>::operator();
-    using traits = zipper::views::detail::ViewTraits<self_type>;
+    using self_type = MatrixProduct<A, B>;
+    using Base = BinaryExpressionBase<self_type, const A, const B>;
+    using ExpressionBase = expression::ExpressionBase<self_type>;
+    using traits = zipper::expression::detail::ExpressionTraits<self_type>;
     using value_type = traits::value_type;
-    using Base = BinaryViewBase<self_type, A, B>;
     using Base::extent;
     using Base::lhs;
     using Base::rhs;
@@ -68,7 +69,7 @@ class MatrixProductView : public BinaryViewBase<MatrixProductView<A, B>, A, B> {
     using extents_type = traits::extents_type;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
 
-    MatrixProductView(const A& a, const B& b)
+    MatrixProduct(const A& a, const B& b)
         : Base(a, b,
                traits::ConvertExtentsUtil::merge(a.extents(), b.extents())) {
         assert(a.extent(1) == b.extent(0));
@@ -76,39 +77,41 @@ class MatrixProductView : public BinaryViewBase<MatrixProductView<A, B>, A, B> {
 
     value_type coeff(index_type a, index_type b) const {
         value_type v = 0;
-        constexpr bool lhs_sparse = lhs_traits::is_sparse(1);
-        constexpr bool rhs_sparse = rhs_traits::is_sparse(0);
-        if constexpr (lhs_sparse && rhs_sparse) {
-            const auto& lnnz = lhs().template nonZeros<1>(a, b);
-            const auto& rnnz = rhs().template nonZeros<0>(a, b);
-            auto nnz = views::detail::intersect_nonzeros(lnnz, rnnz);
-
-            for (const auto& j : nnz) {
-                v += lhs()(a, j) * rhs()(j, b);
-            }
-        } else if constexpr (lhs_sparse) {
-            const auto& lnnz = lhs().template nonZeros<1>(a, b);
-            for (const auto& j : lnnz) {
-                v += lhs()(a, j) * rhs()(j, b);
-            }
-        } else if constexpr (rhs_sparse) {
-            const auto& rnnz = rhs().template nonZeros<0>(a, b);
-            for (const auto& j : rnnz) {
-                v += lhs()(a, j) * rhs()(j, b);
-            }
-
-        } else {
+        // TODO: re-enable sparse optimizations once is_sparse is available
+        // in all expression traits
+        // constexpr bool lhs_sparse = lhs_traits::is_sparse(1);
+        // constexpr bool rhs_sparse = rhs_traits::is_sparse(0);
+        // if constexpr (lhs_sparse && rhs_sparse) {
+        //     const auto& lnnz = lhs().template nonZeros<1>(a, b);
+        //     const auto& rnnz = rhs().template nonZeros<0>(a, b);
+        //     auto nnz = expression::detail::intersect_nonzeros(lnnz, rnnz);
+        //
+        //     for (const auto& j : nnz) {
+        //         v += lhs()(a, j) * rhs()(j, b);
+        //     }
+        // } else if constexpr (lhs_sparse) {
+        //     const auto& lnnz = lhs().template nonZeros<1>(a, b);
+        //     for (const auto& j : lnnz) {
+        //         v += lhs()(a, j) * rhs()(j, b);
+        //     }
+        // } else if constexpr (rhs_sparse) {
+        //     const auto& rnnz = rhs().template nonZeros<0>(a, b);
+        //     for (const auto& j : rnnz) {
+        //         v += lhs()(a, j) * rhs()(j, b);
+        //     }
+        // } else {
             for (index_type j = 0; j < lhs().extent(1); ++j) {
                 v += lhs()(a, j) * rhs()(j, b);
             }
-        }
+        // }
         return v;
     }
+};
 
-};  // namespace binarytemplate<typenameA,typenameB>class MatrixProductView
+template <zipper::concepts::RankedExpression<2> A,
+          zipper::concepts::RankedExpression<2> B>
+MatrixProduct(const A& a, const B& b) -> MatrixProduct<A, B>;
 
-template <zipper::concepts::MatrixViewDerived A, zipper::concepts::MatrixViewDerived B>
-MatrixProductView(const A& a, const B& b) -> MatrixProductView<A, B>;
 }  // namespace binary
-}  // namespace zipper::views
+}  // namespace zipper::expression
 #endif

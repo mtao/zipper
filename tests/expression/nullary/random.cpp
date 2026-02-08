@@ -5,9 +5,9 @@
 using namespace zipper::expression::nullary;
 using namespace zipper;
 TEST_CASE("test_random", "[expression][nullary]") {
-  auto a = uniform_random_view<double>(create_dextents(3));
-  auto b = uniform_random_view<double>(extents<2, 3>{});
-  auto c = uniform_random_view<double>();
+  auto a = uniform_random<double>(create_dextents(3));
+  auto b = uniform_random<double>(extents<2, 3>{});
+  auto c = uniform_random<double>();
 
   REQUIRE(a.extents().rank() == 1);
   CHECK(a.extent(0) == 3);

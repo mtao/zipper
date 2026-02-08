@@ -16,10 +16,10 @@
 
 namespace zipper {
 
-template <concepts::Expression View>
-class FormBase : public ZipperBase<FormBase, View> {
+template <concepts::Expression Expr>
+class FormBase : public ZipperBase<FormBase, Expr> {
 public:
-  using Base = ZipperBase<FormBase, View>;
+  using Base = ZipperBase<FormBase, Expr>;
   FormBase() = default;
 
   using expression_type = typename Base::expression_type;
@@ -106,10 +106,10 @@ public:
   }
 };
 
-template <concepts::Expression View>
-FormBase(View &&view) -> FormBase<View>;
-template <concepts::Expression View>
-FormBase(const View &view) -> FormBase<View>;
+template <concepts::Expression Expr>
+FormBase(Expr &&) -> FormBase<Expr>;
+template <concepts::Expression Expr>
+FormBase(const Expr &) -> FormBase<Expr>;
 
 // NOTE: SpanStorage deduction guides commented out - SpanStorage has been removed.
 // template <class T, std::size_t Size = std::dynamic_extent>
@@ -128,25 +128,25 @@ SCALAR_BINARY_DECLARATION(FormBase, Divides, operator/)
 BINARY_DECLARATION(FormBase, Plus, operator+)
 BINARY_DECLARATION(FormBase, Minus, operator-)
 
-template <concepts::Form View1, concepts::Form View2>
-auto operator^(View1 const &lhs, View2 const &rhs) {
-  using V = expression::binary::WedgeProduct<const typename View1::expression_type,
-                                            const typename View2::expression_type>;
+template <concepts::Form Expr1, concepts::Form Expr2>
+auto operator^(Expr1 const &lhs, Expr2 const &rhs) {
+  using V = expression::binary::WedgeProduct<const typename Expr1::expression_type,
+                                            const typename Expr2::expression_type>;
   return FormBase<V>(V(lhs.expression(), rhs.expression()));
 }
 
-template <concepts::Form View1, concepts::Tensor View2>
-auto operator*(View1 const &lhs, View2 const &rhs) {
-  using V = expression::binary::FormTensorProduct<const typename View1::expression_type,
-                                                  const typename View2::expression_type>;
+template <concepts::Form Expr1, concepts::Tensor Expr2>
+auto operator*(Expr1 const &lhs, Expr2 const &rhs) {
+  using V = expression::binary::FormTensorProduct<const typename Expr1::expression_type,
+                                                  const typename Expr2::expression_type>;
 
   return FormBase<V>(V(lhs.expression(), rhs.expression()));
 }
-template <concepts::Form View1, concepts::Vector View2>
-auto operator*(View1 const &lhs, View2 const &rhs) {
+template <concepts::Form Expr1, concepts::Vector Expr2>
+auto operator*(Expr1 const &lhs, Expr2 const &rhs) {
 
-  using V = expression::binary::FormTensorProduct<const typename View1::expression_type,
-                                                  const typename View2::expression_type>;
+  using V = expression::binary::FormTensorProduct<const typename Expr1::expression_type,
+                                                  const typename Expr2::expression_type>;
   return FormBase<V>(V(lhs.expression(), rhs.expression()));
 }
 

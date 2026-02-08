@@ -22,17 +22,17 @@
 #include "zipper/expression/binary/ArithmeticExpressions.hpp"
 
 namespace zipper {
-template <concepts::Expression View> class ArrayBase;
+template <concepts::Expression Expr> class ArrayBase;
 template <typename ValueType, index_type Rows, index_type Cols,
           bool RowMajor = true>
 class Matrix;
 
-template <concepts::Expression View>
-class MatrixBase : public ZipperBase<MatrixBase, View> {
+template <concepts::Expression Expr>
+class MatrixBase : public ZipperBase<MatrixBase, Expr> {
 public:
   MatrixBase() = default;
 
-  using Base = ZipperBase<MatrixBase, View>;
+  using Base = ZipperBase<MatrixBase, Expr>;
   using expression_type = typename Base::expression_type;
   using expression_traits = typename Base::expression_traits;
   using value_type = typename expression_traits::value_type;
@@ -315,10 +315,10 @@ using MatrixRX = Matrix<T, R, dynamic_extent>;
 template <typename T, index_type C>
 using MatrixXC = Matrix<T, dynamic_extent, C>;
 
-template <concepts::Expression View>
-MatrixBase(View &&view) -> MatrixBase<View>;
-template <concepts::Expression View>
-MatrixBase(const View &view) -> MatrixBase<View>;
+template <concepts::Expression Expr>
+MatrixBase(Expr &&) -> MatrixBase<Expr>;
+template <concepts::Expression Expr>
+MatrixBase(const Expr &) -> MatrixBase<Expr>;
 
 UNARY_DECLARATION(MatrixBase, LogicalNot, operator!)
 UNARY_DECLARATION(MatrixBase, BitNot, operator~)
@@ -330,40 +330,40 @@ BINARY_DECLARATION(MatrixBase, Plus, operator+)
 BINARY_DECLARATION(MatrixBase, Minus, operator-)
 //
 
-template <concepts::Matrix View1, concepts::Matrix View2>
-auto operator==(View1 const &lhs, View2 const &rhs) {
+template <concepts::Matrix Expr1, concepts::Matrix Expr2>
+auto operator==(Expr1 const &lhs, Expr2 const &rhs) {
   return (lhs.as_array() == rhs.as_array()).all();
 }
-template <concepts::Matrix View1, concepts::Matrix View2>
-auto operator!=(View1 const &lhs, View2 const &rhs) {
+template <concepts::Matrix Expr1, concepts::Matrix Expr2>
+auto operator!=(Expr1 const &lhs, Expr2 const &rhs) {
   return (lhs.as_array() != rhs.as_array()).any();
 }
 
-template <concepts::Matrix View1, concepts::Matrix View2>
-auto operator*(View1 const &lhs, View2 const &rhs) {
+template <concepts::Matrix Expr1, concepts::Matrix Expr2>
+auto operator*(Expr1 const &lhs, Expr2 const &rhs) {
   using V =
-      expression::binary::MatrixProduct<const typename View1::expression_type,
-                                         const typename View2::expression_type>;
+      expression::binary::MatrixProduct<const typename Expr1::expression_type,
+                                         const typename Expr2::expression_type>;
   return MatrixBase<V>(V(lhs.expression(), rhs.expression()));
 }
 
-template <concepts::Matrix View>
-auto operator*(View const &lhs, typename View::value_type const &rhs) {
+template <concepts::Matrix Expr>
+auto operator*(Expr const &lhs, typename Expr::value_type const &rhs) {
   using V = expression::unary::ScalarMultiplies<
-      typename View::value_type, const typename View::expression_type, true>;
+      typename Expr::value_type, const typename Expr::expression_type, true>;
   return MatrixBase<V>(V(lhs.expression(), rhs));
 }
-template <concepts::Matrix View>
-auto operator*(typename View::value_type const &lhs, View const &rhs) {
+template <concepts::Matrix Expr>
+auto operator*(typename Expr::value_type const &lhs, Expr const &rhs) {
   using V = expression::unary::ScalarMultiplies<
-      typename View::value_type, const typename View::expression_type, false>;
+      typename Expr::value_type, const typename Expr::expression_type, false>;
   return MatrixBase<V>(V(lhs, rhs.expression()));
 }
 
-template <concepts::Matrix View1, concepts::Vector View2>
-auto operator*(View1 const &lhs, View2 const &rhs) {
+template <concepts::Matrix Expr1, concepts::Vector Expr2>
+auto operator*(Expr1 const &lhs, Expr2 const &rhs) {
   using V = expression::binary::MatrixVectorProduct<
-      const typename View1::expression_type, const typename View2::expression_type>;
+      const typename Expr1::expression_type, const typename Expr2::expression_type>;
 
   return VectorBase<V>(V(lhs.expression(), rhs.expression()));
 }

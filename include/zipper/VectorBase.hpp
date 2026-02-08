@@ -19,12 +19,12 @@
 namespace zipper {
 template <typename ValueType, index_type Rows> class Vector;
 
-template <concepts::Expression View>
-class VectorBase : public ZipperBase<VectorBase, View> {
+template <concepts::Expression Expr>
+class VectorBase : public ZipperBase<VectorBase, Expr> {
 public:
   VectorBase() = default;
 
-  using Base = ZipperBase<VectorBase, View>;
+  using Base = ZipperBase<VectorBase, Expr>;
   using expression_type = typename Base::expression_type;
   using expression_traits = typename Base::expression_traits;
   using value_type = typename expression_traits::value_type;
@@ -53,7 +53,7 @@ public:
   template <typename... Args>
   VectorBase(Args &&...args)
     requires(!(concepts::Vector<Args> && ...))
-      : VectorBase(View(std::forward<Args>(args)...)) {}
+      : VectorBase(Expr(std::forward<Args>(args)...)) {}
 
   template <concepts::Vector Other>
   auto operator=(const Other &other) -> VectorBase &
@@ -270,10 +270,10 @@ public:
   }
 };
 
-template <concepts::Expression View>
-VectorBase(View &&view) -> VectorBase<View>;
-template <concepts::Expression View>
-VectorBase(const View &view) -> VectorBase<View>;
+template <concepts::Expression Expr>
+VectorBase(Expr &&) -> VectorBase<Expr>;
+template <concepts::Expression Expr>
+VectorBase(const Expr &) -> VectorBase<Expr>;
 
 // NOTE: SpanStorage deduction guides commented out - SpanStorage has been removed.
 // These will be re-enabled when MDSpan-based deduction guides are added.
@@ -290,27 +290,27 @@ SCALAR_BINARY_DECLARATION(VectorBase, Divides, operator/)
 BINARY_DECLARATION(VectorBase, Plus, operator+)
 BINARY_DECLARATION(VectorBase, Minus, operator-)
 
-template <concepts::Vector View1, concepts::Vector View2>
-auto operator==(View1 const &lhs, View2 const &rhs) -> bool {
+template <concepts::Vector Expr1, concepts::Vector Expr2>
+auto operator==(Expr1 const &lhs, Expr2 const &rhs) -> bool {
   return (lhs.as_array() == rhs.as_array()).all();
 }
 
-template <concepts::Vector View1, concepts::Vector View2>
-auto operator!=(View1 const &lhs, View2 const &rhs) -> bool {
+template <concepts::Vector Expr1, concepts::Vector Expr2>
+auto operator!=(Expr1 const &lhs, Expr2 const &rhs) -> bool {
   return (lhs.as_array() != rhs.as_array()).any();
 }
-template <concepts::Vector View>
-auto operator*(View const &lhs, typename View::value_type const &rhs) {
+template <concepts::Vector Expr>
+auto operator*(Expr const &lhs, typename Expr::value_type const &rhs) {
   using V =
-      expression::unary::ScalarMultiplies<typename View::value_type,
-                                         const typename View::expression_type, true>;
+      expression::unary::ScalarMultiplies<typename Expr::value_type,
+                                         const typename Expr::expression_type, true>;
   return VectorBase<V>(V(lhs.expression(), rhs));
 }
-template <concepts::Vector View>
-auto operator*(typename View::value_type const &lhs, View const &rhs) {
+template <concepts::Vector Expr>
+auto operator*(typename Expr::value_type const &lhs, Expr const &rhs) {
   using V =
-      expression::unary::ScalarMultiplies<typename View::value_type,
-                                         const typename View::expression_type, false>;
+      expression::unary::ScalarMultiplies<typename Expr::value_type,
+                                         const typename Expr::expression_type, false>;
   return VectorBase<V>(V(lhs, rhs.expression()));
 }
 

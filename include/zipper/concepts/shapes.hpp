@@ -8,7 +8,7 @@
 
 namespace zipper {
 template <template <concepts::QualifiedExpression> typename DerivedT,
-          concepts::QualifiedExpression View>
+          concepts::QualifiedExpression Expr>
 class ZipperBase;
 }  // namespace zipper
 namespace zipper::concepts {
@@ -30,19 +30,6 @@ struct ValidExtents<Ext, Shapes...> {
             std::make_integer_sequence<rank_type, Ext::rank()>{});
 };
 
-/*
-template <typename T, index_type... Shapes>
-struct ValidExtents<T, Shapes...>
-    : public ValidExtents<typename T::extents_type, Shapes...> {};
-    */
-
-/*
-template <template <concepts::QualifiedViewDerived> typename DerivedT,
-          concepts::QualifiedViewDerived View, index_type... Shapes>
-struct ValidExtents<ZipperBase<DerivedT, View>, Shapes...>
-    : public ValidExtents<typename View::extents_type, Shapes...> {};
-
-    */
 }  // namespace detail
 
 template <typename T, index_type... Shapes>
