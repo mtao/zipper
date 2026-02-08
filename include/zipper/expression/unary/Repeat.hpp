@@ -1,6 +1,6 @@
 
-#if !defined(ZIPPER_EXPRESSION_UNARY_REPEATVIEW_HPP)
-#define ZIPPER_EXPRESSION_UNARY_REPEATVIEW_HPP
+#if !defined(ZIPPER_EXPRESSION_UNARY_REPEAT_HPP)
+#define ZIPPER_EXPRESSION_UNARY_REPEAT_HPP
 
 #include "UnaryExpressionBase.hpp"
 #include "zipper/concepts/Extents.hpp"

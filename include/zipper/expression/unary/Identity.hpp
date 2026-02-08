@@ -1,5 +1,5 @@
-#if !defined(ZIPPER_EXPRESSION_UNARY_IDENTITYVIEW_HPP)
-#define ZIPPER_EXPRESSION_UNARY_IDENTITYVIEW_HPP
+#if !defined(ZIPPER_EXPRESSION_UNARY_IDENTITY_HPP)
+#define ZIPPER_EXPRESSION_UNARY_IDENTITY_HPP
 
 #include "CoefficientWiseOperation.hpp"
 #include <functional>

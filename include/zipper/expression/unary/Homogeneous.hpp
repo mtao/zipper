@@ -1,5 +1,5 @@
-#if !defined(ZIPPER_EXPRESSION_UNARY_HOMOGENEOUSVIEW_HPP)
-#define ZIPPER_EXPRESSION_UNARY_HOMOGENEOUSVIEW_HPP
+#if !defined(ZIPPER_EXPRESSION_UNARY_HOMOGENEOUS_HPP)
+#define ZIPPER_EXPRESSION_UNARY_HOMOGENEOUS_HPP
 
 #include "UnaryExpressionBase.hpp"
 #include "zipper/detail/pack_index.hpp"

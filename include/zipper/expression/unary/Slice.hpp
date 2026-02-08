@@ -1,5 +1,5 @@
-#if !defined(ZIPPER_EXPRESSION_UNARY_SLICEVIEW_HPP)
-#define ZIPPER_EXPRESSION_UNARY_SLICEVIEW_HPP
+#if !defined(ZIPPER_EXPRESSION_UNARY_SLICE_HPP)
+#define ZIPPER_EXPRESSION_UNARY_SLICE_HPP
 
 #include "UnaryExpressionBase.hpp"
 #include "zipper/concepts/IndexSlice.hpp"
