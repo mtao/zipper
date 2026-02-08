@@ -17,7 +17,7 @@ TEST_CASE("test_span_1d", "[storage][dense][span]") {
   CHECK(v.coeff(0) == 2);
   CHECK(v.coeff(1) == 3);
 
-  std::array<int, 2> y;
+  std::array<int, 2> y = {2, 3};
   storage::SpanData<int, 2> z(y);
   storage::SpanData<const int, 2> z_const(y);
   CHECK(y[0] == 2);

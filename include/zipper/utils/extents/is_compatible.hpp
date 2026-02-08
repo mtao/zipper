@@ -2,13 +2,13 @@
 #define ZIPPER_UTILS_EXTENTS_IS_COMPATIBLE_HPP
 #include "zipper/types.hpp"
 
-#include "zipper/concepts/ExtentsType.hpp"
+#include "zipper/concepts/Extents.hpp"
 #include "zipper/detail/ExtentsTraits.hpp"
 #include "zipper/detail/pack_index.hpp"
 
 namespace zipper::utils::extents {
 namespace detail {
-template <bool AllowDynamic, rank_type N, zipper::concepts::ExtentsType Ext,
+template <bool AllowDynamic, rank_type N, zipper::concepts::Extents Ext,
           index_type... Sizes>
 constexpr bool is_dim_compatible(std::integer_sequence<index_type, Sizes...>) {
     constexpr static index_type R = zipper::detail::pack_index<N>(Sizes...);
@@ -21,7 +21,7 @@ constexpr bool is_dim_compatible(std::integer_sequence<index_type, Sizes...>) {
         return R == Ext::static_extent(N);
     }
 }
-template <rank_type N, zipper::concepts::ExtentsType Ext, index_type... Sizes>
+template <rank_type N, zipper::concepts::Extents Ext, index_type... Sizes>
 bool is_dim_compatible(const Ext& ext,
                        std::integer_sequence<index_type, Sizes...>) {
     constexpr static index_type R = zipper::detail::pack_index<N>(Sizes...);
@@ -33,14 +33,14 @@ bool is_dim_compatible(const Ext& ext,
         return R == Ext::static_extent(N);
     }
 }
-template <zipper::concepts::ExtentsType Ext, index_type... Indices,
+template <zipper::concepts::Extents Ext, index_type... Indices,
           rank_type... N>
 bool is_compatible(const Ext& ext,
                    std::integer_sequence<index_type, Indices...> idxs,
                    std::integer_sequence<rank_type, N...>) {
     return (is_dim_compatible<N>(ext, idxs) && ...);
 }
-template <bool AllowDynamic, zipper::concepts::ExtentsType Ext,
+template <bool AllowDynamic, zipper::concepts::Extents Ext,
           index_type... Indices, rank_type... N>
 constexpr bool is_compatible(std::integer_sequence<index_type, Indices...> idxs,
                              std::integer_sequence<rank_type, N...>) {
@@ -51,7 +51,7 @@ constexpr bool is_compatible(std::integer_sequence<index_type, Indices...> idxs,
 //
 //
 /*
-    template <zipper::concepts::ExtentsType Ext,zipper::concepts::ExtentsType
+    template <zipper::concepts::Extents Ext,zipper::concepts::Extents
    Ext2> requires(Ext2::rank() == Ext::rank()) constexpr bool
    is_compatible(const Ext& target_ext, const Ext2& ext) { using traits =
    typename zipper::detail::ExtentsTraits<Ext>;
@@ -61,7 +61,7 @@ constexpr bool is_compatible(std::integer_sequence<index_type, Indices...> idxs,
 
         }
 */
-template <index_type... Indices, zipper::concepts::ExtentsType Ext>
+template <index_type... Indices, zipper::concepts::Extents Ext>
     requires(sizeof...(Indices) == Ext::rank() && Ext::rank_dynamic() == 0)
 constexpr bool is_compatible() {
     // using traits = typename zipper::detail::ExtentsTraits<Ext>;
@@ -71,7 +71,7 @@ constexpr bool is_compatible() {
         std::make_integer_sequence<rank_type, Ext::rank()>{});
 }
 
-template <index_type... Indices, zipper::concepts::ExtentsType Ext>
+template <index_type... Indices, zipper::concepts::Extents Ext>
     requires(sizeof...(Indices) == Ext::rank() && Ext::rank_dynamic() == 0)
 constexpr bool is_compatible(const Ext&) {
     // using traits = typename zipper::detail::ExtentsTraits<Ext>;
@@ -81,7 +81,7 @@ constexpr bool is_compatible(const Ext&) {
         std::make_integer_sequence<rank_type, Ext::rank()>{});
 }
 
-template <index_type... Indices, zipper::concepts::ExtentsType Ext>
+template <index_type... Indices, zipper::concepts::Extents Ext>
     requires(sizeof...(Indices) == Ext::rank() && Ext::rank_dynamic() != 0)
 bool is_compatible(const Ext& ext) {
     // using traits = typename zipper::detail::ExtentsTraits<Ext>;
@@ -91,7 +91,7 @@ bool is_compatible(const Ext& ext) {
         std::make_integer_sequence<rank_type, Ext::rank()>{});
 }
 
-template <index_type... Indices, zipper::concepts::ExtentsType Ext>
+template <index_type... Indices, zipper::concepts::Extents Ext>
     requires(sizeof...(Indices) == Ext::rank())
 constexpr void throw_if_not_compatible(const Ext& ext) {
     if constexpr (Ext::rank_dynamic() == 0) {

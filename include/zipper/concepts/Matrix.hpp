@@ -1,18 +1,19 @@
-#if !defined(ZIPPER_CONCEPTS_MATRIXBASEDERIVED_HPP)
-#define ZIPPER_CONCEPTS_MATRIXBASEDERIVED_HPP
+#if !defined(ZIPPER_CONCEPTS_MATRIX_HPP)
+#define ZIPPER_CONCEPTS_MATRIX_HPP
 #include <type_traits>
 
 #include "Expression.hpp"
 
 namespace zipper::concepts {
 namespace detail {
-template <typename> struct IsMatrixBaseDerived : std::false_type {};
+template <typename> struct IsMatrix : std::false_type {};
 
 } // namespace detail
 
 template <typename T>
-concept Matrix = detail::IsMatrixBaseDerived<std::decay_t<T>>::value;
+concept Matrix = detail::IsMatrix<std::decay_t<T>>::value;
 template <typename T>
 concept MatrixExpression = RankedExpression<T, 2>;
+
 } // namespace zipper::concepts
 #endif

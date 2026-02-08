@@ -1,9 +1,9 @@
 
-#if !defined(ZIPPER_VIEWS_CONCEPTS_VIEW_DERIVED_HPP)
-#define ZIPPER_VIEWS_CONCEPTS_VIEW_DERIVED_HPP
+#if !defined(ZIPPER_EXPRESSION_CONCEPTS_REDUCTION_VIEW_LIKE_HPP)
+#define ZIPPER_EXPRESSION_CONCEPTS_REDUCTION_VIEW_LIKE_HPP
 #include <concepts>
 
-#include "zipper/concepts/ViewDerived.hpp"
+#include "zipper/concepts/Expression.hpp"
 
 namespace zipper::views {
 template <typename T>
@@ -14,7 +14,7 @@ namespace detail {
 template <typename T>
 struct ReductionViewLike : public std::false_type {};
 
-template <zipper::concepts::ViewDerived T>
+template <zipper::concepts::Expression T>
     requires(T::extents_type::rank() == 0)
 struct ReductionViewLike<T> : public std::true_type {};
 }  // namespace detail

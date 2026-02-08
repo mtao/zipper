@@ -4,11 +4,14 @@
 #include "zipper/detail/ExtentsTraits.hpp"
 #include "zipper/expression/detail/ExpressionTraits.hpp"
 #include "zipper/utils/extents/all_extents_indices.hpp"
-namespace zipper::storage {
-template <typename ValueType, typename Extents, typename LayoutPolicy,
+#include <tuple>
+
+namespace zipper::expression::nullary {
+template <typename ElementType, typename Extents, typename LayoutPolicy,
           typename AccessorPolicy>
-class PlainObjectStorage;
-}
+class MDArray;
+} // namespace zipper::expression::nullary
+
 namespace zipper::expression::detail {
 
 template <zipper::concepts::Expression From, zipper::concepts::Expression To>
@@ -47,7 +50,7 @@ void AssignHelper<From, To>::assign_direct(const From &from, To &to) {
   } else {
     for (const auto &i :
          zipper::utils::extents::all_extents_indices(to.extents())) {
-      to(i) = from(i);
+      std::apply(to, i) = std::apply(from, i);
     }
   }
 }
@@ -58,7 +61,7 @@ void AssignHelper<From, To>::assign(const From &from, To &to) {
   constexpr static bool assigning_from_infinite =
       FromTraits::extents_type::rank() == 0;
   constexpr static bool should_resize =
-      !assigning_from_infinite && ToTraits::is_resizable;
+      !assigning_from_infinite && ToTraits::is_resizable();
   if constexpr (FromTraits::is_coefficient_consistent) {
     if constexpr (should_resize) {
       to.resize(to_extents_traits::convert_from(from.extents()));
@@ -69,7 +72,7 @@ void AssignHelper<From, To>::assign(const From &from, To &to) {
 
     assign_direct(from, to);
   } else {
-    using POS = storage::PlainObjectStorage<value_type, extents_type,
+    using POS = nullary::MDArray<value_type, extents_type,
                                             layout_policy, accessor_policy>;
     POS pos(to_extents_traits::convert_from(from.extents()));
 

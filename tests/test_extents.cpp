@@ -4,9 +4,8 @@
 #include <zipper/detail/extents/dynamic_extents_indices.hpp>
 #include <zipper/utils/extents/is_compatible.hpp>
 #include <zipper/detail/extents/swizzle_extents.hpp>
-#include <zipper/storage/PlainObjectStorage.hpp>
 #include <zipper/types.hpp>
-#include <zipper/views/unary/detail/invert_integer_sequence.hpp>
+#include <zipper/expression/unary/detail/invert_integer_sequence.hpp>
 
 using namespace zipper;
 TEST_CASE("test_extent_compatibility", "[extents]") {
@@ -45,33 +44,33 @@ TEST_CASE("test_invert_integer_sequence", "[extents]") {
     {
         auto a = to_array(std::integer_sequence<rank_type>{});
         auto b = to_array(
-            zipper::views::unary::detail::invert_integer_sequence<3, 0, 1,
+            zipper::expression::unary::detail::invert_integer_sequence<3, 0, 1,
                                                                   2>::type{});
 
         static_assert(a.size() == b.size());
         CHECK(a == b);
 
-        using E = zipper::views::unary::detail::invert_integer_sequence<
+        using E = zipper::expression::unary::detail::invert_integer_sequence<
             3, 0, 1, 2>::assign_types<zipper::extents, A>;
         static_assert(std::is_same_v<E, zipper::extents<>>);
     }
     {
         auto a = to_array(std::integer_sequence<rank_type, 0>{});
         auto b = to_array(
-            zipper::views::unary::detail::invert_integer_sequence<3, 1,
+            zipper::expression::unary::detail::invert_integer_sequence<3, 1,
                                                                   2>::type{});
 
         static_assert(a.size() == b.size());
         CHECK(a == b);
 
-        using E = zipper::views::unary::detail::invert_integer_sequence<
+        using E = zipper::expression::unary::detail::invert_integer_sequence<
             3, 1, 2>::assign_types<zipper::extents, A>;
         static_assert(std::is_same_v<E, zipper::extents<0>>);
     }
     {
         auto a = to_array(std::integer_sequence<rank_type, 0, 2>{});
         auto b = to_array(
-            zipper::views::unary::detail::invert_integer_sequence<3,
+            zipper::expression::unary::detail::invert_integer_sequence<3,
                                                                   1>::type{});
 
         static_assert(a.size() == b.size());
@@ -80,12 +79,12 @@ TEST_CASE("test_invert_integer_sequence", "[extents]") {
     {
         auto a = to_array(std::integer_sequence<rank_type, 0, 1, 2>{});
         auto b = to_array(
-            zipper::views::unary::detail::invert_integer_sequence<3>::type{});
+            zipper::expression::unary::detail::invert_integer_sequence<3>::type{});
 
         static_assert(a.size() == b.size());
         CHECK(a == b);
 
-        using E = zipper::views::unary::detail::invert_integer_sequence<
+        using E = zipper::expression::unary::detail::invert_integer_sequence<
             3>::assign_types<zipper::extents, A>;
         static_assert(std::is_same_v<E, zipper::extents<0, 1, 2>>);
     }

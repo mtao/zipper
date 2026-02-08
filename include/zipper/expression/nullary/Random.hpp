@@ -112,7 +112,7 @@ template <typename T, typename Generator, concepts::Extents Extents>
 auto normal_random_view(const Extents &extents, const T &mean, const T &stddev,
                         const Generator &g) {
   static_assert(std::is_floating_point_v<T>);
-  return random_view<T, std::normal_distribution, Generator, Extents>(
+  return random_view<std::normal_distribution, T, Generator, Extents>(
       extents, std::normal_distribution<T>(mean, stddev), g);
 }
 

@@ -1,7 +1,7 @@
 
 #if !defined(ZIPPER_VIEWS_DETAIL_STATIC_EXTENTS_TO_INTEGRAL_SEQUENCE_HPP)
 #define ZIPPER_VIEWS_DETAIL_STATIC_EXTENTS_TO_INTEGRAL_SEQUENCE_HPP
-#include "zipper/concepts/ExtentsType.hpp"
+#include "zipper/concepts/Extents.hpp"
 #include "zipper/types.hpp"
 namespace zipper::detail::extents {
 
@@ -13,7 +13,7 @@ struct static_extents_to_integral_sequence<zipper::extents<Indices...>> {
     using type = std::integer_sequence<index_type, Indices...>;
 };
 
-template <concepts::ExtentsType From>
+template <concepts::Extents From>
 using static_extents_to_integral_sequence_t =
     static_extents_to_integral_sequence<From>::type;
 

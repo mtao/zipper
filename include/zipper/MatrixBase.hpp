@@ -4,16 +4,22 @@
 #include "ZipperBase.hpp"
 #include "as.hpp"
 #include "concepts/Index.hpp"
+#include "concepts/IndexSlice.hpp"
 #include "concepts/Matrix.hpp"
 #include "concepts/Vector.hpp"
+#include "concepts/detail/IsZipperBase.hpp"
 #include "zipper/types.hpp"
 //
 #include "expression/binary/MatrixProduct.hpp"
 #include "expression/binary/MatrixVectorProduct.hpp"
 #include "expression/reductions/Trace.hpp"
+#include "expression/unary/Diagonal.hpp"
+#include "expression/unary/ScalarArithmetic.hpp"
 #include "zipper/detail/PartialReductionDispatcher.hpp"
 #include "zipper/detail/constexpr_arithmetic.hpp"
+#include "zipper/detail/declare_operations.hpp"
 #include "zipper/detail/extents/get_extent.hpp"
+#include "zipper/expression/binary/ArithmeticExpressions.hpp"
 
 namespace zipper {
 template <concepts::Expression View> class ArrayBase;
@@ -21,65 +27,65 @@ template <typename ValueType, index_type Rows, index_type Cols,
           bool RowMajor = true>
 class Matrix;
 
-// template <concepts::MatrixViewDerived View>
 template <concepts::Expression View>
 class MatrixBase : public ZipperBase<MatrixBase, View> {
 public:
   MatrixBase() = default;
 
-  using view_type = View;
-  using view_traits = expression::detail::ViewTraits<View>;
-  using value_type = view_traits::value_type;
-  using extents_type = view_traits::extents_type;
+  using Base = ZipperBase<MatrixBase, View>;
+  using expression_type = typename Base::expression_type;
+  using expression_traits = typename Base::expression_traits;
+  using value_type = typename expression_traits::value_type;
+  using extents_type = typename expression_traits::extents_type;
   using extents_traits = detail::ExtentsTraits<extents_type>;
   static_assert(extents_traits::rank == 2);
-  using Base = ZipperBase<MatrixBase, View>;
 
   using Base::Base;
   // using Base::operator=;
   using Base::cast;
   using Base::extent;
   using Base::extents;
+  using Base::expression;
   using Base::swizzle;
-  using Base::view;
 
   auto eval() const { return Matrix(*this); }
 
-  template <concepts::MatrixBaseDerived Other>
-  MatrixBase(const Other &other) : MatrixBase(other.view()) {}
+  template <concepts::Matrix Other>
+  MatrixBase(const Other &other) : MatrixBase(other.expression()) {}
 
-  auto operator=(concepts::MatrixBaseDerived auto const &v) -> MatrixBase & {
-    return operator=(v.view());
+  auto operator=(concepts::Matrix auto const &v) -> MatrixBase & {
+    return operator=(v.expression());
   }
 
-  template <concepts::MatrixViewDerived Other>
+  template <concepts::Expression Other>
   auto operator=(const Other &other) -> MatrixBase &
-    requires(view_traits::is_writable)
+    requires(expression_traits::is_writable)
   {
-    return Base::operator=(other);
+    Base::operator=(other);
+    return *this;
   }
 
   void resize(index_type rows, index_type cols) {
     constexpr static bool dynamic_row = extents_traits::is_dynamic_extent(0);
     constexpr static bool dynamic_col = extents_traits::is_dynamic_extent(1);
     if constexpr (dynamic_row && dynamic_col) {
-      view().resize(extents_type{rows, cols});
+      expression().resize(extents_type{rows, cols});
     } else if constexpr (dynamic_row) {
-      view().resize(extents_type{rows});
+      expression().resize(extents_type{rows});
     } else if constexpr (dynamic_col) {
-      view().resize(extents_type{cols});
+      expression().resize(extents_type{cols});
     }
   }
   void resize(index_type size)
     requires(extents_traits::rank_dynamic == 1)
   {
-    view().resize(extents_type{size});
+    expression().resize(extents_type{size});
   }
 
   auto as_array() const { return zipper::as_array(*this); }
 
   auto trace() const -> value_type {
-    return expression::reductions::Trace(view())();
+    return expression::reductions::Trace(expression())();
   }
 
   template <typename... Args>
@@ -143,7 +149,7 @@ public:
     return slice<full_extent_t, Slice>(full_extent_t{}, std::forward<Slice>(s));
   }
   template <typename... Slices> auto slice() {
-    auto v = Base::template slice_view<Slices...>();
+    auto v = Base::template slice_expression<Slices...>();
     using V = std::decay_t<decltype(v)>;
     if constexpr (V::extents_type::rank() == 2) {
       return MatrixBase<V>(std::move(v));
@@ -155,7 +161,7 @@ public:
 
   template <typename... Slices> auto slice(Slices &&...slices) const {
     auto v =
-        Base::template slice_view<Slices...>(std::forward<Slices>(slices)...);
+        Base::template slice_expression<Slices...>(std::forward<Slices>(slices)...);
     using V = std::decay_t<decltype(v)>;
     if constexpr (V::extents_type::rank() == 2) {
       return MatrixBase<V>(std::move(v));
@@ -165,7 +171,7 @@ public:
     }
   }
   template <typename... Slices> auto slice() const {
-    auto v = Base::template slice_view<Slices...>();
+    auto v = Base::template slice_expression<Slices...>();
     using V = std::decay_t<decltype(v)>;
     if constexpr (V::extents_type::rank() == 2) {
       return MatrixBase<V>(std::move(v));
@@ -177,7 +183,7 @@ public:
 
   template <typename... Slices> auto slice(Slices &&...slices) {
     auto v =
-        Base::template slice_view<Slices...>(std::forward<Slices>(slices)...);
+        Base::template slice_expression<Slices...>(std::forward<Slices>(slices)...);
     using V = std::decay_t<decltype(v)>;
     if constexpr (V::extents_type::rank() == 2) {
       return MatrixBase<V>(std::move(v));
@@ -188,10 +194,10 @@ public:
   }
 
   auto diagonal() const {
-    return VectorBase<expression::unary::DiagonalView<const view_type>>(view());
+    return VectorBase<expression::unary::Diagonal<const expression_type>>(expression());
   }
   auto diagonal() {
-    return VectorBase<expression::unary::DiagonalView<view_type>>(view());
+    return VectorBase<expression::unary::Diagonal<expression_type>>(expression());
   }
 
   template <rank_type... ranks> auto swizzle() const {
@@ -199,51 +205,51 @@ public:
   }
   auto transpose() const { return Base::template swizzle<MatrixBase, 1, 0>(); }
 
-  template <concepts::SliceLike Slice> auto row_slice(const Slice &s = {}) {
+  template <concepts::IndexSlice Slice> auto row_slice(const Slice &s = {}) {
     return slice(s, full_extent_t{});
   }
-  template <concepts::SliceLike Slice>
+  template <concepts::IndexSlice Slice>
   auto row_slice(const Slice &s = {}) const {
     return slice(s, full_extent_t{});
   }
-  template <concepts::SliceLike Slice> auto col_slice(const Slice &s = {}) {
+  template <concepts::IndexSlice Slice> auto col_slice(const Slice &s = {}) {
     return slice(full_extent_t{}, s);
   }
-  template <concepts::SliceLike Slice>
+  template <concepts::IndexSlice Slice>
   auto col_slice(const Slice &s = {}) const {
     return slice(full_extent_t{}, s);
   }
 
   // meh names for alignment with eigen
-  template <concepts::IndexLike Index> auto topRows(const Index &s) {
+  template <concepts::Index Index> auto topRows(const Index &s) {
     return row_slice(zipper::slice({}, s));
   }
-  template <concepts::IndexLike Index> auto topRows(const Index &s) const {
+  template <concepts::Index Index> auto topRows(const Index &s) const {
     return row_slice(zipper::slice({}, s));
   }
-  template <concepts::IndexLike Index> auto leftCols(const Index &s) {
+  template <concepts::Index Index> auto leftCols(const Index &s) {
     return col_slice(zipper::slice({}, s));
   }
-  template <concepts::IndexLike Index> auto leftCols(const Index &s) const {
+  template <concepts::Index Index> auto leftCols(const Index &s) const {
     return col_slice(zipper::slice({}, s));
   }
 
-  template <concepts::IndexLike Index> auto bottomRows(const Index &s) {
+  template <concepts::Index Index> auto bottomRows(const Index &s) {
     auto end = detail::extents::get_extent<0>(extents());
     detail::ConstexprArithmetic size(s);
     return row_slice(zipper::slice((end - size).value(), s));
   }
-  template <concepts::IndexLike Index> auto bottomRows(const Index &s) const {
+  template <concepts::Index Index> auto bottomRows(const Index &s) const {
     auto end = detail::extents::get_extent<0>(extents());
     detail::ConstexprArithmetic size(s);
     return row_slice(zipper::slice((end - size).value(), s));
   }
-  template <concepts::IndexLike Index> auto rightCols(const Index &s) {
+  template <concepts::Index Index> auto rightCols(const Index &s) {
     auto end = detail::extents::get_extent<1>(extents());
     detail::ConstexprArithmetic size(s);
     return col_slice(zipper::slice((end - size).value(), s));
   }
-  template <concepts::IndexLike Index> auto rightCols(const Index &s) const {
+  template <concepts::Index Index> auto rightCols(const Index &s) const {
     auto end = detail::extents::get_extent<1>(extents());
     detail::ConstexprArithmetic size(s);
     return col_slice(zipper::slice((end - size).value(), s));
@@ -284,21 +290,21 @@ public:
 
   auto rowwise() {
     // we're reducing the first cols
-    return detail::PartialReductionDispatcher<VectorBase, view_type, 1>(view());
+    return detail::PartialReductionDispatcher<VectorBase, expression_type, 1>(expression());
   }
   auto colwise() {
     // we're reducing the first rows
-    return detail::PartialReductionDispatcher<VectorBase, view_type, 0>(view());
+    return detail::PartialReductionDispatcher<VectorBase, expression_type, 0>(expression());
   }
   auto rowwise() const {
     // we're reducing the first cols
-    return detail::PartialReductionDispatcher<VectorBase, const view_type, 1>(
-        view());
+    return detail::PartialReductionDispatcher<VectorBase, const expression_type, 1>(
+        expression());
   }
   auto colwise() const {
     // we're reducing the first rows
-    return detail::PartialReductionDispatcher<VectorBase, const view_type, 0>(
-        view());
+    return detail::PartialReductionDispatcher<VectorBase, const expression_type, 0>(
+        expression());
   }
 };
 
@@ -309,9 +315,9 @@ using MatrixRX = Matrix<T, R, dynamic_extent>;
 template <typename T, index_type C>
 using MatrixXC = Matrix<T, dynamic_extent, C>;
 
-template <concepts::MatrixViewDerived View>
+template <concepts::Expression View>
 MatrixBase(View &&view) -> MatrixBase<View>;
-template <concepts::MatrixViewDerived View>
+template <concepts::Expression View>
 MatrixBase(const View &view) -> MatrixBase<View>;
 
 UNARY_DECLARATION(MatrixBase, LogicalNot, operator!)
@@ -324,47 +330,49 @@ BINARY_DECLARATION(MatrixBase, Plus, operator+)
 BINARY_DECLARATION(MatrixBase, Minus, operator-)
 //
 
-template <concepts::MatrixBaseDerived View1, concepts::MatrixBaseDerived View2>
+template <concepts::Matrix View1, concepts::Matrix View2>
 auto operator==(View1 const &lhs, View2 const &rhs) {
   return (lhs.as_array() == rhs.as_array()).all();
 }
-template <concepts::MatrixBaseDerived View1, concepts::MatrixBaseDerived View2>
+template <concepts::Matrix View1, concepts::Matrix View2>
 auto operator!=(View1 const &lhs, View2 const &rhs) {
-  return (lhs.as_array() == rhs.as_array()).all();
+  return (lhs.as_array() != rhs.as_array()).any();
 }
 
-template <concepts::MatrixBaseDerived View1, concepts::MatrixBaseDerived View2>
+template <concepts::Matrix View1, concepts::Matrix View2>
 auto operator*(View1 const &lhs, View2 const &rhs) {
   using V =
-      expression::binary::MatrixProductView<const typename View1::view_type,
-                                            const typename View2::view_type>;
-  return MatrixBase<V>(V(lhs.view(), rhs.view()));
+      expression::binary::MatrixProduct<const typename View1::expression_type,
+                                         const typename View2::expression_type>;
+  return MatrixBase<V>(V(lhs.expression(), rhs.expression()));
 }
 
-template <concepts::MatrixBaseDerived View>
+template <concepts::Matrix View>
 auto operator*(View const &lhs, typename View::value_type const &rhs) {
-  using V = expression::unary::ScalarMultipliesView<
-      typename View::value_type, const typename View::view_type, true>;
-  return MatrixBase<V>(V(lhs.view(), rhs));
+  using V = expression::unary::ScalarMultiplies<
+      typename View::value_type, const typename View::expression_type, true>;
+  return MatrixBase<V>(V(lhs.expression(), rhs));
 }
-template <concepts::MatrixBaseDerived View>
+template <concepts::Matrix View>
 auto operator*(typename View::value_type const &lhs, View const &rhs) {
-  using V = expression::unary::ScalarMultipliesView<
-      typename View::value_type, const typename View::view_type, false>;
-  return MatrixBase<V>(V(lhs, rhs.view()));
+  using V = expression::unary::ScalarMultiplies<
+      typename View::value_type, const typename View::expression_type, false>;
+  return MatrixBase<V>(V(lhs, rhs.expression()));
 }
 
-template <concepts::MatrixBaseDerived View1, concepts::VectorBaseDerived View2>
+template <concepts::Matrix View1, concepts::Vector View2>
 auto operator*(View1 const &lhs, View2 const &rhs) {
-  using V = expression::binary::MatrixVectorProductView<
-      const typename View1::view_type, const typename View2::view_type>;
+  using V = expression::binary::MatrixVectorProduct<
+      const typename View1::expression_type, const typename View2::expression_type>;
 
-  return VectorBase<V>(V(lhs.view(), rhs.view()));
+  return VectorBase<V>(V(lhs.expression(), rhs.expression()));
 }
 
 namespace concepts::detail {
 template <typename T>
-struct MatrixBaseDerived<MatrixBase<T>> : std::true_type {};
+struct IsMatrix<MatrixBase<T>> : std::true_type {};
+template <typename T>
+struct IsZipperBase<MatrixBase<T>> : std::true_type {};
 } // namespace concepts::detail
 
 } // namespace zipper

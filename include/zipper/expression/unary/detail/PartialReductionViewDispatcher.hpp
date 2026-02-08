@@ -1,38 +1,38 @@
-#if !defined(ZIPPER_VIEWS_UNARY_DETAIL_PARTIALREDUCTIONVIEWDISPATCHER_HPP)
-#define ZIPPER_VIEWS_UNARY_DETAIL_PARTIALREDUCTIONVIEWDISPATCHER_HPP
-#include "zipper/concepts/ViewDerived.hpp"
-#include "zipper/views/reductions/CoefficientSum.hpp"
-#include "zipper/views/reductions/LpNorm.hpp"
-#include "zipper/views/unary/PartialReductionView.hpp"
+#if !defined(ZIPPER_EXPRESSION_UNARY_DETAIL_PARTIALREDUCTIONDISPATCHER_HPP)
+#define ZIPPER_EXPRESSION_UNARY_DETAIL_PARTIALREDUCTIONDISPATCHER_HPP
+#include "zipper/concepts/Expression.hpp"
+#include "zipper/expression/reductions/CoefficientSum.hpp"
+#include "zipper/expression/reductions/LpNorm.hpp"
+#include "zipper/expression/unary/PartialReductionView.hpp"
 
-namespace zipper::views::unary::detail {
+namespace zipper::expression::unary::detail {
 
-template <zipper::concepts::QualifiedViewDerived ViewType, rank_type... Indices>
-class PartialReductionViewDispatcher {
+template <zipper::concepts::QualifiedExpression ExprType, rank_type... Indices>
+class PartialReductionDispatcher {
    public:
-    PartialReductionViewDispatcher(ViewType& v) : m_view(v) {}
+    PartialReductionDispatcher(ExprType& v) : m_expression(v) {}
     auto sum() const {
-        return views::unary::PartialReductionView<
-            ViewType, views::reductions::CoefficientSum,
-            Indices...>(m_view);
+        return unary::PartialReduction<
+            ExprType, reductions::CoefficientSum,
+            Indices...>(m_expression);
     }
     template <index_type P = 2>
     auto norm() const {
-        using holder = views::reductions::detail::lp_norm_holder<P>;
-        return holder::template reduction_view<ViewType,
-                                               Indices...>(m_view);
+        using holder = reductions::detail::lp_norm_holder<P>;
+        return holder::template reduction_view<ExprType,
+                                               Indices...>(m_expression);
     }
     template <index_type P = 2>
     auto norm_powered() const {
-        using holder = views::reductions::detail::lp_norm_powered_holder<P>;
-        return holder::template reduction_view<ViewType,
-                                               Indices...>(m_view);
+        using holder = reductions::detail::lp_norm_powered_holder<P>;
+        return holder::template reduction_view<ExprType,
+                                               Indices...>(m_expression);
     }
 
    private:
-    ViewType& m_view;
+    ExprType& m_expression;
 };
 
-}  // namespace zipper::views::unary::detail
+}  // namespace zipper::expression::unary::detail
 
 #endif

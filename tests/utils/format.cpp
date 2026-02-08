@@ -2,7 +2,7 @@
 #include <zipper/utils/format.hpp>
 
 #include <zipper/Matrix.hpp>
-//#include <zipper/Vector.hpp>
+#include <zipper/Vector.hpp>
 #include "../catch_include.hpp"
 
 TEST_CASE("test_format_vector", "[storage][dense]") {

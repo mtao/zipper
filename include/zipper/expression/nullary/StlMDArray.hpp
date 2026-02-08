@@ -1,12 +1,11 @@
-#include "zipper/expression/SizedExpressionBase.hpp"
+#include "zipper/expression/ExpressionBase.hpp"
 #include "zipper/expression/detail/AssignHelper.hpp"
 #include "zipper/storage/StlStorageInfo.hpp"
 namespace zipper::expression::nullary {
 
 template <typename S>
-struct StlMDArray : public SizedExpressionBase<StlMDArray<S>> {
+struct StlMDArray : public ExpressionBase<StlMDArray<S>> {
 public:
-  using Base = zipper::expression::SizedExpressionBase<StlMDArray<S>>;
   using traits = expression::detail::ExpressionTraits<StlMDArray<S>>;
   using info_helper = storage::StlStorageInfo<std::decay_t<S>>;
   using extents_type = typename info_helper::extents_type;
@@ -18,22 +17,21 @@ public:
     return extents_type::static_extent;
   }
 
+  auto extents() const -> extents_type { return info_helper::make_extents(m_data); }
+  auto extent(rank_type i) const -> index_type { return extents().extent(i); }
+
   StlMDArray(const extents_type &e = {}, const value_type &default_value = 0.0)
     requires(!IsStatic)
-      : Base(e), m_data(info_helper::initialize(e, default_value)) {}
+      : m_data(info_helper::initialize(e, default_value)) {}
 
   StlMDArray(const value_type &default_value = 0.0)
     requires(IsStatic)
-      : Base(), m_data(info_helper::initialize(default_value)) {}
-  StlMDArray(S &d) : Base(info_helper::make_extents(d)), m_data(d) {}
+      : m_data(info_helper::initialize(default_value)) {}
+  StlMDArray(S &d) : m_data(d) {}
 
   void resize(const extents_type &e) {
-    Base::set_extent(e);
     info_helper::resize(m_data, e);
   }
-
-  // extents_type extents() const { return info_helper::make_extents(m_data);
-  // }
 
   template <zipper::concepts::Index... Args>
   auto const_coeff_ref(Args &&...args) const -> const value_type & {

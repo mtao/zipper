@@ -3,18 +3,13 @@
 
 #include "concepts/Expression.hpp"
 #include "concepts/IndexArgument.hpp"
-#include "concepts/ZipperBaseDerived.hpp"
-// #include "expression/unary/Cast.hpp"
+#include "concepts/Zipper.hpp"
+#include "expression/unary/Cast.hpp"
 #include "zipper/detail/ExtentsTraits.hpp"
 #include "zipper/expression/detail/ExpressionTraits.hpp"
-// #include "expression/unary/DiagonalExpression.hpp"
-// #include "expression/unary/RepeatExpression.hpp"
-// #include "expression/unary/SliceExpression.hpp"
-// #include "expression/unary/SwizzleExpression.hpp"
-// #include "expression/unary/detail/operation_implementations.hpp"
-// #include "zipper/detail/declare_operations.hpp"
-// #include "zipper/expression/binary/ArithmeticExpressions.hpp"
-// #include "zipper/expression/unary/ScalarArithmeticExpressions.hpp"
+#include "expression/unary/RepeatView.hpp"
+#include "expression/unary/SliceView.hpp"
+#include "expression/unary/SwizzleView.hpp"
 #include "zipper/types.hpp"
 
 namespace zipper {
@@ -23,6 +18,7 @@ template <template <concepts::QualifiedExpression> typename DerivedT,
           concepts::QualifiedExpression Expression>
 class ZipperBase {
 public:
+
   ZipperBase()
     requires(std::is_default_constructible_v<Expression>)
       : m_expression() {}
@@ -84,7 +80,7 @@ public:
   }
 
   template <typename... Args>
-    requires(!(concepts::ZipperBaseDerived<Args> && ...))
+    requires(!(concepts::Zipper<Args> && ...))
   ZipperBase(Args &&...args) : m_expression(std::forward<Args>(args)...) {}
 
   template <concepts::Expression Other>
@@ -101,7 +97,7 @@ public:
   template <concepts::Expression Other>
   auto operator=(Other &&other) -> Derived &
     requires(is_writable && zipper::utils::extents::assignable_extents_v<
-                                typename Other::extents_type, extents_type>)
+                                typename std::decay_t<Other>::extents_type, extents_type>)
   {
     m_expression.assign(other);
 #pragma GCC diagnostic push
@@ -110,7 +106,7 @@ public:
 #pragma GCC diagnostic pop
   }
 
-  template <concepts::ZipperBaseDerived Other>
+  template <concepts::Zipper Other>
   auto operator+=(const Other &other) -> Derived &
     requires(is_writable)
   {
@@ -120,7 +116,7 @@ public:
     return derived();
 #pragma GCC diagnostic pop
   }
-  template <concepts::ZipperBaseDerived Other>
+  template <concepts::Zipper Other>
   auto operator-=(const Other &other) -> Derived &
     requires(is_writable)
   {
@@ -160,19 +156,17 @@ public:
   //   return DerivedT<V>(V(expression(), op));
   // }
 
-  // template <template <typename> typename BaseType = DerivedT,
-  //           rank_type... ranks>
-  // auto swizzle() const {
-  //   using V =
-  //       expression::unary::SwizzleExpression<const expression_type,
-  //       ranks...>;
-  //   return BaseType<V>(V(expression()));
-  // }
-  // template <typename T> auto cast() const {
-  //   using V = expression::unary::CastExpression<T, const expression_type>;
-
-  //  return DerivedT<V>(V(expression()));
-  //}
+  template <template <typename> typename BaseType = DerivedT,
+            rank_type... ranks>
+  auto swizzle() const {
+    using V =
+        expression::unary::Swizzle<const expression_type, ranks...>;
+    return BaseType<V>(V(expression()));
+  }
+  template <typename T> auto cast() const {
+    using V = expression::unary::Cast<T, const expression_type>;
+    return DerivedT<V>(V(expression()));
+  }
 
   template <concepts::IndexArgument... Args>
   auto operator()(Args &&...idxs) -> decltype(auto)
@@ -190,56 +184,56 @@ public:
   }
 
   // pads left with dummy dimensions
-  // template <rank_type Count = 1,
-  //          template <typename> typename BaseType = DerivedT>
-  // auto repeat_left() const {
-  //  using V =
-  //      expression::unary::RepeatExpression<expression::unary::RepeatMode::Left,
-  //                                          Count, const expression_type>;
-  //  return BaseType<V>(V(expression()));
-  //}
-  // template <rank_type Count = 1,
-  //          template <typename> typename BaseType = DerivedT>
-  // auto repeat_right() const {
-  //  using V = expression::unary::RepeatExpression<
-  //      expression::unary::RepeatMode::Right, Count, const expression_type>;
-  //  return BaseType<V>(V(expression()));
-  //}
+  template <rank_type Count = 1,
+            template <typename> typename BaseType = DerivedT>
+  auto repeat_left() const {
+    using V =
+        expression::unary::Repeat<expression::unary::RepeatMode::Left,
+                                  Count, const expression_type>;
+    return BaseType<V>(V(expression()));
+  }
+  template <rank_type Count = 1,
+            template <typename> typename BaseType = DerivedT>
+  auto repeat_right() const {
+    using V = expression::unary::Repeat<
+        expression::unary::RepeatMode::Right, Count, const expression_type>;
+    return BaseType<V>(V(expression()));
+  }
 
 protected:
   // slicing has fairly dimension specific effects for most derived types,
   // so we will just return the expression and let base class return things
-  // template <concepts::SliceLike... Slices>
-  // auto slice_expression(Slices &&...slices) const {
-  //  using my_expression_type =
-  //      expression::unary::SliceExpression<const expression_type,
-  //                                         std::decay_t<Slices>...>;
+  template <typename... Slices>
+  auto slice_expression(Slices &&...slices) const {
+    using my_expression_type =
+        expression::unary::Slice<const expression_type,
+                                 std::decay_t<Slices>...>;
 
-  //  return my_expression_type(expression(),
-  //                            filter_args_for_zipperbase(std::forward<Slices>(slices))...);
-  //}
+    return my_expression_type(expression(),
+                              filter_args_for_zipperbase(std::forward<Slices>(slices))...);
+  }
 
-  // template <concepts::SliceLike... Slices> auto slice_expression() const {
-  //   using my_expression_type =
-  //       expression::unary::SliceExpression<const expression_type,
-  //                                          std::decay_t<Slices>...>;
-  //   return my_expression_type(expression(), Slices{}...);
-  // }
+  template <typename... Slices> auto slice_expression() const {
+    using my_expression_type =
+        expression::unary::Slice<const expression_type,
+                                 std::decay_t<Slices>...>;
+    return my_expression_type(expression(), Slices{}...);
+  }
 
-  // template <concepts::SliceLike... Slices>
-  // auto slice_expression(Slices &&...slices) {
-  //   using my_expression_type =
-  //       expression::unary::SliceExpression<expression_type,
-  //                                          std::decay_t<Slices>...>;
-  //   return my_expression_type(expression(),
-  //                             filter_args_for_zipperbase(std::forward<Slices>(slices))...);
-  // }
-  // template <concepts::SliceLike... Slices> auto slice_expression() {
-  //   using my_expression_type =
-  //       expression::unary::SliceExpression<expression_type,
-  //                                          std::decay_t<Slices>...>;
-  //   return my_expression_type(expression(), Slices{}...);
-  // }
+  template <typename... Slices>
+  auto slice_expression(Slices &&...slices) {
+    using my_expression_type =
+        expression::unary::Slice<expression_type,
+                                 std::decay_t<Slices>...>;
+    return my_expression_type(expression(),
+                              filter_args_for_zipperbase(std::forward<Slices>(slices))...);
+  }
+  template <typename... Slices> auto slice_expression() {
+    using my_expression_type =
+        expression::unary::Slice<expression_type,
+                                 std::decay_t<Slices>...>;
+    return my_expression_type(expression(), Slices{}...);
+  }
 
 public:
 private:
@@ -247,7 +241,7 @@ private:
   /// namespace
   template <typename T>
   static auto filter_args_for_zipperbase(T &&v) -> decltype(auto) {
-    if constexpr (concepts::ZipperBaseDerived<std::decay_t<T>>) {
+    if constexpr (concepts::Zipper<std::decay_t<T>>) {
       return v.expression();
     } else {
       return std::forward<T>(v);
@@ -296,14 +290,14 @@ private:
 //  BINARY_DECLARATION(ZipperBase, BitOr, operator|)
 //  BINARY_DECLARATION(ZipperBase, BitXor, operator^)
 
-// template <concepts::ZipperBaseDerived Expression1,
-// concepts::ZipperBaseDerived Expression2> bool operator==(Expression1 const&
+// template <concepts::Zipper Expression1,
+// concepts::Zipper Expression2> bool operator==(Expression1 const&
 // lhs, Expression2 const& rhs) {
 //     return (lhs.as_array() == rhs.as_array()).all();
 // }
 
-// template <concepts::ZipperBaseDerived Expression1,
-// concepts::ZipperBaseDerived Expression2> bool operator!=(Expression1 const&
+// template <concepts::Zipper Expression1,
+// concepts::Zipper Expression2> bool operator!=(Expression1 const&
 // lhs, Expression2 const& rhs) {
 //     return (lhs.as_array() != rhs.as_array()).any();
 // }

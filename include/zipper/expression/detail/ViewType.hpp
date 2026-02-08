@@ -1,16 +1,16 @@
-#if !defined(ZIPPER_VIEWS_DETAIL_VIEW_TYPE_HPP)
-#define ZIPPER_VIEWS_DETAIL_VIEW_TYPE_HPP
-#include "zipper/concepts/ViewDerived.hpp"
-namespace zipper::views::detail {
+#if !defined(ZIPPER_EXPRESSION_DETAIL_EXPRESSION_TYPE_HPP)
+#define ZIPPER_EXPRESSION_DETAIL_EXPRESSION_TYPE_HPP
+#include "zipper/concepts/Expression.hpp"
+namespace zipper::expression::detail {
 template <typename T>
-struct ViewType {
-    using type = T::view_type;
+struct ExpressionTypeHelper {
+    using type = T::expression_type;
 };
 
-template <zipper::concepts::ViewDerived T>
-struct ViewType<T> {
+template <zipper::concepts::Expression T>
+struct ExpressionTypeHelper<T> {
     using type = T;
 };
 
-}  // namespace zipper::views::detail
+}  // namespace zipper::expression::detail
 #endif

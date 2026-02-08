@@ -2,39 +2,42 @@
 #define ZIPPER_ARRAY_HPP
 
 #include "ArrayBase.hpp"
-#include "concepts/ArrayBaseDerived.hpp"
-#include "concepts/ExtentsType.hpp"
-#include "concepts/MatrixViewDerived.hpp"
-#include "concepts/VectorViewDerived.hpp"
-#include "storage/PlainObjectStorage.hpp"
+#include "concepts/Array.hpp"
+#include "concepts/Extents.hpp"
+#include "concepts/Matrix.hpp"
+#include "concepts/Vector.hpp"
+#include "zipper/expression/nullary/MDArray.hpp"
 #include "zipper/types.hpp"
 namespace zipper {
 
 namespace detail {
-template <typename ValueType, concepts::ExtentsType Extents,
+template <typename ValueType, concepts::Extents Extents,
           bool LeftMajor = true>
-class Array_ : public ArrayBase<storage::PlainObjectStorage<
-                   ValueType, Extents, storage::tensor_layout<LeftMajor>>> {
+class Array_ : public ArrayBase<expression::nullary::MDArray<
+                   ValueType, Extents, storage::tensor_layout<LeftMajor>,
+                   default_accessor_policy<ValueType>>> {
 public:
   using layout_type = storage::tensor_layout<LeftMajor>;
-  using Base =
-      ArrayBase<storage::PlainObjectStorage<ValueType, Extents, layout_type>>;
-  using Base::view;
-  using view_type = Base::view_type;
+  using expression_type =
+      expression::nullary::MDArray<ValueType, Extents, layout_type,
+                                   default_accessor_policy<ValueType>>;
+  using Base = ArrayBase<expression_type>;
+  using Base::expression;
   using value_type = Base::value_type;
   using extents_type = Base::extents_type;
   using Base::extent;
   using Base::extents;
   using span_type =
-      ArrayBase<storage::SpanStorage<ValueType, Extents, layout_type>>;
+      ArrayBase<expression::nullary::MDSpan<ValueType, Extents, layout_type,
+                                            default_accessor_policy<ValueType>>>;
 
   Array_(const Array_ &o) = default;
   Array_(Array_ &&o) = default;
   auto operator=(const Array_ &o) -> Array_ & = default;
   auto operator=(Array_ &&o) -> Array_ & = default;
-  template <concepts::ViewDerived Other>
+  template <concepts::Expression Other>
   Array_(const Other &other) : Base(other) {}
-  template <concepts::ArrayBaseDerived Other>
+  template <concepts::Array Other>
   Array_(const Other &other) : Base(other) {}
   template <typename... Args>
   Array_(Args &&...args)
@@ -44,11 +47,11 @@ public:
   Array_(const zipper::extents<indices...> &e) : Base(e) {}
 };
 
-template <concepts::MatrixViewDerived MB>
+template <concepts::Matrix MB>
 Array_(const MB &o)
     -> Array_<typename MB::value_type, typename MB::extents_type>;
 
-template <concepts::VectorViewDerived MB>
+template <concepts::Vector MB>
 Array_(const MB &o)
     -> Array_<typename MB::value_type, typename MB::extents_type>;
 
@@ -58,8 +61,11 @@ using Array = detail::Array_<ValueType, zipper::extents<Indxs...>>;
 
 namespace concepts::detail {
 
-template <typename ValueType, concepts::ExtentsType Extents, bool LeftMajor>
-struct ArrayBaseDerived<zipper::detail::Array_<ValueType, Extents, LeftMajor>>
+template <typename ValueType, concepts::Extents Extents, bool LeftMajor>
+struct IsArray<zipper::detail::Array_<ValueType, Extents, LeftMajor>>
+    : std::true_type {};
+template <typename ValueType, concepts::Extents Extents, bool LeftMajor>
+struct IsZipperBase<zipper::detail::Array_<ValueType, Extents, LeftMajor>>
     : std::true_type {};
 } // namespace concepts::detail
 

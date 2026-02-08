@@ -1,13 +1,13 @@
 #if !defined(ZIPPER_UTILS_MAXCOEFF_HPP)
 #define ZIPPER_UTILS_MAXCOEFF_HPP
 #include <zipper/ZipperBase.hpp>
-#include <zipper/concepts/ZipperBaseDerived.hpp>
+#include <zipper/concepts/Zipper.hpp>
 
 #include "detail/tuple_to_array.hpp"
 namespace zipper::utils {
 
 namespace detail {
-template <zipper::concepts::ZipperBaseDerived D, bool ReturnMultiIndex>
+template <zipper::concepts::Zipper D, bool ReturnMultiIndex>
 
 auto _maxCoeff(const D& d) {
     constexpr static index_type rank = D::extents_traits::rank;
@@ -19,7 +19,7 @@ auto _maxCoeff(const D& d) {
     AT arr;
     for (const auto& i :
          zipper::utils::extents::all_extents_indices(d.extents())) {
-        T v = d(i);
+        T v = std::apply(d, i);
         if (v > max) {
             max = v;
             if constexpr (ReturnMultiIndex) {
@@ -34,11 +34,11 @@ auto _maxCoeff(const D& d) {
     }
 }
 }  // namespace detail
-template <zipper::concepts::ZipperBaseDerived D>
+template <zipper::concepts::Zipper D>
 auto maxCoeff(const D& d) {
     return detail::_maxCoeff<D, false>(d);
 }
-template <zipper::concepts::ZipperBaseDerived D>
+template <zipper::concepts::Zipper D>
 auto maxCoeffWithIndex(const D& d) {
     return detail::_maxCoeff<D, true>(d);
 }

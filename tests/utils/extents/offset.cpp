@@ -4,11 +4,9 @@
 #include <zipper/concepts/shapes.hpp>
 #include <zipper/detail/extents/dynamic_extents_indices.hpp>
 #include <zipper/detail/extents/swizzle_extents.hpp>
-#include <zipper/storage/PlainObjectStorage.hpp>
 #include <zipper/types.hpp>
 #include <zipper/utils/extents/is_compatible.hpp>
 #include <zipper/utils/extents/offset_extents.hpp>
-#include <zipper/views/unary/detail/invert_integer_sequence.hpp>
 
 #include "../../catch_include.hpp"
 

@@ -1,7 +1,7 @@
 #if !defined(ZIPPER_UTILS_EXTENTS_EXTENT_ARITHMETIC_HPP)
 #define ZIPPER_UTILS_EXTENTS_EXTENT_ARITHMETIC_HPP
 
-#include "zipper/concepts/IndexLike.hpp"
+#include "zipper/concepts/Index.hpp"
 #include "zipper/types.hpp"
 
 namespace zipper::utils::extents {

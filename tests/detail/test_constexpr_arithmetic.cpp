@@ -10,7 +10,7 @@ using IR = zipper::index_type;
 template <zipper::index_type T>
 using IC = zipper::static_index_t<T>;
 
-template <zipper::concepts::IndexLike T>
+template <zipper::concepts::Index T>
 using CA = zipper::detail::ConstexprArithmetic<T>;
 
 using namespace zipper::detail;

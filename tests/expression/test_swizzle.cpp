@@ -1,7 +1,7 @@
 
 
 #include "../catch_include.hpp"
-#include <zipper/views/unary/SwizzleView.hpp>
+#include <zipper/expression/unary/SwizzleView.hpp>
 // #include <zipper/Vector.hpp>
 
 TEST_CASE("test_swizzle_pair", "[swizzle]") {

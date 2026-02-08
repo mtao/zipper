@@ -1,8 +1,8 @@
-#if !defined(ZIPPER_VIEWS_DETAIL_INTERSECT_NONZEROS_HPP)
-#define ZIPPER_VIEWS_DETAIL_INTERSECT_NONZEROS_HPP
+#if !defined(ZIPPER_EXPRESSION_DETAIL_INTERSECT_NONZEROS_HPP)
+#define ZIPPER_EXPRESSION_DETAIL_INTERSECT_NONZEROS_HPP
 
 #include "zipper/types.hpp"
-namespace zipper::views::detail {
+namespace zipper::expression::detail {
 
 template <typename A, typename B>
 struct intersect_nonzeros {
@@ -86,5 +86,10 @@ struct intersect_nonzeros {
 template <typename A, typename B>
 intersect_nonzeros(const A& a, const B& b) -> intersect_nonzeros<A, B>;
 
+}  // namespace zipper::expression::detail
+
+// backward compatibility
+namespace zipper::views::detail {
+using zipper::expression::detail::intersect_nonzeros;
 }  // namespace zipper::views::detail
 #endif

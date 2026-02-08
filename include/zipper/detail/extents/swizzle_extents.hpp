@@ -2,7 +2,7 @@
 #define ZIPPER_DETAIL_EXTENTS_SWIZZLE_EXTENTS_HPP
 
 #include "dynamic_extents_indices.hpp"
-#include "zipper/concepts/TupleLike.hpp"
+#include "zipper/concepts/Index.hpp"
 #include "zipper/detail/ExtentsTraits.hpp"
 #include "zipper/types.hpp"
 
@@ -129,7 +129,7 @@ struct ExtentsSwizzler {
 
         requires(Index < valid_internal_indices.size())
     constexpr static auto _unswizzle_single_index(
-        concepts::TupleLike auto const& t) -> index_type {
+        concepts::IndexPackTuple auto const& t) -> index_type {
         if constexpr (Index != std::dynamic_extent) {
             static_assert(valid_internal_indices[Index] < size);
             return std::get<valid_internal_indices[Index]>(t);
@@ -139,7 +139,7 @@ struct ExtentsSwizzler {
     }
 
     template <std::size_t... ValidIndices>
-    constexpr static auto _unswizzle(concepts::TupleLike auto const& t,
+    constexpr static auto _unswizzle(concepts::IndexPackTuple auto const& t,
                                      std::index_sequence<ValidIndices...>) {
         using input_type = std::decay_t<decltype(t)>;
         constexpr std::size_t my_size = std::tuple_size_v<input_type>;
@@ -159,7 +159,7 @@ struct ExtentsSwizzler {
         return r;
     }
 
-    constexpr static auto _unswizzle(concepts::TupleLike auto const& t) {
+    constexpr static auto _unswizzle(concepts::IndexPackTuple auto const& t) {
         return _unswizzle(t, std::make_index_sequence<valid_indices_rank>{});
         // using input_type = std::decay_t<decltype(t)>;
         // constexpr std::size_t my_size = std::tuple_size_v<input_type>;
@@ -174,7 +174,7 @@ struct ExtentsSwizzler {
     template <typename... Indices>
     constexpr static auto unswizzle(Indices&&... indices) {
         if constexpr (sizeof...(Indices) == 1 &&
-                      (concepts::TupleLike<Indices> && ...)) {
+                      (concepts::IndexPackTuple<Indices> && ...)) {
             return _unswizzle(std::forward<Indices>(indices)...);
         } else {
 #if defined(__cpp_pack_indexing) && false

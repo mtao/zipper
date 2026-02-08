@@ -1,13 +1,13 @@
 #include <numeric>
-#if !defined(ZIPPER_VIEWS_UNARY_DETAIL_INVERT_INTEGER_SEQUENCE_HPP)
-#define ZIPPER_VIEWS_UNARY_DETAIL_INVERT_INTEGER_SEQUENCE_HPP
+#if !defined(ZIPPER_EXPRESSION_UNARY_DETAIL_INVERT_INTEGER_SEQUENCE_HPP)
+#define ZIPPER_EXPRESSION_UNARY_DETAIL_INVERT_INTEGER_SEQUENCE_HPP
 #include <tuple>
 
 #include "zipper/detail/extents/dynamic_extents_indices.hpp"
 #include "zipper/detail/extents/static_extents_to_array.hpp"
 #include "zipper/types.hpp"
 
-namespace zipper::views::unary::detail {
+namespace zipper::expression::unary::detail {
 
 // defines a sequence [a,b,c..f] by the entries in [0...total_rank] NOT
 // identified in Indices
@@ -144,5 +144,5 @@ struct invert_integer_sequence {
     }
 };
 
-}  // namespace zipper::views::unary::detail
+}  // namespace zipper::expression::unary::detail
 #endif

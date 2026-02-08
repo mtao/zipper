@@ -24,7 +24,7 @@
 
 #include "zipper/detail//ExtentsTraits.hpp"
 #include "zipper/detail/pack_index.hpp"
-#include "zipper/expression/SizedExpressionBase.hpp"
+#include "zipper/expression/ExpressionBase.hpp"
 namespace zipper::storage {
 template <typename ValueType, typename Extents> class SparseCoordinateAccessor;
 
@@ -112,8 +112,9 @@ private:
 // SpanStorage predeclares the defaults now?
 template <typename ValueType, typename Extents>
 class SparseCoordinateAccessor
-    : public expression::SizedExpressionBase<
-          SparseCoordinateAccessor<ValueType, Extents>> {
+    : public expression::ExpressionBase<
+          SparseCoordinateAccessor<ValueType, Extents>>,
+      public Extents {
   // template <typename T>
   // struct _detail;
   // template <rank_type... Index>
@@ -127,7 +128,7 @@ class SparseCoordinateAccessor
 public:
   template <typename VT, typename E, bool is_const>
   friend class detail::SparseCoordinateAccessor_iterator;
-  using ParentType = expression::SizedExpressionBase<
+  using ParentType = expression::ExpressionBase<
       SparseCoordinateAccessor<ValueType, Extents>>;
   using value_type = ValueType;
   using extents_type = Extents;
@@ -136,13 +137,14 @@ public:
   constexpr static bool IsStatic =
       zipper::detail::ExtentsTraits<extents_type>::is_static;
 
-  using ParentType::extents;
+  using extents_type::extent;
   using ParentType::size;
+  auto extents() const -> const extents_type & { return *this; }
 
   ~SparseCoordinateAccessor();
   SparseCoordinateAccessor()
     requires(IsStatic)
-      : ParentType() {}
+      : extents_type() {}
 
   SparseCoordinateAccessor(const SparseCoordinateAccessor &) = default;
   SparseCoordinateAccessor(SparseCoordinateAccessor &&) = default;
@@ -153,9 +155,9 @@ public:
 
   SparseCoordinateAccessor(const extents_type &extents_)
     requires(!IsStatic)
-      : ParentType(extents_) {}
+      : extents_type(extents_) {}
 
-  // template <zipper::concepts::ExtentsType E2>
+  // template <zipper::concepts::Extents E2>
   // void resize(const E2& e)
   //     requires(extents_traits::template is_convertable_from<E2>() &&
   //              !IsStatic)

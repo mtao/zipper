@@ -2,29 +2,32 @@
 #define ZIPPER_TENSORBASE_HPP
 
 #include "ZipperBase.hpp"
-#include "concepts/TensorBaseDerived.hpp"
+#include "concepts/Tensor.hpp"
 #include "detail/extents/static_extents_to_integral_sequence.hpp"
-#include "zipper/views/binary/TensorProductView.hpp"
+#include "zipper/detail/declare_operations.hpp"
+#include "zipper/expression/binary/ArithmeticExpressions.hpp"
+#include "zipper/expression/binary/TensorProduct.hpp"
+#include "zipper/expression/unary/ScalarArithmetic.hpp"
 
 namespace zipper {
 
-template <concepts::QualifiedViewDerived View>
+template <concepts::Expression View>
 class TensorBase : public ZipperBase<TensorBase, View> {
 public:
   using Base = ZipperBase<TensorBase, View>;
   TensorBase() = default;
 
-  using view_type = View;
-  using view_traits = views::detail::ViewTraits<View>;
-  using value_type = view_traits::value_type;
-  using extents_type = view_traits::extents_type;
+  using expression_type = typename Base::expression_type;
+  using expression_traits = typename Base::expression_traits;
+  using value_type = expression_traits::value_type;
+  using extents_type = expression_traits::extents_type;
   using extents_traits = detail::ExtentsTraits<extents_type>;
 
   template <index_type... N>
   auto eval(const std::integer_sequence<index_type, N...> &) const
     requires(std::is_same_v<extents<N...>, extents_type>)
   {
-    return Tensor_<value_type, extents<N...>>(this->view());
+    return Tensor_<value_type, extents<N...>>(this->expression());
   }
   auto eval() const {
     return eval(
@@ -33,62 +36,60 @@ public:
 
   using Base::Base;
   using Base::operator=;
-  using Base::cast;
-  using Base::swizzle;
-  using Base::view;
+  using Base::expression;
 
-  auto operator=(concepts::TensorBaseDerived auto const &v) -> TensorBase & {
-    view() = v.view();
+  auto operator=(concepts::Tensor auto const &v) -> TensorBase & {
+    expression() = v.expression();
     return *this;
   }
 
-  template <concepts::TensorBaseDerived Other>
+  template <concepts::Tensor Other>
   TensorBase(const Other &other)
-    requires(view_traits::is_writable)
-      : TensorBase(other.view()) {}
-  template <concepts::TensorBaseDerived Other>
+    requires(expression_traits::is_writable)
+      : TensorBase(other.expression()) {}
+  template <concepts::Tensor Other>
   auto operator=(const Other &other) -> TensorBase &
-    requires(view_traits::is_writable)
+    requires(expression_traits::is_writable)
   {
-    return operator=(other.view());
+    return operator=(other.expression());
   }
-  auto operator=(concepts::TensorBaseDerived auto &&v) -> TensorBase & {
-    return Base::operator=(v.view());
+  auto operator=(concepts::Tensor auto &&v) -> TensorBase & {
+    return Base::operator=(v.expression());
   }
 
+  // Slice methods - delegate to ZipperBase::slice_expression
   template <typename... Slices> auto slice() {
-    auto v = Base::template slice_view<Slices...>();
+    auto v = Base::template slice_expression<Slices...>();
     return TensorBase<std::decay_t<decltype(v)>>(std::move(v));
   }
-
   template <typename... Slices> auto slice(Slices &&...slices) const {
     auto v =
-        Base::template slice_view<Slices...>(std::forward<Slices>(slices)...);
+        Base::template slice_expression<Slices...>(std::forward<Slices>(slices)...);
     return TensorBase<std::decay_t<decltype(v)>>(std::move(v));
   }
   template <typename... Slices> auto slice() const {
-    auto v = Base::template slice_view<Slices...>();
+    auto v = Base::template slice_expression<Slices...>();
     return TensorBase<std::decay_t<decltype(v)>>(std::move(v));
   }
-
   template <typename... Slices> auto slice(Slices &&...slices) {
     auto v =
-        Base::template slice_view<Slices...>(std::forward<Slices>(slices)...);
+        Base::template slice_expression<Slices...>(std::forward<Slices>(slices)...);
     return TensorBase<std::decay_t<decltype(v)>>(std::move(v));
   }
 };
 
-template <concepts::QualifiedViewDerived View>
+template <concepts::Expression View>
 TensorBase(View &&view) -> TensorBase<View>;
-template <concepts::QualifiedViewDerived View>
+template <concepts::Expression View>
 TensorBase(const View &view) -> TensorBase<View>;
 
-template <class T, std::size_t Size = std::dynamic_extent>
-TensorBase(const std::span<T, Size> &s)
-    -> TensorBase<storage::SpanStorage<T, zipper::extents<Size>>>;
-template <class T, std::size_t Size = std::dynamic_extent>
-TensorBase(std::span<const T, Size> &s)
-    -> TensorBase<storage::SpanStorage<const T, zipper::extents<Size>>>;
+// NOTE: SpanStorage deduction guides commented out - SpanStorage has been removed.
+// template <class T, std::size_t Size = std::dynamic_extent>
+// TensorBase(const std::span<T, Size> &s)
+//     -> TensorBase<storage::SpanStorage<T, zipper::extents<Size>>>;
+// template <class T, std::size_t Size = std::dynamic_extent>
+// TensorBase(std::span<const T, Size> &s)
+//     -> TensorBase<storage::SpanStorage<const T, zipper::extents<Size>>>;
 
 UNARY_DECLARATION(TensorBase, LogicalNot, operator!)
 UNARY_DECLARATION(TensorBase, BitNot, operator~)
@@ -102,12 +103,13 @@ SCALAR_BINARY_DECLARATION(TensorBase, Divides, operator/)
 BINARY_DECLARATION(TensorBase, Plus, operator+)
 BINARY_DECLARATION(TensorBase, Minus, operator-)
 
-template <concepts::TensorBaseDerived View1, concepts::TensorBaseDerived View2>
+template <concepts::Tensor View1, concepts::Tensor View2>
 auto operator*(View1 const &lhs, View2 const &rhs) {
-  using V = views::binary::TensorProductView<typename View1::view_type,
-                                             typename View2::view_type>;
-  return TensorBase<V>(V(lhs.view(), rhs.view()));
+  using V = expression::binary::TensorProduct<const typename View1::expression_type,
+                                              const typename View2::expression_type>;
+  return TensorBase<V>(V(lhs.expression(), rhs.expression()));
 }
+
 } // namespace zipper
 
 #endif

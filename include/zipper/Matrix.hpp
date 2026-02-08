@@ -6,7 +6,8 @@
 #include "storage/layout_types.hpp"
 //
 #include "MatrixBase.hpp"
-#include "storage/SpanStorage.hpp"
+// storage/SpanStorage.hpp has been removed; MDSpan is used for span types now
+#include "expression/nullary/MDSpan.hpp"
 #include "zipper/types.hpp"
 namespace zipper {
 
@@ -159,7 +160,10 @@ Matrix(const MB &o) -> Matrix<std::decay_t<typename MB::value_type>,
 
 namespace concepts::detail {
 template <typename T, index_type R, index_type C, bool RowMajor>
-struct IsMatrixBaseDerived<zipper::Matrix<T, R, C, RowMajor>> : std::true_type {
+struct IsMatrix<zipper::Matrix<T, R, C, RowMajor>> : std::true_type {
+};
+template <typename T, index_type R, index_type C, bool RowMajor>
+struct IsZipperBase<zipper::Matrix<T, R, C, RowMajor>> : std::true_type {
 };
 
 } // namespace concepts::detail

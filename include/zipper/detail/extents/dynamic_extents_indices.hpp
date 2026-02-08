@@ -47,8 +47,7 @@ struct DynamicExtentIndices<zipper::extents<indices...>> {
         return j;
       }
     }
-    assert(false);
-    return rank_type{};
+    return dynamic_extent;
   }
   // composes the indices that belong to dynamic indices.
   // Note that due to swizzle the set of indices bieng

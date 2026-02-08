@@ -2,97 +2,97 @@
 #define ZIPPER_ARRAYBASE_HPP
 
 #include "ZipperBase.hpp"
-#include "views/reductions/All.hpp"
-#include "views/reductions/Any.hpp"
-#include "views/reductions/CoefficientProduct.hpp"
-#include "views/reductions/CoefficientSum.hpp"
-#include "views/reductions/LpNorm.hpp"
-#include "views/reductions/LpNormPowered.hpp"
+#include "concepts/detail/IsZipperBase.hpp"
+#include "expression/reductions/All.hpp"
+#include "expression/reductions/Any.hpp"
+#include "expression/reductions/CoefficientProduct.hpp"
+#include "expression/reductions/CoefficientSum.hpp"
+#include "expression/reductions/LpNorm.hpp"
+#include "expression/reductions/LpNormPowered.hpp"
 #include "zipper/types.hpp"
 //
-#include "concepts/ArrayBaseDerived.hpp"
-#include "concepts/ViewDerived.hpp"
+#include "concepts/Array.hpp"
+#include "concepts/Expression.hpp"
 //
 ////
 #include "detail/extents/static_extents_to_integral_sequence.hpp"
-#include "views/unary/AbsView.hpp"
-#include "views/unary/ScalarPowerView.hpp"
-#include "views/unary/detail/operation_implementations.hpp"
+#include "expression/unary/AbsView.hpp"
+#include "expression/unary/ScalarPowerView.hpp"
+#include "expression/unary/detail/operation_implementations.hpp"
 #include "zipper/detail/declare_operations.hpp"
-#include "zipper/views/binary/ArithmeticViews.hpp"
-#include "zipper/views/unary/ScalarArithmeticViews.hpp"
+#include "zipper/expression/binary/ArithmeticExpressions.hpp"
+#include "zipper/expression/unary/ScalarArithmetic.hpp"
 
 namespace zipper {
 
-template <concepts::QualifiedViewDerived View>
+template <concepts::Expression View>
 class ArrayBase : public ZipperBase<ArrayBase, View> {
 public:
   ArrayBase() = default;
 
-  using view_type = View;
-  using traits = views::detail::ViewTraits<View>;
-  using value_type = typename traits::value_type;
-  using extents_type = typename traits::extents_type;
+  using expression_type = std::decay_t<View>;
+  using expression_traits =
+      expression::detail::ExpressionTraits<expression_type>;
+  using value_type = typename expression_traits::value_type;
+  using extents_type = typename expression_traits::extents_type;
   using extents_traits = detail::ExtentsTraits<extents_type>;
   using Base = ZipperBase<ArrayBase, View>;
   using Base::Base;
-  using Base::cast;
-  using Base::swizzle;
-  using Base::view;
+  using Base::expression;
 
   template <index_type... N>
   auto eval(const std::integer_sequence<index_type, N...> &) const
     requires(std::is_same_v<extents<N...>, extents_type>)
   {
-    return Array_<value_type, zipper::extents<N...>>(this->view());
+    return Array_<value_type, zipper::extents<N...>>(this->expression());
   }
   auto eval() const {
     return eval(
         detail::extents::static_extents_to_integral_sequence_t<extents_type>{});
   }
-  auto operator=(concepts::ArrayBaseDerived auto const &v) -> ArrayBase & {
-    return Base::operator=(v.view());
+  auto operator=(concepts::Array auto const &v) -> ArrayBase & {
+    return Base::operator=(v.expression());
   }
-  auto operator=(concepts::ArrayBaseDerived auto &&v) -> ArrayBase & {
-    return Base::operator=(v.view());
+  auto operator=(concepts::Array auto &&v) -> ArrayBase & {
+    return Base::operator=(v.expression());
   }
 
-  template <concepts::ArrayBaseDerived Other>
+  template <concepts::Array Other>
   ArrayBase(const Other &other)
-    requires(view_type::is_writable)
-      : ArrayBase(other.view()) {}
+    requires(expression_traits::is_writable)
+      : ArrayBase(other.expression()) {}
 
   auto operator*=(const value_type &other) -> ArrayBase &
-    requires(view_type::is_writable)
+    requires(expression_traits::is_writable)
   {
     return *this = other * *this;
   }
   auto operator/=(const value_type &other) -> ArrayBase &
-    requires(view_type::is_writable)
+    requires(expression_traits::is_writable)
   {
     return *this = *this / other;
   }
-  template <concepts::ArrayBaseDerived Other>
+  template <concepts::Array Other>
   auto operator+=(const Other &other) -> ArrayBase &
-    requires(view_type::is_writable)
+    requires(expression_traits::is_writable)
   {
     return *this = *this + other;
   }
-  template <concepts::ArrayBaseDerived Other>
+  template <concepts::Array Other>
   auto operator-=(const Other &other) -> ArrayBase &
-    requires(view_type::is_writable)
+    requires(expression_traits::is_writable)
   {
     return *this = *this - other;
   }
-  template <concepts::ArrayBaseDerived Other>
+  template <concepts::Array Other>
   auto operator*=(const Other &other) -> ArrayBase &
-    requires(view_type::is_writable)
+    requires(expression_traits::is_writable)
   {
     return *this = *this * other;
   }
-  template <concepts::ArrayBaseDerived Other>
+  template <concepts::Array Other>
   auto operator/=(const Other &other) -> ArrayBase &
-    requires(view_type::is_writable)
+    requires(expression_traits::is_writable)
   {
     return *this = *this / other;
   }
@@ -102,31 +102,34 @@ public:
 
   auto pow(value_type const &exp) const {
     return ArrayBase<
-        views::unary::ScalarPowerView<const view_type, value_type>>(view(),
-                                                                    exp);
+        expression::unary::ScalarPower<const expression_type, value_type>>(
+        expression(), exp);
   }
 
   auto abs() const {
-    return ArrayBase<views::unary::AbsView<const view_type>>(view());
+    return ArrayBase<expression::unary::Abs<const expression_type>>(
+        expression());
   }
 
   auto sum() const -> value_type {
-    return views::reductions::CoefficientSum{view()}();
+    return expression::reductions::CoefficientSum{expression()}();
   }
 
   auto product() const -> value_type {
-    return views::reductions::CoefficientProduct{view()}();
+    return expression::reductions::CoefficientProduct{expression()}();
   }
 
   template <index_type T> auto norm_powered() const -> value_type {
-    return views::reductions::LpNormPowered<T, const view_type>(view())();
+    return expression::reductions::LpNormPowered<T, const expression_type>(
+        expression())();
   }
   auto norm_powered(value_type T) const -> value_type {
     return pow(T).abs().sum();
   }
 
   template <index_type T = 2> auto norm() const -> value_type {
-    return views::reductions::LpNorm<T, const view_type>(view())();
+    return expression::reductions::LpNorm<T, const expression_type>(
+        expression())();
   }
   auto norm(value_type T) const -> value_type {
     value_type p = value_type(1.0) / T;
@@ -143,45 +146,46 @@ public:
   [[nodiscard]] auto any() const -> bool
     requires(std::is_same_v<value_type, bool>)
   {
-    return views::reductions::Any(view())();
+    return expression::reductions::Any(expression())();
   }
   [[nodiscard]] auto all() const -> bool
     requires(std::is_same_v<value_type, bool>)
   {
-    return views::reductions::All(view())();
-  }
-  template <typename... Slices> auto slice() {
-    auto v = Base::template slice_view<Slices...>();
-    return ArrayBase<std::decay_t<decltype(v)>>(std::move(v));
+    return expression::reductions::All(expression())();
   }
 
+  // Slice methods - delegate to ZipperBase::slice_expression
+  template <typename... Slices> auto slice() {
+    auto v = Base::template slice_expression<Slices...>();
+    return ArrayBase<std::decay_t<decltype(v)>>(std::move(v));
+  }
   template <typename... Slices> auto slice(Slices &&...slices) const {
     auto v =
-        Base::template slice_view<Slices...>(std::forward<Slices>(slices)...);
+        Base::template slice_expression<Slices...>(std::forward<Slices>(slices)...);
     return ArrayBase<std::decay_t<decltype(v)>>(std::move(v));
   }
   template <typename... Slices> auto slice() const {
-    auto v = Base::template slice_view<Slices...>();
+    auto v = Base::template slice_expression<Slices...>();
     return ArrayBase<std::decay_t<decltype(v)>>(std::move(v));
   }
-
   template <typename... Slices> auto slice(Slices &&...slices) {
     auto v =
-        Base::template slice_view<Slices...>(std::forward<Slices>(slices)...);
+        Base::template slice_expression<Slices...>(std::forward<Slices>(slices)...);
     return ArrayBase<std::decay_t<decltype(v)>>(std::move(v));
   }
 };
 
-template <concepts::QualifiedViewDerived View>
+template <concepts::Expression View>
 ArrayBase(View &&view) -> ArrayBase<View>;
-template <concepts::QualifiedViewDerived View>
+template <concepts::Expression View>
 ArrayBase(const View &view) -> ArrayBase<View>;
-template <class T, std::size_t Size = std::dynamic_extent>
-ArrayBase(std::span<T, Size> s)
-    -> ArrayBase<storage::SpanStorage<T, zipper::extents<Size>>>;
-template <class T, std::size_t Size = std::dynamic_extent>
-ArrayBase(std::span<const T, Size> s)
-    -> ArrayBase<storage::SpanStorage<T, zipper::extents<Size>>>;
+// NOTE: SpanStorage deduction guides commented out - SpanStorage has been removed.
+// template <class T, std::size_t Size = std::dynamic_extent>
+// ArrayBase(std::span<T, Size> s)
+//     -> ArrayBase<storage::SpanStorage<T, zipper::extents<Size>>>;
+// template <class T, std::size_t Size = std::dynamic_extent>
+// ArrayBase(std::span<const T, Size> s)
+//     -> ArrayBase<storage::SpanStorage<T, zipper::extents<Size>>>;
 
 UNARY_DECLARATION(ArrayBase, LogicalNot, operator!)
 UNARY_DECLARATION(ArrayBase, BitNot, operator~)
@@ -236,7 +240,8 @@ BINARY_DECLARATION(ArrayBase, Min, min)
 BINARY_DECLARATION(ArrayBase, Max, max)
 
 namespace concepts::detail {
-template <typename T> struct ArrayBaseDerived<ArrayBase<T>> : std::true_type {};
+template <typename T> struct IsArray<ArrayBase<T>> : std::true_type {};
+template <typename T> struct IsZipperBase<ArrayBase<T>> : std::true_type {};
 } // namespace concepts::detail
 } // namespace zipper
 

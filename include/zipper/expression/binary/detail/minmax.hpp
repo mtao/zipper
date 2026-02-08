@@ -1,10 +1,10 @@
-#if !defined(ZIPPER_VIEWS_BINARY_DETAIL_MINMAX_HPP)
+#if !defined(ZIPPER_EXPRESSION_BINARY_DETAIL_MINMAX_HPP)
 
-#define ZIPPER_VIEWS_BINARY_DETAIL_MINMAX_HPP
+#define ZIPPER_EXPRESSION_BINARY_DETAIL_MINMAX_HPP
 
 #include <algorithm>
 
-namespace zipper::views::binary::detail {
+namespace zipper::expression::binary::detail {
 template <typename T>
 struct min {
     constexpr decltype(auto) operator()(const T& a, const T& b) const {
@@ -18,5 +18,5 @@ struct max {
     }
 };
 
-}  // namespace zipper::views::binary::detail
+}  // namespace zipper::expression::binary::detail
 #endif

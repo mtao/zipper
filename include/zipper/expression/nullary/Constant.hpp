@@ -55,9 +55,5 @@ struct detail::ExpressionTraits<nullary::Constant<T, Indices...>>
               .is_const = false, .is_reference = false, .is_alias_free = true},
           expression::detail::ShapeFeatures{.is_resizable = true}> {};
 
-// constexpr static bool is_plain_data = false;
-// using base_type =
-//     SizedExpressionBase<typename nullary::Constant<T, Indices...>>;
-// };
 } // namespace zipper::expression
 #endif

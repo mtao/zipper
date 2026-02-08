@@ -3,14 +3,14 @@
 
 #include <type_traits>
 
-#include "zipper/concepts/ExtentsType.hpp"
-#include "zipper/concepts/IndexLike.hpp"
+#include "zipper/concepts/Extents.hpp"
+#include "zipper/concepts/Index.hpp"
 #include "zipper/concepts/SliceLike.hpp"
 #include "zipper/types.hpp"
 
 namespace zipper::detail::extents {
 // slices that have an extent of std::dynamic_extent
-template <concepts::ExtentsType Extents>
+template <concepts::Extents Extents>
 struct SliceSpecialization {
     template <rank_type J, concepts::IndexLike Idx, concepts::SliceLike Slice>
     auto extent(const Extents& ext, Slice const& s) {

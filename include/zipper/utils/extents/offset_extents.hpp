@@ -2,7 +2,7 @@
 #define ZIPPER_UTILS_EXTENTS_OFFSET_EXTENTS_HPP
 
 #include "extent_arithmetic.hpp"
-#include "zipper/concepts/ExtentsType.hpp"
+#include "zipper/concepts/Extents.hpp"
 #include "zipper/detail/extents/dynamic_extents_indices.hpp"
 #include "zipper/detail/pack_index.hpp"
 #include "zipper/types.hpp"
@@ -73,11 +73,11 @@ struct OffsetExtents<zipper::extents<FromIndices...>,
     }
 };
 
-template <concepts::ExtentsType A, int64_t... OffsetIndices>
+template <concepts::Extents A, int64_t... OffsetIndices>
 using offset_extents_t = typename OffsetExtents<
     A, std::integer_sequence<int64_t, OffsetIndices...>>::extents_type;
 
-template <int64_t... OffsetIndices, concepts::ExtentsType A>
+template <int64_t... OffsetIndices, concepts::Extents A>
 auto offset_extents(const A& a) {
     return OffsetExtents<
         A, std::integer_sequence<int64_t, OffsetIndices...>>::run(a);

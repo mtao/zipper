@@ -1,8 +1,8 @@
-#if !defined(ZIPPER_VIEWS_BINARY_DETAIL_PIVOT_UTILS_HPP)
-#define ZIPPER_VIEWS_BINARY_DETAIL_PIVOT_UTILS_HPP
+#if !defined(ZIPPER_EXPRESSION_BINARY_DETAIL_PIVOT_UTILS_HPP)
+#define ZIPPER_EXPRESSION_BINARY_DETAIL_PIVOT_UTILS_HPP
 #include "zipper/detail//ExtentsTraits.hpp"
 
-namespace zipper::views::binary::detail {
+namespace zipper::expression::binary::detail {
     template <rank_type a, rank_type b, index_type... Indices, rank_type... Idxs>
         auto pivot(const extents<Indices...>& indices , std::integer_sequence<rank_type,Idxs...>) {
 
