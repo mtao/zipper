@@ -30,7 +30,7 @@ public:
     element_type v = 0.0;
     for (const auto &i :
          zipper::utils::extents::all_extents_indices(m_expression.extents())) {
-      v += m_expression(i);
+      v += std::apply(m_expression, i);
     }
     return v;
   }

@@ -1,81 +1,78 @@
-#if !defined(ZIPPER_VIEWS_NORM_POWERED_HPP)
-#define ZIPPER_VIEWS_NORM_POWERED_HPP
+#if !defined(ZIPPER_EXPRESSION_REDUCTIONS_LPNORMPOWERED_HPP)
+#define ZIPPER_EXPRESSION_REDUCTIONS_LPNORMPOWERED_HPP
 
-#include "zipper/concepts/ViewDerived.hpp"
-#include "zipper/views/detail/ViewTraits.hpp"
-#include "zipper/views/reductions/CoefficientSum.hpp"
-#include "zipper/views/unary/AbsView.hpp"
-#include "zipper/views/unary/PartialReductionView.hpp"
-#include "zipper/views/unary/ScalarPowerView.hpp"
+#include "CoefficientSum.hpp"
+#include "zipper/concepts/Expression.hpp"
+#include "zipper/expression/detail/ExpressionTraits.hpp"
+#include "zipper/expression/unary/Abs.hpp"
+#include "zipper/expression/unary/ScalarPower.hpp"
+#include "zipper/expression/unary/PartialReduction.hpp"
 
-namespace zipper::views {
+namespace zipper::expression {
 namespace reductions {
 namespace detail {
 template <index_type P>
-    requires(P > 0)
+  requires(P > 0)
 struct lp_norm_powered_holder {
-    template <zipper::concepts::QualifiedViewDerived View>
-    class LpNormPowered {
-       public:
-        using self_type = LpNormPowered<View>;
-        using view_type = View;
-        using view_traits =
-            zipper::views::detail::ViewTraits<view_type>;
-        using value_type = typename view_traits::value_type;
+  template <zipper::concepts::QualifiedExpression Expr>
+  class LpNormPowered {
+  public:
+    using self_type = LpNormPowered<Expr>;
+    using expression_type = Expr;
+    using expression_traits =
+        zipper::expression::detail::ExpressionTraits<expression_type>;
+    using value_type = typename expression_traits::value_type;
 
-        LpNormPowered(View& v) : m_view(v) {}
-        LpNormPowered(View&& v) : m_view(v) {}
+    LpNormPowered(Expr &v) : m_expression(v) {}
+    LpNormPowered(Expr &&v) : m_expression(v) {}
 
-        LpNormPowered(LpNormPowered&& v) = default;
-        LpNormPowered(const LpNormPowered& v) = default;
+    LpNormPowered(LpNormPowered &&v) = default;
+    LpNormPowered(const LpNormPowered &v) = default;
 
-        value_type operator()() const {
-            // return reductions::CoefficientSum(unary::DiagonalView(m_view))();
-            if constexpr (P % 2 == 0) {
-                auto pow = unary::ScalarPowerView<const view_type, value_type>(
-                    m_view, P);
-                auto sum = views::reductions::CoefficientSum(pow);
-                return sum();
-            } else {
-                auto abs = views::unary::AbsView<const view_type>(m_view);
-                if constexpr (P == 1) {
-                    auto sum = views::reductions::CoefficientSum(abs);
-                    return sum();
-                } else {
-                    auto pow =
-                        unary::ScalarPowerView<const view_type, value_type>(
-                            m_view, P);
-                    auto sum = views::reductions::CoefficientSum(pow);
-                    return sum();
-                }
-            }
+    value_type operator()() const {
+      if constexpr (P % 2 == 0) {
+        auto pow =
+            unary::ScalarPower<const expression_type, value_type>(m_expression, P);
+        auto sum = reductions::CoefficientSum(pow);
+        return sum();
+      } else {
+        auto abs = unary::Abs<const expression_type>(m_expression);
+        if constexpr (P == 1) {
+          auto sum = reductions::CoefficientSum(abs);
+          return sum();
+        } else {
+          auto pow =
+              unary::ScalarPower<const expression_type, value_type>(m_expression, P);
+          auto sum = reductions::CoefficientSum(pow);
+          return sum();
         }
-
-       private:
-        const View& m_view;
-    };
-
-    template <zipper::concepts::QualifiedViewDerived ViewType,
-
-              rank_type... Indices>
-    static auto reduction_view(ViewType& view) {
-        return views::unary::PartialReductionView<ViewType, LpNormPowered,
-                                                  Indices...>(view);
+      }
     }
+
+  private:
+    const Expr &m_expression;
+  };
+
+  template <zipper::concepts::QualifiedExpression ExprType,
+            rank_type... Indices>
+  static auto reduction_view(ExprType &expr) {
+    return unary::PartialReduction<ExprType, LpNormPowered,
+                                   Indices...>(expr);
+  }
 };
-}  // namespace detail
+} // namespace detail
 
-template <index_type P, zipper::concepts::QualifiedViewDerived View>
+template <index_type P, zipper::concepts::QualifiedExpression Expr>
 using LpNormPowered =
-    typename detail::lp_norm_powered_holder<P>::template LpNormPowered<View>;
+    typename detail::lp_norm_powered_holder<P>::template LpNormPowered<Expr>;
 
-template <zipper::concepts::QualifiedViewDerived View>
+template <zipper::concepts::QualifiedExpression Expr>
 using L2NormPowered =
-    typename detail::lp_norm_powered_holder<2>::LpNormPowered<View>;
-template <zipper::concepts::QualifiedViewDerived View>
+    typename detail::lp_norm_powered_holder<2>::LpNormPowered<Expr>;
+template <zipper::concepts::QualifiedExpression Expr>
 using L1NormPowered =
-    typename detail::lp_norm_powered_holder<1>::LpNormPowered<View>;
+    typename detail::lp_norm_powered_holder<1>::LpNormPowered<Expr>;
 
-}  // namespace reductions
-}  // namespace zipper::views
+} // namespace reductions
+} // namespace zipper::expression
 #endif

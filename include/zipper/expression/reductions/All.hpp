@@ -1,43 +1,43 @@
-#if !defined(ZIPPER_VIEWS_ALL_HPP)
-#define ZIPPER_VIEWS_ALL_HPP
-#include "zipper/concepts/ViewDerived.hpp"
+#if !defined(ZIPPER_EXPRESSION_REDUCTIONS_ALL_HPP)
+#define ZIPPER_EXPRESSION_REDUCTIONS_ALL_HPP
+
+#include "zipper/concepts/Expression.hpp"
+#include "zipper/expression/detail/ExpressionTraits.hpp"
 #include "zipper/utils/extents/all_extents_indices.hpp"
-#include "zipper/views/detail/ViewTraits.hpp"
 
-namespace zipper::views {
-namespace reductions {
+namespace zipper::expression::reductions {
 
-template <zipper::concepts::ViewDerived View>
+template <zipper::concepts::QualifiedExpression Expression>
 class All {
-   public:
-    using self_type = All<View>;
-    using view_type = View;
-    using view_traits = zipper::views::detail::ViewTraits<view_type>;
-    using value_type = bool;  // typename View::value_type;
+public:
+  using self_type = All<Expression>;
+  using expression_type = Expression;
+  using expression_traits =
+      zipper::expression::detail::ExpressionTraits<expression_type>;
+  using value_type = bool;
 
-    All(View&& v) : m_view(v) {}
-    All(const View& v) : m_view(v) {}
+  All(Expression &v) : m_expression(v) {}
+  All(Expression &&v) : m_expression(v) {}
 
-    All(All&& v) = default;
-    All(const All& v) = default;
+  All(All &&v) = default;
+  All(const All &v) = default;
 
-    value_type operator()() const {
-        for (const auto& i :
-             zipper::utils::extents::all_extents_indices(m_view.extents())) {
-            if (!value_type(m_view(i))) {
-                return false;
-            }
-        }
-        return true;
+  value_type operator()() const {
+    for (const auto &i :
+         zipper::utils::extents::all_extents_indices(m_expression.extents())) {
+      if (!value_type(std::apply(m_expression, i))) {
+        return false;
+      }
     }
+    return true;
+  }
 
-   private:
-    const View& m_view;
-};  // namespace unarytemplate<typenameA,typenameB>class AdditionView
+private:
+  const Expression &m_expression;
+};
 
-template <zipper::concepts::ViewDerived View>
-All(const View&) -> All<View>;
+template <zipper::concepts::QualifiedExpression Expression>
+All(Expression &) -> All<Expression>;
 
-}  // namespace reductions
-}  // namespace zipper::views
+} // namespace zipper::expression::reductions
 #endif

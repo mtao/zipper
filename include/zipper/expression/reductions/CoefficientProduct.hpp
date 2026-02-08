@@ -1,43 +1,42 @@
-#if !defined(ZIPPER_VIEWS_COEFFICIENTPRODUCT_HPP)
-#define ZIPPER_VIEWS_COEFFICIENTPRODUCT_HPP
+#if !defined(ZIPPER_EXPRESSION_REDUCTIONS_COEFFICIENTPRODUCT_HPP)
+#define ZIPPER_EXPRESSION_REDUCTIONS_COEFFICIENTPRODUCT_HPP
 
-#include "zipper/concepts/ViewDerived.hpp"
+#include "zipper/concepts/Expression.hpp"
+#include "zipper/expression/detail/ExpressionTraits.hpp"
 #include "zipper/utils/extents/all_extents_indices.hpp"
-#include "zipper/views/detail/ViewTraits.hpp"
 
-namespace zipper::views {
-namespace reductions {
+namespace zipper::expression::reductions {
 
-template <zipper::concepts::ViewDerived View>
+template <zipper::concepts::QualifiedExpression Expression>
 class CoefficientProduct {
-   public:
-    using self_type = CoefficientProduct<View>;
-    using view_type = View;
-    using view_traits = zipper::views::detail::ViewTraits<view_type>;
-    using value_type = typename View::value_type;
+public:
+  using self_type = CoefficientProduct<Expression>;
+  using expression_type = Expression;
+  using expression_traits =
+      zipper::expression::detail::ExpressionTraits<expression_type>;
+  using value_type = typename Expression::value_type;
 
-    CoefficientProduct(View&& v) : m_view(v) {}
-    CoefficientProduct(const View& v) : m_view(v) {}
+  CoefficientProduct(Expression &v) : m_expression(v) {}
+  CoefficientProduct(Expression &&v) : m_expression(v) {}
 
-    CoefficientProduct(CoefficientProduct&& v) = default;
-    CoefficientProduct(const CoefficientProduct& v) = default;
+  CoefficientProduct(CoefficientProduct &&v) = default;
+  CoefficientProduct(const CoefficientProduct &v) = default;
 
-    value_type operator()() const {
-        value_type v = 1.0;
-        for (const auto& i :
-             zipper::utils::extents::all_extents_indices(m_view.extents())) {
-            v *= m_view(i);
-        }
-        return v;
+  value_type operator()() const {
+    value_type v = 1.0;
+    for (const auto &i :
+         zipper::utils::extents::all_extents_indices(m_expression.extents())) {
+      v *= std::apply(m_expression, i);
     }
+    return v;
+  }
 
-   private:
-    const View& m_view;
-};  // namespace unarytemplate<typenameA,typenameB>class AdditionView
+private:
+  const Expression &m_expression;
+};
 
-template <zipper::concepts::QualifiedViewDerived View>
-CoefficientProduct(View&) -> CoefficientProduct<View>;
+template <zipper::concepts::QualifiedExpression Expression>
+CoefficientProduct(Expression &) -> CoefficientProduct<Expression>;
 
-}  // namespace reductions
-}  // namespace zipper::views
+} // namespace zipper::expression::reductions
 #endif

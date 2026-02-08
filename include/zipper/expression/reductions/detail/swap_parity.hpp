@@ -1,7 +1,14 @@
-#if !defined(ZIPPER_VIEWS_REDUCTIONS_DETAIL_SWAP_PARITY_HPP)
-#define ZIPPER_VIEWS_REDUCTIONS_DETAIL_SWAP_PARITY_HPP
+#if !defined(ZIPPER_EXPRESSION_REDUCTIONS_DETAIL_SWAP_PARITY_HPP)
+#define ZIPPER_EXPRESSION_REDUCTIONS_DETAIL_SWAP_PARITY_HPP
 
-namespace zipper::views::reductions::detail {
+#include <algorithm>
+#include <array>
+#include <span>
+#include <vector>
+
+#include "zipper/types.hpp"
+
+namespace zipper::expression::reductions::detail {
 // returns true if even
 template <size_t size>
 bool swap_parity(std::span<index_type, size> s) {
@@ -23,5 +30,5 @@ bool swap_parity(std::span<index_type, size> s) {
     }
     return r;
 }
-}  // namespace zipper::views::reductions::detail
+}  // namespace zipper::expression::reductions::detail
 #endif
