@@ -3,7 +3,7 @@
 #include "../../fmt_include.hpp"
 #include "../../catch_include.hpp"
 #include <zipper/utils/extents/all_extents_indices.hpp>
-#include <zipper/views/detail/intersect_nonzeros.hpp>
+#include <zipper/expression/detail/intersect_nonzeros.hpp>
 #include <zipper/Vector.hpp>
 using namespace zipper;
 
@@ -53,7 +53,7 @@ TEST_CASE("test_iterate_nonzeros", "[vector][nonzeros]") {
     std::vector<index_type> b = {3,4,5};
 
     {
-    zipper::views::detail::intersect_nonzeros innz(a,b);
+    zipper::expression::detail::intersect_nonzeros innz(a,b);
 
     static_assert(std::ranges::range<std::decay_t<decltype(a)>>);
     static_assert(std::ranges::range<std::decay_t<decltype(b)>>);
@@ -65,7 +65,7 @@ TEST_CASE("test_iterate_nonzeros", "[vector][nonzeros]") {
     CHECK(res[1] == 4);
     }
     {
-    zipper::views::detail::intersect_nonzeros innz(a,a);
+    zipper::expression::detail::intersect_nonzeros innz(a,a);
     auto res = std::ranges::views::all(innz) | std::ranges::to<std::vector>();
     REQUIRE(res.size() == 4);
     CHECK(res[0] == 0);

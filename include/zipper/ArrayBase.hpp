@@ -26,6 +26,11 @@
 
 namespace zipper {
 
+namespace detail {
+template <typename ValueType, concepts::Extents Extents, bool LeftMajor>
+class Array_;
+} // namespace detail
+
 template <concepts::Expression Expr>
 class ArrayBase : public ZipperBase<ArrayBase, Expr> {
 public:
@@ -45,7 +50,7 @@ public:
   auto eval(const std::integer_sequence<index_type, N...> &) const
     requires(std::is_same_v<extents<N...>, extents_type>)
   {
-    return Array_<value_type, zipper::extents<N...>>(this->expression());
+    return detail::Array_<value_type, zipper::extents<N...>, true>(this->expression());
   }
   auto eval() const {
     return eval(

@@ -1,6 +1,10 @@
+test_format = executable('test_format', 'format.cpp', dependencies: [zipper_test_dep])
+test('format', test_format)
 
-srcs = ['format.cpp','test_minmax.cpp','test_determinant.cpp']
-test_utils = executable('test_utils', srcs, dependencies: [zipper_test_dep])
-test('test_utils', test_utils)
+test_determinant = executable('test_determinant', 'test_determinant.cpp', dependencies: [zipper_test_dep])
+test('determinant', test_determinant)
+
+test_minmax = executable('test_minmax', 'test_minmax.cpp', dependencies: [zipper_test_dep])
+test('minmax', test_minmax)
 
 subdir('extents')

@@ -41,6 +41,9 @@ public:
   auto operator=(const Form_ &o) -> Form_ & = default;
   template <concepts::Expression Other>
   Form_(const Other &other) : Base(other) {}
+  template <concepts::Expression Other>
+    requires(!std::is_same_v<std::decay_t<Other>, Form_>)
+  Form_(Other &&other) : Base(static_cast<const Other&>(other)) {}
   template <concepts::Form Other>
   Form_(const Other &other) : Base(other) {}
   template <concepts::Index... Args>

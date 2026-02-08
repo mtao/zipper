@@ -2,6 +2,7 @@
 #define ZIPPER_FORMBASE_HPP
 
 #include "ZipperBase.hpp"
+#include "TensorBase.hpp"
 #include "as.hpp"
 #include "concepts/Form.hpp"
 #include "concepts/Tensor.hpp"
@@ -16,6 +17,11 @@
 #include "zipper/expression/unary/ScalarArithmetic.hpp"
 
 namespace zipper {
+
+namespace detail {
+template <typename ValueType, concepts::Extents Extents, bool LeftMajor>
+class Form_;
+} // namespace detail
 
 template <concepts::Expression Expr>
 class FormBase : public ZipperBase<FormBase, Expr> {
@@ -36,7 +42,7 @@ public:
   auto eval(const std::integer_sequence<index_type, N...> &) const
     requires(std::is_same_v<extents<N...>, extents_type>)
   {
-    return Form_<value_type, extents<N...>>(this->expression());
+    return detail::Form_<value_type, extents<N...>, true>(this->expression());
   }
   auto eval() const {
     return eval(
@@ -141,14 +147,22 @@ auto operator*(Expr1 const &lhs, Expr2 const &rhs) {
   using V = expression::binary::FormTensorProduct<const typename Expr1::expression_type,
                                                   const typename Expr2::expression_type>;
 
-  return FormBase<V>(V(lhs.expression(), rhs.expression()));
+  if constexpr (V::result_is_form) {
+    return FormBase<V>(V(lhs.expression(), rhs.expression()));
+  } else {
+    return TensorBase<V>(V(lhs.expression(), rhs.expression()));
+  }
 }
 template <concepts::Form Expr1, concepts::Vector Expr2>
 auto operator*(Expr1 const &lhs, Expr2 const &rhs) {
 
   using V = expression::binary::FormTensorProduct<const typename Expr1::expression_type,
                                                   const typename Expr2::expression_type>;
-  return FormBase<V>(V(lhs.expression(), rhs.expression()));
+  if constexpr (V::result_is_form) {
+    return FormBase<V>(V(lhs.expression(), rhs.expression()));
+  } else {
+    return TensorBase<V>(V(lhs.expression(), rhs.expression()));
+  }
 }
 
 namespace concepts::detail {
