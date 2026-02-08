@@ -15,6 +15,7 @@
 #include "expression/reductions/LpNorm.hpp"
 #include "expression/reductions/LpNormPowered.hpp"
 #include "expression/unary/Homogeneous.hpp"
+#include "expression/nullary/MDSpan.hpp"
 
 namespace zipper {
 template <typename ValueType, index_type Rows> class Vector;
@@ -275,11 +276,32 @@ VectorBase(Expr &&) -> VectorBase<Expr>;
 template <concepts::Expression Expr>
 VectorBase(const Expr &) -> VectorBase<Expr>;
 
-// NOTE: SpanStorage deduction guides commented out - SpanStorage has been removed.
-// These will be re-enabled when MDSpan-based deduction guides are added.
-// template <class T, std::size_t Size = std::dynamic_extent>
-// VectorBase(std::span<T, Size> s) -> VectorBase<...>;
-// etc.
+// Deduction guides from std::span
+template <typename T, std::size_t N>
+VectorBase(std::span<T, N>) -> VectorBase<
+    expression::nullary::MDSpan<T, extents<N>>>;
+
+template <typename T>
+VectorBase(std::span<T, std::dynamic_extent>) -> VectorBase<
+    expression::nullary::MDSpan<T, extents<dynamic_extent>>>;
+
+// Deduction guides from std::vector (creates a mutable dynamic-extent view)
+template <typename T, typename Alloc>
+VectorBase(std::vector<T, Alloc> &) -> VectorBase<
+    expression::nullary::MDSpan<T, extents<dynamic_extent>>>;
+
+template <typename T, typename Alloc>
+VectorBase(const std::vector<T, Alloc> &) -> VectorBase<
+    expression::nullary::MDSpan<const T, extents<dynamic_extent>>>;
+
+// Deduction guides from std::array (creates a view with static extent)
+template <typename T, std::size_t N>
+VectorBase(std::array<T, N> &) -> VectorBase<
+    expression::nullary::MDSpan<T, extents<N>>>;
+
+template <typename T, std::size_t N>
+VectorBase(const std::array<T, N> &) -> VectorBase<
+    expression::nullary::MDSpan<const T, extents<N>>>;
 
 UNARY_DECLARATION(VectorBase, LogicalNot, operator!)
 UNARY_DECLARATION(VectorBase, BitNot, operator~)
