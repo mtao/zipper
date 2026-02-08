@@ -1,7 +1,7 @@
 #if !defined(ZIPPER_VECTOR_HPP)
 #define ZIPPER_VECTOR_HPP
 
-#include "VectorBase.hpp"
+#include "VectorBase.hxx"
 #include "zipper/expression/nullary/MDArray.hpp"
 #include "zipper/expression/nullary/MDSpan.hpp"
 #include "zipper/types.hpp"

@@ -2,7 +2,7 @@
 
 #include "../catch_include.hpp"
 #include <iostream>
-#include <zipper/MatrixBase.hpp>
+#include <zipper/MatrixBase.hxx>
 #include <zipper/Tensor.hpp>
 #include <zipper/Vector.hpp>
 #include <zipper/expression/binary/CrossProduct.hpp>

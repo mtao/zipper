@@ -1,7 +1,7 @@
 #if !defined(ZIPPER_ARRAY_HPP)
 #define ZIPPER_ARRAY_HPP
 
-#include "ArrayBase.hpp"
+#include "ArrayBase.hxx"
 #include "concepts/Array.hpp"
 #include "concepts/Extents.hpp"
 #include "concepts/Matrix.hpp"

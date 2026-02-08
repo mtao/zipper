@@ -10,8 +10,8 @@
 #include <zipper/Vector.hpp>
 #include <zipper/Matrix.hpp>
 #include <zipper/Form.hpp>
-#include <zipper/MatrixBase.hpp>
-#include <zipper/FormBase.hpp>
+#include <zipper/MatrixBase.hxx>
+#include <zipper/FormBase.hxx>
 #include <zipper/expression/nullary/Constant.hpp>
 #include <zipper/expression/nullary/Identity.hpp>
 #include <zipper/expression/nullary/Random.hpp>

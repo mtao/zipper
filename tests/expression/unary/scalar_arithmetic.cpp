@@ -2,6 +2,7 @@
 #include <zipper/Matrix.hpp>
 #include <zipper/Tensor.hpp>
 #include <zipper/Vector.hpp>
+#include <zipper/ArrayBase.hxx>
 
 #include "../../catch_include.hpp"
 

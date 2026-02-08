@@ -1,7 +1,7 @@
 
 
 #include <iostream>
-#include <zipper/ArrayBase.hpp>
+#include <zipper/ArrayBase.hxx>
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
 #include <zipper/utils/determinant.hpp>

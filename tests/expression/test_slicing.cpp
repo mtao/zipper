@@ -3,7 +3,7 @@
 #include <iostream>
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
-#include <zipper/VectorBase.hpp>
+#include <zipper/VectorBase.hxx>
 #include <zipper/detail/extents/dynamic_extents_indices.hpp>
 #include <zipper/detail/extents/swizzle_extents.hpp>
 #include <zipper/types.hpp>

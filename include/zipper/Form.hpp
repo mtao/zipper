@@ -1,7 +1,7 @@
 #if !defined(ZIPPER_FORM_HPP)
 #define ZIPPER_FORM_HPP
 
-#include "FormBase.hpp"
+#include "FormBase.hxx"
 #include "concepts/Form.hpp"
 #include "zipper/expression/nullary/MDArray.hpp"
 #include "zipper/expression/nullary/MDSpan.hpp"

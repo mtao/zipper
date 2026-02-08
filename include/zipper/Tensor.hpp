@@ -1,7 +1,7 @@
 #if !defined(ZIPPER_TENSOR_HPP)
 #define ZIPPER_TENSOR_HPP
 
-#include "TensorBase.hpp"
+#include "TensorBase.hxx"
 #include "concepts/Extents.hpp"
 #include "concepts/Tensor.hpp"
 #include "zipper/expression/nullary/MDArray.hpp"

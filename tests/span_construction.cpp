@@ -1,14 +1,14 @@
 #include <numeric>
 #include <zipper/Array.hpp>
-#include <zipper/ArrayBase.hpp>
+#include <zipper/ArrayBase.hxx>
 #include <zipper/Form.hpp>
-#include <zipper/FormBase.hpp>
+#include <zipper/FormBase.hxx>
 #include <zipper/Matrix.hpp>
-#include <zipper/MatrixBase.hpp>
+#include <zipper/MatrixBase.hxx>
 #include <zipper/Tensor.hpp>
-#include <zipper/TensorBase.hpp>
+#include <zipper/TensorBase.hxx>
 #include <zipper/Vector.hpp>
-#include <zipper/VectorBase.hpp>
+#include <zipper/VectorBase.hxx>
 
 #include "catch_include.hpp"
 

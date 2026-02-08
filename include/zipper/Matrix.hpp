@@ -5,7 +5,7 @@
 #include "expression/nullary/MDArray.hpp"
 #include "storage/layout_types.hpp"
 //
-#include "MatrixBase.hpp"
+#include "MatrixBase.hxx"
 // storage/SpanStorage.hpp has been removed; MDSpan is used for span types now
 #include "expression/nullary/MDSpan.hpp"
 #include "zipper/types.hpp"
