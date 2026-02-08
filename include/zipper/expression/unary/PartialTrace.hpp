@@ -20,8 +20,7 @@ class PartialTrace;
 }
 template <zipper::concepts::Expression ExprType, rank_type... Indices>
 struct detail::ExpressionTraits<unary::PartialTrace<ExprType, Indices...>>
-    : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<ExprType,
-                                                                  true> {
+    : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<ExprType> {
     using Base = detail::ExpressionTraits<ExprType>;
     using index_remover =
         unary::detail::invert_integer_sequence<Base::extents_type::rank(),
@@ -66,16 +65,23 @@ class PartialTrace
     using extents_type = traits::extents_type;
     using value_type = traits::value_type;
     using Base = UnaryExpressionBase<self_type, ExprType>;
-    using Base::extent;
     using Base::expression;
 
     PartialTrace(const ExprType& b)
-        : Base(b, traits::index_remover::get_extents(b.extents())) {}
+        : Base(b), m_extents(traits::index_remover::get_extents(b.extents())) {}
     PartialTrace() = delete;
     PartialTrace& operator=(const PartialTrace&) = delete;
     PartialTrace& operator=(PartialTrace&&) = delete;
     PartialTrace(PartialTrace&& o) = default;
     PartialTrace(const PartialTrace& o) = default;
+
+    constexpr auto extent(rank_type i) const -> index_type {
+        return m_extents.extent(i);
+    }
+
+    constexpr auto extents() const -> extents_type {
+        return m_extents;
+    }
 
     template <typename>
     struct slice_type_;
@@ -130,6 +136,8 @@ class PartialTrace
         }
     }
 
+private:
+    extents_type m_extents;
 };
 
 }  // namespace unary

@@ -44,9 +44,20 @@ struct BasicExpressionTraits {
   consteval auto is_alias_free() -> bool {
     return access_features.is_alias_free;
   }
+
+  /// Coefficient-consistent means iterating over coefficients gives correct
+  /// results without aliasing issues (i.e. writing a[i] doesn't affect a[j]).
+  constexpr static bool is_coefficient_consistent = AF.is_alias_free;
+
+  constexpr static bool is_writable = is_assignable();
 };
 
 template <typename T> struct ExpressionTraits;
+
+/// Const-forwarding: traits for const-qualified expressions forward to the
+/// unqualified version, since constness doesn't change expression structure.
+template <typename T>
+struct ExpressionTraits<const T> : public ExpressionTraits<T> {};
 
 /// This concept is designed for debug / testing that an extents traits is
 /// reasonable
@@ -67,12 +78,10 @@ concept ExpressionTraitsConcept =
       /// entry
       { et.is_alias_free() } -> std::same_as<bool>;
       /// A const expression that is assignable is NOT allowed
-    } && (!(ET::is_const() && ET::is_assignable()));
-
-template <typename T> struct ExpressionTraits;
+    } && (!(ET::is_const_valued() && ET::is_assignable()));
 
 // NOTE: template parameters should NOT be used in this struct so that derived
-// can overwrite them
+// can overwrite them.
 template <typename ValueType = void, typename Extents = zipper::dextents<0>>
 struct DefaultExpressionTraits {
   /// Value-qualified type
@@ -81,14 +90,42 @@ struct DefaultExpressionTraits {
   using element_type = std::remove_cvref_t<ValueType>;
 
   using extents_type = Extents;
-
-  constexpr static bool is_const = std::is_const_v<value_type>;
-  constexpr static bool is_assignable = false;
+  using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
 
   constexpr static bool is_resizable = false;
 
   /// guarantees that V(j) = f(...) cannot depend on V(k) for j != k)
   constexpr static bool is_alias_free = false;
+
+  // New-style feature structs required by ExpressionBase
+  constexpr static AccessFeatures access_features = {
+      .is_const = std::is_const_v<value_type>,
+      .is_reference = false,
+      .is_alias_free = is_alias_free,
+  };
+  constexpr static ShapeFeatures shape_features = {
+      .is_resizable = is_resizable,
+  };
+
+  // New-style consteval functions required by ExpressionBase
+  consteval static auto is_const_valued() -> bool {
+    return access_features.is_const;
+  }
+  consteval static auto is_reference_valued() -> bool {
+    return access_features.is_reference;
+  }
+  consteval static auto is_assignable() -> bool {
+    return access_features.is_assignable();
+  }
+  consteval static auto is_referrable() -> bool {
+    return is_reference_valued();
+  }
+
+  /// Coefficient-consistent means iterating over coefficients gives correct
+  /// results without aliasing issues.
+  constexpr static bool is_coefficient_consistent = is_alias_free;
+
+  constexpr static bool is_writable = is_assignable();
 
   /// returns true if a dimension is sparse, false if dense. Should be used to
   /// hint if a dimension should be iterated via a full loop or an iterator

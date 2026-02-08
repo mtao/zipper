@@ -44,15 +44,17 @@ class MatrixVectorProduct
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
 
     MatrixVectorProduct(const A& a, const B& b)
-        requires(extents_traits::is_dynamic)
-        : Base(a, b, extents_type{a.extent(0)}) {
+        : Base(a, b) {
         assert(a.extent(1) == b.extent(0));
     }
 
-    MatrixVectorProduct(const A& a, const B& b)
-        requires(extents_traits::is_static)
-        : Base(a, b) {
-        assert(a.extent(1) == b.extent(0));
+    constexpr auto extent(rank_type i) const -> index_type {
+        assert(i == 0);
+        return lhs().extent(0);
+    }
+
+    constexpr auto extents() const -> extents_type {
+        return extents_traits::make_extents_from(*this);
     }
     value_type coeff(index_type a) const {
         value_type v = 0;
@@ -85,6 +87,7 @@ class MatrixVectorProduct
         // }
         return v;
     }
+
 };
 
 template <zipper::concepts::RankedExpression<2> A,

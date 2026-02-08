@@ -309,7 +309,7 @@ template <zipper::concepts::Expression ExprType,
           typename... Slices>
 struct detail::ExpressionTraits<unary::Slice<ExprType, Slices...>>
     : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<
-          ExprType, true> {
+          ExprType> {
     using Base = detail::ExpressionTraits<ExprType>;
 
     template <rank_type R>
@@ -363,8 +363,17 @@ class Slice : public UnaryExpressionBase<Slice<ExprType, Slices...>,
         return *this;
     }
     Slice(ExprType &b, const Slices &...slices)
-        : Base(b, traits::extents_helper::get_extents(b.extents(), slices...)),
+        : Base(b),
+          m_extents(traits::extents_helper::get_extents(b.extents(), slices...)),
           m_slices(_detail_slice::slice_helper<std::decay_t<Slices>>(slices)...) {}
+
+    constexpr auto extent(rank_type i) const -> index_type {
+        return m_extents.extent(i);
+    }
+
+    constexpr auto extents() const -> extents_type {
+        return m_extents;
+    }
 
     template <rank_type K, typename... Args>
     index_type get_index(Args &&...a) const {
@@ -432,6 +441,7 @@ class Slice : public UnaryExpressionBase<Slice<ExprType, Slices...>,
     }
 
    private:
+    extents_type m_extents;
     slice_storage_type m_slices;
 };
 

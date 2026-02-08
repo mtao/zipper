@@ -57,7 +57,6 @@ struct detail::ExpressionTraits<binary::FormTensorProduct<A, B>>
     static_assert(extents_type::rank() ==
                   partial_trace_type::extents_type::rank());
     using value_type = partial_trace_traits::value_type;
-    constexpr static bool holds_extents = false;
 };
 
 namespace binary {
@@ -87,7 +86,12 @@ class FormTensorProduct : public ExpressionBase<FormTensorProduct<A, B>> {
     value_type coeff(Args&&... args) const {
         return m_trace(std::forward<Args>(args)...);
     }
-    const extents_type& extents() const { return m_trace.extents(); }
+    constexpr auto extent(rank_type i) const -> index_type {
+        return m_trace.extent(i);
+    }
+    constexpr auto extents() const -> extents_type {
+        return extents_traits::make_extents_from(*this);
+    }
 
    private:
     traits::tensor_product_type m_tensor;

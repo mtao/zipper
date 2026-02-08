@@ -19,7 +19,7 @@ template <zipper::concepts::QualifiedExpression QualifiedExprType,
 struct detail::ExpressionTraits<
     unary::Swizzle<QualifiedExprType, Indices...>>
     : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<
-          QualifiedExprType, true> {
+          QualifiedExprType> {
   using ExprType = std::decay_t<QualifiedExprType>;
   using swizzler_type = zipper::detail::extents::ExtentsSwizzler<Indices...>;
 
@@ -47,7 +47,6 @@ public:
   using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
   using swizzler_type = traits::swizzler_type;
   using Base = UnaryExpressionBase<self_type, QualifiedExprType>;
-  using Base::extent;
   using Base::expression;
   constexpr static rank_type internal_rank = ExprType::extents_type::rank();
   constexpr static std::array<rank_type, internal_rank>
@@ -58,7 +57,20 @@ public:
   auto operator=(const Swizzle &) -> Swizzle & = delete;
   auto operator=(Swizzle &&) -> Swizzle & = delete;
   Swizzle(QualifiedExprType &b)
-      : Base(b, swizzler_type::swizzle_extents(b.extents())) {}
+      : Base(b) {}
+
+  constexpr auto extent(rank_type i) const -> index_type {
+      constexpr std::array<index_type, sizeof...(Indices)> swizzle_map = {{Indices...}};
+      if (swizzle_map[i] == std::dynamic_extent) {
+          return 1;
+      } else {
+          return expression().extent(swizzle_map[i]);
+      }
+  }
+
+  constexpr auto extents() const -> extents_type {
+    return extents_traits::make_extents_from(*this);
+  }
 
   template <typename... Args>
     requires(extents_type::rank() == sizeof...(Args))

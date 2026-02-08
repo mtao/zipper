@@ -56,9 +56,7 @@ public:
   using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
   using Base = BinaryExpressionBase<self_type, const A, const B>;
   using value_type = traits::value_type;
-  constexpr static bool holds_extents = traits::holds_extents;
   constexpr static bool is_static = extents_traits::is_static;
-  static_assert(holds_extents);
 
   using a_extents_type = traits::ATraits::extents_type;
   using b_extents_type = traits::BTraits::extents_type;
@@ -86,22 +84,7 @@ public:
   using Base::lhs;
   using Base::rhs;
   Operation(const A &a, const B &b, const Op &op = {})
-    requires(is_static)
       : Base(a, b), m_op(op) {
-    if (!valid_input_extents(a.extents(), b.extents())) {
-      throw std::runtime_error(
-          fmt::format("Operation between {} and {} is invalid",
-#if defined(ZIPPER_FMT_OVERRIDES_DISABLED)
-                      zipper::utils::extents::as_array(a.extents()),
-                      zipper::utils::extents::as_array(b.extents())));
-#else
-                      a.extents(), b.extents()));
-#endif
-    }
-  }
-  Operation(const A &a, const B &b, const Op &op = {})
-    requires(!is_static)
-      : Base(a, b, extents_traits::convert_from(a.extents())), m_op(op) {
     if (!valid_input_extents(a.extents(), b.extents())) {
       throw std::runtime_error(
           fmt::format("Operation between {} and {} is invalid",
@@ -116,6 +99,14 @@ public:
 
   value_type get_value(const auto &a, const auto &b) const {
     return m_op(a, b);
+  }
+
+  constexpr auto extent(rank_type i) const -> index_type {
+    return lhs().extent(i);
+  }
+
+  constexpr auto extents() const -> extents_type {
+    return extents_traits::make_extents_from(*this);
   }
 
 private:

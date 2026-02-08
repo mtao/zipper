@@ -53,7 +53,7 @@ class Homogeneous;
 template <unary::HomogeneousMode Mode, zipper::concepts::Expression Child>
 struct detail::ExpressionTraits<unary::Homogeneous<Mode, Child>>
     : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<
-          Child, true> {
+          Child> {
   using ChildTraits = ExpressionTraits<Child>;
   using value_type = typename ChildTraits::value_type;
 
@@ -64,7 +64,6 @@ struct detail::ExpressionTraits<unary::Homogeneous<Mode, Child>>
   static extents_type make_extents(const ChildTraits::extents_type &a) {
     return helper::run(a);
   }
-  constexpr static bool holds_extents = true;
   // Homogeneous computes values (returns literal 0/1 for appended row) — not
   // referrable or assignable
   constexpr static zipper::detail::AccessFeatures access_features = {
@@ -105,11 +104,19 @@ public:
   using Base::expression;
 
   Homogeneous(Child &a)
-    requires(is_static)
       : Base(a) {}
-  Homogeneous(Child &a)
-    requires(!is_static)
-      : Base(a, traits::make_extents(a.extents())) {}
+
+  constexpr auto extent(rank_type i) const -> index_type {
+    if (i == 0) {
+      return expression().extent(0) + 1;
+    } else {
+      return expression().extent(i);
+    }
+  }
+
+  constexpr auto extents() const -> extents_type {
+    return extents_traits::make_extents_from(*this);
+  }
 
   template <typename... Args>
   value_type coeff(Args &&...args) const {

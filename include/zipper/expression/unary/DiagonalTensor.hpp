@@ -18,7 +18,7 @@ template <zipper::concepts::QualifiedExpression ExpressionType, rank_type N>
   requires(ExpressionType::extents_type::rank() == 1)
 struct detail::ExpressionTraits<unary::DiagonalTensor<ExpressionType, N>>
     : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<
-          ExpressionType, true> {
+          ExpressionType> {
   using Base = detail::ExpressionTraits<ExpressionType>;
   using value_type = Base::value_type;
   using base_extents_type = Base::extents_type;
@@ -61,14 +61,10 @@ public:
   using extents_type = traits::extents_type;
   using value_type = traits::value_type;
   using Base = UnaryExpressionBase<self_type, ExpressionType>;
-  using Base::extent;
   using Base::expression;
   using child_traits = traits::Base;
   using child_extents_type = child_traits::extents_type;
   using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
-
-  constexpr static bool holds_extents = traits::holds_extents;
-  static_assert(holds_extents);
 
   DiagonalTensor(const DiagonalTensor &o)
       : DiagonalTensor(o.expression()) {}
@@ -81,7 +77,16 @@ public:
       -> DiagonalTensor & = delete;
 
   DiagonalTensor(ExpressionType &b)
-      : Base(b, traits::make_extents(b.extents())) {}
+      : Base(b) {}
+
+  constexpr auto extent(rank_type i) const -> index_type {
+    // All dimensions have the same extent as the 1D child
+    return expression().extent(0);
+  }
+
+  constexpr auto extents() const -> extents_type {
+    return extents_traits::make_extents_from(*this);
+  }
 
   template <rank_type K>
   index_type
@@ -146,6 +151,7 @@ public:
   {
     expression::detail::AssignHelper<V, self_type>::assign(v, *this);
   }
+
 };
 
 } // namespace unary

@@ -21,8 +21,7 @@ template <zipper::concepts::QualifiedExpression ExprType,
           template <typename> typename Reduction, rank_type... Indices>
 struct detail::ExpressionTraits<
     unary::PartialReduction<ExprType, Reduction, Indices...>>
-    : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<ExprType,
-                                                                  true> {
+    : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<ExprType> {
     using Base = detail::ExpressionTraits<std::decay_t<ExprType>>;
     using child_extents_type = Base::extents_type;
     using index_remover =
@@ -67,18 +66,25 @@ class PartialReduction
     using traits = zipper::expression::detail::ExpressionTraits<self_type>;
     using extents_type = traits::extents_type;
     using value_type = traits::value_type;
-    using Base = UnaryExpressionBase<self_type, ExprType>;
-    using Base::extent;
+     using Base = UnaryExpressionBase<self_type, ExprType>;
     using Base::expression;
     using child_extents_type = traits::child_extents_type;
 
     PartialReduction(ExprType& b)
-        : Base(b, traits::index_remover::get_extents(b.extents())) {}
+        : Base(b), m_extents(traits::index_remover::get_extents(b.extents())) {}
     PartialReduction() = delete;
     PartialReduction& operator=(const PartialReduction&) = delete;
     PartialReduction& operator=(PartialReduction&&) = delete;
     PartialReduction(PartialReduction&& o) = default;
     PartialReduction(const PartialReduction& o) = default;
+
+    constexpr auto extent(rank_type i) const -> index_type {
+        return m_extents.extent(i);
+    }
+
+    constexpr auto extents() const -> extents_type {
+        return m_extents;
+    }
 
     template <typename>
     struct slice_type_;
@@ -130,6 +136,8 @@ class PartialReduction
             std::forward<Args>(idxs)...);
     }
 
+private:
+    extents_type m_extents;
 };
 
 }  // namespace unary

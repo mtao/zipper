@@ -27,16 +27,18 @@ class CoeffProduct : public BinaryExpressionBase<CoeffProduct<A, B>, const A, co
     using traits = zipper::expression::detail::ExpressionTraits<self_type>;
     using Base = BinaryExpressionBase<self_type, const A, const B>;
     using Base::Base;
-    using Base::extent;
-    using Base::extents;
     using Base::lhs;
     using Base::rhs;
     using extents_type = traits::extents_type;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
 
-    CoeffProduct(const A& a, const B& b)
-        requires(!extents_traits::is_static)
-        : Base(a, b, a.extents()) {}
+    constexpr auto extent(rank_type i) const -> index_type {
+        return lhs().extent(i);
+    }
+
+    constexpr auto extents() const -> extents_type {
+        return extents_traits::make_extents_from(*this);
+    }
 
     template <typename... Args>
     auto coeff(Args&&... idxs) const {

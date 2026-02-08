@@ -14,7 +14,7 @@ TEST_CASE("test_mdarray", "[expression][nullary]") {
   auto c = MDArray<double, extents<>>();
 
   // Check extents
-  static_assert(a.extents().rank() == 1);
+  static_assert(decltype(a)::extents_type::rank() == 1);
   REQUIRE(a.extents().rank() == 1);
   CHECK(a.extent(0) == 3);
 

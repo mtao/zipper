@@ -49,22 +49,25 @@ class CrossProduct : public BinaryExpressionBase<CrossProduct<A, B>, const A, co
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
 
     CrossProduct(const A& a, const B& b)
-        requires(extents_traits::is_dynamic)
-        : Base(a, b, extents_type{a.extent(0)}) {
+        : Base(a, b) {
         assert(a.extent(0) == b.extent(0));
         assert(a.extent(0) == 3);
     }
 
-    CrossProduct(const A& a, const B& b)
-        requires(extents_traits::is_static)
-        : Base(a, b) {
-        assert(a.extent(0) == b.extent(0));
+    constexpr auto extent(rank_type i) const -> index_type {
+        assert(i == 0);
+        return lhs().extent(0);
+    }
+
+    constexpr auto extents() const -> extents_type {
+        return extents_traits::make_extents_from(*this);
     }
     value_type coeff(index_type a) const {
         rank_type b = (a + 1) % 3;
         rank_type c = (a + 2) % 3;
         return lhs()(b) * rhs()(c) - lhs()(c) * rhs()(b);
     }
+
 };
 
 template <zipper::concepts::RankedExpression<1> A,

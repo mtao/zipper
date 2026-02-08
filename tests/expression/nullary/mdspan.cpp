@@ -19,11 +19,11 @@ TEST_CASE("test_mdspan_construction", "[mdspan][nullary][dense]") {
         caspan(cspan);
     static_assert(aspan.rank() == 1);
     static_assert(aspan.extent(0) == 3);
-    static_assert(aspan.extents() == zipper::extents<3>{});
+    REQUIRE(aspan.extents() == zipper::extents<3>{});
 
     static_assert(caspan.rank() == 1);
     static_assert(caspan.extent(0) == 3);
-    static_assert(caspan.extents() == zipper::extents<3>{});
+    REQUIRE(caspan.extents() == zipper::extents<3>{});
 
     // check for values first
     for (size_t j = 0; j < 3; ++j) {

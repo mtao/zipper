@@ -10,14 +10,14 @@ template <typename A, typename B> struct cast {
 };
 } // namespace detail
 
-// converts an underlying view to a new type
+// converts an underlying expression to a new type
 template <typename A, zipper::concepts::Expression Child>
 using Cast = CoefficientWiseOperation<
     const Child, detail::cast<typename zipper::expression::detail::
                                   ExpressionTraits<Child>::value_type,
                               A>>;
 
-// converts b into a view of type A
+// converts b into an expression of type A
 template <typename A, zipper::concepts::Expression B> auto cast(B &b) {
   return Cast<A, B>(b);
 }

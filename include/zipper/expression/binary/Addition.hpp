@@ -38,9 +38,14 @@ class Addition : public BinaryExpressionBase<Addition<A, B>, const A, const B> {
     using Base::Base;
     using Base::lhs;
     using Base::rhs;
-    Addition(const A& a, const B& b)
-        requires(!extents_traits::is_static)
-        : Base(a, b, a.extents()) {}
+
+    constexpr auto extent(rank_type i) const -> index_type {
+        return lhs().extent(i);
+    }
+
+    constexpr auto extents() const -> extents_type {
+        return extents_traits::make_extents_from(*this);
+    }
 
     template <typename... Args>
         requires concepts::IndexPack<Args...>
@@ -48,6 +53,7 @@ class Addition : public BinaryExpressionBase<Addition<A, B>, const A, const B> {
         static_assert(sizeof...(idxs) == extents_type::rank());
         return lhs()(idxs...) + rhs()(idxs...);
     }
+
 };
 
 template <zipper::concepts::Expression A, zipper::concepts::Expression B>

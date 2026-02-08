@@ -14,7 +14,7 @@ template <zipper::concepts::QualifiedExpression ExpressionType> class Diagonal;
 template <zipper::concepts::QualifiedExpression ExpressionType>
 struct detail::ExpressionTraits<unary::Diagonal<ExpressionType>>
     : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<
-          ExpressionType, true> {
+          ExpressionType> {
   using Base = detail::ExpressionTraits<ExpressionType>;
   using value_type = Base::value_type;
   using base_extents_type = Base::extents_type;
@@ -76,14 +76,10 @@ public:
   using extents_type = traits::extents_type;
   using value_type = traits::value_type;
   using Base = UnaryExpressionBase<self_type, ExpressionType>;
-  using Base::extent;
   using Base::expression;
   using child_traits = traits::Base;
   using child_extents_type = child_traits::extents_type;
   using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
-
-  constexpr static bool holds_extents = traits::holds_extents;
-  static_assert(holds_extents);
 
   Diagonal(const Diagonal &o) : Diagonal(o.expression()) {}
   Diagonal(Diagonal &&o) : Diagonal(o.expression()) {}
@@ -91,7 +87,16 @@ public:
   auto operator=(const Diagonal &) -> Diagonal & = delete;
   auto operator=(Diagonal &&) -> Diagonal & = delete;
 
-  Diagonal(ExpressionType &b) : Base(b, traits::get_extents(b.extents())) {}
+  Diagonal(ExpressionType &b) : Base(b) {}
+
+  constexpr auto extent(rank_type i) const -> index_type {
+    assert(i == 0);
+    return traits::get_min_extent(expression().extents());
+  }
+
+  constexpr auto extents() const -> extents_type {
+    return extents_traits::make_extents_from(*this);
+  }
 
   template <rank_type K>
   auto get_index(zipper::concepts::IndexPackTuple auto const &a) const
@@ -152,6 +157,7 @@ public:
   {
     expression::detail::AssignHelper<V, self_type>::assign(v, *this);
   }
+
 };
 
 template <zipper::concepts::QualifiedExpression ExpressionType>

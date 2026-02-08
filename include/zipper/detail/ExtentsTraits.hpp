@@ -80,6 +80,21 @@ template <concepts::Extents Extents> struct ExtentsTraits {
 
   constexpr static std::array<rank_type, rank_dynamic> dynamic_indices =
       dynamic_indices_helper::value;
+
+  /// Constructs an extents_type from any object that provides
+  /// extent(rank_type) -> index_type.  Only the dynamic extents are
+  /// forwarded to the constructor; static extents are known at compile time.
+  template <typename HasExtent>
+  static constexpr auto make_extents_from(const HasExtent &src)
+      -> extents_type {
+    if constexpr (is_static) {
+      return extents_type{};
+    } else {
+      return [&]<std::size_t... N>(std::index_sequence<N...>) -> auto {
+        return extents_type{src.extent(dynamic_indices[N])...};
+      }(std::make_index_sequence<rank_dynamic>{});
+    }
+  }
 };
 } // namespace zipper::detail
 #endif

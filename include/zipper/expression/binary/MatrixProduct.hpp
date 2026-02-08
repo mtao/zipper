@@ -60,7 +60,6 @@ class MatrixProduct : public BinaryExpressionBase<MatrixProduct<A, B>, const A, 
     using ExpressionBase = expression::ExpressionBase<self_type>;
     using traits = zipper::expression::detail::ExpressionTraits<self_type>;
     using value_type = traits::value_type;
-    using Base::extent;
     using Base::lhs;
     using Base::rhs;
     using lhs_traits = traits::ATraits;
@@ -70,9 +69,20 @@ class MatrixProduct : public BinaryExpressionBase<MatrixProduct<A, B>, const A, 
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
 
     MatrixProduct(const A& a, const B& b)
-        : Base(a, b,
-               traits::ConvertExtentsUtil::merge(a.extents(), b.extents())) {
+        : Base(a, b) {
         assert(a.extent(1) == b.extent(0));
+    }
+
+    constexpr auto extent(rank_type i) const -> index_type {
+        if (i == 0) {
+            return lhs().extent(0);
+        } else {
+            return rhs().extent(1);
+        }
+    }
+
+    constexpr auto extents() const -> extents_type {
+        return extents_traits::make_extents_from(*this);
     }
 
     value_type coeff(index_type a, index_type b) const {
@@ -106,6 +116,7 @@ class MatrixProduct : public BinaryExpressionBase<MatrixProduct<A, B>, const A, 
         // }
         return v;
     }
+
 };
 
 template <zipper::concepts::RankedExpression<2> A,

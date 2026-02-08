@@ -2,31 +2,19 @@
 #define ZIPPER_EXPRESSION_UNARY_COEFFICIENTWISE_OPERATION_HPP
 
 #include "UnaryExpressionBase.hpp"
-// TODO: perhaps switch back to using scalaroperation concept
-// #include "concepts/ScalarOperation.hpp"
 #include "zipper/expression/detail/ExpressionTraits.hpp"
 
 namespace zipper::expression {
 namespace unary {
-// TODO: operation should inherit std::unary_function<T,U>
-template <zipper::concepts::Expression B,
-          //
-          // concepts::ScalarOperation<typename B::value_type> Operation,
-          typename Op>
-// concepts::ScalarOperation<typename Child::value_type>
+template <zipper::concepts::Expression B, typename Op>
 class CoefficientWiseOperation;
 
 } // namespace unary
-template <zipper::concepts::Expression Child,
-          //
-          // unary::concepts::ScalarOperation<typename Child::value_type>
-          // Operation,
-          typename Op>
-//
+template <zipper::concepts::Expression Child, typename Op>
 struct expression::detail::ExpressionTraits<
     unary::CoefficientWiseOperation<Child, Op>>
     : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<
-          Child, false> {
+          Child> {
   using child_traits = ExpressionTraits<Child>;
   using value_type = std::decay_t<decltype(std::declval<Op>()(
       std::declval<typename child_traits::value_type>()))>;
@@ -56,12 +44,7 @@ struct expression::detail::ExpressionTraits<
 // represents a coefficient-wise transformation of an underlyng expression
 namespace unary {
 
-template <zipper::concepts::Expression Child,
-          // concepts::ScalarOperation<typename Child::value_type> Operation,
-          typename Operation>
-//
-
-// requires(concepts::ScalarOperation<Child::value_type,Operation>)
+template <zipper::concepts::Expression Child, typename Operation>
 class CoefficientWiseOperation
     : public UnaryExpressionBase<CoefficientWiseOperation<Child, Operation>,
                                  Child> {
@@ -88,9 +71,6 @@ public:
 private:
   Operation m_op;
 
-  // debug typedef
-  constexpr static bool holds_extents = traits::holds_extents;
-  static_assert(!holds_extents);
 };
 
 template <typename A, zipper::concepts::Expression B>

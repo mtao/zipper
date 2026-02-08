@@ -54,13 +54,8 @@ public:
   static consteval auto static_extent(rank_type i) -> index_type {
     return extents_type::static_extent(i);
   }
-  constexpr auto extents() const -> decltype(auto) {
-    auto &&r = derived().extents();
-    // accepts any sort of qualification as long as the return type is
-    // convertible to a extents_type
-    static_assert(
-        std::is_same_v<std::remove_cvref_t<decltype(r)>, extents_type>);
-    return r;
+  constexpr auto extents() const -> extents_type {
+    return derived().extents();
   }
 
   [[nodiscard]] constexpr auto size() const -> size_t {

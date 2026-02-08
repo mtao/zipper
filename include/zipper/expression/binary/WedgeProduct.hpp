@@ -85,7 +85,6 @@ class WedgeProduct : public BinaryExpressionBase<WedgeProduct<A, B>, const A, co
     using ExpressionBase = expression::ExpressionBase<self_type>;
     using traits = zipper::expression::detail::ExpressionTraits<self_type>;
     using value_type = traits::value_type;
-    using Base::extent;
     using Base::lhs;
     using Base::rhs;
     constexpr static rank_type lhs_rank = traits::lhs_rank;
@@ -95,11 +94,19 @@ class WedgeProduct : public BinaryExpressionBase<WedgeProduct<A, B>, const A, co
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
 
     WedgeProduct(const A& a, const B& b)
-        requires(extents_traits::is_static)
         : Base(a, b) {}
-    WedgeProduct(const A& a, const B& b)
-        requires(!extents_traits::is_static)
-        : Base(a, b, traits::CEV::merge(a.extents(), b.extents())) {}
+
+    constexpr auto extent(rank_type i) const -> index_type {
+        if (i < lhs_rank) {
+            return lhs().extent(i);
+        } else {
+            return rhs().extent(i - lhs_rank);
+        }
+    }
+
+    constexpr auto extents() const -> extents_type {
+        return extents_traits::make_extents_from(*this);
+    }
 
     template <bool DoOffset, typename... Args, rank_type... ranks>
     auto lhs_value(std::integer_sequence<rank_type, ranks...>,
@@ -128,8 +135,9 @@ class WedgeProduct : public BinaryExpressionBase<WedgeProduct<A, B>, const A, co
                      std::forward<Args>(args)...) *
                      rhs_value<false>(
                          std::make_integer_sequence<rank_type, rhs_rank>{},
-                         std::forward<Args>(args)...);
+                          std::forward<Args>(args)...);
     }
+
 };
 
 template <zipper::concepts::Expression A, zipper::concepts::Expression B>

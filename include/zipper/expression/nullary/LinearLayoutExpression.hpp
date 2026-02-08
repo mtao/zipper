@@ -56,14 +56,14 @@ public:
                                            layout_policy, accessor_policy>;
 
   constexpr auto mapping() const -> const mapping_type & { return m_mapping; }
-  constexpr auto extents() const -> const extents_type & {
+  constexpr auto extents() const -> extents_type {
     return mapping().extents();
   }
-  [[nodiscard]] constexpr auto rank() const -> rank_type {
-    return extents().rank();
+  [[nodiscard]] static constexpr auto rank() -> rank_type {
+    return extents_type::rank();
   }
   [[nodiscard]] constexpr auto extent(index_type i) const -> index_type {
-    return extents().extent(i);
+    return m_mapping.extents().extent(i);
   }
 
   LinearLayoutExpression(const LinearLayoutExpression &) = default;

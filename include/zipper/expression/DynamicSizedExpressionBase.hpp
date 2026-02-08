@@ -26,13 +26,7 @@ public:
   {}
 
   constexpr auto extents() const -> extents_type {
-    using ET = extents_traits::dynamic_indices_helper;
-    auto run = [this]<rank_type... N>(
-                   std::integer_sequence<rank_type, N...>) -> extents_type {
-      return extents_type{extent(std::get<ET::dynamic_local_indnices>(N))...};
-    };
-
-    return run();
+    return extents_traits::make_extents_from(derived());
   }
 };
 } // namespace zipper::expression

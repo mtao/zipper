@@ -7,61 +7,66 @@
 namespace zipper::expression::unary {
 
 namespace detail {
-template <zipper::concepts::Expression Child, bool _holds_extents = false>
-struct DefaultUnaryExpressionTraits
-    : public expression::detail::DefaultExpressionTraits<
-          typename expression::detail::ExpressionTraits<Child>::value_type,
-          typename expression::detail::ExpressionTraits<Child>::extents_type> {
-  // to pass a base type to the UnaryExpressionBase
-  constexpr static bool holds_extents = _holds_extents;
-  constexpr static bool is_const = std::is_const_v<Child>;
-  template <typename Derived>
-  using base_traits = expression::detail::ExpressionTraits<Child>;
-  using base_value_type = base_traits::value_type;
-  constexpr static bool is_coefficient_consistent =
-      base_traits::is_coefficient_consistent;
-  constexpr static bool is_value_based = true;
-  constexpr static bool is_assignable = base_traits::is_assignable && !is_const;
 
-  constexpr static bool is_rvalue_reference = std::is_rvalue_reference_v<Child>;
-  constexpr static bool is_lvalue_reference = std::is_lvalue_reference_v<Child>;
-  using child_type_ = std::decay_t<Child>;
-  using child_type_refed =
-      std::conditional<is_lvalue_reference, child_type_ &, child_type_>;
-  using child_type = std::conditional_t<is_assignable, child_type_refed,
-                                        const child_type_refed>;
+/// Helper to compute access_features that accounts for const qualification
+/// of the child expression. When Child is const-qualified, is_const must
+/// be true regardless of what the child's own traits report.
+namespace _dut_detail {
+template <concepts::QualifiedExpression Child>
+consteval auto const_corrected_access_features()
+    -> zipper::detail::AccessFeatures {
+  constexpr auto base =
+      expression::detail::ExpressionTraits<Child>::access_features;
+  return {
+      .is_const = base.is_const ||
+                  std::is_const_v<std::remove_reference_t<Child>>,
+      .is_reference = base.is_reference,
+      .is_alias_free = base.is_alias_free,
+  };
+}
+} // namespace _dut_detail
+
+/// Default traits for unary expressions. Inherits from BasicExpressionTraits
+/// to provide the access_features/shape_features interface.
+template <zipper::concepts::Expression Child>
+struct DefaultUnaryExpressionTraits
+    : public expression::detail::BasicExpressionTraits<
+          typename expression::detail::ExpressionTraits<Child>::value_type,
+          typename expression::detail::ExpressionTraits<Child>::extents_type,
+          _dut_detail::const_corrected_access_features<Child>(),
+          expression::detail::ShapeFeatures{.is_resizable = false}> {
+  using child_traits = expression::detail::ExpressionTraits<Child>;
+  using base_value_type = typename child_traits::value_type;
+
+  constexpr static bool is_value_based = true;
+  constexpr static bool is_coefficient_consistent =
+      child_traits::is_coefficient_consistent;
 };
 } // namespace detail
 
 template <typename Derived, zipper::concepts::Expression ChildType>
-class UnaryExpressionBase : public expression::detail::ExpressionTraits<
-                                Derived>::template base_type<Derived> {
+class UnaryExpressionBase
+    : public expression::ExpressionBase<Derived> {
 public:
   using self_type = UnaryExpressionBase<Derived, ChildType>;
   using traits = zipper::expression::detail::ExpressionTraits<Derived>;
-  using extents_type = traits::extents_type;
-  using value_type = traits::value_type;
+  using extents_type = typename traits::extents_type;
+  using value_type = typename traits::value_type;
   using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
-  constexpr static bool holds_extents = traits::holds_extents;
   constexpr static bool is_static = extents_traits::is_static;
 
-  using Base = typename traits::template base_type<Derived>;
-  // using Base =
-  //     expression::detail::ExpressionTraits<Derived>::template
-  //     base_type<Derived>;
-  using Base::extent;
+  using Base = expression::ExpressionBase<Derived>;
   constexpr static bool is_value_based = traits::is_value_based;
-  constexpr static bool is_const = traits::is_const;
-  constexpr static bool is_assignable = traits::is_assignable;
+  constexpr static bool is_const_valued = traits::access_features.is_const;
+  constexpr static bool is_assignable = traits::is_assignable();
   using child_type =
       std::conditional_t<is_assignable, ChildType, const ChildType>;
-  // using child_type = typename traits::child_type;
 
   auto derived() -> Derived & { return static_cast<Derived &>(*this); }
   auto derived() const -> const Derived & {
     return static_cast<const Derived &>(*this);
   }
-  using child_value_type = traits::base_value_type;
+  using child_value_type = typename traits::base_value_type;
   UnaryExpressionBase() = delete;
 
   UnaryExpressionBase(const UnaryExpressionBase &) = default;
@@ -69,17 +74,18 @@ public:
   auto operator=(const UnaryExpressionBase &) -> UnaryExpressionBase & = delete;
   auto operator=(UnaryExpressionBase &&) -> UnaryExpressionBase & = delete;
   UnaryExpressionBase(child_type &b)
-    requires(!holds_extents || is_static)
       : m_expression(b) {}
-  UnaryExpressionBase(child_type &b, const extents_type &e)
-      : Base(e), m_expression(b) {}
 
-  constexpr auto extents() const -> const extents_type & {
-    if constexpr (holds_extents) {
-      return Base::extents();
-    } else {
-      return m_expression.extents();
-    }
+  /// Primary extent accessor — delegates directly to child expression.
+  /// Derived classes that change shape should shadow this.
+  constexpr auto extent(rank_type i) const -> index_type {
+    return m_expression.extent(i);
+  }
+
+  /// Default extents() constructs from extent() calls.
+  /// Derived classes that have different extents shadow this.
+  constexpr auto extents() const -> extents_type {
+    return extents_traits::make_extents_from(*this);
   }
 
   auto get_value(const child_value_type &value) const -> decltype(auto)

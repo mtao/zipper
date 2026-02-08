@@ -53,7 +53,7 @@ struct RepeatHelper {
 template <unary::RepeatMode Mode, rank_type Count,
           zipper::concepts::QualifiedExpression Child>
 struct detail::ExpressionTraits<unary::Repeat<Mode, Count, Child>>
-    : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<Child, true> {
+    : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<Child> {
     using BaseTraits = expression::detail::ExpressionTraits<Child>;
     using base_extents_type = typename BaseTraits::extents_type;
     constexpr static bool is_writable = false;
@@ -106,11 +106,28 @@ class Repeat : public UnaryExpressionBase<Repeat<Mode, Count, Child>, Child> {
     constexpr static rank_type pad_offset = traits::offset_rank;
 
     Repeat(const Child& a)
-        requires(is_static)
         : Base(a) {}
-    Repeat(const Child& a)
-        requires(!is_static)
-        : Base(a, traits::make_extents(a.extents())) {}
+
+    constexpr auto extent(rank_type i) const -> index_type {
+        if constexpr (Mode == RepeatMode::Left) {
+            if (i < Count) {
+                return extents_type::static_extent(i);  // dummy dim (0)
+            } else {
+                return expression().extent(i - Count);
+            }
+        } else {
+            if (i < base_rank) {
+                return expression().extent(i);
+            } else {
+                return extents_type::static_extent(i);  // dummy dim (0)
+            }
+        }
+    }
+
+    constexpr auto extents() const -> extents_type {
+        return extents_traits::make_extents_from(*this);
+    }
+
     using Base::expression;
     template <typename... Args, rank_type... ranks>
     auto get_value(std::integer_sequence<rank_type, ranks...>,
@@ -123,6 +140,7 @@ class Repeat : public UnaryExpressionBase<Repeat<Mode, Count, Child>, Child> {
         return get_value(std::make_integer_sequence<rank_type, base_rank>{},
                          std::forward<Args>(args)...);
     }
+
 };
 
 }  // namespace unary

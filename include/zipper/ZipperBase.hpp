@@ -43,7 +43,7 @@ public:
 
   auto expression() const -> const Expression & { return m_expression; }
   auto expression() -> Expression & { return m_expression; }
-  auto extents() const -> const extents_type & {
+  auto extents() const -> extents_type {
     return expression().extents();
   }
   [[nodiscard]] constexpr auto extent(rank_type i) const -> index_type {
