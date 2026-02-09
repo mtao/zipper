@@ -114,7 +114,7 @@ public:
   auto operator+=(const Other &other) -> Derived &
     requires(is_writable)
   {
-    *this = *this + other;
+    derived() = derived() + other;
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Weffc++"
     return derived();
@@ -124,7 +124,7 @@ public:
   auto operator-=(const Other &other) -> Derived &
     requires(is_writable)
   {
-    *this = *this - other;
+    derived() = derived() - other;
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Weffc++"
     return derived();
@@ -133,7 +133,7 @@ public:
   auto operator*=(const value_type &other) -> Derived &
     requires(is_writable)
   {
-    *this = other * *this;
+    derived() = other * derived();
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Weffc++"
     return derived();
@@ -142,7 +142,7 @@ public:
   auto operator/=(const value_type &other) -> Derived &
     requires(is_writable)
   {
-    *this = *this / other;
+    derived() = derived() / other;
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Weffc++"
     return derived();
