@@ -82,12 +82,37 @@ struct detail::ExpressionTraits<zipper::expression::nullary::StlMDArray<S>>
   using StlType = std::decay_t<S>;
   using value_type =
       typename zipper::storage::StlStorageInfo<StlType>::value_type;
-  constexpr static bool is_const = std::is_const_v<S>;
   using extents_type =
       typename zipper::storage::StlStorageInfo<StlType>::extents_type;
   using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
-  constexpr static bool is_writable = !is_const;
-  constexpr static bool is_coefficient_consistent = true;
-  constexpr static bool is_resizable = extents_type::rank_dynamic() > 0;
+
+  constexpr static AccessFeatures access_features = {
+      .is_const = std::is_const_v<std::remove_reference_t<S>>,
+      .is_reference = true,
+      .is_alias_free = true,
+  };
+  constexpr static ShapeFeatures shape_features = {
+      .is_resizable = extents_type::rank_dynamic() > 0,
+  };
+
+  consteval static auto is_const_valued() -> bool {
+    return access_features.is_const;
+  }
+  consteval static auto is_reference_valued() -> bool {
+    return access_features.is_reference;
+  }
+  consteval static auto is_assignable() -> bool {
+    return access_features.is_assignable();
+  }
+  consteval static auto is_referrable() -> bool {
+    return access_features.is_reference;
+  }
+  consteval static auto is_resizable() -> bool {
+    return shape_features.is_resizable;
+  }
+
+  constexpr static bool is_writable = is_assignable();
+  constexpr static bool is_coefficient_consistent =
+      access_features.is_alias_free;
 };
 } // namespace zipper::expression

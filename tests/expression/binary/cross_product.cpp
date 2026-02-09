@@ -1,6 +1,6 @@
 
 
-#include "../catch_include.hpp"
+#include "../../catch_include.hpp"
 #include <iostream>
 #include <zipper/MatrixBase.hxx>
 #include <zipper/Tensor.hpp>

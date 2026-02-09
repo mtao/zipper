@@ -7,8 +7,6 @@
 #include <zipper/expression/nullary/Identity.hpp>
 #include <zipper/expression/nullary/Random.hpp>
 #include <zipper/expression/nullary/Unit.hpp>
-#include <zipper/expression/unary/PartialTrace.hpp>
-#include <zipper/expression/unary/Swizzle.hpp>
 
 #include "catch_include.hpp"
 // #include <zipper/Vector.hpp>
@@ -88,88 +86,6 @@ TEST_CASE("test_dot", "[matrix][storage][dense]") {
 
   CHECK(a.head<2>().dot(b.head<2>()) == 6);
 }
-TEST_CASE("slicing", "[vector][storage][dense]") {
-  Vector<double, 5> a{{0, 2, 4, 6, 8}};
-  Vector<double, std::dynamic_extent> b{{1, 3, 5, 7, 9}};
-
-  {
-    auto av = a.head<2>();
-    auto bv = b.head<2>();
-    REQUIRE(av.extents() == create_dextents(2));
-    REQUIRE(bv.extents() == create_dextents(2));
-    CHECK(av(0) == 0);
-    CHECK(av(1) == 2);
-    CHECK(bv(0) == 1);
-    CHECK(bv(1) == 3);
-  }
-
-  {
-    auto av = a.head(2);
-    auto bv = b.head(2);
-    REQUIRE(av.extents() == create_dextents(2));
-    REQUIRE(bv.extents() == create_dextents(2));
-    CHECK(av(0) == 0);
-    CHECK(av(1) == 2);
-    CHECK(bv(0) == 1);
-    CHECK(bv(1) == 3);
-  }
-  {
-    auto av = a.tail<2>();
-    auto bv = b.tail<2>();
-    REQUIRE(av.extents() == create_dextents(2));
-    REQUIRE(bv.extents() == create_dextents(2));
-    CHECK(av(0) == 6);
-    CHECK(av(1) == 8);
-    CHECK(bv(0) == 7);
-    CHECK(bv(1) == 9);
-  }
-
-  {
-    auto av = a.tail(2);
-    auto bv = b.tail(2);
-    REQUIRE(av.extents() == create_dextents(2));
-    REQUIRE(bv.extents() == create_dextents(2));
-    CHECK(av(0) == 6);
-    CHECK(av(1) == 8);
-    CHECK(bv(0) == 7);
-    CHECK(bv(1) == 9);
-  }
-  {
-    auto av = a.segment<1, 2>();
-    auto bv = b.segment<1, 2>();
-    REQUIRE(av.extents() == create_dextents(2));
-    REQUIRE(bv.extents() == create_dextents(2));
-    CHECK(av(0) == 2);
-    CHECK(av(1) == 4);
-    CHECK(bv(0) == 3);
-    CHECK(bv(1) == 5);
-  }
-
-  {
-    auto av = a.segment<2>(1);
-    auto bv = b.segment<2>(1);
-    REQUIRE(av.extents() == create_dextents(2));
-    REQUIRE(bv.extents() == create_dextents(2));
-    CHECK(av(0) == 2);
-    CHECK(av(1) == 4);
-    CHECK(bv(0) == 3);
-    CHECK(bv(1) == 5);
-  }
-  {
-    auto av = a.segment(1, 2);
-    auto bv = b.segment(1, 2);
-    REQUIRE(av.extents() == create_dextents(2));
-    REQUIRE(bv.extents() == create_dextents(2));
-    CHECK(av(0) == 2);
-    CHECK(av(1) == 4);
-    CHECK(bv(0) == 3);
-    CHECK(bv(1) == 5);
-  }
-}
-
-struct A {
-  zipper::Vector<double, 3> x;
-};
 
 TEST_CASE("test_span", "[vector][storage][dense]") {
   zipper::Vector<zipper::index_type, 3> C;
@@ -240,20 +156,4 @@ TEST_CASE("test_vector_span", "[vector][storage][dense][span]") {
   // VectorBase(y) = {4, 5};
   // CHECK(v(0) == 2);
   // CHECK(v(1) == 3);
-}
-TEST_CASE("test_vector_scalar", "[vector][unary][scalar_arithmetic]") {
-  zipper::Vector<double, 3> x{0.5, 1.5, 2.5};
-
-  {
-    auto y = 3 * x;
-    CHECK(y(0) == 1.5);
-    CHECK(y(1) == 4.5);
-    CHECK(y(2) == 7.5);
-  }
-  {
-    auto y = x.as_array() + 1;
-    CHECK(y(0) == 1.5);
-    CHECK(y(1) == 2.5);
-    CHECK(y(2) == 3.5);
-  }
 }

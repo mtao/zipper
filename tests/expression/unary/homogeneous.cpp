@@ -1,6 +1,6 @@
 
-#include "../fmt_include.hpp"
-#include "../catch_include.hpp"
+#include "../../fmt_include.hpp"
+#include "../../catch_include.hpp"
 #include <iostream>
 #include <zipper/Vector.hpp>
 #include <zipper/expression/nullary/Constant.hpp>
@@ -31,5 +31,3 @@ TEST_CASE("test_homogeneous", "[vector][homogeneous]") {
     CHECK(e(2) == a(2));
     CHECK(e(3) == 0);
 }
-
-// #include <zipper/Vector.hpp>

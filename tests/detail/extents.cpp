@@ -1,5 +1,5 @@
 
-#include "catch_include.hpp"
+#include "../catch_include.hpp"
 #include <zipper/concepts/shapes.hpp>
 #include <zipper/detail/extents/dynamic_extents_indices.hpp>
 #include <zipper/utils/extents/is_compatible.hpp>

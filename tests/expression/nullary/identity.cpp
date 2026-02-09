@@ -1,5 +1,7 @@
 
 #include <zipper/expression/nullary/Identity.hpp>
+#include <zipper/expression/nullary/Random.hpp>
+#include <zipper/Matrix.hpp>
 
 #include "../../catch_include.hpp"
 
@@ -39,4 +41,60 @@ TEST_CASE("test_identity", "[expression][nullary]") {
   CHECK(c(2, 3, 1, 2) == 0);
   CHECK(c(3, 3, 3, 3) == 1);
   CHECK(c() == 1);
+}
+
+// === From test_matrix.cpp: test_identity (Identity * Matrix properties) ===
+
+TEST_CASE("test_identity_matrix", "[matrix][identity]") {
+  auto check_identity = [](const auto &i) {
+    for (index_type j = 0; j < i.extent(0); ++j) {
+      for (index_type k = 0; k < i.extent(1); ++k) {
+        if (j == k) {
+          CHECK(i(j, k) == 1);
+        } else {
+          CHECK(i(j, k) == 0);
+        }
+      }
+    }
+  };
+  Matrix<double, 3, 3> I =
+      MatrixBase(Identity<double, 3, 3>{});
+
+  check_identity(I);
+  check_identity(
+      MatrixBase(Identity<double, 3, 3>{}));
+  CHECK(
+      (I ==
+       MatrixBase(
+           Identity<double, std::dynamic_extent, 3>{
+               3})));
+  CHECK((I ==
+         MatrixBase(
+             Identity<double, std::dynamic_extent,
+                                                  std::dynamic_extent>{3, 3})));
+
+  check_identity(MatrixBase(
+      Identity<double, std::dynamic_extent,
+                                           std::dynamic_extent>{20, 20}));
+
+  Matrix<double, 3, 3> M =
+      uniform_random<double>(
+          extents<3, 3>{}, 0, 5);
+
+  Matrix<double, 3, 3> MI = I * M;
+  Matrix<double, 3, 3> IM = M * I;
+  CHECK((M == MI));
+  CHECK((M == IM));
+
+  // These last unit tests check that the identity matrix view works, but it
+  // was mostly written so i could add print statements in the matrix product
+  // to check that sparse operations are happening properly
+
+  MatrixBase IV = Identity<double, 3, 3>{};
+  Matrix<double, 3, 3> MIV = IV * M;
+  Matrix<double, 3, 3> IVM = M * IV;
+  CHECK((M == MIV));
+  CHECK((M == IVM));
+  Matrix<double, 3, 3> IVIV = IV * IV;
+  CHECK((I == IVIV));
 }

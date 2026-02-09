@@ -2,8 +2,11 @@
 #include <iostream>
 
 #include "../../catch_include.hpp"
+#include <zipper/Matrix.hpp>
+#include <zipper/Vector.hpp>
 #include <zipper/expression/nullary/Identity.hpp>
 #include <zipper/expression/nullary/MDArray.hpp>
+#include <zipper/expression/nullary/Random.hpp>
 #include <zipper/expression/reductions/CoefficientSum.hpp>
 #include <zipper/expression/reductions/Trace.hpp>
 #include <zipper/expression/unary/PartialReduction.hpp>
@@ -126,3 +129,22 @@ TEST_CASE("test_partial_sum_mdarray", "[expression][unary][partial_reduction]") 
 //       decltype(v), expression::reductions::Trace, 1, 2>(v);
 //   ...
 // }
+
+// === From test_matrix.cpp: test_rowwise_colwise_matrix ===
+
+TEST_CASE("test_rowwise_colwise_matrix", "[matrix][storage][dense]") {
+  Matrix<double, 3, 5> N;
+  N = expression::nullary::uniform_random<double>(
+      extents<3, 5>{}, -1, 1);
+
+  {
+    auto colnorm = N.colwise().norm();
+    auto rownorm = N.rowwise().norm();
+    for (index_type j = 0; j < N.extent(1); ++j) {
+      CHECK(N.col(j).norm() == colnorm(j));
+    }
+    for (index_type j = 0; j < N.extent(0); ++j) {
+      CHECK(N.row(j).norm() == rownorm(j));
+    }
+  }
+}

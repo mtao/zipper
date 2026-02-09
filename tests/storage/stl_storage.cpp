@@ -1,6 +1,7 @@
 
 #include <zipper/expression/nullary/StlMDArray.hpp>
 #include <zipper/storage/StlStorageInfo.hpp>
+#include <zipper/Matrix.hpp>
 
 #include "../catch_include.hpp"
 
@@ -343,6 +344,101 @@ TEST_CASE("stl_storage_non_owning", "[data]") {
     CHECK(x[1][1] == 25);
     CHECK(x[1][2] == 26);
   }
+}
+
+TEST_CASE("stl_mdarray_traits_consistency", "[storage][stl]") {
+  // Verify that ExpressionTraits for StlMDArray are self-consistent:
+  // access_features/shape_features agree with is_writable, is_resizable, etc.
+
+  // Non-const owning dynamic vector
+  {
+    using T = zipper::expression::nullary::StlMDArray<std::vector<double>>;
+    using traits = zipper::expression::detail::ExpressionTraits<T>;
+
+    // access_features should indicate writable, alias-free
+    static_assert(!traits::access_features.is_const);
+    static_assert(traits::access_features.is_reference);
+    static_assert(traits::access_features.is_alias_free);
+
+    // derived bools must agree
+    static_assert(traits::is_writable);
+    static_assert(traits::is_coefficient_consistent);
+
+    // dynamic extent → resizable
+    static_assert(traits::shape_features.is_resizable);
+    static_assert(traits::is_resizable());
+  }
+
+  // Const non-owning reference
+  {
+    using T = zipper::expression::nullary::StlMDArray<const std::vector<double> &>;
+    using traits = zipper::expression::detail::ExpressionTraits<T>;
+
+    static_assert(traits::access_features.is_const);
+    static_assert(!traits::is_writable);
+    static_assert(!traits::is_assignable());
+  }
+
+  // Static extent → not resizable
+  {
+    using T = zipper::expression::nullary::StlMDArray<std::array<double, 3>>;
+    using traits = zipper::expression::detail::ExpressionTraits<T>;
+
+    static_assert(!traits::shape_features.is_resizable);
+    static_assert(!traits::is_resizable());
+  }
+
+  // Dynamic 2D (vector<array>) → resizable
+  {
+    using T = zipper::expression::nullary::StlMDArray<
+        std::vector<std::array<double, 3>>>;
+    using traits = zipper::expression::detail::ExpressionTraits<T>;
+
+    static_assert(traits::shape_features.is_resizable);
+    static_assert(traits::is_resizable());
+    static_assert(traits::is_writable);
+    static_assert(traits::is_coefficient_consistent);
+  }
+}
+
+TEST_CASE("stl_mdarray_transpose_assign", "[storage][stl]") {
+  // Reproduces the bug from MshLoader: assigning a transposed MDSpan
+  // into a non-owning StlMDArray matrix via MatrixBase::operator=.
+
+  // Build a 2x3 source matrix via MDArray
+  zipper::Matrix<double, 2, 3> src;
+  src(0, 0) = 1;
+  src(0, 1) = 2;
+  src(0, 2) = 3;
+  src(1, 0) = 4;
+  src(1, 1) = 5;
+  src(1, 2) = 6;
+
+  // Destination: non-owning StlMDArray wrapping vector<array<double,2>>
+  // After transpose, a 2×3 matrix becomes 3×2
+  std::vector<std::array<double, 2>> dst_data(3, {0, 0});
+
+  auto dst_storage =
+      zipper::expression::nullary::get_non_owning_stl_storage(dst_data);
+  zipper::MatrixBase dst(dst_storage);
+
+  // Assign transpose of src (3x2) into dst (3x2)
+  dst = src.transpose();
+
+  CHECK(dst(0, 0) == 1);
+  CHECK(dst(0, 1) == 4);
+  CHECK(dst(1, 0) == 2);
+  CHECK(dst(1, 1) == 5);
+  CHECK(dst(2, 0) == 3);
+  CHECK(dst(2, 1) == 6);
+
+  // Also verify the underlying STL data was written through
+  CHECK(dst_data[0][0] == 1);
+  CHECK(dst_data[0][1] == 4);
+  CHECK(dst_data[1][0] == 2);
+  CHECK(dst_data[1][1] == 5);
+  CHECK(dst_data[2][0] == 3);
+  CHECK(dst_data[2][1] == 6);
 }
 
 // TODO: test resizing vectors and how it affects the expression

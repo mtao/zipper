@@ -11,15 +11,18 @@ class PartialReductionDispatcher {
 public:
   PartialReductionDispatcher(ExprType &v) : m_dispatcher(v) {}
   auto sum() const {
-    DerivedT a = m_dispatcher.sum();
+    auto expr = m_dispatcher.sum();
+    DerivedT<decltype(expr)> a(std::move(expr));
     return a;
   }
   template <index_type P = 2> auto norm() const {
-    DerivedT a = m_dispatcher.norm();
+    auto expr = m_dispatcher.template norm<P>();
+    DerivedT<decltype(expr)> a(std::move(expr));
     return a;
   }
   template <index_type P = 2> auto norm_powered() const {
-    DerivedT a = m_dispatcher.norm_powered();
+    auto expr = m_dispatcher.template norm_powered<P>();
+    DerivedT<decltype(expr)> a(std::move(expr));
     return a;
   }
 

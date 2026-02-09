@@ -1,4 +1,4 @@
-#include "catch_include.hpp"
+#include "../catch_include.hpp"
 
 #include "zipper/concepts/Zipper.hpp"
 #include "zipper/detail/declare_operations.hpp"

@@ -5,7 +5,7 @@
 #include <zipper/Vector.hpp>
 #include <zipper/concepts/Zipper.hpp>
 
-#include "catch_include.hpp"
+#include "../catch_include.hpp"
 
 // -----------------------------------------------------------------------
 // Static assertions: concrete types satisfy their specific concepts
