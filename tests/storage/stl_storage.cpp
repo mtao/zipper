@@ -362,7 +362,7 @@ TEST_CASE("stl_mdarray_traits_consistency", "[storage][stl]") {
 
     // derived bools must agree
     static_assert(traits::is_writable);
-    static_assert(traits::is_coefficient_consistent);
+    static_assert(zipper::expression::detail::get_is_coefficient_consistent<traits>());
 
     // dynamic extent → resizable
     static_assert(traits::shape_features.is_resizable);
@@ -397,7 +397,7 @@ TEST_CASE("stl_mdarray_traits_consistency", "[storage][stl]") {
     static_assert(traits::shape_features.is_resizable);
     static_assert(traits::is_resizable());
     static_assert(traits::is_writable);
-    static_assert(traits::is_coefficient_consistent);
+    static_assert(zipper::expression::detail::get_is_coefficient_consistent<traits>());
   }
 }
 

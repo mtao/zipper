@@ -366,8 +366,6 @@ struct detail::ExpressionTraits<
   }
 
   constexpr static bool is_writable = is_assignable();
-  constexpr static bool is_coefficient_consistent =
-      access_features.is_alias_free;
 };
 
 } // namespace zipper::expression

@@ -62,7 +62,7 @@ void AssignHelper<From, To>::assign(const From &from, To &to) {
       FromTraits::extents_type::rank() == 0;
   constexpr static bool should_resize =
       !assigning_from_infinite && ToTraits::is_resizable();
-  if constexpr (FromTraits::is_coefficient_consistent) {
+  if constexpr (get_is_coefficient_consistent<FromTraits>()) {
     if constexpr (should_resize) {
       to.resize(to_extents_traits::convert_from(from.extents()));
     } else if constexpr (to_extents_traits::is_dynamic &&

@@ -40,7 +40,7 @@ struct DefaultUnaryExpressionTraits
 
   constexpr static bool is_value_based = true;
   constexpr static bool is_coefficient_consistent =
-      child_traits::is_coefficient_consistent;
+      expression::detail::get_is_coefficient_consistent<child_traits>();
 };
 } // namespace detail
 

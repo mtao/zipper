@@ -31,7 +31,7 @@ struct DefaultBinaryExpressionTraits
   // defaulting to first parameter
   using value_type = typename ATraits::value_type;
   constexpr static bool is_coefficient_consistent =
-      ATraits::is_coefficient_consistent && BTraits::is_coefficient_consistent;
+      expression::detail::get_is_coefficient_consistent<ATraits>() && expression::detail::get_is_coefficient_consistent<BTraits>();
   constexpr static bool is_value_based = true;
 };
 } // namespace detail

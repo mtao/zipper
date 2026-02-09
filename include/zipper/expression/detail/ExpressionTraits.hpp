@@ -45,10 +45,6 @@ struct BasicExpressionTraits {
     return access_features.is_alias_free;
   }
 
-  /// Coefficient-consistent means iterating over coefficients gives correct
-  /// results without aliasing issues (i.e. writing a[i] doesn't affect a[j]).
-  constexpr static bool is_coefficient_consistent = AF.is_alias_free;
-
   constexpr static bool is_writable = is_assignable();
 };
 
@@ -79,6 +75,24 @@ concept ExpressionTraitsConcept =
       { et.is_alias_free() } -> std::same_as<bool>;
       /// A const expression that is assignable is NOT allowed
     } && (!(ET::is_const_valued() && ET::is_assignable()));
+
+/// Detects whether an ExpressionTraits type explicitly defines
+/// is_coefficient_consistent (a non-nullary expression property).
+/// For nullary expressions that don't define it, falls back to
+/// access_features.is_alias_free.
+template <typename ET>
+concept HasCoefficientConsistency = requires {
+  { ET::is_coefficient_consistent } -> std::convertible_to<bool>;
+};
+
+template <typename ET>
+consteval auto get_is_coefficient_consistent() -> bool {
+  if constexpr (HasCoefficientConsistency<ET>) {
+    return ET::is_coefficient_consistent;
+  } else {
+    return ET::access_features.is_alias_free;
+  }
+}
 
 // NOTE: template parameters should NOT be used in this struct so that derived
 // can overwrite them.
@@ -119,11 +133,6 @@ struct DefaultExpressionTraits {
   consteval static auto is_resizable() -> bool {
     return shape_features.is_resizable;
   }
-
-  /// Coefficient-consistent means iterating over coefficients gives correct
-  /// results without aliasing issues.
-  constexpr static bool is_coefficient_consistent =
-      access_features.is_alias_free;
 
   constexpr static bool is_writable = is_assignable();
 
