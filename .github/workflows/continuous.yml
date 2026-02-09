@@ -43,8 +43,11 @@ jobs:
       - name: Configure Project
         run: meson setup . build -Dtesting=true -Dbuildtype=${{ matrix.build }}
 
+      - name: Build Project
+        run: meson compile -C build
+
       - name: Run Tests
-        run: meson test -C build/ -v
+        run: meson test -C build/ -v --no-rebuild
 
       - name: Upload Test Log
         uses: actions/upload-artifact@v4
