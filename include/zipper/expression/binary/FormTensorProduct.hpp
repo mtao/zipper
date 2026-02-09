@@ -30,7 +30,7 @@ struct form_tensor_partial_trace_type_<A, B,
     constexpr static rank_type Off = (a_rank >= b_rank) ? (a_rank - b_rank) : 0;
     using tensor_product_type =
         binary::TensorProduct<A, B>;
-    using partial_trace_type = unary::PartialTrace<tensor_product_type, (N + Off)...>;
+    using partial_trace_type = unary::PartialTrace<const tensor_product_type &, (N + Off)...>;
 };
 
 template <typename A, typename B>

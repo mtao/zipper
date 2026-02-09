@@ -57,10 +57,10 @@ public:
   using Base = UnaryExpressionBase<self_type, Child>;
   using Base::expression;
 
-  ScalarOperation(Child &a, const Scalar &b, const Operation &op = {})
+  ScalarOperation(std::remove_reference_t<Child> &a, const Scalar &b, const Operation &op = {})
     requires(ScalarOnRight)
       : Base(a), m_op(op), m_scalar(b) {}
-  ScalarOperation(const Scalar &a, Child &b, const Operation &op = {})
+  ScalarOperation(const Scalar &a, std::remove_reference_t<Child> &b, const Operation &op = {})
     requires(!ScalarOnRight)
       : Base(b), m_op(op), m_scalar(a) {}
 

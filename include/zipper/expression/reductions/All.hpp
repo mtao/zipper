@@ -11,13 +11,12 @@ template <zipper::concepts::QualifiedExpression Expression>
 class All {
 public:
   using self_type = All<Expression>;
-  using expression_type = Expression;
+  using expression_type = std::remove_reference_t<Expression>;
   using expression_traits =
       zipper::expression::detail::ExpressionTraits<expression_type>;
   using value_type = bool;
 
-  All(Expression &v) : m_expression(v) {}
-  All(Expression &&v) : m_expression(v) {}
+  All(const expression_type &v) : m_expression(v) {}
 
   All(All &&v) = default;
   All(const All &v) = default;
@@ -33,11 +32,11 @@ public:
   }
 
 private:
-  const Expression &m_expression;
+  const expression_type &m_expression;
 };
 
 template <zipper::concepts::QualifiedExpression Expression>
-All(Expression &) -> All<Expression>;
+All(const Expression &) -> All<Expression>;
 
 } // namespace zipper::expression::reductions
 #endif

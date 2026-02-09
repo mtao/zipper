@@ -72,7 +72,7 @@ public:
   auto operator=(const Cofactor &) -> Cofactor & = delete;
   auto operator=(Cofactor &&) -> Cofactor & = delete;
 
-  Cofactor(ExprType &b) : Base(b) {
+  Cofactor(std::remove_reference_t<ExprType> &b) : Base(b) {
     assert(expression().extent(0) == expression().extent(1));
   }
 

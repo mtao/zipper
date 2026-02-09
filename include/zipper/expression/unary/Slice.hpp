@@ -363,7 +363,7 @@ class Slice : public UnaryExpressionBase<Slice<ExprType, Slices...>,
         assign(v);
         return *this;
     }
-    Slice(ExprType &b, const Slices &...slices)
+    Slice(std::remove_reference_t<ExprType> &b, const Slices &...slices)
         : Base(b),
           m_extents(traits::extents_helper::get_extents(b.extents(), slices...)),
           m_slices(_detail_slice::slice_helper<std::decay_t<Slices>>(slices)...) {}

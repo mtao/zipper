@@ -189,10 +189,10 @@ public:
   }
 
   auto diagonal() const {
-    return VectorBase<expression::unary::Diagonal<const expression_type>>(expression());
+    return VectorBase<expression::unary::Diagonal<const expression_type &>>(expression());
   }
   auto diagonal() {
-    return VectorBase<expression::unary::Diagonal<expression_type>>(expression());
+    return VectorBase<expression::unary::Diagonal<expression_type &>>(expression());
   }
 
   template <rank_type... ranks> auto swizzle() const {
@@ -285,20 +285,20 @@ public:
 
   auto rowwise() {
     // we're reducing the first cols
-    return detail::PartialReductionDispatcher<VectorBase, expression_type, 1>(expression());
+    return detail::PartialReductionDispatcher<VectorBase, expression_type &, 1>(expression());
   }
   auto colwise() {
     // we're reducing the first rows
-    return detail::PartialReductionDispatcher<VectorBase, expression_type, 0>(expression());
+    return detail::PartialReductionDispatcher<VectorBase, expression_type &, 0>(expression());
   }
   auto rowwise() const {
     // we're reducing the first cols
-    return detail::PartialReductionDispatcher<VectorBase, const expression_type, 1>(
+    return detail::PartialReductionDispatcher<VectorBase, const expression_type &, 1>(
         expression());
   }
   auto colwise() const {
     // we're reducing the first rows
-    return detail::PartialReductionDispatcher<VectorBase, const expression_type, 0>(
+    return detail::PartialReductionDispatcher<VectorBase, const expression_type &, 0>(
         expression());
   }
 };

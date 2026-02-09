@@ -88,7 +88,7 @@ public:
   auto operator=(const Diagonal &) -> Diagonal & = delete;
   auto operator=(Diagonal &&) -> Diagonal & = delete;
 
-  Diagonal(ExpressionType &b) : Base(b) {}
+  Diagonal(std::remove_reference_t<ExpressionType> &b) : Base(b) {}
 
   constexpr auto extent(rank_type i) const -> index_type {
     assert(i == 0);

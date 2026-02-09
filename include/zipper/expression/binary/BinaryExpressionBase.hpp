@@ -61,11 +61,25 @@ public:
   BinaryExpressionBase(const BinaryExpressionBase &) = default;
   BinaryExpressionBase(BinaryExpressionBase &&) = default;
   auto operator=(const BinaryExpressionBase &)
-      -> BinaryExpressionBase & = delete;
-  auto operator=(BinaryExpressionBase &&) -> BinaryExpressionBase & = delete;
+      -> BinaryExpressionBase & = default;
+  auto operator=(BinaryExpressionBase &&) -> BinaryExpressionBase & = default;
 
-  BinaryExpressionBase(const ChildTypeA &a, const ChildTypeB &b)
-      : m_lhs(a), m_rhs(b) {}
+  /// storage helpers: use pointers for reference child types
+  /// to preserve assignability (raw references delete copy/move assignment).
+  using lhs_element_type = std::remove_reference_t<ChildTypeA>;
+  using rhs_element_type = std::remove_reference_t<ChildTypeB>;
+  using lhs_storage_type = std::conditional_t<
+      std::is_lvalue_reference_v<ChildTypeA>,
+      const lhs_element_type*,
+      ChildTypeA>;
+  using rhs_storage_type = std::conditional_t<
+      std::is_lvalue_reference_v<ChildTypeB>,
+      const rhs_element_type*,
+      ChildTypeB>;
+
+  BinaryExpressionBase(const lhs_element_type &a,
+                       const rhs_element_type &b)
+      : m_lhs(_init_lhs(a)), m_rhs(_init_rhs(b)) {}
 
   /// Default extents() constructs from extent() calls.
   /// Derived classes must provide extent(rank_type) — there is no single
@@ -75,9 +89,9 @@ public:
     return extents_traits::make_extents_from(derived());
   }
 
-  auto lhs() const -> const ChildTypeA & { return m_lhs; }
+  auto lhs() const -> const lhs_element_type & { return _get_lhs(); }
 
-  auto rhs() const -> const ChildTypeB & { return m_rhs; }
+  auto rhs() const -> const rhs_element_type & { return _get_rhs(); }
 
   auto get_value(const lhs_value_type &l, const rhs_value_type &r) const
       -> value_type {
@@ -88,13 +102,45 @@ public:
   auto coeff(Args &&...args) const -> value_type
     requires(is_value_based)
   {
-    return value_type(get_value(m_lhs(std::forward<Args>(args)...),
-                                m_rhs(std::forward<Args>(args)...)));
+    return value_type(get_value(_get_lhs()(std::forward<Args>(args)...),
+                                _get_rhs()(std::forward<Args>(args)...)));
   }
 
 private:
-  const ChildTypeA &m_lhs;
-  const ChildTypeB &m_rhs;
+  static auto _init_lhs(const lhs_element_type &a) -> lhs_storage_type {
+    if constexpr (std::is_lvalue_reference_v<ChildTypeA>) {
+      return std::addressof(a);
+    } else {
+      return a;
+    }
+  }
+  static auto _init_rhs(const rhs_element_type &b) -> rhs_storage_type {
+    if constexpr (std::is_lvalue_reference_v<ChildTypeB>) {
+      return std::addressof(b);
+    } else {
+      return b;
+    }
+  }
+  auto _get_lhs() const -> const lhs_element_type & {
+    if constexpr (std::is_lvalue_reference_v<ChildTypeA>) {
+      return *m_lhs;
+    } else {
+      return m_lhs;
+    }
+  }
+  auto _get_rhs() const -> const rhs_element_type & {
+    if constexpr (std::is_lvalue_reference_v<ChildTypeB>) {
+      return *m_rhs;
+    } else {
+      return m_rhs;
+    }
+  }
+
+  /// When ChildTypeA/B are reference types (e.g. `const Expr&`), the expression
+  /// node stores pointers (non-owning, but assignable). When they are value
+  /// types (e.g. `const Expr`), the node stores by value (owns copies).
+  lhs_storage_type m_lhs;
+  rhs_storage_type m_rhs;
 };
 
 } // namespace zipper::expression::binary

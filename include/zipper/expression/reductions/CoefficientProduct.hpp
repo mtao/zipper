@@ -11,13 +11,12 @@ template <zipper::concepts::QualifiedExpression Expression>
 class CoefficientProduct {
 public:
   using self_type = CoefficientProduct<Expression>;
-  using expression_type = Expression;
+  using expression_type = std::remove_reference_t<Expression>;
   using expression_traits =
       zipper::expression::detail::ExpressionTraits<expression_type>;
-  using value_type = typename Expression::value_type;
+  using value_type = typename expression_type::value_type;
 
-  CoefficientProduct(Expression &v) : m_expression(v) {}
-  CoefficientProduct(Expression &&v) : m_expression(v) {}
+  CoefficientProduct(const expression_type &v) : m_expression(v) {}
 
   CoefficientProduct(CoefficientProduct &&v) = default;
   CoefficientProduct(const CoefficientProduct &v) = default;
@@ -32,11 +31,11 @@ public:
   }
 
 private:
-  const Expression &m_expression;
+  const expression_type &m_expression;
 };
 
 template <zipper::concepts::QualifiedExpression Expression>
-CoefficientProduct(Expression &) -> CoefficientProduct<Expression>;
+CoefficientProduct(const Expression &) -> CoefficientProduct<Expression>;
 
 } // namespace zipper::expression::reductions
 #endif

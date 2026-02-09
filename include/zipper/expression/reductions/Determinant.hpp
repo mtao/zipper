@@ -46,7 +46,6 @@ public:
   constexpr static size_t size =
       static_rows == std::dynamic_extent ? static_cols : static_rows;
 
-  Determinant(Expr &&v) : m_expression(v) {}
   Determinant(const Expr &v) : m_expression(v) {}
 
   Determinant(Determinant &&v) = default;

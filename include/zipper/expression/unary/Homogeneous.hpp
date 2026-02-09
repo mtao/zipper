@@ -103,7 +103,7 @@ public:
   using Base::Base;
   using Base::expression;
 
-  Homogeneous(Child &a)
+  Homogeneous(std::remove_reference_t<Child> &a)
       : Base(a) {}
 
   constexpr auto extent(rank_type i) const -> index_type {

@@ -103,12 +103,12 @@ public:
 
   auto pow(value_type const &exp) const {
     return ArrayBase<
-        expression::unary::ScalarPower<const expression_type, value_type>>(
+        expression::unary::ScalarPower<const expression_type &, value_type>>(
         expression(), exp);
   }
 
   auto abs() const {
-    return ArrayBase<expression::unary::Abs<const expression_type>>(
+    return ArrayBase<expression::unary::Abs<const expression_type &>>(
         expression());
   }
 

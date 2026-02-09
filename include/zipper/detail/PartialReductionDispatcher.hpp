@@ -9,7 +9,7 @@ template <template <concepts::QualifiedExpression> typename DerivedT,
           zipper::concepts::QualifiedExpression ExprType, rank_type... Indices>
 class PartialReductionDispatcher {
 public:
-  PartialReductionDispatcher(ExprType &v) : m_dispatcher(v) {}
+  PartialReductionDispatcher(std::remove_reference_t<ExprType> &v) : m_dispatcher(v) {}
   auto sum() const {
     auto expr = m_dispatcher.sum();
     DerivedT<decltype(expr)> a(std::move(expr));

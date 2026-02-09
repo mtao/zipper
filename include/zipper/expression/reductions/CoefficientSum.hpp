@@ -11,15 +11,14 @@ template <zipper::concepts::QualifiedExpression Expression>
 class CoefficientSum {
 public:
   using self_type = CoefficientSum<Expression>;
-  using expression_type = Expression;
+  using expression_type = std::remove_reference_t<Expression>;
   using expression_traits =
       zipper::expression::detail::ExpressionTraits<expression_type>;
   using value_type = typename expression_traits::value_type;
   /// unqualified type of the underlying object
   using element_type = typename expression_traits::element_type;
 
-  CoefficientSum(Expression &v) : m_expression(v) {}
-  CoefficientSum(Expression &&v) : m_expression(v) {}
+  CoefficientSum(const expression_type &v) : m_expression(v) {}
 
   CoefficientSum(CoefficientSum &&v) = default;
   CoefficientSum(const CoefficientSum &v) = default;
@@ -36,11 +35,11 @@ public:
   }
 
 private:
-  const Expression &m_expression;
+  const expression_type &m_expression;
 }; // namespace unarytemplate<typenameA,typenameB>class AdditionExpression
 
 template <zipper::concepts::QualifiedExpression Expression>
-CoefficientSum(Expression &) -> CoefficientSum<Expression>;
+CoefficientSum(const Expression &) -> CoefficientSum<Expression>;
 
 } // namespace zipper::expression::reductions
 

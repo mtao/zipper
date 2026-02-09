@@ -56,7 +56,7 @@ public:
   Swizzle(Swizzle &&) = default;
   auto operator=(const Swizzle &) -> Swizzle & = delete;
   auto operator=(Swizzle &&) -> Swizzle & = delete;
-  Swizzle(QualifiedExprType &b)
+  Swizzle(std::remove_reference_t<QualifiedExprType> &b)
       : Base(b) {}
 
   constexpr auto extent(rank_type i) const -> index_type {

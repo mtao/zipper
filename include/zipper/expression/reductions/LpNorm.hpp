@@ -17,13 +17,12 @@ struct lp_norm_holder {
   class LpNorm {
   public:
     using self_type = LpNorm<Expr>;
-    using expression_type = Expr;
+    using expression_type = std::remove_reference_t<Expr>;
     using expression_traits =
         zipper::expression::detail::ExpressionTraits<expression_type>;
     using value_type = typename expression_traits::value_type;
 
-    LpNorm(Expr &v) : m_expression(v) {}
-    LpNorm(Expr &&v) : m_expression(v) {}
+    LpNorm(expression_type &v) : m_expression(v) {}
 
     LpNorm(LpNorm &&v) = default;
     LpNorm(const LpNorm &v) = default;
@@ -40,11 +39,11 @@ struct lp_norm_holder {
     }
 
   private:
-    Expr &m_expression;
+    expression_type &m_expression;
   };
   template <zipper::concepts::QualifiedExpression ExprType,
             rank_type... Indices>
-  static auto reduction(ExprType &expr) {
+  static auto reduction(std::remove_reference_t<ExprType> &expr) {
     return unary::PartialReduction<ExprType, LpNorm, Indices...>(expr);
   }
 };

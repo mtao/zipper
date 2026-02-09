@@ -55,6 +55,15 @@ template <typename T> struct ExpressionTraits;
 template <typename T>
 struct ExpressionTraits<const T> : public ExpressionTraits<T> {};
 
+/// Reference-forwarding: traits for reference-qualified expressions forward
+/// to the unqualified version, since reference-ness doesn't change expression
+/// structure. These are needed when expression nodes store children by
+/// reference (e.g. `Diagonal<const MDArray&>`).
+template <typename T>
+struct ExpressionTraits<T&> : public ExpressionTraits<T> {};
+template <typename T>
+struct ExpressionTraits<T&&> : public ExpressionTraits<T> {};
+
 /// This concept is designed for debug / testing that an extents traits is
 /// reasonable
 template <typename ET>

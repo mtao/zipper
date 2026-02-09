@@ -11,13 +11,12 @@ template <zipper::concepts::QualifiedExpression Expression>
 class Any {
 public:
   using self_type = Any<Expression>;
-  using expression_type = Expression;
+  using expression_type = std::remove_reference_t<Expression>;
   using expression_traits =
       zipper::expression::detail::ExpressionTraits<expression_type>;
   using value_type = bool;
 
-  Any(Expression &v) : m_expression(v) {}
-  Any(Expression &&v) : m_expression(v) {}
+  Any(const expression_type &v) : m_expression(v) {}
 
   Any(Any &&v) = default;
   Any(const Any &v) = default;
@@ -35,11 +34,11 @@ public:
   }
 
 private:
-  const Expression &m_expression;
+  const expression_type &m_expression;
 };
 
 template <zipper::concepts::QualifiedExpression Expression>
-Any(Expression &) -> Any<Expression>;
+Any(const Expression &) -> Any<Expression>;
 
 } // namespace zipper::expression::reductions
 #endif

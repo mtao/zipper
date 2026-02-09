@@ -98,14 +98,14 @@ public:
 
   /// Construct from expression + new extents.
   /// Asserts total element count is preserved.
-  Reshape(ExpressionType &expr, const extents_type &new_extents)
+  Reshape(std::remove_reference_t<ExpressionType> &expr, const extents_type &new_extents)
       : Base(expr), m_extents(new_extents), m_new_mapping(new_extents) {
     assert(extents_traits::size(new_extents) ==
            child_extents_traits::size(expr.extents()));
   }
 
   /// Construct with static new extents (when fully static).
-  Reshape(ExpressionType &expr)
+  Reshape(std::remove_reference_t<ExpressionType> &expr)
     requires(extents_traits::is_static)
       : Reshape(expr, extents_type{}) {}
 

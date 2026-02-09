@@ -70,7 +70,7 @@ class PartialReduction
     using Base::expression;
     using child_extents_type = traits::child_extents_type;
 
-    PartialReduction(ExprType& b)
+    PartialReduction(std::remove_reference_t<ExprType>& b)
         : Base(b), m_extents(traits::index_remover::get_extents(b.extents())) {}
     PartialReduction() = delete;
     PartialReduction& operator=(const PartialReduction&) = delete;
@@ -91,7 +91,7 @@ class PartialReduction
     template <rank_type... N>
     struct slice_type_<std::integer_sequence<rank_type, N...>> {
         using type =
-            Slice<const ExprType,
+            Slice<const std::remove_reference_t<ExprType> &,
                       std::conditional_t<traits::index_remover::in_sequence(N),
                                          index_type, full_extent_t>...>;
     };
@@ -122,7 +122,7 @@ class PartialReduction
             slice_type(expression(), get_index(std::integral_constant<rank_type, N>{},
                                          std::forward<Args>(idxs)...)...);
 
-        Reduction<const slice_type> v(slice);
+        Reduction<const slice_type &> v(slice);
         value_type val = v();
         return val;
     }

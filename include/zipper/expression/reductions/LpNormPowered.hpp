@@ -18,13 +18,12 @@ struct lp_norm_powered_holder {
   class LpNormPowered {
   public:
     using self_type = LpNormPowered<Expr>;
-    using expression_type = Expr;
+    using expression_type = std::remove_reference_t<Expr>;
     using expression_traits =
         zipper::expression::detail::ExpressionTraits<expression_type>;
     using value_type = typename expression_traits::value_type;
 
-    LpNormPowered(Expr &v) : m_expression(v) {}
-    LpNormPowered(Expr &&v) : m_expression(v) {}
+    LpNormPowered(expression_type &v) : m_expression(v) {}
 
     LpNormPowered(LpNormPowered &&v) = default;
     LpNormPowered(const LpNormPowered &v) = default;
@@ -32,17 +31,17 @@ struct lp_norm_powered_holder {
     value_type operator()() const {
       if constexpr (P % 2 == 0) {
         auto pow =
-            unary::ScalarPower<const expression_type, value_type>(m_expression, P);
+            unary::ScalarPower<const expression_type &, value_type>(m_expression, P);
         auto sum = reductions::CoefficientSum(pow);
         return sum();
       } else {
-        auto abs = unary::Abs<const expression_type>(m_expression);
+        auto abs = unary::Abs<const expression_type &>(m_expression);
         if constexpr (P == 1) {
           auto sum = reductions::CoefficientSum(abs);
           return sum();
         } else {
           auto pow =
-              unary::ScalarPower<const expression_type, value_type>(m_expression, P);
+              unary::ScalarPower<const expression_type &, value_type>(m_expression, P);
           auto sum = reductions::CoefficientSum(pow);
           return sum();
         }
@@ -50,12 +49,12 @@ struct lp_norm_powered_holder {
     }
 
   private:
-    const Expr &m_expression;
+    const expression_type &m_expression;
   };
 
   template <zipper::concepts::QualifiedExpression ExprType,
             rank_type... Indices>
-  static auto reduction(ExprType &expr) {
+  static auto reduction(std::remove_reference_t<ExprType> &expr) {
     return unary::PartialReduction<ExprType, LpNormPowered,
                                    Indices...>(expr);
   }

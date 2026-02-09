@@ -59,7 +59,7 @@ public:
   using Base::expression;
   using Base::extent;
 
-  CoefficientWiseOperation(Child &v, Operation const &op = {})
+  CoefficientWiseOperation(std::remove_reference_t<Child> &v, Operation const &op = {})
       : Base(v), m_op(op) {}
 
   using child_value_type = traits::base_value_type;

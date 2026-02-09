@@ -15,25 +15,25 @@ public:
   using expression_type = Expression;
   using Expression_traits =
       zipper::expression::detail::ExpressionTraits<expression_type>;
+  using expression_element_type = std::remove_reference_t<Expression>;
   using value_type = typename Expression_traits::value_type;
 
-  Trace(Expression &v) : m_Expression(v) {}
-  Trace(Expression &&v) : m_Expression(v) {}
+  Trace(const expression_element_type &v) : m_Expression(v) {}
 
   Trace(Trace &&v) = default;
   Trace(const Trace &v) = default;
 
   value_type operator()() const {
     return reductions::CoefficientSum(
-        unary::Diagonal<const expression_type>(m_Expression))();
+        unary::Diagonal<const expression_element_type &>(m_Expression))();
   }
 
 private:
-  Expression &m_Expression;
+  const expression_element_type &m_Expression;
 };
 
 template <zipper::concepts::QualifiedExpression Expression>
-Trace(Expression &) -> Trace<Expression>;
+Trace(const Expression &) -> Trace<Expression>;
 
 } // namespace reductions
 } // namespace zipper::expression

@@ -62,7 +62,6 @@ public:
   using folder = detail::folded_extents<base_extents_type>;
   using extents_type = folder::extents_type;
 
-  Contraction(Expr &&v) : m_expression(v) {}
   Contraction(const Expr &v) : m_expression(v) {}
 
   Contraction(Contraction &&v) = default;

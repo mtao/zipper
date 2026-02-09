@@ -105,7 +105,7 @@ class Repeat : public UnaryExpressionBase<Repeat<Mode, Count, Child>, Child> {
     constexpr static rank_type base_rank = traits::base_rank;
     constexpr static rank_type pad_offset = traits::offset_rank;
 
-    Repeat(const Child& a)
+    Repeat(std::remove_reference_t<Child>& a)
         : Base(a) {}
 
     constexpr auto extent(rank_type i) const -> index_type {

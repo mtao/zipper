@@ -62,6 +62,8 @@ public:
   ZipperBase(const Derived &v) : ZipperBase(v.expression()) {}
   ZipperBase(const expression_type &v) : m_expression(v) {}
   ZipperBase(const ZipperBase &v) = default;
+  auto operator=(const ZipperBase &) -> ZipperBase & = default;
+  auto operator=(ZipperBase &&) -> ZipperBase & = default;
   // Derived& operator=(concepts::ExpressionDerived auto const& v) {
   //     m_expression = v;
   //     return derived();
@@ -151,7 +153,7 @@ public:
     requires(expression::unary::concepts::ScalarOperation<value_type, OpType>)
   auto unary_expr(const OpType &op) const {
     using V =
-        expression::unary::CoefficientWiseOperation<const expression_type,
+        expression::unary::CoefficientWiseOperation<const expression_type &,
                                                      OpType>;
     return DerivedT<V>(V(expression(), op));
   }
@@ -160,11 +162,11 @@ public:
             rank_type... ranks>
   auto swizzle() const {
     using V =
-        expression::unary::Swizzle<const expression_type, ranks...>;
+        expression::unary::Swizzle<const expression_type &, ranks...>;
     return BaseType<V>(V(expression()));
   }
   template <typename T> auto cast() const {
-    using V = expression::unary::Cast<T, const expression_type>;
+    using V = expression::unary::Cast<T, const expression_type &>;
     return DerivedT<V>(V(expression()));
   }
 
@@ -189,14 +191,14 @@ public:
   auto repeat_left() const {
     using V =
         expression::unary::Repeat<expression::unary::RepeatMode::Left,
-                                  Count, const expression_type>;
+                                  Count, const expression_type &>;
     return BaseType<V>(V(expression()));
   }
   template <rank_type Count = 1,
             template <typename> typename BaseType = DerivedT>
   auto repeat_right() const {
     using V = expression::unary::Repeat<
-        expression::unary::RepeatMode::Right, Count, const expression_type>;
+        expression::unary::RepeatMode::Right, Count, const expression_type &>;
     return BaseType<V>(V(expression()));
   }
 
@@ -206,7 +208,7 @@ protected:
   template <typename... Slices>
   auto slice_expression(Slices &&...slices) const {
     using my_expression_type =
-        expression::unary::Slice<const expression_type,
+        expression::unary::Slice<const expression_type &,
                                  std::decay_t<Slices>...>;
 
     return my_expression_type(expression(),
@@ -215,7 +217,7 @@ protected:
 
   template <typename... Slices> auto slice_expression() const {
     using my_expression_type =
-        expression::unary::Slice<const expression_type,
+        expression::unary::Slice<const expression_type &,
                                  std::decay_t<Slices>...>;
     return my_expression_type(expression(), Slices{}...);
   }
@@ -223,14 +225,14 @@ protected:
   template <typename... Slices>
   auto slice_expression(Slices &&...slices) {
     using my_expression_type =
-        expression::unary::Slice<expression_type,
+        expression::unary::Slice<expression_type &,
                                  std::decay_t<Slices>...>;
     return my_expression_type(expression(),
                               filter_args_for_zipperbase(std::forward<Slices>(slices))...);
   }
   template <typename... Slices> auto slice_expression() {
     using my_expression_type =
-        expression::unary::Slice<expression_type,
+        expression::unary::Slice<expression_type &,
                                  std::decay_t<Slices>...>;
     return my_expression_type(expression(), Slices{}...);
   }

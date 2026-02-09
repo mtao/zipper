@@ -266,7 +266,7 @@ public:
   template <expression::unary::HomogeneousMode Mode =
                 expression::unary::HomogeneousMode::Position>
   auto homogeneous() const {
-    return VectorBase<expression::unary::Homogeneous<Mode, const expression_type>>(expression());
+    return VectorBase<expression::unary::Homogeneous<Mode, const expression_type &>>(expression());
   }
 };
 
