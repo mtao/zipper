@@ -3,7 +3,6 @@
 
 #include "zipper/expression/ExpressionBase.hpp"
 #include "zipper/types.hpp"
-#include <spdlog/spdlog.h>
 
 namespace zipper::expression::nullary {
 

@@ -2,6 +2,7 @@
 #define ZIPPER_expression_UNARY_DIAGONALVIEW_HPP
 
 #include "UnaryExpressionBase.hpp"
+#include <cassert>
 #include "zipper/concepts/Expression.hpp"
 #include "zipper/expression/detail/AssignHelper.hpp"
 

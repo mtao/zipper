@@ -2,6 +2,7 @@
 #define ZIPPER_FORMBASE_HPP
 
 #include "ZipperBase.hpp"
+#include <cassert>
 #include "as.hpp"
 #include "concepts/Form.hpp"
 #include "concepts/Tensor.hpp"

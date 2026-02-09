@@ -2,6 +2,7 @@
 #define ZIPPER_EXPRESSION_BINARY_MATRIXVECTORPRODUCT_HPP
 
 #include "BinaryExpressionBase.hpp"
+#include <cassert>
 #include "zipper/concepts/Expression.hpp"
 // #include "zipper/expression/detail/intersect_nonzeros.hpp"
 

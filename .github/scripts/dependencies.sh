@@ -24,13 +24,11 @@ echo $os
 if [[ "$os" = "linux" ]]
 then
     ${PREFIX} sudo apt-get update
-    ${PREFIX} sudo apt-get install -y libfmt-dev catch2 librange-v3-dev
+    ${PREFIX} sudo apt-get install -y libfmt-dev catch2
 elif [[ "$os" = "osx" ]]
 then
-    ${PREFIX} brew install fmt catch2 range-v3
-    echo "hi"
+    ${PREFIX} brew install fmt catch2
 fi
 
 
 ${PREFIX} python -m pip install meson==${meson_version} ninja
-

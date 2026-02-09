@@ -2,6 +2,7 @@
 #define ZIPPER_EXPRESSION_UNARY_SLICE_HPP
 
 #include "UnaryExpressionBase.hpp"
+#include <cassert>
 #include "zipper/concepts/IndexSlice.hpp"
 #include "zipper/concepts/Expression.hpp"
 #include "zipper/concepts/Index.hpp"
