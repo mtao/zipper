@@ -436,6 +436,18 @@ TEST_CASE("matrix_diagonal_read", "[matrix][view]") {
 }
 
 // ============================================================
+// Matrix transpose write-through
+// ============================================================
+
+TEST_CASE("matrix_transpose_write_through", "[matrix][view][mutable]") {
+    zipper::Matrix<double, 2, 2> M{{1.0, 2.0}, {3.0, 4.0}};
+
+    M.transpose()(1, 0) = 55.0;
+    CHECK(M(0, 1) == 55.0);
+    CHECK(M(1, 0) == 3.0);  // unchanged
+}
+
+// ============================================================
 // Matrix row/col slicing
 // ============================================================
 

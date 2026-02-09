@@ -324,3 +324,75 @@ TEST_CASE("test_matrix_transpose", "[matrix][storage][dense]") {
     }
   }
 }
+
+// ============================================================
+// Mutable swizzle / transpose write-through
+// ============================================================
+
+TEST_CASE("transpose_write_through_element", "[swizzle][mutable]") {
+    zipper::Matrix<double, 2, 2> M{{1.0, 2.0}, {3.0, 4.0}};
+
+    // Write through transpose view
+    M.transpose()(1, 0) = 55.0;
+    CHECK(M(0, 1) == 55.0);
+
+    M.transpose()(0, 1) = 77.0;
+    CHECK(M(1, 0) == 77.0);
+}
+
+TEST_CASE("transpose_write_through_assign", "[swizzle][mutable]") {
+    zipper::Matrix<double, 2, 3> M;
+    M(0, 0) = 1.0; M(0, 1) = 2.0; M(0, 2) = 3.0;
+    M(1, 0) = 4.0; M(1, 1) = 5.0; M(1, 2) = 6.0;
+
+    // Transpose is 3x2, assign a 3x2 matrix into it
+    zipper::Matrix<double, 3, 2> T;
+    T(0, 0) = 10.0; T(0, 1) = 40.0;
+    T(1, 0) = 20.0; T(1, 1) = 50.0;
+    T(2, 0) = 30.0; T(2, 1) = 60.0;
+
+    M.transpose() = T;
+    // M should now be [[10,20,30],[40,50,60]]
+    CHECK(M(0, 0) == 10.0);
+    CHECK(M(0, 1) == 20.0);
+    CHECK(M(0, 2) == 30.0);
+    CHECK(M(1, 0) == 40.0);
+    CHECK(M(1, 1) == 50.0);
+    CHECK(M(1, 2) == 60.0);
+}
+
+TEST_CASE("transpose_view_reflects_mutations", "[swizzle][mutable]") {
+    zipper::Matrix<double, 2, 2> M{{1.0, 2.0}, {3.0, 4.0}};
+
+    auto T = M.transpose();
+
+    // Mutate original, transpose view sees it
+    M(0, 1) = 99.0;
+    CHECK(T(1, 0) == 99.0);
+
+    // Mutate through transpose, original sees it
+    T(0, 1) = 88.0;
+    CHECK(M(1, 0) == 88.0);
+}
+
+TEST_CASE("const_matrix_transpose_not_writable", "[swizzle][const]") {
+    const zipper::Matrix<double, 2, 2> M{{1.0, 2.0}, {3.0, 4.0}};
+
+    auto T = M.transpose();
+    // T should be read-only since M is const
+    using T_type = decltype(T);
+    static_assert(!T_type::is_writable,
+                  "transpose of const matrix should not be writable");
+    CHECK(T(0, 0) == 1.0);
+    CHECK(T(1, 0) == 2.0);
+    CHECK(T(0, 1) == 3.0);
+    CHECK(T(1, 1) == 4.0);
+}
+
+TEST_CASE("swizzle_vector_to_colmat_write_through", "[swizzle][mutable]") {
+    zipper::Vector<double, 3> x{1.0, 2.0, 3.0};
+
+    auto colMat = x.swizzle<zipper::MatrixBase, 0, std::dynamic_extent>();
+    colMat(1, 0) = 99.0;
+    CHECK(x(1) == 99.0);
+}

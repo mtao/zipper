@@ -376,9 +376,9 @@ TEST_CASE("element_write_through_view", "[ownership][assign][view]") {
     d(1) = 77.0;
     CHECK(M(1, 1) == 77.0);
 
-    // Note: transpose() returns a const view (swizzle is const-only),
-    // so write-through transpose is not supported.
-    // M.transpose()(1, 0) = 55.0; // would not compile
+    // Transpose write-through: swizzle now supports mutable views
+    M.transpose()(1, 0) = 55.0;
+    CHECK(M(0, 1) == 55.0);
 }
 
 // ============================================================

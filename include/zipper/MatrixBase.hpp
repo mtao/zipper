@@ -198,7 +198,11 @@ public:
   template <rank_type... ranks> auto swizzle() const {
     return Base::template swizzle<MatrixBase, ranks...>();
   }
+  template <rank_type... ranks> auto swizzle() {
+    return Base::template swizzle<MatrixBase, ranks...>();
+  }
   auto transpose() const { return Base::template swizzle<MatrixBase, 1, 0>(); }
+  auto transpose() { return Base::template swizzle<MatrixBase, 1, 0>(); }
 
   template <concepts::IndexSlice Slice> auto row_slice(const Slice &s = {}) {
     return slice(s, full_extent_t{});

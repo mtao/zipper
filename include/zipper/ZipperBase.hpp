@@ -165,6 +165,13 @@ public:
         expression::unary::Swizzle<const expression_type &, ranks...>;
     return BaseType<V>(V(expression()));
   }
+  template <template <typename> typename BaseType = DerivedT,
+            rank_type... ranks>
+  auto swizzle() {
+    using V =
+        expression::unary::Swizzle<expression_type &, ranks...>;
+    return BaseType<V>(V(expression()));
+  }
   template <typename T> auto cast() const {
     using V = expression::unary::Cast<T, const expression_type &>;
     return DerivedT<V>(V(expression()));
