@@ -8,6 +8,7 @@
 // built-in registrations.  External code can add new ZipperBase
 // families by specializing IsZipperBase without modifying this file.
 #include "Array.hpp"
+#include "Container.hpp"
 #include "Form.hpp"
 #include "Matrix.hpp"
 #include "Tensor.hpp"

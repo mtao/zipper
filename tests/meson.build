@@ -31,3 +31,6 @@ test('span_construction', test_span_construction)
 
 test_zipperbase_stl = executable('test_zipperbase_stl', 'zipperbase_stl.cpp', dependencies: [zipper_test_dep])
 test('zipperbase_stl', test_zipperbase_stl)
+
+test_container = executable('test_container', 'container.cpp', dependencies: [zipper_test_dep])
+test('container', test_container)

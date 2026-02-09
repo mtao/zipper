@@ -6,6 +6,7 @@ namespace zipper {
 
 // Forward declarations of Base types used by AS_IMPL
 template <concepts::Expression T> class ArrayBase;
+template <concepts::Expression T> class ContainerBase;
 template <concepts::Expression T> class VectorBase;
 template <concepts::Expression T> class MatrixBase;
 template <concepts::Expression T> class FormBase;
@@ -30,6 +31,7 @@ template <concepts::Expression T> class TensorBase;
   }
 
 AS_IMPL(array, Array)
+AS_IMPL(container, Container)
 AS_IMPL(vector, Vector)
 AS_IMPL(matrix, Matrix)
 AS_IMPL(form, Form)
