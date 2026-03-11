@@ -78,3 +78,13 @@ endif
 #if get_option('examples')
 #  subdir('examples')
 #endif
+
+# Optional: Doxygen documentation target.
+# Build with: ninja -C build-debug docs
+doxygen = find_program('doxygen', required: false)
+if doxygen.found()
+  run_target(
+    'docs',
+    command: [doxygen, meson.project_source_root() / 'Doxyfile'],
+  )
+endif
