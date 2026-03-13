@@ -22,8 +22,10 @@ class TestBase {
 
     Expr m_expression;
 
-    Expr& expression() { return m_expression; }
-    const Expr& expression() const { return m_expression; }
+    Expr& expression() & { return m_expression; }
+    const Expr& expression() const & { return m_expression; }
+    Expr&& expression() && { return std::move(m_expression); }
+    const Expr&& expression() const && { return std::move(m_expression); }
 };
 namespace concepts::detail {
 

@@ -94,8 +94,12 @@ class FormTensorProduct : public ExpressionBase<FormTensorProduct<A, B>> {
         : FormTensorProduct(o.m_tensor.lhs(), o.m_tensor.rhs()) {}
     FormTensorProduct& operator=(FormTensorProduct& o) = delete;
     FormTensorProduct& operator=(FormTensorProduct&& o) = delete;
-    FormTensorProduct(const std::decay_t<A>& a, const std::decay_t<B>& b)
-        : m_tensor(a, b), m_trace(m_tensor) {
+
+    template <typename U, typename V>
+      requires std::constructible_from<typename traits::tensor_product_type::lhs_storage_type, U&&> &&
+               std::constructible_from<typename traits::tensor_product_type::rhs_storage_type, V&&>
+    FormTensorProduct(U&& a, V&& b)
+        : m_tensor(std::forward<U>(a), std::forward<V>(b)), m_trace(m_tensor) {
         ZIPPER_ASSERT(&m_trace.expression() == &m_tensor);
     }
 
@@ -114,7 +118,7 @@ class FormTensorProduct : public ExpressionBase<FormTensorProduct<A, B>> {
     auto make_owned() const {
         auto owned_a = m_tensor.lhs().make_owned();
         auto owned_b = m_tensor.rhs().make_owned();
-        return FormTensorProduct<const decltype(owned_a), const decltype(owned_b)>(
+        return FormTensorProduct<decltype(owned_a), decltype(owned_b)>(
             std::move(owned_a), std::move(owned_b));
     }
 

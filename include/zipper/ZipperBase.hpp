@@ -36,6 +36,7 @@ public:
     }
   }
 
+  using raw_expression_type = Expression;  // the template parameter, possibly const/ref qualified
   using expression_type = std::decay_t<Expression>;
   using expression_traits =
       expression::detail::ExpressionTraits<expression_type>;

@@ -35,7 +35,6 @@ class MatrixVectorProduct
     using ExpressionBase = expression::ExpressionBase<self_type>;
     using traits = zipper::expression::detail::ExpressionTraits<self_type>;
     using value_type = traits::value_type;
-    using Base::Base;
     using Base::lhs;
     using Base::rhs;
     using extents_type = typename traits::extents_type;
@@ -44,9 +43,12 @@ class MatrixVectorProduct
 
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
 
-    MatrixVectorProduct(const std::decay_t<A>& a, const std::decay_t<B>& b)
-        : Base(a, b) {
-        ZIPPER_ASSERT(a.extent(1) == b.extent(0));
+    template <typename U, typename V>
+      requires std::constructible_from<typename Base::lhs_storage_type, U&&> &&
+               std::constructible_from<typename Base::rhs_storage_type, V&&>
+    MatrixVectorProduct(U&& a, V&& b)
+        : Base(std::forward<U>(a), std::forward<V>(b)) {
+        ZIPPER_ASSERT(lhs().extent(1) == rhs().extent(0));
     }
 
     constexpr auto extent(rank_type i) const -> index_type {
@@ -93,7 +95,7 @@ class MatrixVectorProduct
     auto make_owned() const {
         auto owned_a = lhs().make_owned();
         auto owned_b = rhs().make_owned();
-        return MatrixVectorProduct<const decltype(owned_a), const decltype(owned_b)>(
+        return MatrixVectorProduct<decltype(owned_a), decltype(owned_b)>(
             std::move(owned_a), std::move(owned_b));
     }
 

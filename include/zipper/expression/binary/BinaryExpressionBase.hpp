@@ -40,11 +40,14 @@ struct DefaultBinaryExpressionTraits
       ATraits::is_coefficient_consistent && BTraits::is_coefficient_consistent;
   constexpr static bool is_value_based = true;
 
-  /// stores_references is true when either child is stored by reference.
-  /// When both children are stored by value, the expression owns all its
-  /// data and can safely escape scope.
+  /// stores_references is true when either child is stored by reference,
+  /// OR when either child (even if stored by value) internally stores
+  /// references to external data.  This ensures that an expression like
+  /// (a+b)+(c+d) correctly reports stores_references==true when the sub-
+  /// expressions are moved in by value but still hold references to a,b,c,d.
   constexpr static bool stores_references =
-      std::is_reference_v<ChildA> || std::is_reference_v<ChildB>;
+      std::is_reference_v<ChildA> || std::is_reference_v<ChildB> ||
+      ATraits::stores_references || BTraits::stores_references;
 };
 } // namespace detail
 

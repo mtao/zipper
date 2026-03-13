@@ -48,10 +48,13 @@ struct DefaultUnaryExpressionTraits
   constexpr static bool is_coefficient_consistent =
       child_traits::is_coefficient_consistent;
 
-  /// stores_references is true when the child is stored by reference.
-  /// When the child is stored by value, the expression owns its data
-  /// and can safely escape scope.
-  constexpr static bool stores_references = std::is_reference_v<Child>;
+  /// stores_references is true when the child is stored by reference,
+  /// OR when the child itself (even if stored by value) internally stores
+  /// references to external data.  This ensures that an expression like
+  /// -(a+b) correctly reports stores_references==true when (a+b) is moved
+  /// in by value but still holds references to a and b.
+  constexpr static bool stores_references =
+      std::is_reference_v<Child> || child_traits::stores_references;
 };
 } // namespace detail
 

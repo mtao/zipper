@@ -5,23 +5,23 @@
 
 namespace zipper::detail {
 
-/// A mixin that prevents an expression from being copied or moved,
-/// making it impossible to return from a function as an lvalue.
+/// A mixin that prevents an expression from being **copied** while still
+/// allowing moves.  This protects expression trees that store references
+/// from being accidentally duplicated (e.g. `auto x = lvalue_expr;`).
 ///
-/// C++17 guaranteed copy elision still allows prvalue returns:
-///   auto make() { return Foo(...); }   // OK — constructs in-place
-/// but prevents:
-///   auto make() { Foo f(...); return f; }   // ERROR — copy/move deleted
+/// Moves are allowed so that operator chaining works:
+///   auto chain = (a + b) * 2.0;   // OK — intermediate moved into outer op
 ///
-/// This is used to protect expression trees that store references from
-/// escaping the scope of the objects they reference.
-///
-/// Expressions that need to be returned can use to_owned() to convert
-/// the tree to a fully-owning form, or unsafe_ref() to opt out explicitly.
+/// Returning a named local is technically possible via implicit move,
+/// which is a deliberate trade-off: compile-time prevention of ALL
+/// escaping (deleting both copy and move) would also prevent the
+/// essential operator-chaining use case.  Use `stores_references` for
+/// compile-time checks in function signatures, `to_owned()` / `eval()`
+/// to create safe copies, or `unsafe_ref()` to explicitly opt out.
 struct NonReturnable {
   NonReturnable() = default;
   NonReturnable(const NonReturnable &) = delete;
-  NonReturnable(NonReturnable &&) = delete;
+  NonReturnable(NonReturnable &&) = default;
   auto operator=(const NonReturnable &) -> NonReturnable & = delete;
   auto operator=(NonReturnable &&) -> NonReturnable & = delete;
 

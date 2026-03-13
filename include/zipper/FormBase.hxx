@@ -29,33 +29,51 @@ SCALAR_BINARY_DECLARATION(FormBase, Divides, operator/)
 BINARY_DECLARATION(FormBase, Plus, operator+)
 BINARY_DECLARATION(FormBase, Minus, operator-)
 
-template <concepts::Form Expr1, concepts::Form Expr2>
-auto operator^(Expr1 const &lhs, Expr2 const &rhs) {
-  using V = expression::binary::WedgeProduct<const typename Expr1::expression_type&,
-                                            const typename Expr2::expression_type&>;
-  return FormBase<V>(std::in_place, lhs.expression(), rhs.expression());
+template <typename Expr1, typename Expr2>
+    requires(concepts::Form<std::decay_t<Expr1>> &&
+             concepts::Form<std::decay_t<Expr2>>)
+auto operator^(Expr1&& lhs, Expr2&& rhs) {
+  using A = detail::forwarded_expression_t<Expr1>;
+  using B = detail::forwarded_expression_t<Expr2>;
+  using V = expression::binary::WedgeProduct<A, B>;
+  return FormBase<V>(std::in_place,
+      std::forward<Expr1>(lhs).expression(),
+      std::forward<Expr2>(rhs).expression());
 }
 
-template <concepts::Form Expr1, concepts::Tensor Expr2>
-auto operator*(Expr1 const &lhs, Expr2 const &rhs) {
-  using V = expression::binary::FormTensorProduct<const typename Expr1::expression_type&,
-                                                  const typename Expr2::expression_type&>;
+template <typename Expr1, typename Expr2>
+    requires(concepts::Form<std::decay_t<Expr1>> &&
+             concepts::Tensor<std::decay_t<Expr2>>)
+auto operator*(Expr1&& lhs, Expr2&& rhs) {
+  using A = detail::forwarded_expression_t<Expr1>;
+  using B = detail::forwarded_expression_t<Expr2>;
+  using V = expression::binary::FormTensorProduct<A, B>;
 
   if constexpr (V::result_is_form) {
-    return FormBase<V>(std::in_place, lhs.expression(), rhs.expression());
+    return FormBase<V>(std::in_place,
+        std::forward<Expr1>(lhs).expression(),
+        std::forward<Expr2>(rhs).expression());
   } else {
-    return TensorBase<V>(std::in_place, lhs.expression(), rhs.expression());
+    return TensorBase<V>(std::in_place,
+        std::forward<Expr1>(lhs).expression(),
+        std::forward<Expr2>(rhs).expression());
   }
 }
-template <concepts::Form Expr1, concepts::Vector Expr2>
-auto operator*(Expr1 const &lhs, Expr2 const &rhs) {
-
-  using V = expression::binary::FormTensorProduct<const typename Expr1::expression_type&,
-                                                  const typename Expr2::expression_type&>;
+template <typename Expr1, typename Expr2>
+    requires(concepts::Form<std::decay_t<Expr1>> &&
+             concepts::Vector<std::decay_t<Expr2>>)
+auto operator*(Expr1&& lhs, Expr2&& rhs) {
+  using A = detail::forwarded_expression_t<Expr1>;
+  using B = detail::forwarded_expression_t<Expr2>;
+  using V = expression::binary::FormTensorProduct<A, B>;
   if constexpr (V::result_is_form) {
-    return FormBase<V>(std::in_place, lhs.expression(), rhs.expression());
+    return FormBase<V>(std::in_place,
+        std::forward<Expr1>(lhs).expression(),
+        std::forward<Expr2>(rhs).expression());
   } else {
-    return TensorBase<V>(std::in_place, lhs.expression(), rhs.expression());
+    return TensorBase<V>(std::in_place,
+        std::forward<Expr1>(lhs).expression(),
+        std::forward<Expr2>(rhs).expression());
   }
 }
 

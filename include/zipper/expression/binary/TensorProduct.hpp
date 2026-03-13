@@ -105,8 +105,12 @@ class TensorProduct : public BinaryExpressionBase<TensorProduct<A, B>, A, B> {
     TensorProduct(TensorProduct&&) = default;
     TensorProduct& operator=(const TensorProduct&) = delete;
     TensorProduct& operator=(TensorProduct&&) = delete;
-    TensorProduct(const std::decay_t<A>& a, const std::decay_t<B>& b)
-        : Base(a, b) {}
+
+    template <typename U, typename V>
+      requires std::constructible_from<typename Base::lhs_storage_type, U&&> &&
+               std::constructible_from<typename Base::rhs_storage_type, V&&>
+    TensorProduct(U&& a, V&& b)
+        : Base(std::forward<U>(a), std::forward<V>(b)) {}
 
     constexpr auto extent(rank_type i) const -> index_type {
         if (i < lhs_rank) {
@@ -145,7 +149,7 @@ class TensorProduct : public BinaryExpressionBase<TensorProduct<A, B>, A, B> {
     auto make_owned() const {
         auto owned_a = lhs().make_owned();
         auto owned_b = rhs().make_owned();
-        return TensorProduct<const decltype(owned_a), const decltype(owned_b)>(
+        return TensorProduct<decltype(owned_a), decltype(owned_b)>(
             std::move(owned_a), std::move(owned_b));
     }
 

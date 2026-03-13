@@ -44,15 +44,20 @@ class CrossProduct : public BinaryExpressionBase<CrossProduct<A, B>, A, B> {
     using lhs_traits = traits::ATraits;
     using rhs_traits = traits::BTraits;
 
-    using Base::Base;
     using Base::lhs;
     using Base::rhs;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
 
-    CrossProduct(const std::decay_t<A>& a, const std::decay_t<B>& b)
-        : Base(a, b) {
-        ZIPPER_ASSERT(a.extent(0) == b.extent(0));
-        ZIPPER_ASSERT(a.extent(0) == 3);
+    CrossProduct(const CrossProduct&) = default;
+    CrossProduct(CrossProduct&&) = default;
+
+    template <typename U, typename V>
+      requires std::constructible_from<typename Base::lhs_storage_type, U&&> &&
+               std::constructible_from<typename Base::rhs_storage_type, V&&>
+    CrossProduct(U&& a, V&& b)
+        : Base(std::forward<U>(a), std::forward<V>(b)) {
+        ZIPPER_ASSERT(lhs().extent(0) == rhs().extent(0));
+        ZIPPER_ASSERT(lhs().extent(0) == 3);
     }
 
     constexpr auto extent(rank_type i) const -> index_type {
@@ -73,7 +78,7 @@ class CrossProduct : public BinaryExpressionBase<CrossProduct<A, B>, A, B> {
     auto make_owned() const {
         auto owned_a = lhs().make_owned();
         auto owned_b = rhs().make_owned();
-        return CrossProduct<const decltype(owned_a), const decltype(owned_b)>(
+        return CrossProduct<decltype(owned_a), decltype(owned_b)>(
             std::move(owned_a), std::move(owned_b));
     }
 

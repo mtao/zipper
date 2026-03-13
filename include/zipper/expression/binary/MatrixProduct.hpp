@@ -69,9 +69,12 @@ class MatrixProduct : public BinaryExpressionBase<MatrixProduct<A, B>, A, B> {
     using extents_type = traits::extents_type;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
 
-    MatrixProduct(const std::decay_t<A>& a, const std::decay_t<B>& b)
-        : Base(a, b) {
-        ZIPPER_ASSERT(a.extent(1) == b.extent(0));
+    template <typename U, typename V>
+      requires std::constructible_from<typename Base::lhs_storage_type, U&&> &&
+               std::constructible_from<typename Base::rhs_storage_type, V&&>
+    MatrixProduct(U&& a, V&& b)
+        : Base(std::forward<U>(a), std::forward<V>(b)) {
+        ZIPPER_ASSERT(lhs().extent(1) == rhs().extent(0));
     }
 
     constexpr auto extent(rank_type i) const -> index_type {
@@ -122,7 +125,7 @@ class MatrixProduct : public BinaryExpressionBase<MatrixProduct<A, B>, A, B> {
     auto make_owned() const {
         auto owned_a = lhs().make_owned();
         auto owned_b = rhs().make_owned();
-        return MatrixProduct<const decltype(owned_a), const decltype(owned_b)>(
+        return MatrixProduct<decltype(owned_a), decltype(owned_b)>(
             std::move(owned_a), std::move(owned_b));
     }
 

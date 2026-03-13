@@ -60,20 +60,7 @@ template <concepts::Vector Expr1, concepts::Vector Expr2>
 auto operator!=(Expr1 const &lhs, Expr2 const &rhs) -> bool {
   return (lhs.as_array() != rhs.as_array()).any();
 }
-template <concepts::Vector Expr>
-auto operator*(Expr const &lhs, typename Expr::value_type const &rhs) {
-  using V =
-      expression::unary::ScalarMultiplies<typename Expr::value_type,
-                                         const typename Expr::expression_type&, true>;
-  return VectorBase<V>(std::in_place, lhs.expression(), rhs);
-}
-template <concepts::Vector Expr>
-auto operator*(typename Expr::value_type const &lhs, Expr const &rhs) {
-  using V =
-      expression::unary::ScalarMultiplies<typename Expr::value_type,
-                                         const typename Expr::expression_type&, false>;
-  return VectorBase<V>(std::in_place, lhs, rhs.expression());
-}
+SCALAR_BINARY_DECLARATION(VectorBase, Multiplies, operator*)
 
 } // namespace zipper
 
