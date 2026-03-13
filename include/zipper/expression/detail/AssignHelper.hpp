@@ -2,6 +2,7 @@
 #define ZIPPER_EXPRESSION_DETAIL_ASSIGNHELPER_HPP
 #include "zipper/concepts/Expression.hpp"
 #include "zipper/detail/ExtentsTraits.hpp"
+#include "zipper/detail/assert.hpp"
 #include "zipper/expression/detail/ExpressionTraits.hpp"
 #include "zipper/utils/extents/all_extents_indices.hpp"
 #include <tuple>
@@ -67,7 +68,7 @@ void AssignHelper<From, To>::assign(const From &from, To &to) {
       to.resize(to_extents_traits::convert_from(from.extents()));
     } else if constexpr (to_extents_traits::is_dynamic &&
                          !assigning_from_infinite) {
-      assert(to.extents() == from.extents());
+      ZIPPER_ASSERT(to.extents() == from.extents());
     }
 
     assign_direct(from, to);

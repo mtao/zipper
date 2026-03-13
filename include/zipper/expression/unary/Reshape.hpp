@@ -3,6 +3,7 @@
 
 #include "UnaryExpressionBase.hpp"
 #include "zipper/concepts/Expression.hpp"
+#include "zipper/detail/assert.hpp"
 #include "zipper/storage/layout_types.hpp"
 
 namespace zipper::expression {
@@ -39,7 +40,7 @@ template <zipper::concepts::QualifiedExpression ExpressionType,
 struct detail::ExpressionTraits<unary::Reshape<ExpressionType, NewExtents>>
     : public unary::detail::DefaultUnaryExpressionTraits<ExpressionType> {
 
-  using child_traits = detail::ExpressionTraits<ExpressionType>;
+  using child_traits = detail::ExpressionTraits<std::decay_t<ExpressionType>>;
   using value_type = typename child_traits::value_type;
   using extents_type = NewExtents;
 
@@ -82,7 +83,7 @@ public:
 
   using child_extents_type =
       typename zipper::expression::detail::ExpressionTraits<
-          ExpressionType>::extents_type;
+          std::decay_t<ExpressionType>>::extents_type;
   using child_extents_traits =
       zipper::detail::ExtentsTraits<child_extents_type>;
 
@@ -98,16 +99,19 @@ public:
 
   /// Construct from expression + new extents.
   /// Asserts total element count is preserved.
-  Reshape(ExpressionType &expr, const extents_type &new_extents)
-      : Base(expr), m_extents(new_extents), m_new_mapping(new_extents) {
-    assert(extents_traits::size(new_extents) ==
-           child_extents_traits::size(expr.extents()));
+  template <typename U>
+    requires std::constructible_from<typename Base::storage_type, U &&>
+  Reshape(U &&expr, const extents_type &new_extents)
+      : Base(std::forward<U>(expr)), m_extents(new_extents), m_new_mapping(new_extents) {
+    ZIPPER_ASSERT(extents_traits::size(new_extents) ==
+           child_extents_traits::size(expression().extents()));
   }
 
   /// Construct with static new extents (when fully static).
-  Reshape(ExpressionType &expr)
-    requires(extents_traits::is_static)
-      : Reshape(expr, extents_type{}) {}
+  template <typename U>
+    requires (extents_traits::is_static && std::constructible_from<typename Base::storage_type, U &&>)
+  Reshape(U &&expr)
+      : Reshape(std::forward<U>(expr), extents_type{}) {}
 
   [[nodiscard]] constexpr auto extent(rank_type i) const -> index_type {
     return m_extents.extent(i);
@@ -174,11 +178,23 @@ private:
 
   extents_type m_extents;
   new_mapping_type m_new_mapping;
+
+public:
+  /// Recursively deep-copy child so the result owns all data.
+  auto make_owned() const {
+      auto owned_child = expression().make_owned();
+      return Reshape<const decltype(owned_child), NewExtents>(
+          std::move(owned_child), m_extents);
+  }
 };
 
-template <zipper::concepts::QualifiedExpression E,
+template <zipper::concepts::Expression E,
           zipper::concepts::Extents Ext>
-Reshape(E &, const Ext &) -> Reshape<E, Ext>;
+Reshape(E &, const Ext &) -> Reshape<E&, Ext>;
+
+template <zipper::concepts::Expression E,
+          zipper::concepts::Extents Ext>
+Reshape(const E &, const Ext &) -> Reshape<const E&, Ext>;
 
 } // namespace unary
 } // namespace zipper::expression

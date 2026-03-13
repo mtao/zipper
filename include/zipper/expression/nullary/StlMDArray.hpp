@@ -1,3 +1,4 @@
+#pragma once
 #include "zipper/expression/ExpressionBase.hpp"
 #include "zipper/expression/detail/AssignHelper.hpp"
 #include "zipper/storage/StlStorageInfo.hpp"
@@ -20,14 +21,23 @@ public:
   auto extents() const -> extents_type { return info_helper::make_extents(m_data); }
   auto extent(rank_type i) const -> index_type { return extents().extent(i); }
 
-  StlMDArray(const extents_type &e = {}, const value_type &default_value = 0.0)
+  StlMDArray()
+    requires(!IsStatic)
+      : m_data(info_helper::initialize(extents_type{}, value_type{0.0})) {}
+
+  explicit StlMDArray(const extents_type &e, const value_type &default_value = 0.0)
     requires(!IsStatic)
       : m_data(info_helper::initialize(e, default_value)) {}
 
-  StlMDArray(const value_type &default_value = 0.0)
+  StlMDArray()
+    requires(IsStatic)
+      : m_data(info_helper::initialize(value_type{0.0})) {}
+
+  explicit StlMDArray(const value_type &default_value)
     requires(IsStatic)
       : m_data(info_helper::initialize(default_value)) {}
-  StlMDArray(S &d) : m_data(d) {}
+
+  explicit StlMDArray(S &d) : m_data(d) {}
 
   void resize(const extents_type &e) {
     info_helper::resize(m_data, e);

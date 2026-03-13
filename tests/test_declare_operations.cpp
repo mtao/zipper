@@ -16,6 +16,10 @@ class TestBase {
     TestBase() = default;
     TestBase(Expr&& v) : m_expression(v) {}
 
+    template <typename... Args>
+    TestBase(std::in_place_t, Args&&... args)
+        : m_expression(std::forward<Args>(args)...) {}
+
     Expr m_expression;
 
     Expr& expression() { return m_expression; }

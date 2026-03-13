@@ -118,6 +118,11 @@ public:
   {
     expression::detail::AssignHelper<V, self_type>::assign(v, *this);
   }
+
+  /// MDSpan borrows external memory — make_owned() deep-copies into an MDArray.
+  /// Defined out-of-line (after MDArray.hpp is included) because MDArray
+  /// depends on MDSpan and not vice versa.
+  auto make_owned() const;
 };
 } // namespace zipper::expression::nullary
 
@@ -132,6 +137,8 @@ struct detail::ExpressionTraits<nullary::MDSpan<
                             zipper::detail::ExtentsTraits<Extents>::static_size>,
           Extents, LayoutPolicy, AccessorPolicy,
           nullary::MDSpan<ElementType, Extents, LayoutPolicy, AccessorPolicy>>> {
+  /// MDSpan borrows external memory via a span, so it stores references.
+  constexpr static bool stores_references = true;
 };
 } // namespace zipper::expression
 

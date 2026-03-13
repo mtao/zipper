@@ -64,15 +64,15 @@ template <concepts::Vector Expr>
 auto operator*(Expr const &lhs, typename Expr::value_type const &rhs) {
   using V =
       expression::unary::ScalarMultiplies<typename Expr::value_type,
-                                         const typename Expr::expression_type, true>;
-  return VectorBase<V>(V(lhs.expression(), rhs));
+                                         const typename Expr::expression_type&, true>;
+  return VectorBase<V>(std::in_place, lhs.expression(), rhs);
 }
 template <concepts::Vector Expr>
 auto operator*(typename Expr::value_type const &lhs, Expr const &rhs) {
   using V =
       expression::unary::ScalarMultiplies<typename Expr::value_type,
-                                         const typename Expr::expression_type, false>;
-  return VectorBase<V>(V(lhs, rhs.expression()));
+                                         const typename Expr::expression_type&, false>;
+  return VectorBase<V>(std::in_place, lhs, rhs.expression());
 }
 
 } // namespace zipper

@@ -6,15 +6,18 @@
 #include "zipper/expression/binary/detail/operation_implementations.hpp"
 #include "zipper/expression/unary/detail/operation_implementations.hpp"
 
-// Helper: checks if ExprType is derived from BASETYPE<expression_type> or
-// BASETYPE<const expression_type>.  This is needed because ZipperBase defines
-// expression_type = std::decay_t<Expression>, stripping const.  So
+// Helper: checks if ExprType is derived from BASETYPE<T> for various
+// qualifications of T.  This is needed because ZipperBase defines
+// expression_type = std::decay_t<Expression>, stripping const/ref.  So
 // BASETYPE<const Expr> has expression_type = Expr, but is NOT derived from
-// BASETYPE<Expr> — the two are sibling template instantiations.  Checking
-// both const and non-const branches handles this uniformly.
+// BASETYPE<Expr> — the two are sibling template instantiations.
+// We check value, const-value, lvalue-ref, and const-lvalue-ref variants
+// so that as_array() etc. can return reference-wrapping wrappers.
 #define ZIPPER_DERIVED_FROM_BASE(ExprType, BASETYPE) \
     (std::derived_from<ExprType, zipper::BASETYPE<typename ExprType::expression_type>> || \
-     std::derived_from<ExprType, zipper::BASETYPE<const typename ExprType::expression_type>>)
+     std::derived_from<ExprType, zipper::BASETYPE<const typename ExprType::expression_type>> || \
+     std::derived_from<ExprType, zipper::BASETYPE<typename ExprType::expression_type &>> || \
+     std::derived_from<ExprType, zipper::BASETYPE<const typename ExprType::expression_type &>>)
 
 #define SCALAR_BINARY_DECLARATION(BASETYPE, NAME, OP)                \
     template <concepts::Zipper ExprType, typename Scalar>  \

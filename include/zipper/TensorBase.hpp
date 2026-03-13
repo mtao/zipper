@@ -53,24 +53,22 @@ public:
     return Base::operator=(v.expression());
   }
 
-  // Slice methods - delegate to ZipperBase::slice_expression
+  // Slice methods - construct wrapper in-place to avoid moving non-movable expressions
   template <typename... Slices> auto slice() {
-    auto v = Base::template slice_expression<Slices...>();
-    return TensorBase<std::decay_t<decltype(v)>>(std::move(v));
+    using V = expression::unary::Slice<expression_type&, std::decay_t<Slices>...>;
+    return TensorBase<V>(std::in_place, expression(), Slices{}...);
   }
   template <typename... Slices> auto slice(Slices &&...slices) const {
-    auto v =
-        Base::template slice_expression<Slices...>(std::forward<Slices>(slices)...);
-    return TensorBase<std::decay_t<decltype(v)>>(std::move(v));
+    using V = expression::unary::Slice<const expression_type&, std::decay_t<Slices>...>;
+    return TensorBase<V>(std::in_place, expression(), std::forward<Slices>(slices)...);
   }
   template <typename... Slices> auto slice() const {
-    auto v = Base::template slice_expression<Slices...>();
-    return TensorBase<std::decay_t<decltype(v)>>(std::move(v));
+    using V = expression::unary::Slice<const expression_type&, std::decay_t<Slices>...>;
+    return TensorBase<V>(std::in_place, expression(), Slices{}...);
   }
   template <typename... Slices> auto slice(Slices &&...slices) {
-    auto v =
-        Base::template slice_expression<Slices...>(std::forward<Slices>(slices)...);
-    return TensorBase<std::decay_t<decltype(v)>>(std::move(v));
+    using V = expression::unary::Slice<expression_type&, std::decay_t<Slices>...>;
+    return TensorBase<V>(std::in_place, expression(), std::forward<Slices>(slices)...);
   }
 };
 

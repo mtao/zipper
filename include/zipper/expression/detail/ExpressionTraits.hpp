@@ -50,6 +50,15 @@ struct BasicExpressionTraits {
   constexpr static bool is_coefficient_consistent = AF.is_alias_free;
 
   constexpr static bool is_writable = is_assignable();
+
+  /// Whether this expression (or any sub-expression) stores references to
+  /// external data.  When true, the expression tree may dangle if it outlives
+  /// the referenced objects, so returning it from a function is disallowed
+  /// by default (see NonReturnable).  Leaf expressions that own their data
+  /// (e.g. MDArray, Constant) set this to false.  The default for
+  /// BasicExpressionTraits is false — derived traits must propagate or
+  /// override as appropriate.
+  constexpr static bool stores_references = false;
 };
 
 template <typename T> struct ExpressionTraits;
@@ -126,6 +135,10 @@ struct DefaultExpressionTraits {
   constexpr static bool is_coefficient_consistent = is_alias_free;
 
   constexpr static bool is_writable = is_assignable();
+
+  /// Whether this expression stores references to external data.
+  /// Default is false — overridden by expressions that borrow data.
+  constexpr static bool stores_references = false;
 
   /// returns true if a dimension is sparse, false if dense. Should be used to
   /// hint if a dimension should be iterated via a full loop or an iterator

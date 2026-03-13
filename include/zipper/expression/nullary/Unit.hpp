@@ -70,6 +70,9 @@ public:
     return std::array<index_type, 1>{{static_cast<index_type>(m_index)}};
   }
 
+  /// Unit already owns its data — make_owned() returns a copy.
+  auto make_owned() const -> Unit { return *this; }
+
 private:
   IndexType m_index;
 };

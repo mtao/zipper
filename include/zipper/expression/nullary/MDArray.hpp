@@ -42,6 +42,9 @@ public:
     expression::detail::AssignHelper<V, self_type>::assign(v, *this);
   }
 
+  /// MDArray already owns its data — make_owned() returns a copy.
+  auto make_owned() const -> self_type { return *this; }
+
   auto as_span() -> span_type {
     if constexpr (IsStatic) {
       return span_type(linear_accessor().as_std_span());
@@ -86,4 +89,20 @@ struct detail::ExpressionTraits<nullary::MDArray<
           nullary::MDArray<ElementType, Extents, LayoutPolicy, AccessorPolicy>>> {
 };
 } // namespace zipper::expression
+
+// Out-of-line definition of MDSpan::make_owned() — must appear after MDArray
+// is fully defined because it constructs an MDArray.
+namespace zipper::expression::nullary {
+template <typename ElementType, typename Extents,
+          typename LayoutPolicy, typename AccessorPolicy>
+auto MDSpan<ElementType, Extents, LayoutPolicy, AccessorPolicy>::make_owned() const {
+  using non_const_element = std::remove_const_t<ElementType>;
+  using owned_type = MDArray<non_const_element, Extents, LayoutPolicy,
+                             default_accessor_policy<non_const_element>>;
+  owned_type result(this->extents());
+  expression::detail::AssignHelper<self_type, owned_type>::assign(*this, result);
+  return result;
+}
+} // namespace zipper::expression::nullary
+
 #endif

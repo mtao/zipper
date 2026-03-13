@@ -7,7 +7,7 @@
 
 namespace zipper::expression {
 namespace binary {
-template <zipper::concepts::Expression A, zipper::concepts::Expression B>
+template <zipper::concepts::QualifiedExpression A, zipper::concepts::QualifiedExpression B>
 class WedgeProduct;
 
 }
@@ -52,12 +52,12 @@ struct wedge_coeffwise_extents_values<extents<A...>, extents<B...>> {
 
 }  // namespace _detail_wedge
 
-template <concepts::Expression A, concepts::Expression B>
+template <concepts::QualifiedExpression A, concepts::QualifiedExpression B>
 struct detail::ExpressionTraits<binary::WedgeProduct<A, B>>
     : public binary::detail::DefaultBinaryExpressionTraits<A, B> {
-    using ATraits = detail::ExpressionTraits<A>;
+    using ATraits = detail::ExpressionTraits<std::decay_t<A>>;
     constexpr static rank_type lhs_rank = ATraits::extents_type::rank();
-    using BTraits = detail::ExpressionTraits<B>;
+    using BTraits = detail::ExpressionTraits<std::decay_t<B>>;
     constexpr static rank_type rhs_rank = BTraits::extents_type::rank();
     using CEV =
         _detail_wedge::wedge_coeffwise_extents_values<typename ATraits::extents_type,
@@ -77,11 +77,11 @@ struct detail::ExpressionTraits<binary::WedgeProduct<A, B>>
 };
 
 namespace binary {
-template <zipper::concepts::Expression A, zipper::concepts::Expression B>
-class WedgeProduct : public BinaryExpressionBase<WedgeProduct<A, B>, const A, const B> {
+template <zipper::concepts::QualifiedExpression A, zipper::concepts::QualifiedExpression B>
+class WedgeProduct : public BinaryExpressionBase<WedgeProduct<A, B>, A, B> {
    public:
     using self_type = WedgeProduct<A, B>;
-    using Base = BinaryExpressionBase<self_type, const A, const B>;
+    using Base = BinaryExpressionBase<self_type, A, B>;
     using ExpressionBase = expression::ExpressionBase<self_type>;
     using traits = zipper::expression::detail::ExpressionTraits<self_type>;
     using value_type = traits::value_type;
@@ -93,7 +93,7 @@ class WedgeProduct : public BinaryExpressionBase<WedgeProduct<A, B>, const A, co
     using extents_type = traits::extents_type;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
 
-    WedgeProduct(const A& a, const B& b)
+    WedgeProduct(const std::decay_t<A>& a, const std::decay_t<B>& b)
         : Base(a, b) {}
 
     constexpr auto extent(rank_type i) const -> index_type {
@@ -138,10 +138,18 @@ class WedgeProduct : public BinaryExpressionBase<WedgeProduct<A, B>, const A, co
                           std::forward<Args>(args)...);
     }
 
+    /// Recursively deep-copy children so the result owns all data.
+    auto make_owned() const {
+        auto owned_a = lhs().make_owned();
+        auto owned_b = rhs().make_owned();
+        return WedgeProduct<const decltype(owned_a), const decltype(owned_b)>(
+            std::move(owned_a), std::move(owned_b));
+    }
+
 };
 
 template <zipper::concepts::Expression A, zipper::concepts::Expression B>
-WedgeProduct(const A& a, const B& b) -> WedgeProduct<A, B>;
+WedgeProduct(const A& a, const B& b) -> WedgeProduct<const A&, const B&>;
 
 }  // namespace binary
 }  // namespace zipper::expression

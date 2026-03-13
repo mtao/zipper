@@ -69,6 +69,9 @@ public:
     }
   }
 
+  /// Identity already owns its data — make_owned() returns a copy.
+  auto make_owned() const -> Identity { return *this; }
+
 private:
   // =====================================================
   // TODO: this should be used for sparse?

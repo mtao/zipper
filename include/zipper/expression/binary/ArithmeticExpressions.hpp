@@ -10,8 +10,8 @@ namespace zipper::expression::binary {
 namespace _detail_arith {
 template <concepts::QualifiedExpression ExprA, concepts::QualifiedExpression ExprB>
 struct scalar_type {
-    using ATraits = expression::detail::ExpressionTraits<ExprA>;
-    using BTraits = expression::detail::ExpressionTraits<ExprB>;
+    using ATraits = expression::detail::ExpressionTraits<std::decay_t<ExprA>>;
+    using BTraits = expression::detail::ExpressionTraits<std::decay_t<ExprB>>;
 
     using a_value_type = ATraits::value_type;
     using b_value_type = BTraits::value_type;

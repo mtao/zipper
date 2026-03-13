@@ -5,7 +5,7 @@
 #include "fmt_include.hpp"
 #include "catch_include.hpp"
 #include <zipper/expression/nullary/Unit.hpp>
-#include <iostream>
+#include <print>
 #include <zipper/Tensor.hpp>
 #include <zipper/Vector.hpp>
 #include <zipper/Matrix.hpp>
@@ -25,39 +25,38 @@ void print(auto const& M) {
 
     if constexpr (rank == 1) {
         for (zipper::index_type j = 0; j < M.extent(0); ++j) {
-            std::cout << M(j) << " ";
-            std::cout << std::endl;
+            std::print("{} ", M(j));
+            std::println("");
         }
     } else if constexpr (rank == 2) {
         for (zipper::index_type j = 0; j < M.extent(0); ++j) {
             for (zipper::index_type k = 0; k < M.extent(1); ++k) {
-                std::cout << M(j, k) << " ";
+                std::print("{} ", M(j, k));
             }
-            std::cout << std::endl;
+            std::println("");
         }
     } else if constexpr (rank == 3) {
         for (zipper::index_type j = 0; j < M.extent(0); ++j) {
             for (zipper::index_type k = 0; k < M.extent(1); ++k) {
                 for (zipper::index_type l = 0; l < M.extent(2); ++l) {
-                    //fmt::print("{} {} {} / {} {} {}\n", j, k, l, M.extents().static_extent(0),M.extents().static_extent(1),M.extents().static_extent(2));
-                    std::cout << M(j, k, l) << " ";
+                    std::print("{} ", M(j, k, l));
                 }
-                std::cout << std::endl;
+                std::println("");
             }
-            std::cout << "-----" << std::endl;
+            std::println("-----");
         }
     } else if constexpr (rank == 4) {
         for (zipper::index_type j = 0; j < M.extent(0); ++j) {
             for (zipper::index_type k = 0; k < M.extent(1); ++k) {
                 for (zipper::index_type l = 0; l < M.extent(2); ++l) {
                     for (zipper::index_type m = 0; m < M.extent(3); ++m) {
-                        std::cout << M(j, k, l, m) << " ";
+                        std::print("{} ", M(j, k, l, m));
                     }
-                    std::cout << std::endl;
+                    std::println("");
                 }
-                std::cout << "-----" << std::endl;
+                std::println("-----");
             }
-            std::cout << "=====" << std::endl;
+            std::println("=====");
         }
     }
 }
@@ -117,7 +116,7 @@ TEST_CASE("test_product", "[storage][tensor]") {
     static_assert(decltype(TP)::extents_type::rank() == 4);
 
     using TP_type = std::decay_t<decltype(TP)>::expression_type;
-    zipper::expression::unary::PartialTrace<const TP_type, 1, 2> pt(TP.expression());
+    zipper::expression::unary::PartialTrace<const TP_type&, 1, 2> pt(TP.expression());
     zipper::Matrix<double, 3, 3> MN_tensor = pt;
 
     // Both methods should give the same result

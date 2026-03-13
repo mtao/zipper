@@ -7,7 +7,7 @@
 namespace zipper::expression::unary {
 namespace detail {
 template <typename A> struct abs {
-  constexpr A operator()(const A &a) const { return std::abs(a); }
+  static constexpr A operator()(const A &a) { return std::abs(a); }
 };
 } // namespace detail
 

@@ -1,5 +1,5 @@
-#if !defined(ZIPPER_UTILS_MAXCOEFF_HPP)
-#define ZIPPER_UTILS_MAXCOEFF_HPP
+#if !defined(ZIPPER_UTILS_MAX_COEFF_HPP)
+#define ZIPPER_UTILS_MAX_COEFF_HPP
 #include <zipper/ZipperBase.hpp>
 #include <zipper/concepts/Zipper.hpp>
 

@@ -11,8 +11,10 @@ template <template <zipper::concepts::QualifiedExpression,
           zipper::concepts::QualifiedExpression ExprA,
           zipper::concepts::QualifiedExpression ExprB>
 auto operation_implementation(const ExprA& lhs, const ExprB& rhs) {
-    using OpType = Op<ExprA, ExprB>;
-    return BaseType<OpType>(OpType(lhs, rhs, {}));
+    using OpType = Op<const ExprA&, const ExprB&>;
+    // Construct the expression in-place inside BaseType by forwarding
+    // the constructor arguments, avoiding a move of the expression node.
+    return BaseType<OpType>(std::in_place, lhs, rhs);
 }
 
 }  // namespace zipper::expression::binary::detail

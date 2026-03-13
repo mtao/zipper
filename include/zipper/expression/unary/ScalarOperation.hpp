@@ -5,18 +5,18 @@
 
 namespace zipper::expression {
 namespace unary {
-template <zipper::concepts::Expression Child, typename Operation,
+template <zipper::concepts::QualifiedExpression Child, typename Operation,
           typename Scalar, bool ScalarOnRight = false>
 class ScalarOperation;
 
 }
-template <zipper::concepts::Expression Child, typename Operation,
+template <zipper::concepts::QualifiedExpression Child, typename Operation,
           typename Scalar, bool ScalarOnRight>
 struct detail::ExpressionTraits<
     unary::ScalarOperation<Child, Operation, Scalar, ScalarOnRight>>
     : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<
           Child> {
-  using ChildTraits = ExpressionTraits<Child>;
+  using ChildTraits = ExpressionTraits<std::decay_t<Child>>;
   using value_type = decltype(std::declval<Operation>()(
       std::declval<typename ChildTraits::value_type>(),
       std::declval<Scalar>()));
@@ -43,7 +43,7 @@ struct detail::ExpressionTraits<
 };
 
 namespace unary {
-template <zipper::concepts::Expression Child, typename Operation,
+template <zipper::concepts::QualifiedExpression Child, typename Operation,
           typename Scalar, bool ScalarOnRight>
 class ScalarOperation
     : public UnaryExpressionBase<
@@ -57,12 +57,14 @@ public:
   using Base = UnaryExpressionBase<self_type, Child>;
   using Base::expression;
 
-  ScalarOperation(Child &a, const Scalar &b, const Operation &op = {})
-    requires(ScalarOnRight)
-      : Base(a), m_op(op), m_scalar(b) {}
-  ScalarOperation(const Scalar &a, Child &b, const Operation &op = {})
-    requires(!ScalarOnRight)
-      : Base(b), m_op(op), m_scalar(a) {}
+  template <typename U>
+    requires (ScalarOnRight && std::constructible_from<typename Base::storage_type, U &&>)
+  ScalarOperation(U &&a, const Scalar &b, const Operation &op = {})
+      : Base(std::forward<U>(a)), m_op(op), m_scalar(b) {}
+  template <typename U>
+    requires (!ScalarOnRight && std::constructible_from<typename Base::storage_type, U &&>)
+  ScalarOperation(const Scalar &a, U &&b, const Operation &op = {})
+      : Base(std::forward<U>(b)), m_op(op), m_scalar(a) {}
 
   // using child_value_type = traits::base_value_type;
 
@@ -74,6 +76,18 @@ public:
     }
   }
 
+  /// Recursively deep-copy child so the result owns all data.
+  auto make_owned() const {
+      auto owned_child = expression().make_owned();
+      if constexpr (ScalarOnRight) {
+          return ScalarOperation<const decltype(owned_child), Operation, Scalar, ScalarOnRight>(
+              std::move(owned_child), m_scalar, m_op);
+      } else {
+          return ScalarOperation<const decltype(owned_child), Operation, Scalar, ScalarOnRight>(
+              m_scalar, std::move(owned_child), m_op);
+      }
+  }
+
 private:
   Operation m_op;
   Scalar m_scalar;
@@ -82,11 +96,11 @@ private:
 template <zipper::concepts::Expression Child, typename Operation,
           typename Scalar>
 ScalarOperation(const Child &a, const Scalar &b, const Operation &op)
-    -> ScalarOperation<Child, Scalar, Operation, true>;
+    -> ScalarOperation<const Child&, Operation, Scalar, true>;
 template <zipper::concepts::Expression Child, typename Operation,
           typename Scalar>
 ScalarOperation(const Scalar &a, const Child &b, const Operation &op)
-    -> ScalarOperation<Child, Scalar, Operation, false>;
+    -> ScalarOperation<const Child&, Operation, Scalar, false>;
 } // namespace unary
 } // namespace zipper::expression
 #endif

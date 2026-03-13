@@ -63,9 +63,9 @@ template <concepts::QualifiedExpression A, concepts::QualifiedExpression B>
 struct detail::ExpressionTraits<binary::TensorProduct<A, B>>
     : public binary::detail::DefaultBinaryExpressionTraits<A, B>
 {
-    using ATraits = detail::ExpressionTraits<A>;
+    using ATraits = detail::ExpressionTraits<std::decay_t<A>>;
     constexpr static rank_type lhs_rank = ATraits::extents_type::rank();
-    using BTraits = detail::ExpressionTraits<B>;
+    using BTraits = detail::ExpressionTraits<std::decay_t<B>>;
     constexpr static rank_type rhs_rank = BTraits::extents_type::rank();
     using CEV = binary::_detail_tensor::tensor_coeffwise_extents_values<
         typename ATraits::extents_type, typename BTraits::extents_type>;
@@ -105,7 +105,7 @@ class TensorProduct : public BinaryExpressionBase<TensorProduct<A, B>, A, B> {
     TensorProduct(TensorProduct&&) = default;
     TensorProduct& operator=(const TensorProduct&) = delete;
     TensorProduct& operator=(TensorProduct&&) = delete;
-    TensorProduct(const A& a, const B& b)
+    TensorProduct(const std::decay_t<A>& a, const std::decay_t<B>& b)
         : Base(a, b) {}
 
     constexpr auto extent(rank_type i) const -> index_type {
@@ -141,10 +141,18 @@ class TensorProduct : public BinaryExpressionBase<TensorProduct<A, B>, A, B> {
                          std::forward<Args>(args)...);
     }
 
+    /// Recursively deep-copy children so the result owns all data.
+    auto make_owned() const {
+        auto owned_a = lhs().make_owned();
+        auto owned_b = rhs().make_owned();
+        return TensorProduct<const decltype(owned_a), const decltype(owned_b)>(
+            std::move(owned_a), std::move(owned_b));
+    }
+
 };
 
 template <zipper::concepts::Expression A, zipper::concepts::Expression B>
-TensorProduct(const A& a, const B& b) -> TensorProduct<A, B>;
+TensorProduct(const A& a, const B& b) -> TensorProduct<const A&, const B&>;
 
 }  // namespace binary
 }  // namespace zipper::expression

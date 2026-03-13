@@ -4,8 +4,7 @@
 #include <cmath>
 
 #include "LpNormPowered.hpp"
-#include "zipper/concepts/Expression.hpp"
-#include "zipper/expression/detail/ExpressionTraits.hpp"
+#include "ReductionBase.hpp"
 
 namespace zipper::expression {
 namespace reductions {
@@ -13,23 +12,19 @@ namespace reductions {
 namespace detail {
 template <index_type P>
 struct lp_norm_holder {
-  template <zipper::concepts::QualifiedExpression Expr>
-  class LpNorm {
+  template <typename Expr>
+  class LpNorm : public ReductionBase<LpNorm<Expr>, Expr> {
   public:
-    using self_type = LpNorm<Expr>;
-    using expression_type = Expr;
-    using expression_traits =
-        zipper::expression::detail::ExpressionTraits<expression_type>;
-    using value_type = typename expression_traits::value_type;
+    using Base = ReductionBase<LpNorm<Expr>, Expr>;
+    using typename Base::expression_type;
+    using typename Base::expression_traits;
+    using typename Base::value_type;
 
-    LpNorm(Expr &v) : m_expression(v) {}
-    LpNorm(Expr &&v) : m_expression(v) {}
-
-    LpNorm(LpNorm &&v) = default;
-    LpNorm(const LpNorm &v) = default;
+    using Base::Base;
+    using Base::expression;
 
     value_type operator()() const {
-      auto v = LpNormPowered<P, expression_type>(m_expression)();
+      auto v = LpNormPowered<P, const expression_type &>(expression())();
       if constexpr (P == 1) {
         return v;
       } else if constexpr (P == 2) {
@@ -38,9 +33,6 @@ struct lp_norm_holder {
         return std::pow(v, value_type(1.0) / P);
       }
     }
-
-  private:
-    Expr &m_expression;
   };
   template <zipper::concepts::QualifiedExpression ExprType,
             rank_type... Indices>
@@ -50,13 +42,13 @@ struct lp_norm_holder {
 };
 } // namespace detail
 
-template <index_type P, zipper::concepts::QualifiedExpression Expr>
+template <index_type P, typename Expr>
 using LpNorm =
     typename detail::template lp_norm_holder<P>::template LpNorm<Expr>;
 
-template <zipper::concepts::QualifiedExpression Expr>
+template <typename Expr>
 using L2Norm = typename detail::lp_norm_holder<2>::LpNorm<Expr>;
-template <zipper::concepts::QualifiedExpression Expr>
+template <typename Expr>
 using L1Norm = typename detail::lp_norm_holder<1>::LpNorm<Expr>;
 
 } // namespace reductions

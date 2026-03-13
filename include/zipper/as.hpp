@@ -26,7 +26,7 @@ template <concepts::Expression T> class TensorBase;
   template <concepts::Zipper ZipperDerived>                         \
   auto as_##NAME_LOWER(const ZipperDerived &v) {                               \
     using Expr = typename ZipperDerived::expression_type;                      \
-    return NAME_UPPER##Base<const Expr>(v.expression());                       \
+    return NAME_UPPER##Base<const Expr &>(v.expression());                     \
   }
 
 AS_IMPL(array, Array)

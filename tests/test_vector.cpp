@@ -1,4 +1,4 @@
-#include <iostream>
+#include <print>
 #include <zipper/Form.hpp>
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
@@ -18,16 +18,16 @@ namespace {
 void print(zipper::concepts::Matrix auto const &M) {
   for (zipper::index_type j = 0; j < M.extent(0); ++j) {
     for (zipper::index_type k = 0; k < M.extent(1); ++k) {
-      std::cout << M(j, k) << " ";
+      std::print("{} ", M(j, k));
     }
-    std::cout << std::endl;
+    std::println("");
   }
 }
 void print(zipper::concepts::Vector auto const &M) {
   for (zipper::index_type j = 0; j < M.extent(0); ++j) {
-    std::cout << M(j) << " ";
+    std::print("{} ", M(j));
   }
-  std::cout << std::endl;
+  std::println("");
 }
 } // namespace
   //
@@ -54,7 +54,8 @@ TEST_CASE("test_deductions", "[vector][storage][dense]") {
   CHECK(y(1) == 2);
   CHECK(y(2) == 4);
 #if defined(__cpp_lib_span_initializer_list)
-  VectorBase z(std::array{1, 2, 3});
+  auto z_arr = std::array{1, 2, 3};
+  VectorBase z(z_arr);
   CHECK(z(0) == 1);
   CHECK(z(1) == 2);
   CHECK(z(2) == 3);

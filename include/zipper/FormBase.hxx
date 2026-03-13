@@ -31,31 +31,31 @@ BINARY_DECLARATION(FormBase, Minus, operator-)
 
 template <concepts::Form Expr1, concepts::Form Expr2>
 auto operator^(Expr1 const &lhs, Expr2 const &rhs) {
-  using V = expression::binary::WedgeProduct<const typename Expr1::expression_type,
-                                            const typename Expr2::expression_type>;
-  return FormBase<V>(V(lhs.expression(), rhs.expression()));
+  using V = expression::binary::WedgeProduct<const typename Expr1::expression_type&,
+                                            const typename Expr2::expression_type&>;
+  return FormBase<V>(std::in_place, lhs.expression(), rhs.expression());
 }
 
 template <concepts::Form Expr1, concepts::Tensor Expr2>
 auto operator*(Expr1 const &lhs, Expr2 const &rhs) {
-  using V = expression::binary::FormTensorProduct<const typename Expr1::expression_type,
-                                                  const typename Expr2::expression_type>;
+  using V = expression::binary::FormTensorProduct<const typename Expr1::expression_type&,
+                                                  const typename Expr2::expression_type&>;
 
   if constexpr (V::result_is_form) {
-    return FormBase<V>(V(lhs.expression(), rhs.expression()));
+    return FormBase<V>(std::in_place, lhs.expression(), rhs.expression());
   } else {
-    return TensorBase<V>(V(lhs.expression(), rhs.expression()));
+    return TensorBase<V>(std::in_place, lhs.expression(), rhs.expression());
   }
 }
 template <concepts::Form Expr1, concepts::Vector Expr2>
 auto operator*(Expr1 const &lhs, Expr2 const &rhs) {
 
-  using V = expression::binary::FormTensorProduct<const typename Expr1::expression_type,
-                                                  const typename Expr2::expression_type>;
+  using V = expression::binary::FormTensorProduct<const typename Expr1::expression_type&,
+                                                  const typename Expr2::expression_type&>;
   if constexpr (V::result_is_form) {
-    return FormBase<V>(V(lhs.expression(), rhs.expression()));
+    return FormBase<V>(std::in_place, lhs.expression(), rhs.expression());
   } else {
-    return TensorBase<V>(V(lhs.expression(), rhs.expression()));
+    return TensorBase<V>(std::in_place, lhs.expression(), rhs.expression());
   }
 }
 

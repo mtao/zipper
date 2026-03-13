@@ -16,7 +16,6 @@ constexpr index_type max_dim(std::integer_sequence<rank_type, N...>) {
     return std::max({(Ext::static_extent(N) == std::dynamic_extent
                           ? 0
                           : Ext::static_extent(N))...});
-    return std::max({Ext::static_extent(N)...});
 }
 template <zipper::concepts::Extents Ext>
 constexpr index_type max_dim() {
@@ -59,6 +58,7 @@ constexpr std::optional<index_type> size_if_cubic(const Ext& e) {
         if (is_cubic(e)) {
             return detail::max_dim(e);
         }
+        return std::nullopt;
     }
 }
 template <zipper::concepts::Extents Ext>

@@ -6,16 +6,16 @@
 
 namespace zipper::expression {
 namespace unary {
-template <zipper::concepts::Expression B, typename Op>
+template <zipper::concepts::QualifiedExpression Child, typename Op>
 class CoefficientWiseOperation;
 
 } // namespace unary
-template <zipper::concepts::Expression Child, typename Op>
+template <zipper::concepts::QualifiedExpression Child, typename Op>
 struct expression::detail::ExpressionTraits<
     unary::CoefficientWiseOperation<Child, Op>>
     : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<
           Child> {
-  using child_traits = ExpressionTraits<Child>;
+  using child_traits = ExpressionTraits<std::decay_t<Child>>;
   using value_type = std::decay_t<decltype(std::declval<Op>()(
       std::declval<typename child_traits::value_type>()))>;
   // CoefficientWiseOperation computes values on the fly — not referrable or
@@ -44,7 +44,7 @@ struct expression::detail::ExpressionTraits<
 // represents a coefficient-wise transformation of an underlyng expression
 namespace unary {
 
-template <zipper::concepts::Expression Child, typename Operation>
+template <zipper::concepts::QualifiedExpression Child, typename Operation>
 class CoefficientWiseOperation
     : public UnaryExpressionBase<CoefficientWiseOperation<Child, Operation>,
                                  Child> {
@@ -59,8 +59,10 @@ public:
   using Base::expression;
   using Base::extent;
 
-  CoefficientWiseOperation(Child &v, Operation const &op = {})
-      : Base(v), m_op(op) {}
+  template <typename U>
+    requires std::constructible_from<typename Base::storage_type, U &&>
+  CoefficientWiseOperation(U &&v, Operation const &op = {})
+      : Base(std::forward<U>(v)), m_op(op) {}
 
   using child_value_type = traits::base_value_type;
 
@@ -68,13 +70,20 @@ public:
     return value_type(m_op(value));
   }
 
+  /// Recursively deep-copy child so the result owns all data.
+  auto make_owned() const {
+      auto owned_child = expression().make_owned();
+      return CoefficientWiseOperation<const decltype(owned_child), Operation>(
+          std::move(owned_child), m_op);
+  }
+
 private:
   Operation m_op;
 
 };
 
-template <typename A, zipper::concepts::Expression B>
-CoefficientWiseOperation(const A &a, B &b) -> CoefficientWiseOperation<A, B>;
+template <typename Op, zipper::concepts::Expression B>
+CoefficientWiseOperation(const B &a, const Op &) -> CoefficientWiseOperation<const B&, Op>;
 } // namespace unary
 } // namespace zipper::expression
 #endif

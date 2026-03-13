@@ -23,7 +23,7 @@ struct detail::ExpressionTraits<
   using ExprType = std::decay_t<QualifiedExprType>;
   using swizzler_type = zipper::detail::extents::ExtentsSwizzler<Indices...>;
 
-  using Base = ExpressionTraits<QualifiedExprType>;
+  using Base = ExpressionTraits<std::decay_t<QualifiedExprType>>;
   using extents_type = swizzler_type::template extents_type_swizzler_t<
       typename Base::extents_type>;
   using value_type = Base::value_type;
@@ -56,8 +56,17 @@ public:
   Swizzle(Swizzle &&) = default;
   auto operator=(const Swizzle &) -> Swizzle & = delete;
   auto operator=(Swizzle &&) -> Swizzle & = delete;
-  Swizzle(QualifiedExprType &b)
-      : Base(b) {}
+  template <typename U>
+    requires std::constructible_from<typename Base::storage_type, U &&>
+  Swizzle(U &&b)
+      : Base(std::forward<U>(b)) {}
+
+  /// Recursively deep-copy child so the result owns all data.
+  auto make_owned() const {
+      auto owned_child = expression().make_owned();
+      return Swizzle<const decltype(owned_child), Indices...>(
+          std::move(owned_child));
+  }
 
   constexpr auto extent(rank_type i) const -> index_type {
       constexpr std::array<index_type, sizeof...(Indices)> swizzle_map = {{Indices...}};

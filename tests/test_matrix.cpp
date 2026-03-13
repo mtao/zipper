@@ -1,6 +1,6 @@
 
 
-#include <iostream>
+#include <print>
 #include <zipper/ArrayBase.hxx>
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
@@ -21,16 +21,16 @@ namespace {
 void print(zipper::concepts::Matrix auto const &M) {
   for (zipper::index_type j = 0; j < M.extent(0); ++j) {
     for (zipper::index_type k = 0; k < M.extent(1); ++k) {
-      std::cout << M(j, k) << " ";
+      std::print("{} ", M(j, k));
     }
-    std::cout << std::endl;
+    std::println("");
   }
 }
 void print(zipper::concepts::Vector auto const &M) {
   for (zipper::index_type j = 0; j < M.extent(0); ++j) {
-    std::cout << M(j) << " ";
+    std::print("{} ", M(j));
   }
-  std::cout << std::endl;
+  std::println("");
 }
 } // namespace
   //
@@ -338,9 +338,9 @@ TEST_CASE("test_partial_trace_matrix", "[matrix][storage][dense]") {
   N.diagonal() = zipper::expression::nullary::Constant<double, 3>(1.0);
 
   {
-    zipper::MatrixBase empty_partial_trace =
-        zipper::expression::unary::PartialTrace<
-            std::decay_t<decltype(N.expression())>>(N.expression());
+    using PT = zipper::expression::unary::PartialTrace<
+        std::decay_t<decltype(N.expression())>>;
+    zipper::MatrixBase<PT> empty_partial_trace(std::in_place, N.expression());
     static_assert(
         std::decay_t<decltype(empty_partial_trace.extents())>::rank() == 2);
     using reducer = std::decay_t<
@@ -772,7 +772,10 @@ TEST_CASE("test_matrix_span", "[matrix][storage][dense][span]") {
     auto b = m.as_const_span();
     CHECK((a == b));
 
-    zipper::Matrix<int, 2, 2>::const_span_type d = a;
+    // const_span_type wraps an MDSpan (stores_references) and is not writable,
+    // so it cannot be constructed from a mutable span via copy. Use
+    // as_const_span() directly instead.
+    auto d = m.as_const_span();
     CHECK((a == d));
   }
 
@@ -784,13 +787,15 @@ TEST_CASE("test_matrix_span", "[matrix][storage][dense][span]") {
   // CHECK(v(1) == 3);
 }
 TEST_CASE("test_span_view", "[vector][storage][dense][span]") {
-  using zipper::VectorBase;
   {
     zipper::Vector<double, 3> x = {1, 2, 3};
 
-    VectorBase y = x.expression().as_span();
+    // Use Vector::as_span() which returns VectorBase<MDSpan> as a prvalue
+    // (guaranteed copy elision). Don't use expression().as_span() which
+    // returns a raw MDSpan prvalue that can't be moved into VectorBase.
+    auto y = x.as_span();
     CHECK(x == y);
-    VectorBase z = x.expression().as_std_span();
+    auto z = x.as_const_span();
     CHECK(x == z);
   }
   {
@@ -798,9 +803,9 @@ TEST_CASE("test_span_view", "[vector][storage][dense][span]") {
 
     static_assert(std::decay_t<decltype(x)>::extents_type::rank() == 1);
 
-    VectorBase y = x.expression().as_span();
+    auto y = x.as_span();
     CHECK(x == y);
-    VectorBase z = x.expression().as_std_span();
+    auto z = x.as_const_span();
     CHECK(x == z);
   }
 }

@@ -70,8 +70,10 @@ class PartialReduction
     using Base::expression;
     using child_extents_type = traits::child_extents_type;
 
-    PartialReduction(ExprType& b)
-        : Base(b), m_extents(traits::index_remover::get_extents(b.extents())) {}
+    template <typename U>
+      requires std::constructible_from<typename Base::storage_type, U &&>
+    PartialReduction(U &&b)
+        : Base(std::forward<U>(b)), m_extents(traits::index_remover::get_extents(expression().extents())) {}
     PartialReduction() = delete;
     PartialReduction& operator=(const PartialReduction&) = delete;
     PartialReduction& operator=(PartialReduction&&) = delete;
@@ -91,7 +93,7 @@ class PartialReduction
     template <rank_type... N>
     struct slice_type_<std::integer_sequence<rank_type, N...>> {
         using type =
-            Slice<const ExprType,
+            Slice<const std::decay_t<ExprType>&,
                       std::conditional_t<traits::index_remover::in_sequence(N),
                                          index_type, full_extent_t>...>;
     };
@@ -122,7 +124,7 @@ class PartialReduction
             slice_type(expression(), get_index(std::integral_constant<rank_type, N>{},
                                          std::forward<Args>(idxs)...)...);
 
-        Reduction<const slice_type> v(slice);
+        Reduction<const slice_type &> v(slice);
         value_type val = v();
         return val;
     }
@@ -138,6 +140,14 @@ class PartialReduction
 
 private:
     extents_type m_extents;
+
+public:
+    /// Recursively deep-copy child so the result owns all data.
+    auto make_owned() const {
+        auto owned_child = expression().make_owned();
+        return PartialReduction<const decltype(owned_child), Reduction, Indices...>(
+            std::move(owned_child));
+    }
 };
 
 }  // namespace unary

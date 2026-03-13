@@ -3,7 +3,6 @@
 
 #include "zipper/expression/ExpressionBase.hpp"
 #include "zipper/types.hpp"
-#include <spdlog/spdlog.h>
 
 namespace zipper::expression::nullary {
 
@@ -21,9 +20,12 @@ public:
   constexpr static expression::detail::AccessFeatures access_features =
       expression_base::access_features;
 
-  auto derived() -> Derived & { return static_cast<Derived &>(*this); }
-  auto derived() const -> const Derived & {
-    return static_cast<const Derived &>(*this);
+  auto derived(this auto& self) -> auto& {
+    if constexpr (std::is_const_v<std::remove_reference_t<decltype(self)>>) {
+      return static_cast<const Derived &>(self);
+    } else {
+      return static_cast<Derived &>(self);
+    }
   }
 
   static_assert(!concepts::Extents<value_type>);

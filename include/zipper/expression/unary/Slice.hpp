@@ -3,6 +3,7 @@
 
 #include "UnaryExpressionBase.hpp"
 #include "zipper/concepts/IndexSlice.hpp"
+#include <utility>
 #include "zipper/concepts/Expression.hpp"
 #include "zipper/concepts/Index.hpp"
 #include "zipper/concepts/stl.hpp"
@@ -13,7 +14,7 @@
 
 namespace zipper::expression {
 namespace unary {
-template <zipper::concepts::Expression ExprType,
+template <zipper::concepts::QualifiedExpression ExprType,
           typename... Slices>
 class Slice;
 
@@ -63,6 +64,8 @@ struct slice_helper<strided_slice<OffsetType, ExtentType, StrideType>> {
         return start + input * stride;
     }
 
+    constexpr auto slice() const -> const type & { return m_slice; }
+
    private:
     type m_slice;
 };
@@ -81,6 +84,8 @@ struct slice_helper<full_extent_t> {
     }
 
     constexpr index_type get_index(index_type input) const { return input; }
+
+    constexpr auto slice() const -> type { return full_extent_t{}; }
 };
 template <typename T>
     requires(std::is_integral_v<T>)
@@ -98,6 +103,8 @@ struct slice_helper<T> {
     }
 
     constexpr index_type get_index() const { return m_slice; }
+
+    constexpr auto slice() const -> const type & { return m_slice; }
 
    private:
     index_type m_slice;
@@ -118,6 +125,8 @@ struct slice_helper<std::integral_constant<index_type, N>> {
     }
 
     constexpr index_type get_index() const { return N; }
+
+    constexpr auto slice() const -> type { return type{}; }
 };
 template <zipper::concepts::QualifiedExpression Expr>
     requires(Expr::extents_type::rank() == 1)
@@ -137,6 +146,37 @@ struct slice_helper<Expr> {
     constexpr index_type get_index(index_type input) const {
         return m_slice(input);
     }
+
+    constexpr auto slice() const -> const type & { return m_slice; }
+
+   private:
+    type m_slice;
+};
+
+// ZipperBase-derived types (e.g. Vector<index_type, N>) used as index slices
+template <typename Wrapper>
+    requires(!zipper::concepts::QualifiedExpression<Wrapper> &&
+             zipper::concepts::detail::IsZipperBase<std::decay_t<Wrapper>>::value &&
+             Wrapper::extents_type::rank() == 1 &&
+             zipper::concepts::Index<typename Wrapper::value_type>)
+struct slice_helper<Wrapper> {
+   public:
+    using type = Wrapper;
+    constexpr slice_helper(const type &t) : m_slice(t) {}
+    template <rank_type M, zipper::concepts::Extents ET>
+    constexpr static index_type static_extent() {
+        return Wrapper::extents_type::static_extent(0);
+    }
+    template <rank_type M, zipper::concepts::Extents ET>
+    constexpr static index_type extent(const type &t, const ET &) {
+        return t.extent(0);
+    }
+
+    constexpr index_type get_index(index_type input) const {
+        return m_slice(input);
+    }
+
+    constexpr auto slice() const -> const type & { return m_slice; }
 
    private:
     type m_slice;
@@ -160,6 +200,8 @@ struct slice_helper<std::array<index_type, N>> {
         return m_slice[input];
     }
 
+    constexpr auto slice() const -> const type & { return m_slice; }
+
    private:
     type m_slice;
 };
@@ -180,6 +222,8 @@ struct slice_helper<std::vector<index_type>> {
     constexpr index_type get_index(index_type input) const {
         return m_slice[input];
     }
+
+    constexpr auto slice() const -> const type & { return m_slice; }
 
    private:
     std::vector<index_type> m_slice;
@@ -250,7 +294,7 @@ struct _slice_extent_helper<ET, std::integer_sequence<rank_type, N...>,
             }
             // clang doesn't catch that all executions of this consteval turn
             // out to return
-            assert(false);
+            std::unreachable();
             return rank + 1;
         }
         consteval static rank_type get_dynamic_rank(rank_type r) {
@@ -305,12 +349,12 @@ using slice_extent_helper = _slice_extent_helper<
 
 }  // namespace unary
 
-template <zipper::concepts::Expression ExprType,
+template <zipper::concepts::QualifiedExpression ExprType,
           typename... Slices>
 struct detail::ExpressionTraits<unary::Slice<ExprType, Slices...>>
     : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<
           ExprType> {
-    using Base = detail::ExpressionTraits<ExprType>;
+    using Base = detail::ExpressionTraits<std::decay_t<ExprType>>;
 
     template <rank_type R>
     using get_slice_t =
@@ -332,7 +376,7 @@ struct detail::ExpressionTraits<unary::Slice<ExprType, Slices...>>
 };
 
 namespace unary {
-template <zipper::concepts::Expression ExprType,
+template <zipper::concepts::QualifiedExpression ExprType,
           typename... Slices>
 class Slice : public UnaryExpressionBase<Slice<ExprType, Slices...>,
                                        ExprType> {
@@ -362,9 +406,11 @@ class Slice : public UnaryExpressionBase<Slice<ExprType, Slices...>,
         assign(v);
         return *this;
     }
-    Slice(ExprType &b, const Slices &...slices)
-        : Base(b),
-          m_extents(traits::extents_helper::get_extents(b.extents(), slices...)),
+    template <typename U>
+      requires std::constructible_from<typename Base::storage_type, U &&>
+    Slice(U &&b, const Slices &...slices)
+        : Base(std::forward<U>(b)),
+          m_extents(traits::extents_helper::get_extents(expression().extents(), slices...)),
           m_slices(_detail_slice::slice_helper<std::decay_t<Slices>>(slices)...) {}
 
     constexpr auto extent(rank_type i) const -> index_type {
@@ -440,18 +486,34 @@ class Slice : public UnaryExpressionBase<Slice<ExprType, Slices...>,
         expression::detail::AssignHelper<V, self_type>::assign(v, *this);
     }
 
+    /// Recursively deep-copy child so the result owns all data.
+    /// Slice parameters (offsets, extents, strides) are value types and
+    /// are copied directly.
+    auto make_owned() const {
+        return _make_owned_impl(
+            std::make_integer_sequence<rank_type, sizeof...(Slices)>{});
+    }
+
    private:
+    template <rank_type... Is>
+    auto _make_owned_impl(std::integer_sequence<rank_type, Is...>) const {
+        auto owned_child = expression().make_owned();
+        return Slice<const decltype(owned_child), Slices...>(
+            std::move(owned_child),
+            std::get<Is>(m_slices).slice()...);
+    }
+
     extents_type m_extents;
     slice_storage_type m_slices;
 };
 
 template <zipper::concepts::Expression ExprType, typename... Slices>
 Slice(const ExprType &expr, Slices &&...)
-    -> Slice<const ExprType, std::decay_t<Slices>...>;
+    -> Slice<const ExprType&, std::decay_t<Slices>...>;
 
 template <zipper::concepts::Expression ExprType, typename... Slices>
 Slice(ExprType &expr, Slices &&...)
-    -> Slice<ExprType, std::decay_t<Slices>...>;
+    -> Slice<ExprType&, std::decay_t<Slices>...>;
 
 }  // namespace unary
 }  // namespace zipper::expression

@@ -2,27 +2,13 @@
 #if !defined(ZIPPER_STORAGE_SPARSECOORDINATEACCESSOR_HPP)
 #define ZIPPER_STORAGE_SPARSECOORDINATEACCESSOR_HPP
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wtautological-compare"
-#pragma GCC diagnostic ignored "-Winline"
-#pragma GCC diagnostic ignored "-Wpadded"
-#pragma GCC diagnostic ignored "-Wswitch-enum"
-#pragma GCC diagnostic ignored "-Wswitch-default"
-#pragma GCC diagnostic ignored "-Wstrict-overflow"
-#pragma GCC diagnostic ignored "-Wctor-dtor-privacy"
-#pragma GCC diagnostic ignored "-Weffc++"
-#if !defined(__clang__)
-#pragma GCC diagnostic ignored "-Wmultiple-inheritance"
-#pragma GCC diagnostic ignored "-Wabi-tag"
-#endif
-#include <fmt/format.h>
-#include <fmt/ranges.h>
-#pragma GCC diagnostic pop
+#include "zipper/detail/assert.hpp"
+#include "zipper/detail/fmt.hpp"
 
 #include <ranges>
 #include <vector>
 
-#include "zipper/detail//ExtentsTraits.hpp"
+#include "zipper/detail/ExtentsTraits.hpp"
 #include "zipper/detail/pack_index.hpp"
 #include "zipper/expression/ExpressionBase.hpp"
 namespace zipper::storage {
@@ -63,7 +49,7 @@ ValueType& value()
 */
   auto operator=(const SparseCoordinateAccessor_iterator &N)
       -> SparseCoordinateAccessor_iterator & {
-    assert(&m_acc == &N.m_acc);
+    ZIPPER_ASSERT(&m_acc == &N.m_acc);
     m_index = N.m_index;
     return *this;
   }
@@ -85,14 +71,14 @@ ValueType& value()
   auto operator*() const -> const auto & { return *this; }
   auto operator*() -> auto & { return *this; }
   auto operator<=>(const auto &t) const -> std::strong_ordering {
-    assert(m_acc.m_compressed);
+    ZIPPER_ASSERT(m_acc.m_compressed);
     if constexpr (std::is_same_v<SparseCoordinateAccessor_iterator<
                                      ValueType, Extents, is_const>,
                                  std::decay_t<decltype(t)>>) {
       return index() <=> t.index();
       // return multiindex() <=> t.multiindex();
     } else {
-      assert(index() != m_acc.size());
+      ZIPPER_ASSERT(index() != m_acc.size());
       return multiindex() <=> t;
     }
   }
@@ -222,6 +208,10 @@ public:
   }
 
   void compress() {
+    if (data_size() == 0) {
+      m_compressed = true;
+      return;
+    }
     std::vector o = std::views::iota(size_t(0), data_size()) |
                     std::ranges::to<std::vector>();
 
@@ -255,9 +245,7 @@ public:
   }
   template <concepts::Index... Indices>
   auto find(Indices &&...indices) const -> const_iterator_type {
-#if !defined(NDEBUG)
-    assert(zipper::utils::extents::indices_in_range(extents(), indices...));
-#endif
+    ZIPPER_ASSERT(zipper::utils::extents::indices_in_range(extents(), indices...));
     if (m_compressed) {
       if (data_size() == 0) {
         return end();
@@ -266,7 +254,7 @@ public:
                                  [](const auto &a, const auto &b) -> auto {
                                    return a.multiindex() < b;
                                  });
-      if (it.multiindex() == std::tie(indices...)) {
+      if (it != end() && it.multiindex() == std::tie(indices...)) {
         return it;
       }
     } else {
@@ -345,20 +333,4 @@ struct detail::ExpressionTraits<
 
 } // namespace zipper::expression
 
-namespace std {
-
-template <typename ValueType, typename Extents, bool is_const>
-auto distance(const zipper::storage::detail::SparseCoordinateAccessor_iterator<
-                  ValueType, Extents, is_const> &a,
-              const zipper::storage::detail::SparseCoordinateAccessor_iterator<
-                  ValueType, Extents, is_const> &b) -> std::int64_t {
-  return std::int64_t(b.index()) - std::int64_t(a.index());
-}
-template <typename ValueType, typename Extents, bool is_const>
-void advance(zipper::storage::detail::SparseCoordinateAccessor_iterator<
-                 ValueType, Extents, is_const> &a,
-             int64_t n) {
-  a += n;
-}
-} // namespace std
 #endif

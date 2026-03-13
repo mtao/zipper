@@ -103,13 +103,13 @@ public:
 
   auto pow(value_type const &exp) const {
     return ArrayBase<
-        expression::unary::ScalarPower<const expression_type, value_type>>(
-        expression(), exp);
+        expression::unary::ScalarPower<const expression_type&, value_type>>(
+        std::in_place, expression(), exp);
   }
 
   auto abs() const {
-    return ArrayBase<expression::unary::Abs<const expression_type>>(
-        expression());
+    return ArrayBase<expression::unary::Abs<const expression_type&>>(
+        std::in_place, expression());
   }
 
   auto sum() const -> value_type {
@@ -121,7 +121,7 @@ public:
   }
 
   template <index_type T> auto norm_powered() const -> value_type {
-    return expression::reductions::LpNormPowered<T, const expression_type>(
+    return expression::reductions::LpNormPowered<T, const expression_type &>(
         expression())();
   }
   auto norm_powered(value_type T) const -> value_type {
@@ -129,7 +129,7 @@ public:
   }
 
   template <index_type T = 2> auto norm() const -> value_type {
-    return expression::reductions::LpNorm<T, const expression_type>(
+    return expression::reductions::LpNorm<T, const expression_type &>(
         expression())();
   }
   auto norm(value_type T) const -> value_type {
@@ -155,24 +155,22 @@ public:
     return expression::reductions::All(expression())();
   }
 
-  // Slice methods - delegate to ZipperBase::slice_expression
+  // Slice methods - construct wrapper in-place to avoid moving non-movable expressions
   template <typename... Slices> auto slice() {
-    auto v = Base::template slice_expression<Slices...>();
-    return ArrayBase<std::decay_t<decltype(v)>>(std::move(v));
+    using V = expression::unary::Slice<expression_type&, std::decay_t<Slices>...>;
+    return ArrayBase<V>(std::in_place, expression(), Slices{}...);
   }
   template <typename... Slices> auto slice(Slices &&...slices) const {
-    auto v =
-        Base::template slice_expression<Slices...>(std::forward<Slices>(slices)...);
-    return ArrayBase<std::decay_t<decltype(v)>>(std::move(v));
+    using V = expression::unary::Slice<const expression_type&, std::decay_t<Slices>...>;
+    return ArrayBase<V>(std::in_place, expression(), std::forward<Slices>(slices)...);
   }
   template <typename... Slices> auto slice() const {
-    auto v = Base::template slice_expression<Slices...>();
-    return ArrayBase<std::decay_t<decltype(v)>>(std::move(v));
+    using V = expression::unary::Slice<const expression_type&, std::decay_t<Slices>...>;
+    return ArrayBase<V>(std::in_place, expression(), Slices{}...);
   }
   template <typename... Slices> auto slice(Slices &&...slices) {
-    auto v =
-        Base::template slice_expression<Slices...>(std::forward<Slices>(slices)...);
-    return ArrayBase<std::decay_t<decltype(v)>>(std::move(v));
+    using V = expression::unary::Slice<expression_type&, std::decay_t<Slices>...>;
+    return ArrayBase<V>(std::in_place, expression(), std::forward<Slices>(slices)...);
   }
 };
 

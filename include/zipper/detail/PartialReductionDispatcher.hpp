@@ -11,16 +11,21 @@ class PartialReductionDispatcher {
 public:
   PartialReductionDispatcher(ExprType &v) : m_dispatcher(v) {}
   auto sum() const {
-    DerivedT a = m_dispatcher.sum();
-    return a;
+    using PR = expression::unary::PartialReduction<
+        ExprType&, expression::reductions::CoefficientSum, Indices...>;
+    return DerivedT<PR>(std::in_place, m_dispatcher.expression());
   }
   template <index_type P = 2> auto norm() const {
-    DerivedT a = m_dispatcher.norm();
-    return a;
+    using holder = expression::reductions::detail::lp_norm_holder<P>;
+    using PR = expression::unary::PartialReduction<
+        ExprType&, holder::template LpNorm, Indices...>;
+    return DerivedT<PR>(std::in_place, m_dispatcher.expression());
   }
   template <index_type P = 2> auto norm_powered() const {
-    DerivedT a = m_dispatcher.norm_powered();
-    return a;
+    using holder = expression::reductions::detail::lp_norm_powered_holder<P>;
+    using PR = expression::unary::PartialReduction<
+        ExprType&, holder::template LpNormPowered, Indices...>;
+    return DerivedT<PR>(std::in_place, m_dispatcher.expression());
   }
 
 private:

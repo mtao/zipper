@@ -15,5 +15,8 @@ test('products', test_products)
 
 test_homogeneous = executable('test_homogeneous', 'test_homogeneous.cpp', dependencies: [zipper_test_dep])
 test('homogeneous', test_homogeneous)
+
+test_dynamic_extents = executable('test_dynamic_extents', 'test_dynamic_extents.cpp', dependencies: [zipper_test_dep])
+test('dynamic_extents', test_dynamic_extents)
 #
 subdir('reductions')

@@ -5,6 +5,7 @@
 #include "Slice.hpp"
 #include "UnaryExpressionBase.hpp"
 #include "zipper/concepts/Expression.hpp"
+#include "zipper/detail/assert.hpp"
 #include "zipper/expression/reductions/Determinant.hpp"
 
 #include <array>
@@ -14,17 +15,17 @@ namespace zipper::expression {
 namespace unary {
 
 template <zipper::concepts::QualifiedExpression ExprType>
-  requires(ExprType::extents_type::rank() == 2)
+  requires(std::decay_t<ExprType>::extents_type::rank() == 2)
 class Cofactor;
 
 } // namespace unary
 
 // ── Traits specialization ──────────────────────────────────────────────
 template <zipper::concepts::QualifiedExpression ExprType>
-  requires(ExprType::extents_type::rank() == 2)
+  requires(std::decay_t<ExprType>::extents_type::rank() == 2)
 struct detail::ExpressionTraits<unary::Cofactor<ExprType>>
     : public unary::detail::DefaultUnaryExpressionTraits<ExprType> {
-  using child_traits = detail::ExpressionTraits<ExprType>;
+  using child_traits = detail::ExpressionTraits<std::decay_t<ExprType>>;
   using value_type = typename child_traits::value_type;
   using extents_type = typename child_traits::extents_type;
 
@@ -55,7 +56,7 @@ struct detail::ExpressionTraits<unary::Cofactor<ExprType>>
 namespace unary {
 
 template <zipper::concepts::QualifiedExpression ExprType>
-  requires(ExprType::extents_type::rank() == 2)
+  requires(std::decay_t<ExprType>::extents_type::rank() == 2)
 class Cofactor
     : public UnaryExpressionBase<Cofactor<ExprType>, ExprType> {
 public:
@@ -72,8 +73,17 @@ public:
   auto operator=(const Cofactor &) -> Cofactor & = delete;
   auto operator=(Cofactor &&) -> Cofactor & = delete;
 
-  Cofactor(ExprType &b) : Base(b) {
-    assert(expression().extent(0) == expression().extent(1));
+  template <typename U>
+    requires std::constructible_from<typename Base::storage_type, U &&>
+  Cofactor(U &&b) : Base(std::forward<U>(b)) {
+    ZIPPER_ASSERT(expression().extent(0) == expression().extent(1));
+  }
+
+  /// Recursively deep-copy child so the result owns all data.
+  auto make_owned() const {
+      auto owned_child = expression().make_owned();
+      return Cofactor<const decltype(owned_child)>(
+          std::move(owned_child));
   }
 
   /// C(i,j) = (-1)^(i+j) * det(minor(M, i, j))
@@ -118,8 +128,11 @@ public:
   }
 };
 
-template <zipper::concepts::QualifiedExpression ExprType>
-Cofactor(ExprType &) -> Cofactor<ExprType>;
+template <zipper::concepts::Expression ExprType>
+Cofactor(ExprType &) -> Cofactor<ExprType&>;
+
+template <zipper::concepts::Expression ExprType>
+Cofactor(const ExprType &) -> Cofactor<const ExprType&>;
 
 } // namespace unary
 } // namespace zipper::expression

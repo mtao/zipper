@@ -9,7 +9,7 @@ namespace zipper::expression::unary {
 namespace detail {
 
 template <typename T> struct pow {
-  constexpr auto operator()(const T &a, const T &b) const {
+  static constexpr auto operator()(const T &a, const T &b) {
     return std::pow(a, b);
   }
 };

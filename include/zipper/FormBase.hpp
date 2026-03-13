@@ -8,6 +8,7 @@
 #include "concepts/Vector.hpp"
 #include "concepts/detail/IsZipperBase.hpp"
 #include "detail/extents/static_extents_to_integral_sequence.hpp"
+#include <utility>
 
 namespace zipper {
 
@@ -79,29 +80,27 @@ public:
   }
 
   template <typename... Slices> auto slice() {
-    auto v = Base::template slice_expression<Slices...>();
-    return FormBase<std::decay_t<decltype(v)>>(std::move(v));
+    using V = expression::unary::Slice<expression_type&, std::decay_t<Slices>...>;
+    return FormBase<V>(std::in_place, expression(), Slices{}...);
   }
 
   template <typename... Slices> auto slice(Slices &&...slices) const {
-    auto v =
-        Base::template slice_expression<Slices...>(std::forward<Slices>(slices)...);
-    return FormBase<std::decay_t<decltype(v)>>(std::move(v));
+    using V = expression::unary::Slice<const expression_type&, std::decay_t<Slices>...>;
+    return FormBase<V>(std::in_place, expression(), std::forward<Slices>(slices)...);
   }
   template <typename... Slices> auto slice() const {
-    auto v = Base::template slice_expression<Slices...>();
-    return FormBase<std::decay_t<decltype(v)>>(std::move(v));
+    using V = expression::unary::Slice<const expression_type&, std::decay_t<Slices>...>;
+    return FormBase<V>(std::in_place, expression(), Slices{}...);
   }
 
   template <typename... Slices> auto slice(Slices &&...slices) {
-    auto v =
-        Base::template slice_expression<Slices...>(std::forward<Slices>(slices)...);
-    return FormBase<std::decay_t<decltype(v)>>(std::move(v));
+    using V = expression::unary::Slice<expression_type&, std::decay_t<Slices>...>;
+    return FormBase<V>(std::in_place, expression(), std::forward<Slices>(slices)...);
   }
 
   auto operator*() const {
     // TODO: this needs to be implemented
-    assert(false);
+    std::unreachable();
     return *this;
   }
 };

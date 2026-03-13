@@ -29,9 +29,9 @@ BINARY_DECLARATION(TensorBase, Minus, operator-)
 
 template <concepts::Tensor Expr1, concepts::Tensor Expr2>
 auto operator*(Expr1 const &lhs, Expr2 const &rhs) {
-  using V = expression::binary::TensorProduct<const typename Expr1::expression_type,
-                                              const typename Expr2::expression_type>;
-  return TensorBase<V>(V(lhs.expression(), rhs.expression()));
+  using V = expression::binary::TensorProduct<const typename Expr1::expression_type&,
+                                              const typename Expr2::expression_type&>;
+  return TensorBase<V>(std::in_place, lhs.expression(), rhs.expression());
 }
 
 } // namespace zipper
