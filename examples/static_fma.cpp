@@ -1,4 +1,4 @@
-#include <iostream>
+#include <print>
 #include <zipper/Array.hpp>
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
@@ -61,9 +61,9 @@ __attribute__((noinline)) auto m() {
 }
 
 int main(int, char*[]) {
-    std::cout << f().norm() << std::endl;
-    // std::cout << g().norm() << std::endl;
-    std::cout << h().norm() << std::endl;
-    std::cout << l().norm() << std::endl;
-    std::cout << m().norm() << std::endl;
+    std::println("{}", f().norm());
+    // std::println("{}", g().norm());
+    std::println("{}", h().norm());
+    std::println("{}", l().norm());
+    std::println("{}", m().norm());
 }

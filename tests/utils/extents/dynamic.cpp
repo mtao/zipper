@@ -1,6 +1,7 @@
 #include <zipper/detail/extents/dynamic_extents_indices.hpp>
 
 #include "../../catch_include.hpp"
+#include <print>
 
 TEST_CASE("test_extent_dynamic_indices", "[extents]") {
     {
@@ -23,7 +24,7 @@ TEST_CASE("test_extent_dynamic_indices", "[extents]") {
 
     {
         using AE = zipper::extents<3, std::dynamic_extent>;
-        std::cout << AE::static_extent(0) << " " << AE::static_extent(1) << std::endl;
+        std::println("{} {}", AE::static_extent(0), AE::static_extent(1));
         using DEI = zipper::detail::extents::DynamicExtentIndices<AE>;
         auto indices = DEI::get_dynamic_local_indices();
         using DIT = std::decay_t<decltype(indices)>;
