@@ -1,10 +1,9 @@
 #if !defined(ZIPPER_EXPRESSION_REDUCTIONS_CONTRACTION_HPP)
 #define ZIPPER_EXPRESSION_REDUCTIONS_CONTRACTION_HPP
 
-#include "zipper/concepts/Expression.hpp"
+#include "ReductionBase.hpp"
 #include "zipper/concepts/Index.hpp"
 #include "zipper/detail/pack_index.hpp"
-#include "zipper/expression/detail/ExpressionTraits.hpp"
 #include "zipper/utils/extents/all_extents_indices.hpp"
 #include "zipper/utils/extents/convert_extents.hpp"
 
@@ -50,29 +49,36 @@ struct folded_extents<extents<N...>> {
 
 } // namespace detail
 
-template <zipper::concepts::Expression Expr>
-class Contraction {
+template <typename Expr>
+class Contraction : public ReductionBase<Contraction<Expr>, Expr> {
 public:
-  using self_type = Contraction<Expr>;
-  using expression_type = Expr;
-  using expression_traits =
-      zipper::expression::detail::ExpressionTraits<expression_type>;
-  using value_type = typename Expr::value_type;
-  using base_extents_type = Expr::extents_type;
+  using Base = ReductionBase<Contraction<Expr>, Expr>;
+  using typename Base::expression_type;
+  using typename Base::expression_traits;
+  using typename Base::value_type;
+
+  using Base::expression;
+
+  using base_extents_type = expression_type::extents_type;
   using folder = detail::folded_extents<base_extents_type>;
   using extents_type = folder::extents_type;
 
-  Contraction(const Expr &v) : m_expression(v) {}
+  // Custom constructor: initializes base + m_extents
+  template <typename U>
+    requires std::constructible_from<typename Base::storage_type, U &&>
+  Contraction(U &&v)
+      : Base(std::forward<U>(v)),
+        m_extents(folder{}.get_extents(expression().extents())) {}
 
-  Contraction(Contraction &&v) = default;
-  Contraction(const Contraction &v) = default;
-  auto operator=(Contraction &&v) -> Contraction & = delete;
-  auto operator=(const Contraction &v) -> Contraction & = delete;
+  Contraction(Contraction &&) = default;
+  Contraction(const Contraction &) = default;
+  auto operator=(Contraction &&) -> Contraction & = delete;
+  auto operator=(const Contraction &) -> Contraction & = delete;
 
   template <rank_type... N>
   value_type coeff_(concepts::IndexPackTuple auto const &t,
                     std::integer_sequence<rank_type, N...>) {
-    return m_expression(folder::template get_arg<N>(t)...);
+    return expression()(folder::template get_arg<N>(t)...);
   }
 
   value_type operator()() const {
@@ -87,12 +93,14 @@ public:
   }
 
 private:
-  const Expr &m_expression;
   extents_type m_extents;
 };
 
-template <zipper::concepts::Expression Expr>
-Contraction(const Expr &) -> Contraction<Expr>;
+template <zipper::concepts::Expression E>
+Contraction(E &) -> Contraction<E &>;
+
+template <zipper::concepts::Expression E>
+Contraction(E &&) -> Contraction<E>;
 
 } // namespace reductions
 } // namespace zipper::expression

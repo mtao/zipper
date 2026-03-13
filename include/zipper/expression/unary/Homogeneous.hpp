@@ -45,16 +45,16 @@ struct extend_extents_single_dimension<N, Size, extents<Idxs...>> {
 
 namespace unary {
 enum class HomogeneousMode { Position, Vector, Affine };
-template <HomogeneousMode Mode, zipper::concepts::Expression Child>
+template <HomogeneousMode Mode, zipper::concepts::QualifiedExpression Child>
 class Homogeneous;
 
 } // namespace unary
 
-template <unary::HomogeneousMode Mode, zipper::concepts::Expression Child>
+template <unary::HomogeneousMode Mode, zipper::concepts::QualifiedExpression Child>
 struct detail::ExpressionTraits<unary::Homogeneous<Mode, Child>>
     : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<
           Child> {
-  using ChildTraits = ExpressionTraits<Child>;
+  using ChildTraits = ExpressionTraits<std::decay_t<Child>>;
   using value_type = typename ChildTraits::value_type;
 
   using helper = detail::extend_extents_single_dimension<
@@ -88,7 +88,7 @@ struct detail::ExpressionTraits<unary::Homogeneous<Mode, Child>>
 };
 
 namespace unary {
-template <HomogeneousMode Mode, zipper::concepts::Expression Child>
+template <HomogeneousMode Mode, zipper::concepts::QualifiedExpression Child>
 class Homogeneous
     : public UnaryExpressionBase<Homogeneous<Mode, Child>, Child> {
 public:
@@ -103,8 +103,17 @@ public:
   using Base::Base;
   using Base::expression;
 
-  Homogeneous(std::remove_reference_t<Child> &a)
-      : Base(a) {}
+  template <typename U>
+    requires std::constructible_from<typename Base::storage_type, U &&>
+  Homogeneous(U &&a)
+      : Base(std::forward<U>(a)) {}
+
+  /// Recursively deep-copy child so the result owns all data.
+  auto make_owned() const {
+      auto owned_child = expression().make_owned();
+      return Homogeneous<Mode, const decltype(owned_child)>(
+          std::move(owned_child));
+  }
 
   constexpr auto extent(rank_type i) const -> index_type {
     if (i == 0) {
@@ -143,19 +152,19 @@ public:
 
 template <zipper::concepts::Expression Child>
 auto homogeneous(Child &a) {
-  return Homogeneous<HomogeneousMode::Position, Child>(a);
+  return Homogeneous<HomogeneousMode::Position, Child&>(a);
 }
 template <zipper::concepts::Expression Child>
 auto homogeneous_position(Child &a) {
-  return Homogeneous<HomogeneousMode::Position, Child>(a);
+  return Homogeneous<HomogeneousMode::Position, Child&>(a);
 }
 template <zipper::concepts::Expression Child>
 auto homogeneous_vector(Child &a) {
-  return Homogeneous<HomogeneousMode::Vector, Child>(a);
+  return Homogeneous<HomogeneousMode::Vector, Child&>(a);
 }
 template <zipper::concepts::Expression Child>
 auto affine(Child &a) {
-  return Homogeneous<HomogeneousMode::Affine, Child>(a);
+  return Homogeneous<HomogeneousMode::Affine, Child&>(a);
 }
 } // namespace unary
 } // namespace zipper::expression

@@ -12,7 +12,10 @@
 #include "expression/unary/Repeat.hpp"
 #include "expression/unary/Slice.hpp"
 #include "expression/unary/Swizzle.hpp"
+#include "expression/unary/UnsafeRef.hpp"
 #include "zipper/types.hpp"
+
+#include <utility> // std::in_place_t, std::in_place
 
 namespace zipper {
 
@@ -25,15 +28,20 @@ public:
     requires(std::is_default_constructible_v<Expression>)
       : m_expression() {}
   using Derived = DerivedT<Expression>;
-  auto derived() const -> const Derived & {
-    return static_cast<const Derived &>(*this);
+  auto derived(this auto& self) -> auto& {
+    if constexpr (std::is_const_v<std::remove_reference_t<decltype(self)>>) {
+      return static_cast<const Derived &>(self);
+    } else {
+      return static_cast<Derived &>(self);
+    }
   }
-  auto derived() -> Derived & { return static_cast<Derived &>(*this); }
 
+  using raw_expression_type = Expression;  // the template parameter, possibly const/ref qualified
   using expression_type = std::decay_t<Expression>;
   using expression_traits =
       expression::detail::ExpressionTraits<expression_type>;
 
+  constexpr static bool stores_references = expression_traits::stores_references || std::is_reference_v<Expression>;
   constexpr static bool is_const = std::is_const_v<Expression>;
   constexpr static bool is_writable =
       expression_traits::is_writable && !is_const;
@@ -41,8 +49,10 @@ public:
   using extents_type = typename expression_traits::extents_type;
   using extents_traits = detail::ExtentsTraits<extents_type>;
 
-  auto expression() const -> const Expression & { return m_expression; }
-  auto expression() -> Expression & { return m_expression; }
+  auto expression() const & -> const Expression & { return m_expression; }
+  auto expression() & -> Expression & { return m_expression; }
+  auto expression() const && -> const Expression && { return std::move(m_expression); }
+  auto expression() && -> Expression && { return std::move(m_expression); }
   auto extents() const -> extents_type {
     return expression().extents();
   }
@@ -55,15 +65,31 @@ public:
   // template <typename... Args>
   // ZipperBase(Args&&... v) : m_expression(std::forward<Args>(v)...) {}
 
-  ZipperBase(expression_type &&v) : m_expression(std::forward<Expression>(v)) {}
-  ZipperBase(Derived &&v) : ZipperBase(std::move(v.expression())) {}
+  ZipperBase(expression_type &&v)
+    requires(!stores_references)
+      : m_expression(std::forward<Expression>(v)) {}
+  ZipperBase(Derived &&v)
+    requires(!stores_references)
+      : ZipperBase(std::move(v.expression())) {}
   ZipperBase(ZipperBase &&v) = default;
 
-  ZipperBase(const Derived &v) : ZipperBase(v.expression()) {}
-  ZipperBase(const expression_type &v) : m_expression(v) {}
+  ZipperBase(const Derived &v)
+    requires(!stores_references)
+      : ZipperBase(v.expression()) {}
+  ZipperBase(const expression_type &v)
+    requires(!stores_references)
+      : m_expression(v) {}
   ZipperBase(const ZipperBase &v) = default;
   auto operator=(const ZipperBase &) -> ZipperBase & = default;
   auto operator=(ZipperBase &&) -> ZipperBase & = default;
+
+  /// In-place constructor: constructs the expression directly inside
+  /// m_expression from forwarded arguments, avoiding any copy/move of the
+  /// expression node.  This is essential for expressions that inherit
+  /// NonReturnable (stores_references == true).
+  template <typename... Args>
+  ZipperBase(std::in_place_t, Args &&...args)
+      : m_expression(std::forward<Args>(args)...) {}
   // Derived& operator=(concepts::ExpressionDerived auto const& v) {
   //     m_expression = v;
   //     return derived();
@@ -77,26 +103,31 @@ public:
 
   template <concepts::Expression Other>
   ZipperBase(const Other &other)
-    requires(is_writable && zipper::utils::extents::assignable_extents_v<
-                                typename Other::extents_type, extents_type>)
+    requires(!std::is_reference_v<Expression> && is_writable &&
+             zipper::utils::extents::assignable_extents_v<
+                 typename Other::extents_type, extents_type>)
       : m_expression(extents_traits::convert_from(other.extents())) {
     m_expression.assign(other);
   }
 
-  template <typename... Args>
-    requires(!(concepts::Zipper<Args> && ...))
-  ZipperBase(Args &&...args) : m_expression(std::forward<Args>(args)...) {}
+  // Removed: variadic forwarding constructor that silently enabled CTAD
+  // from STL containers (std::vector, std::array) into MDSpan, which could
+  // produce dangling references from rvalues.  All wrapper classes now have
+  // their own variadic constructors that forward through std::in_place.
 
+  // GCC's -Weffc++ warns about returning *this in assignment operators of
+  // CRTP bases because derived() doesn't return the same type as *this.
+  // A single suppression block covers all assignment/compound-assignment
+  // operators that return derived().
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Weffc++"
   template <concepts::Expression Other>
   auto operator=(const Other &other) -> Derived &
     requires(is_writable && zipper::utils::extents::assignable_extents_v<
                                 typename Other::extents_type, extents_type>)
   {
     m_expression.assign(other);
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Weffc++"
     return derived();
-#pragma GCC diagnostic pop
   }
   template <concepts::Expression Other>
   auto operator=(Other &&other) -> Derived &
@@ -104,10 +135,7 @@ public:
                                 typename std::decay_t<Other>::extents_type, extents_type>)
   {
     m_expression.assign(other);
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Weffc++"
     return derived();
-#pragma GCC diagnostic pop
   }
 
   template <concepts::Zipper Other>
@@ -115,66 +143,75 @@ public:
     requires(is_writable)
   {
     derived() = derived() + other;
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Weffc++"
     return derived();
-#pragma GCC diagnostic pop
   }
   template <concepts::Zipper Other>
   auto operator-=(const Other &other) -> Derived &
     requires(is_writable)
   {
     derived() = derived() - other;
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Weffc++"
     return derived();
-#pragma GCC diagnostic pop
   }
   auto operator*=(const value_type &other) -> Derived &
     requires(is_writable)
   {
     derived() = other * derived();
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Weffc++"
     return derived();
-#pragma GCC diagnostic pop
   }
   auto operator/=(const value_type &other) -> Derived &
     requires(is_writable)
   {
     derived() = derived() / other;
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Weffc++"
     return derived();
+  }
 #pragma GCC diagnostic pop
+
+  /// Returns a fully-owned copy of this expression that is safe to
+  /// copy/move and can escape scope.  The returned wrapper has
+  /// stores_references == false because all children store by value.
+  /// Unlike eval(), which materializes everything to an MDArray,
+  /// to_owned() preserves the lazy expression template structure but
+  /// recursively deep-copies children so no references remain.
+  auto to_owned() const {
+      auto owned_expr = expression().make_owned();
+      return DerivedT<const decltype(owned_expr)>(std::in_place, std::move(owned_expr));
+  }
+
+  /// Returns a wrapper that is copyable/movable/returnable even when
+  /// this expression stores references.  The caller asserts that the
+  /// referenced data will outlive all copies — hence "unsafe".
+  /// Prefer to_owned() when a safe, owning copy is acceptable.
+  auto unsafe_ref() const {
+      using V = expression::unary::UnsafeRef<const expression_type&>;
+      return DerivedT<V>(std::in_place, expression());
   }
 
   template <typename OpType>
     requires(expression::unary::concepts::ScalarOperation<value_type, OpType>)
   auto unary_expr(const OpType &op) const {
     using V =
-        expression::unary::CoefficientWiseOperation<const expression_type &,
+        expression::unary::CoefficientWiseOperation<const expression_type&,
                                                      OpType>;
-    return DerivedT<V>(V(expression(), op));
+    return DerivedT<V>(std::in_place, expression(), op);
   }
 
   template <template <typename> typename BaseType = DerivedT,
             rank_type... ranks>
   auto swizzle() const {
     using V =
-        expression::unary::Swizzle<const expression_type &, ranks...>;
-    return BaseType<V>(V(expression()));
+        expression::unary::Swizzle<const expression_type&, ranks...>;
+    return BaseType<V>(std::in_place, expression());
   }
   template <template <typename> typename BaseType = DerivedT,
             rank_type... ranks>
   auto swizzle() {
     using V =
-        expression::unary::Swizzle<expression_type &, ranks...>;
-    return BaseType<V>(V(expression()));
+        expression::unary::Swizzle<expression_type&, ranks...>;
+    return BaseType<V>(std::in_place, expression());
   }
   template <typename T> auto cast() const {
-    using V = expression::unary::Cast<T, const expression_type &>;
-    return DerivedT<V>(V(expression()));
+    using V = expression::unary::Cast<T, const expression_type&>;
+    return DerivedT<V>(std::in_place, expression());
   }
 
   template <concepts::IndexArgument... Args>
@@ -198,15 +235,15 @@ public:
   auto repeat_left() const {
     using V =
         expression::unary::Repeat<expression::unary::RepeatMode::Left,
-                                  Count, const expression_type &>;
-    return BaseType<V>(V(expression()));
+                                  Count, const expression_type&>;
+    return BaseType<V>(std::in_place, expression());
   }
   template <rank_type Count = 1,
             template <typename> typename BaseType = DerivedT>
   auto repeat_right() const {
     using V = expression::unary::Repeat<
-        expression::unary::RepeatMode::Right, Count, const expression_type &>;
-    return BaseType<V>(V(expression()));
+        expression::unary::RepeatMode::Right, Count, const expression_type&>;
+    return BaseType<V>(std::in_place, expression());
   }
 
 protected:
@@ -215,7 +252,7 @@ protected:
   template <typename... Slices>
   auto slice_expression(Slices &&...slices) const {
     using my_expression_type =
-        expression::unary::Slice<const expression_type &,
+        expression::unary::Slice<const expression_type&,
                                  std::decay_t<Slices>...>;
 
     return my_expression_type(expression(),
@@ -224,7 +261,7 @@ protected:
 
   template <typename... Slices> auto slice_expression() const {
     using my_expression_type =
-        expression::unary::Slice<const expression_type &,
+        expression::unary::Slice<const expression_type&,
                                  std::decay_t<Slices>...>;
     return my_expression_type(expression(), Slices{}...);
   }
@@ -232,14 +269,14 @@ protected:
   template <typename... Slices>
   auto slice_expression(Slices &&...slices) {
     using my_expression_type =
-        expression::unary::Slice<expression_type &,
+        expression::unary::Slice<expression_type&,
                                  std::decay_t<Slices>...>;
     return my_expression_type(expression(),
                               filter_args_for_zipperbase(std::forward<Slices>(slices))...);
   }
   template <typename... Slices> auto slice_expression() {
     using my_expression_type =
-        expression::unary::Slice<expression_type &,
+        expression::unary::Slice<expression_type&,
                                  std::decay_t<Slices>...>;
     return my_expression_type(expression(), Slices{}...);
   }

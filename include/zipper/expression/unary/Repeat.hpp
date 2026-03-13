@@ -19,8 +19,7 @@ struct RepeatHelper {
     template <size_t... I>
     constexpr static auto make_repeat_extents_type(
         std::integer_sequence<size_t, I...>) {
-        return extents<(I - I)...>{};
-        //
+        return extents<((void)I, dynamic_extent)...>{};
     }
     using repeat_extents_type = std::decay_t<decltype(make_repeat_extents_type(
         std::make_index_sequence<Count>{}))>;
@@ -54,7 +53,7 @@ template <unary::RepeatMode Mode, rank_type Count,
           zipper::concepts::QualifiedExpression Child>
 struct detail::ExpressionTraits<unary::Repeat<Mode, Count, Child>>
     : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<Child> {
-    using BaseTraits = expression::detail::ExpressionTraits<Child>;
+    using BaseTraits = expression::detail::ExpressionTraits<std::decay_t<Child>>;
     using base_extents_type = typename BaseTraits::extents_type;
     constexpr static bool is_writable = false;
     constexpr static bool is_coefficient_consistent = true;
@@ -105,8 +104,17 @@ class Repeat : public UnaryExpressionBase<Repeat<Mode, Count, Child>, Child> {
     constexpr static rank_type base_rank = traits::base_rank;
     constexpr static rank_type pad_offset = traits::offset_rank;
 
-    Repeat(std::remove_reference_t<Child>& a)
-        : Base(a) {}
+    template <typename U>
+      requires std::constructible_from<typename Base::storage_type, U &&>
+    Repeat(U &&a)
+        : Base(std::forward<U>(a)) {}
+
+    /// Recursively deep-copy child so the result owns all data.
+    auto make_owned() const {
+        auto owned_child = expression().make_owned();
+        return Repeat<Mode, Count, const decltype(owned_child)>(
+            std::move(owned_child));
+    }
 
     constexpr auto extent(rank_type i) const -> index_type {
         if constexpr (Mode == RepeatMode::Left) {

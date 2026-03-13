@@ -10,4 +10,7 @@ test('minmax', test_minmax)
 test_inverse = executable('test_inverse', 'inverse.cpp', dependencies: [zipper_test_dep])
 test('inverse', test_inverse)
 
+test_power_method = executable('test_power_method', 'test_power_method.cpp', dependencies: [zipper_test_dep])
+test('power_method', test_power_method)
+
 subdir('extents')

@@ -2,8 +2,8 @@
 #define ZIPPER_expression_UNARY_DIAGONALVIEW_HPP
 
 #include "UnaryExpressionBase.hpp"
-#include <cassert>
 #include "zipper/concepts/Expression.hpp"
+#include "zipper/detail/assert.hpp"
 #include "zipper/expression/detail/AssignHelper.hpp"
 
 namespace zipper::expression {
@@ -16,7 +16,7 @@ template <zipper::concepts::QualifiedExpression ExpressionType>
 struct detail::ExpressionTraits<unary::Diagonal<ExpressionType>>
     : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<
           ExpressionType> {
-  using Base = detail::ExpressionTraits<ExpressionType>;
+  using Base = detail::ExpressionTraits<std::decay_t<ExpressionType>>;
   using value_type = Base::value_type;
   using base_extents_type = Base::extents_type;
   using base_extents_traits = zipper::detail::ExtentsTraits<base_extents_type>;
@@ -88,10 +88,19 @@ public:
   auto operator=(const Diagonal &) -> Diagonal & = delete;
   auto operator=(Diagonal &&) -> Diagonal & = delete;
 
-  Diagonal(std::remove_reference_t<ExpressionType> &b) : Base(b) {}
+  template <typename U>
+    requires std::constructible_from<typename Base::storage_type, U &&>
+  Diagonal(U &&b) : Base(std::forward<U>(b)) {}
+
+  /// Recursively deep-copy child so the result owns all data.
+  auto make_owned() const {
+      auto owned_child = expression().make_owned();
+      return Diagonal<const decltype(owned_child)>(
+          std::move(owned_child));
+  }
 
   constexpr auto extent(rank_type i) const -> index_type {
-    assert(i == 0);
+    ZIPPER_ASSERT(i == 0);
     return traits::get_min_extent(expression().extents());
   }
 
@@ -162,7 +171,7 @@ public:
 };
 
 template <zipper::concepts::QualifiedExpression ExpressionType>
-Diagonal(const ExpressionType &v) -> Diagonal<ExpressionType>;
+Diagonal(const ExpressionType &v) -> Diagonal<const ExpressionType&>;
 
 } // namespace unary
 } // namespace zipper::expression

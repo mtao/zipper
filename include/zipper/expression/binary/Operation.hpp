@@ -8,15 +8,7 @@
 #include "zipper/concepts/Expression.hpp"
 #include "zipper/utils/extents/extents_formatter.hpp"
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winline"
-#pragma GCC diagnostic ignored "-Wpadded"
-#pragma GCC diagnostic ignored "-Wswitch-enum"
-#if !defined(__clang__)
-#pragma GCC diagnostic ignored "-Wabi-tag"
-#endif
-#include <fmt/format.h>
-#pragma GCC diagnostic pop
+#include "zipper/detail/fmt.hpp"
 #if defined(ZIPPER_FMT_OVERRIDES_DISABLED)
 #include "zipper/utils/extents/as_array.hpp"
 #endif
@@ -32,8 +24,8 @@ class Operation;
 template <concepts::QualifiedExpression A, concepts::QualifiedExpression B, typename Op>
 struct detail::ExpressionTraits<binary::Operation<A, B, Op>>
     : public binary::detail::DefaultBinaryExpressionTraits<A, B> {
-  using ATraits = detail::ExpressionTraits<A>;
-  using BTraits = detail::ExpressionTraits<B>;
+  using ATraits = detail::ExpressionTraits<std::decay_t<A>>;
+  using BTraits = detail::ExpressionTraits<std::decay_t<B>>;
   using ConvertExtentsUtil =
       binary::detail::coeffwise_extents_values<typename ATraits::extents_type,
                                                typename BTraits::extents_type>;
@@ -47,14 +39,13 @@ namespace binary {
 template <zipper::concepts::QualifiedExpression A,
           zipper::concepts::QualifiedExpression B, typename Op>
 class Operation
-    : public BinaryExpressionBase<Operation<A, B, Op>, const A,
-                                  const B> {
+    : public BinaryExpressionBase<Operation<A, B, Op>, A, B> {
 public:
   using self_type = Operation<A, B, Op>;
   using traits = zipper::expression::detail::ExpressionTraits<self_type>;
   using extents_type = typename traits::extents_type;
   using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
-  using Base = BinaryExpressionBase<self_type, const A, const B>;
+  using Base = BinaryExpressionBase<self_type, A, B>;
   using value_type = traits::value_type;
   constexpr static bool is_static = extents_traits::is_static;
 
@@ -83,16 +74,20 @@ public:
 
   using Base::lhs;
   using Base::rhs;
-  Operation(const A &a, const B &b, const Op &op = {})
-      : Base(a, b), m_op(op) {
-    if (!valid_input_extents(a.extents(), b.extents())) {
+
+  template <typename U, typename V>
+    requires std::constructible_from<typename Base::lhs_storage_type, U&&> &&
+             std::constructible_from<typename Base::rhs_storage_type, V&&>
+  Operation(U&& a, V&& b, const Op &op = {})
+      : Base(std::forward<U>(a), std::forward<V>(b)), m_op(op) {
+    if (!valid_input_extents(lhs().extents(), rhs().extents())) {
       throw std::runtime_error(
           fmt::format("Operation between {} and {} is invalid",
 #if defined(ZIPPER_FMT_OVERRIDES_DISABLED)
-                      zipper::utils::extents::as_array(a.extents()),
-                      zipper::utils::extents::as_array(b.extents())));
+                      zipper::utils::extents::as_array(lhs().extents()),
+                      zipper::utils::extents::as_array(rhs().extents())));
 #else
-                      a.extents(), b.extents()));
+                      lhs().extents(), rhs().extents()));
 #endif
     }
   }
@@ -109,13 +104,21 @@ public:
     return extents_traits::make_extents_from(*this);
   }
 
+  /// Recursively deep-copy children so the result owns all data.
+  auto make_owned() const {
+      auto owned_a = lhs().make_owned();
+      auto owned_b = rhs().make_owned();
+      return Operation<decltype(owned_a), decltype(owned_b), Op>(
+          std::move(owned_a), std::move(owned_b), m_op);
+  }
+
 private:
   Op m_op;
 };
-template <zipper::concepts::QualifiedExpression A,
-          zipper::concepts::QualifiedExpression B, typename Op>
+template <zipper::concepts::Expression A,
+          zipper::concepts::Expression B, typename Op>
 Operation(const A &a, const B &b, const Op &op)
-    -> Operation<A, B, Op>;
+    -> Operation<const A&, const B&, Op>;
 
 } // namespace binary
 } // namespace zipper::expression

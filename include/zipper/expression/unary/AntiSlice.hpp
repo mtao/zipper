@@ -1,241 +1,280 @@
-#if !defined(ZIPPER_VIEWS_UNARY_ANTISLICEVIEW_HPP)
-#define ZIPPER_VIEWS_UNARY_ANTISLICEVIEW_HPP
+#if !defined(ZIPPER_EXPRESSION_UNARY_ANTISLICE_HPP)
+#define ZIPPER_EXPRESSION_UNARY_ANTISLICE_HPP
 
-#include "UnaryViewBase.hpp"
-#include "zipper/concepts/ViewDerived.hpp"
-#include "zipper/detail/is_integral_constant.hpp"
+#include "UnaryExpressionBase.hpp"
+#include "zipper/concepts/Expression.hpp"
 #include "zipper/detail/pack_index.hpp"
-#include "zipper/storage/PlainObjectStorage.hpp"
-#include "zipper/views/DimensionedViewBase.hpp"
+#include "zipper/expression/detail/AssignHelper.hpp"
 
-namespace zipper::views {
+#include <array>
+
+namespace zipper::expression {
 namespace unary {
-    // the opposite of a slice (we can add indices)
-template <zipper::concepts::ViewDerived ViewType, bool IsConst, rank_type TotalRank, typename IndexSequence>
-class AntiSliceView;
 
+/// AntiSlice embeds an expression into a higher-rank space by inserting
+/// new dimensions of extent 1 at the specified positions.
+///
+/// For example, given a Vector<T,3> (rank 1) and InsertedDim = 1, the
+/// result is a rank-2 expression with extents (3, 1) — conceptually a
+/// column matrix.  With InsertedDim = 0 the result is (1, 3) — a row.
+///
+/// This is the inverse of slicing away a dimension with a fixed index.
+///
+/// Template parameters:
+///   ExprType      — the child expression type (possibly const-qualified,
+///                   satisfying QualifiedExpression)
+///   InsertedDims  — rank positions in the OUTPUT where new size-1
+///                   dimensions are inserted. Must be in [0, output_rank).
+template <zipper::concepts::QualifiedExpression ExprType, rank_type... InsertedDims>
+class AntiSlice;
+
+namespace _detail_antislice {
+
+/// Compute the output rank given child rank and number of inserted dims.
+template <rank_type ChildRank, rank_type NInserted>
+constexpr rank_type output_rank_v = ChildRank + NInserted;
+
+/// Build a compile-time map from output rank index → child rank index.
+/// Inserted positions map to dynamic_extent (sentinel = "not from child").
+/// Non-inserted positions map to consecutive child indices 0,1,2,...
+template <rank_type OutputRank, rank_type... Inserted>
+consteval auto make_child_index_map()
+    -> std::array<rank_type, OutputRank> {
+    std::array<rank_type, OutputRank> map{};
+    // Mark inserted positions
+    constexpr rank_type inserted_arr[] = {Inserted...};
+    for (rank_type i = 0; i < sizeof...(Inserted); ++i) {
+        map[inserted_arr[i]] = std::dynamic_extent;
+    }
+    // Fill in child indices for non-inserted positions
+    rank_type child_idx = 0;
+    for (rank_type i = 0; i < OutputRank; ++i) {
+        if (map[i] != std::dynamic_extent) {
+            map[i] = child_idx++;
+        }
+    }
+    return map;
 }
-template <zipper::concepts::ViewDerived ViewType, bool IsConst, rank_type TotalRank, rank_type... indices>
-struct detail::ViewTraits<unary::AntiSliceView<ViewType, IsConst, TotalRank, std::integer_sequence<rank_type, indices...>>>
-    : public zipper::views::unary::detail::DefaultUnaryViewTraits<
-          ViewType, true> {
-    using Base = detail::ViewTraits<ViewType>;
 
-    template <std::size_t... N>
-    constexpr static std::array<rank_type, TotalRank> indices(std::index_sequence<N...>) {
-
-        std::array<rank_type, TotalRank> R;
-        std::ranges::fill(R.begin(),R.end(), 1);
-
-        ((R[zipper::detail::template pack_index<N>(indices...)] = ViewType::extents_type::static_extent(N)),...);
-
-
+/// Build the output static extents array given child extents type and
+/// inserted dim positions.
+template <typename ChildExtents, rank_type OutputRank, rank_type... Inserted>
+consteval auto make_static_extents()
+    -> std::array<index_type, OutputRank> {
+    constexpr auto child_map = make_child_index_map<OutputRank, Inserted...>();
+    std::array<index_type, OutputRank> result{};
+    for (rank_type i = 0; i < OutputRank; ++i) {
+        if (child_map[i] == std::dynamic_extent) {
+            result[i] = 1;  // inserted dim always has extent 1
+        } else {
+            result[i] = ChildExtents::static_extent(child_map[i]);
+        }
     }
+    return result;
+}
 
-    constexpr static std::array<rank_type, TotalRank> indices() {
+/// Build the extents type for the output.
+template <typename ChildExtents, rank_type OutputRank, rank_type... Inserted>
+struct OutputExtentsHelper {
+    static constexpr auto static_exts =
+        make_static_extents<ChildExtents, OutputRank, Inserted...>();
 
-        std::array<rank_type, TotalRank> R;
-        std::ranges::fill(R.begin(),R.end(), 1);
+    template <typename>
+    struct Builder;
 
+    template <rank_type... Rs>
+    struct Builder<std::integer_sequence<rank_type, Rs...>> {
+        using type = zipper::extents<static_exts[Rs]...>;
+    };
 
-    }
-
-
-    using extents_type =
-        std::decay_t<decltype(std::experimental::submdspan_extents(
-            std::declval<typename Base::extents_type>(),
-            std::declval<AntiSlices>()...))>;
-    using value_type = Base::value_type;
-    constexpr static bool is_writable = Base::is_writable && !IsConst;
-    constexpr static bool is_coefficient_consistent = false;
-    constexpr static bool is_value_based = false;
-    constexpr static bool is_const = IsConst;
-
-    //
-    template <std::size_t... Indices>
-    constexpr static std::array<rank_type, sizeof...(Indices)> get_actionable(
-        std::index_sequence<Indices...>) {
-        constexpr size_t Rank = sizeof...(Indices);
-        std::array<rank_type, Rank> ret;
-        using tuple_type = std::tuple<AntiSlices...>;
-        size_t index = 0;
-        auto add = []<std::size_t J>(std::integral_constant<std::size_t, J>,
-                                     auto& ret, size_t& index) {
-            if (zipper::detail::is_integral_constant_v<
-                    std::tuple_element_t<J, tuple_type>>) {
-                ret[J] = index++;
-            }
-        };
-        ((add(std::integral_constant<std::size_t, Indices>{}, ret, index),
-          ...));
-
-        return ret;
-    }
-
-    constexpr static std::array<rank_type, Base::extents_type::rank()>
-        actionable_indices = get_actionable(
-            std::make_index_sequence<Base::extents_type::rank()>{});
+    using type = typename Builder<
+        std::make_integer_sequence<rank_type, OutputRank>>::type;
 };
 
-namespace unary {
-template <zipper::concepts::ViewDerived ViewType, bool IsConst, typename... AntiSlices>
-    requires(concepts::AntiSlicePackLike<AntiSlices...>)
-class AntiSliceView
-    : public UnaryViewBase<AntiSliceView<ViewType, IsConst, AntiSlices...>, ViewType> {
-   public:
-    using self_type = AntiSliceView<ViewType, IsConst, AntiSlices...>;
-    using traits = zipper::views::detail::ViewTraits<self_type>;
-    using extents_type = traits::extents_type;
-    using value_type = traits::value_type;
-    using Base = UnaryViewBase<self_type, ViewType>;
-    using Base::extent;
-    using Base::view;
-    using view_traits = zipper::views::detail::ViewTraits<ViewType>;
-    using view_extents_type = view_traits::extents_type;
-
-    constexpr static std::array<rank_type, view_extents_type::rank()>
-        actionable_indices = traits::actionable_indices;
-
-    ViewType& view()
-        requires(!IsConst)
-    {
-        return const_cast<ViewType&>(Base::view());
-    }
-
-    AntiSliceView(const AntiSliceView&) = default;
-    AntiSliceView(AntiSliceView&&) = default;
-    AntiSliceView& operator=(const AntiSliceView&) = default;
-    AntiSliceView& operator=(AntiSliceView&&) = default;
-    AntiSliceView(const ViewType& b, AntiSlices&&... slices)
-        : Base(b,
-              std::experimental::submdspan_extents(b.extents(), slices...)),
-          m_slices(std::forward<AntiSlices>(slices)...) {}
-
-    AntiSliceView(ViewType& b, AntiSlices&&... slices)
-        requires(!IsConst && view_traits::is_writable)
-        : Base(b,
-              std::experimental::submdspan_extents(b.extents(), slices...)),
-          m_slices(std::forward<AntiSlices>(slices)...) {}
-
-    // for some reason having zipper::full_extent makes this necessary. TODO fix
-    // this
-    AntiSliceView(const ViewType& b, const AntiSlices&... slices)
-        : Base(b,
-              std::experimental::submdspan_extents(b.extents(), slices...)),
-          m_slices(slices...) {}
-
-    AntiSliceView(ViewType& b, const AntiSlices&... slices)
-        requires(!IsConst && view_traits::is_writable)
-        : Base(b,
-              std::experimental::submdspan_extents(b.extents(), slices...)),
-          m_slices(slices...) {}
-
-
-    template <rank_type K, typename... Args>
-    index_type get_index(Args&&... a) const {
-        // const auto& s = std::get<K>(m_slices);
-        const auto& s = std::get<K>(m_slices);
-        if constexpr (zipper::detail::is_integral_constant_v<
-                          std::decay_t<decltype(s)>>) {
-            return s;
-        } else if constexpr (std::is_integral_v<std::decay_t<decltype(s)>>) {
-            return s;
-        } else {
-            constexpr index_type start = std::experimental::detail::first_of(s);
-            constexpr index_type stride =
-                std::experimental::detail::stride_of(s);
-
-            const auto& v =
-                zipper::detail::pack_index<actionable_indices[K]>(a...);
-            return start + v * stride;
-        }
-    }
-
-
-    template <typename... Args, rank_type... ranks>
-    auto _coeff(std::integer_sequence<rank_type, ranks...>,
-                Args&&... idxs) const -> value_type {
-        return view().coeff(get_index<ranks>(idxs...)...);
-    }
-    template <typename... Args, rank_type... ranks>
-    auto _coeff_ref(std::integer_sequence<rank_type, ranks...>, Args&&... idxs)
-        -> value_type& {
-        return view().coeff_ref(get_index<ranks>(idxs...)...);
-    }
-    template <typename... Args, rank_type... ranks>
-    auto _const_coeff_ref(std::integer_sequence<rank_type, ranks...>,
-                          Args&&... idxs) const -> const value_type& {
-        return view().const_coeff_ref(get_index<ranks>(idxs...)...);
-    }
-
-
-    template <typename... Args>
-    value_type coeff(Args&&... idxs) const {
-        return _coeff(
-            std::make_integer_sequence<rank_type, view_extents_type::rank()>{},
-            std::forward<Args>(idxs)...);
-    }
-    template <typename... Args>
-    value_type& coeff_ref(Args&&... idxs)
-        requires(traits::is_writable)
-    {
-        return _coeff_ref(
-            std::make_integer_sequence<rank_type, view_extents_type::rank()>{},
-            std::forward<Args>(idxs)...);
-    }
-    template <typename... Args>
-    const value_type& const_coeff_ref(Args&&... idxs) const
-        requires(traits::is_writable)
-    {
-        return _const_coeff_ref(
-            std::make_integer_sequence<rank_type, view_extents_type::rank()>{},
-            std::forward<Args>(idxs)...);
-    }
-
-   private:
-    template <zipper::concepts::ViewDerived V>
-    void assign_direct(const V& view) {
-        assert(extents() == view.extents());
-        for (const auto& i : zipper::utils::extents::all_extents_indices(extents())) {
-            (*this)(i) = view(i);
-        }
-    }
-
-   public:
-    template <zipper::concepts::ViewDerived V>
-    void assign(const V& view)
-        requires(zipper::views::detail::assignable_extents<
-                 typename views::detail::ViewTraits<V>::extents_type,
-                 extents_type>::value)
-    {
-        using VTraits = views::detail::ViewTraits<V>;
-        using layout_policy = zipper::default_layout_policy;
-        using accessor_policy = zipper::default_accessor_policy<value_type>;
-        if constexpr (VTraits::is_coefficient_consistent) {
-            // TODO: check sizing
-            assign_direct(view);
-        } else {
-            zipper::storage::PlainObjectStorage<value_type, extents_type,
-                                             layout_policy, accessor_policy>
-                pos(zipper::detail::convert_extents<extents_type>(view.extents()));
-            pos.assign(view);
-            // TODO: check sizing
-            assign_direct(pos);
-        }
-    }
-
-   private:
-    std::tuple<AntiSlices...> m_slices;
-};
-
-template <zipper::concepts::ViewDerived ViewType, typename... AntiSlices>
-AntiSliceView(const ViewType& view, AntiSlices&&...)
-    -> AntiSliceView<ViewType, true, std::decay_t<AntiSlices>...>;
-
-template <zipper::concepts::ViewDerived ViewType, typename... AntiSlices>
-AntiSliceView(ViewType& view, AntiSlices&&...)
-    -> AntiSliceView<ViewType, false, std::decay_t<AntiSlices>...>;
+}  // namespace _detail_antislice
 
 }  // namespace unary
-}  // namespace zipper::views
+
+/// ExpressionTraits specialization for AntiSlice.
+/// Note: ExprType may be const-qualified but not reference-qualified.
+template <zipper::concepts::QualifiedExpression ExprType, rank_type... InsertedDims>
+struct detail::ExpressionTraits<unary::AntiSlice<ExprType, InsertedDims...>>
+    : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<
+          ExprType> {
+    using StrippedExprType = std::decay_t<ExprType>;
+    using Base = detail::ExpressionTraits<StrippedExprType>;
+    using value_type = typename Base::value_type;
+    using child_extents_type = typename Base::extents_type;
+
+    static constexpr rank_type child_rank = child_extents_type::rank();
+    static constexpr rank_type n_inserted = sizeof...(InsertedDims);
+    static constexpr rank_type output_rank =
+        unary::_detail_antislice::output_rank_v<child_rank, n_inserted>;
+
+    using extents_type = typename unary::_detail_antislice::OutputExtentsHelper<
+        child_extents_type, output_rank, InsertedDims...>::type;
+
+    // Validate that InsertedDims are all < output_rank (compile-time)
+    static_assert(((InsertedDims < output_rank) && ...),
+                  "InsertedDims must be valid positions in the output rank");
+
+    constexpr static bool is_coefficient_consistent = false;
+    constexpr static bool is_value_based = false;
+
+    static constexpr auto child_index_map =
+        unary::_detail_antislice::make_child_index_map<output_rank,
+                                                       InsertedDims...>();
+};
+
+namespace unary {
+
+template <zipper::concepts::QualifiedExpression ExprType, rank_type... InsertedDims>
+class AntiSlice
+    : public UnaryExpressionBase<AntiSlice<ExprType, InsertedDims...>,
+                                 ExprType> {
+   public:
+    using self_type = AntiSlice<ExprType, InsertedDims...>;
+    using traits = zipper::expression::detail::ExpressionTraits<self_type>;
+    using extents_type = typename traits::extents_type;
+    using value_type = typename traits::value_type;
+    using StrippedExprType = std::decay_t<ExprType>;
+    using Base = UnaryExpressionBase<self_type, ExprType>;
+    using Base::expression;
+    using child_traits = typename traits::Base;
+    using child_extents_type = typename child_traits::extents_type;
+    using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
+
+    static constexpr rank_type output_rank = traits::output_rank;
+    static constexpr auto child_index_map = traits::child_index_map;
+
+    AntiSlice(const AntiSlice &o) : AntiSlice(o.expression()) {}
+    AntiSlice(AntiSlice &&o) : AntiSlice(o.expression()) {}
+
+    auto operator=(const AntiSlice &) -> AntiSlice & = delete;
+    auto operator=(AntiSlice &&) -> AntiSlice & = delete;
+
+    template <typename U>
+      requires std::constructible_from<typename Base::storage_type, U &&>
+    AntiSlice(U &&b) : Base(std::forward<U>(b)) {}
+
+    /// Recursively deep-copy child so the result owns all data.
+    auto make_owned() const {
+        auto owned_child = expression().make_owned();
+        return AntiSlice<const decltype(owned_child), InsertedDims...>(
+            std::move(owned_child));
+    }
+
+    constexpr auto extent(rank_type i) const -> index_type {
+        if (child_index_map[i] == std::dynamic_extent) {
+            return 1;  // inserted dimension
+        }
+        return expression().extent(child_index_map[i]);
+    }
+
+    constexpr auto extents() const -> extents_type {
+        return extents_traits::make_extents_from(*this);
+    }
+
+    // ---- coefficient access ----
+
+    template <typename Tuple, rank_type... ChildRanks>
+    auto _coeff_dispatch(const Tuple &idxs,
+                         std::integer_sequence<rank_type, ChildRanks...>) const
+        -> value_type {
+        return expression().coeff(
+            _get_child_index<ChildRanks>(idxs)...);
+    }
+
+    template <typename Tuple, rank_type... ChildRanks>
+    auto _coeff_ref_dispatch(const Tuple &idxs,
+                             std::integer_sequence<rank_type, ChildRanks...>)
+        -> value_type &
+        requires(traits::is_assignable())
+    {
+        return expression().coeff_ref(
+            _get_child_index<ChildRanks>(idxs)...);
+    }
+
+    template <typename Tuple, rank_type... ChildRanks>
+    auto _const_coeff_ref_dispatch(
+        const Tuple &idxs,
+        std::integer_sequence<rank_type, ChildRanks...>) const
+        -> const value_type &
+        requires(traits::is_referrable())
+    {
+        return expression().const_coeff_ref(
+            _get_child_index<ChildRanks>(idxs)...);
+    }
+
+    template <typename... Args>
+    auto coeff(Args &&...idxs) const -> value_type {
+        auto tup = std::make_tuple(std::forward<Args>(idxs)...);
+        return _coeff_dispatch(
+            tup,
+            std::make_integer_sequence<rank_type, child_extents_type::rank()>{});
+    }
+
+    template <typename... Args>
+    auto coeff_ref(Args &&...idxs) -> value_type &
+        requires(traits::is_assignable())
+    {
+        auto tup = std::make_tuple(std::forward<Args>(idxs)...);
+        return _coeff_ref_dispatch(
+            tup,
+            std::make_integer_sequence<rank_type, child_extents_type::rank()>{});
+    }
+
+    template <typename... Args>
+    auto const_coeff_ref(Args &&...idxs) const -> const value_type &
+        requires(traits::is_referrable())
+    {
+        auto tup = std::make_tuple(std::forward<Args>(idxs)...);
+        return _const_coeff_ref_dispatch(
+            tup,
+            std::make_integer_sequence<rank_type, child_extents_type::rank()>{});
+    }
+
+    template <zipper::concepts::Expression V>
+    void assign(const V &v)
+        requires(
+            traits::is_assignable() &&
+            extents_traits::template is_convertable_from<
+                typename zipper::expression::detail::ExpressionTraits<
+                    V>::extents_type>())
+    {
+        expression::detail::AssignHelper<V, self_type>::assign(v, *this);
+    }
+
+   private:
+    /// For a given child rank index, find which output rank maps to it,
+    /// then extract that index from the tuple.
+    template <rank_type ChildRank, typename Tuple>
+    static auto _get_child_index(const Tuple &idxs) -> index_type {
+        constexpr rank_type output_pos = _find_output_pos<ChildRank>();
+        return std::get<output_pos>(idxs);
+    }
+
+    /// Find the output position that maps to a given child rank.
+    template <rank_type ChildRank>
+    static consteval rank_type _find_output_pos() {
+        for (rank_type i = 0; i < output_rank; ++i) {
+            if (child_index_map[i] == ChildRank) {
+                return i;
+            }
+        }
+        // Should never happen if InsertedDims is valid
+        return output_rank;
+    }
+};
+
+template <rank_type... InsertedDims,
+          zipper::concepts::Expression ExprType>
+AntiSlice(const ExprType &) -> AntiSlice<const ExprType&, InsertedDims...>;
+
+template <rank_type... InsertedDims,
+          zipper::concepts::Expression ExprType>
+AntiSlice(ExprType &) -> AntiSlice<ExprType&, InsertedDims...>;
+
+}  // namespace unary
+}  // namespace zipper::expression
 #endif

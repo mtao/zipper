@@ -5,12 +5,15 @@
 #include "as.hpp"
 #include "concepts/Vector.hpp"
 #include "concepts/detail/IsZipperBase.hpp"
+#include "concepts/stl.hpp"
+#include "detail/assert.hpp"
 //
 #include "ArrayBase.hpp"
 #include "MatrixBase.hpp"
 #include "detail/constexpr_arithmetic.hpp"
 #include "detail/extents/constexpr_extent.hpp"
 #include "expression/binary/CrossProduct.hpp"
+#include "expression/nullary/StlMDArray.hpp"
 #include "expression/reductions/CoefficientSum.hpp"
 #include "expression/reductions/LpNorm.hpp"
 #include "expression/reductions/LpNormPowered.hpp"
@@ -44,16 +47,20 @@ public:
   template <concepts::Vector Other>
   VectorBase(const Other &other) : VectorBase(other.expression()) {}
 
-  VectorBase(concepts::QualifiedExpression auto &v) : Base(v) {}
-  VectorBase(concepts::QualifiedExpression auto &&v) : Base(std::move(v)) {}
+  VectorBase(concepts::QualifiedExpression auto &v)
+    requires(!expression_traits::stores_references)
+      : Base(v) {}
+  VectorBase(concepts::QualifiedExpression auto &&v)
+    requires(!expression_traits::stores_references)
+      : Base(std::move(v)) {}
   VectorBase(const extents_type &e) : Base(e) {}
   auto operator=(concepts::QualifiedExpression auto const &v) -> VectorBase & {
     return Base::operator=(v);
   }
   template <typename... Args>
-  VectorBase(Args &&...args)
     requires(!(concepts::Vector<Args> && ...))
-      : VectorBase(Expr(std::forward<Args>(args)...)) {}
+  VectorBase(Args &&...args)
+      : Base(std::in_place, std::forward<Args>(args)...) {}
 
   template <concepts::Vector Other>
   auto operator=(const Other &other) -> VectorBase &
@@ -81,7 +88,7 @@ public:
   auto operator=(const std::initializer_list<T> &l) -> VectorBase &
     requires(extents_traits::is_static)
   {
-    assert(l.size() == extent(0));
+    ZIPPER_ASSERT(l.size() == extent(0));
     for (index_type j = 0; j < extent(0); ++j) {
       (*this)(j) = std::data(l)[j];
     }
@@ -105,7 +112,7 @@ public:
   auto as_form() const { return zipper::as_form(*this); }
 
   template <index_type T> auto norm_powered() const -> value_type {
-    return expression::reductions::LpNormPowered<T, const expression_type>(expression())();
+    return expression::reductions::LpNormPowered<T, const expression_type &>(expression())();
   }
   auto norm_powered(value_type T) const -> value_type {
     return expression::reductions::CoefficientSum{as_array().pow(T).abs().expression()}();
@@ -117,7 +124,7 @@ public:
   template <concepts::Vector O> auto cross(O const &o) const {
     using V = expression::binary::CrossProduct<const expression_type,
                                                const typename O::expression_type>;
-    return VectorBase<V>(V(expression(), o.expression()));
+    return VectorBase<V>(std::in_place, expression(), o.expression());
   }
 
   template <index_type Start, index_type Size>
@@ -126,45 +133,39 @@ public:
   {
     auto S = slice(std::integral_constant<index_type, Start>{},
                    std::integral_constant<index_type, Size>{});
-    auto v = Base::slice_expression(S);
-    using V = std::decay_t<decltype(v)>;
-    return VectorBase<V>(std::move(v));
+    using V = expression::unary::Slice<expression_type&, std::decay_t<decltype(S)>>;
+    return VectorBase<V>(std::in_place, expression(), S);
   }
   template <index_type Start, index_type Size> auto segment() const {
     auto S = slice(std::integral_constant<index_type, Start>{},
                    std::integral_constant<index_type, Size>{});
-    auto v = Base::slice_expression(S);
-    using V = std::decay_t<decltype(v)>;
-    return VectorBase<V>(std::move(v));
+    using V = expression::unary::Slice<const expression_type&, std::decay_t<decltype(S)>>;
+    return VectorBase<V>(std::in_place, expression(), S);
   }
   template <index_type Size>
   auto segment(index_type start)
     requires(expression_traits::is_writable)
   {
     auto S = slice(start, std::integral_constant<index_type, Size>{});
-    auto v = Base::slice_expression(S);
-    using V = std::decay_t<decltype(v)>;
-    return VectorBase<V>(std::move(v));
+    using V = expression::unary::Slice<expression_type&, std::decay_t<decltype(S)>>;
+    return VectorBase<V>(std::in_place, expression(), S);
   }
   template <index_type Size> auto segment(index_type start) const {
     auto S = slice(start, Size);
-    auto v = Base::slice_expression(S);
-    using V = std::decay_t<decltype(v)>;
-    return VectorBase<V>(std::move(v));
+    using V = expression::unary::Slice<const expression_type&, std::decay_t<decltype(S)>>;
+    return VectorBase<V>(std::in_place, expression(), S);
   }
   auto segment(index_type start, index_type size)
     requires(expression_traits::is_writable)
   {
     auto S = slice(start, size);
-    auto v = Base::slice_expression(S);
-    using V = std::decay_t<decltype(v)>;
-    return VectorBase<V>(std::move(v));
+    using V = expression::unary::Slice<expression_type&, std::decay_t<decltype(S)>>;
+    return VectorBase<V>(std::in_place, expression(), S);
   }
   auto segment(index_type start, index_type size) const {
     auto S = slice(start, size);
-    auto v = Base::slice_expression(S);
-    using V = std::decay_t<decltype(v)>;
-    return VectorBase<V>(std::move(v));
+    using V = expression::unary::Slice<const expression_type&, std::decay_t<decltype(S)>>;
+    return VectorBase<V>(std::in_place, expression(), S);
   }
 
   template <index_type I>
@@ -173,31 +174,27 @@ public:
   {
     auto S = slice(std::integral_constant<index_type, 0>{},
                    std::integral_constant<index_type, I>{});
-    auto v = Base::slice_expression(S);
-    using V = std::decay_t<decltype(v)>;
-    return VectorBase<V>(std::move(v));
+    using V = expression::unary::Slice<expression_type&, std::decay_t<decltype(S)>>;
+    return VectorBase<V>(std::in_place, expression(), S);
   }
   template <index_type I> auto head() const {
     auto S = slice(std::integral_constant<index_type, 0>{},
                    std::integral_constant<index_type, I>{});
-    auto v = Base::slice_expression(S);
-    using V = std::decay_t<decltype(v)>;
-    return VectorBase<V>(std::move(v));
+    using V = expression::unary::Slice<const expression_type&, std::decay_t<decltype(S)>>;
+    return VectorBase<V>(std::in_place, expression(), S);
   }
   auto head(index_type N)
     requires(expression_traits::is_writable)
   {
     auto S = slice<std::integral_constant<index_type, 0>, index_type>(
         std::integral_constant<index_type, 0>{}, N);
-    auto v = Base::slice_expression(S);
-    using V = std::decay_t<decltype(v)>;
-    return VectorBase<V>(std::move(v));
+    using V = expression::unary::Slice<expression_type&, std::decay_t<decltype(S)>>;
+    return VectorBase<V>(std::in_place, expression(), S);
   }
   auto head(index_type N) const {
     auto S = slice(std::integral_constant<index_type, 0>{}, N);
-    auto v = Base::slice_expression(S);
-    using V = std::decay_t<decltype(v)>;
-    return VectorBase<V>(std::move(v));
+    using V = expression::unary::Slice<const expression_type&, std::decay_t<decltype(S)>>;
+    return VectorBase<V>(std::in_place, expression(), S);
   }
 
   auto get_tail_slice(index_type I) const {
@@ -214,29 +211,25 @@ public:
     requires(expression_traits::is_writable)
   {
     auto S = get_tail_slice<I>();
-    auto v = Base::slice_expression(S);
-    using V = std::decay_t<decltype(v)>;
-    return VectorBase<V>(std::move(v));
+    using V = expression::unary::Slice<expression_type&, std::decay_t<decltype(S)>>;
+    return VectorBase<V>(std::in_place, expression(), S);
   }
   template <index_type I> auto tail() const {
     auto S = get_tail_slice<I>();
-    auto v = Base::slice_expression(S);
-    using V = std::decay_t<decltype(v)>;
-    return VectorBase<V>(std::move(v));
+    using V = expression::unary::Slice<const expression_type&, std::decay_t<decltype(S)>>;
+    return VectorBase<V>(std::in_place, expression(), S);
   }
   auto tail(index_type N)
     requires(expression_traits::is_writable)
   {
     auto S = get_tail_slice(N);
-    auto v = Base::slice_expression(S);
-    using V = std::decay_t<decltype(v)>;
-    return VectorBase<V>(std::move(v));
+    using V = expression::unary::Slice<expression_type&, std::decay_t<decltype(S)>>;
+    return VectorBase<V>(std::in_place, expression(), S);
   }
   auto tail(index_type N) const {
     auto S = get_tail_slice(N);
-    auto v = Base::slice_expression(S);
-    using V = std::decay_t<decltype(v)>;
-    return VectorBase<V>(std::move(v));
+    using V = expression::unary::Slice<const expression_type&, std::decay_t<decltype(S)>>;
+    return VectorBase<V>(std::in_place, expression(), S);
   }
 
   // implements ones * this.transpose()
@@ -249,7 +242,7 @@ public:
   }
 
   template <index_type T = 2> auto norm() const -> value_type {
-    return expression::reductions::LpNorm<T, const expression_type>(expression())();
+    return expression::reductions::LpNorm<T, const expression_type &>(expression())();
   }
   auto norm(value_type T) const -> value_type {
     value_type p = value_type(1.0) / T;
@@ -266,7 +259,7 @@ public:
   template <expression::unary::HomogeneousMode Mode =
                 expression::unary::HomogeneousMode::Position>
   auto homogeneous() const {
-    return VectorBase<expression::unary::Homogeneous<Mode, const expression_type &>>(expression());
+    return VectorBase<expression::unary::Homogeneous<Mode, const expression_type&>>(std::in_place, expression());
   }
 };
 
@@ -274,6 +267,12 @@ template <concepts::Expression Expr>
 VectorBase(Expr &&) -> VectorBase<Expr>;
 template <concepts::Expression Expr>
 VectorBase(const Expr &) -> VectorBase<Expr>;
+
+// STL deduction guides: rvalue → owning StlMDArray, lvalue → borrowing StlMDArray
+template <concepts::StlStorageOfRank<1> S>
+VectorBase(S &&) -> VectorBase<expression::nullary::StlMDArray<std::decay_t<S>>>;
+template <concepts::StlStorageOfRank<1> S>
+VectorBase(S &) -> VectorBase<expression::nullary::StlMDArray<S &>>;
 
 namespace concepts::detail {
 

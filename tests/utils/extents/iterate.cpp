@@ -1,10 +1,10 @@
 
 
-#include "../../fmt_include.hpp"
 #include "../../catch_include.hpp"
 #include <zipper/utils/extents/all_extents_indices.hpp>
 #include <zipper/expression/detail/intersect_nonzeros.hpp>
 #include <zipper/Vector.hpp>
+#include <print>
 using namespace zipper;
 
 TEST_CASE("test_all_extents", "[storage][dense]") {
@@ -12,7 +12,7 @@ TEST_CASE("test_all_extents", "[storage][dense]") {
         // auto v = ind | ranges::views::transform([](auto i) { return 2 * i;
         // });
 
-        fmt::print("{} {}\n", std::get<0>(ind), std::get<1>(ind));
+        std::println("{} {}", std::get<0>(ind), std::get<1>(ind));
     }
 }
 TEST_CASE("test_vector_iterate", "[vector][dense]") {

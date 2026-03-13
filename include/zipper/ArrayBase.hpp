@@ -3,6 +3,8 @@
 
 #include "ZipperBase.hpp"
 #include "concepts/detail/IsZipperBase.hpp"
+#include "concepts/stl.hpp"
+#include "expression/nullary/StlMDArray.hpp"
 #include "expression/reductions/All.hpp"
 #include "expression/reductions/Any.hpp"
 #include "expression/reductions/CoefficientProduct.hpp"
@@ -40,6 +42,11 @@ public:
   using Base = ZipperBase<ArrayBase, Expr>;
   using Base::Base;
   using Base::expression;
+
+  template <typename... Args>
+    requires(!(concepts::Array<Args> && ...))
+  ArrayBase(Args &&...args)
+      : Base(std::in_place, std::forward<Args>(args)...) {}
 
   template <index_type... N>
   auto eval(const std::integer_sequence<index_type, N...> &) const
@@ -103,13 +110,13 @@ public:
 
   auto pow(value_type const &exp) const {
     return ArrayBase<
-        expression::unary::ScalarPower<const expression_type &, value_type>>(
-        expression(), exp);
+        expression::unary::ScalarPower<const expression_type&, value_type>>(
+        std::in_place, expression(), exp);
   }
 
   auto abs() const {
-    return ArrayBase<expression::unary::Abs<const expression_type &>>(
-        expression());
+    return ArrayBase<expression::unary::Abs<const expression_type&>>(
+        std::in_place, expression());
   }
 
   auto sum() const -> value_type {
@@ -121,7 +128,7 @@ public:
   }
 
   template <index_type T> auto norm_powered() const -> value_type {
-    return expression::reductions::LpNormPowered<T, const expression_type>(
+    return expression::reductions::LpNormPowered<T, const expression_type &>(
         expression())();
   }
   auto norm_powered(value_type T) const -> value_type {
@@ -129,7 +136,7 @@ public:
   }
 
   template <index_type T = 2> auto norm() const -> value_type {
-    return expression::reductions::LpNorm<T, const expression_type>(
+    return expression::reductions::LpNorm<T, const expression_type &>(
         expression())();
   }
   auto norm(value_type T) const -> value_type {
@@ -155,24 +162,22 @@ public:
     return expression::reductions::All(expression())();
   }
 
-  // Slice methods - delegate to ZipperBase::slice_expression
+  // Slice methods - construct wrapper in-place to avoid moving non-movable expressions
   template <typename... Slices> auto slice() {
-    auto v = Base::template slice_expression<Slices...>();
-    return ArrayBase<std::decay_t<decltype(v)>>(std::move(v));
+    using V = expression::unary::Slice<expression_type&, std::decay_t<Slices>...>;
+    return ArrayBase<V>(std::in_place, expression(), Slices{}...);
   }
   template <typename... Slices> auto slice(Slices &&...slices) const {
-    auto v =
-        Base::template slice_expression<Slices...>(std::forward<Slices>(slices)...);
-    return ArrayBase<std::decay_t<decltype(v)>>(std::move(v));
+    using V = expression::unary::Slice<const expression_type&, std::decay_t<Slices>...>;
+    return ArrayBase<V>(std::in_place, expression(), std::forward<Slices>(slices)...);
   }
   template <typename... Slices> auto slice() const {
-    auto v = Base::template slice_expression<Slices...>();
-    return ArrayBase<std::decay_t<decltype(v)>>(std::move(v));
+    using V = expression::unary::Slice<const expression_type&, std::decay_t<Slices>...>;
+    return ArrayBase<V>(std::in_place, expression(), Slices{}...);
   }
   template <typename... Slices> auto slice(Slices &&...slices) {
-    auto v =
-        Base::template slice_expression<Slices...>(std::forward<Slices>(slices)...);
-    return ArrayBase<std::decay_t<decltype(v)>>(std::move(v));
+    using V = expression::unary::Slice<expression_type&, std::decay_t<Slices>...>;
+    return ArrayBase<V>(std::in_place, expression(), std::forward<Slices>(slices)...);
   }
 };
 
@@ -180,6 +185,12 @@ template <concepts::Expression Expr>
 ArrayBase(Expr &&) -> ArrayBase<Expr>;
 template <concepts::Expression Expr>
 ArrayBase(const Expr &) -> ArrayBase<Expr>;
+
+// STL deduction guides: rvalue → owning StlMDArray, lvalue → borrowing StlMDArray
+template <concepts::StlStorage S>
+ArrayBase(S &&) -> ArrayBase<expression::nullary::StlMDArray<std::decay_t<S>>>;
+template <concepts::StlStorage S>
+ArrayBase(S &) -> ArrayBase<expression::nullary::StlMDArray<S &>>;
 
 namespace concepts::detail {
 template <typename T> struct IsArray<ArrayBase<T>> : std::true_type {};

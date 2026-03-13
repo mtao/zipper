@@ -24,5 +24,12 @@ concept QualifiedExpression = UnqualifiedExpression<std::remove_cvref_t<T>>;
 /// Specifies something is a tensor with a particular rank
 template <typename T, zipper::rank_type rank>
 concept RankedExpression = Expression<T> && T::extents_type::rank() == rank;
+
+/// Like RankedExpression but accepts qualified (const/ref) types.
+/// Strips cv-ref before checking the rank constraint.
+template <typename T, zipper::rank_type rank>
+concept QualifiedRankedExpression =
+    QualifiedExpression<T> &&
+    std::remove_cvref_t<T>::extents_type::rank() == rank;
 } // namespace zipper::concepts
 #endif

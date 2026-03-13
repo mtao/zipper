@@ -1,0 +1,103 @@
+name: Zipper CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    name: ${{ matrix.platform.name }} / ${{ matrix.build_type }}
+    runs-on: ${{ matrix.platform.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        build_type: [debug, release]
+        platform:
+          - name: Linux (GCC 14)
+            image: ubuntu-24.04
+            cc: gcc-14
+            cxx: g++-14
+          - name: macOS (Clang)
+            image: macos-15
+            cc: clang
+            cxx: clang++
+    env:
+      CC: ${{ matrix.platform.cc }}
+      CXX: ${{ matrix.platform.cxx }}
+      MESON_VERSION: "1.7.2"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      # ── Toolchain ──────────────────────────────────────────────
+      - name: Set up Homebrew
+        if: runner.os == 'macOS'
+        uses: Homebrew/actions/setup-homebrew@master
+
+      - name: Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libfmt-dev catch2 ccache
+
+      - name: Install system dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: brew install fmt catch2 ccache
+
+      - name: Install Meson and Ninja
+        run: python -m pip install meson==${{ env.MESON_VERSION }} ninja
+
+      # ── Caches ─────────────────────────────────────────────────
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-${{ matrix.platform.image }}-${{ matrix.build_type }}-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ matrix.platform.image }}-${{ matrix.build_type }}-
+
+      - name: Configure ccache
+        run: |
+          ccache --set-config=max_size=500M
+          ccache --set-config=compression=true
+          ccache -z
+
+      - name: Cache subproject downloads
+        uses: actions/cache@v4
+        with:
+          path: subprojects/packagecache
+          key: subprojects-${{ hashFiles('subprojects/*.wrap') }}
+
+      # ── Build & Test ───────────────────────────────────────────
+      - name: Configure
+        env:
+          CC: ccache ${{ matrix.platform.cc }}
+          CXX: ccache ${{ matrix.platform.cxx }}
+        run: >
+          meson setup build/
+          --buildtype=${{ matrix.build_type }}
+          --wrap-mode=forcefallback
+          -Dtesting=true
+
+      - name: Build
+        run: meson compile -C build/
+
+      - name: ccache stats
+        run: ccache -s
+
+      - name: Test
+        run: meson test -C build/ -v
+
+      - name: Upload test log
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: ${{ matrix.platform.name }}-${{ matrix.build_type }}-testlog
+          path: build/meson-logs/testlog.txt

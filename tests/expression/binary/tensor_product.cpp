@@ -105,7 +105,7 @@ TEST_CASE("test_product", "[storage][tensor]") {
     static_assert(decltype(TP)::extents_type::rank() == 4);
 
     using TP_type = std::decay_t<decltype(TP)>::expression_type;
-    zipper::expression::unary::PartialTrace<const TP_type, 1, 2> pt(TP.expression());
+    zipper::expression::unary::PartialTrace<const TP_type&, 1, 2> pt(TP.expression());
     zipper::Matrix<double, 3, 3> MN_tensor = pt;
 
     // Both methods should give the same result

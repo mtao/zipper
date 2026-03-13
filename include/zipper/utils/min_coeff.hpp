@@ -1,5 +1,5 @@
-#if !defined(ZIPPER_UTILS_MINCOEFF_HPP)
-#define ZIPPER_UTILS_MINCOEFF_HPP
+#if !defined(ZIPPER_UTILS_MIN_COEFF_HPP)
+#define ZIPPER_UTILS_MIN_COEFF_HPP
 #include <zipper/ZipperBase.hpp>
 #include <zipper/concepts/Zipper.hpp>
 

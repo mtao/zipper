@@ -1,8 +1,9 @@
-// Tests for expression ownership semantics:
-// - Operator expressions (+ - * /) OWN copies of their children
+// Tests for expression ownership semantics (refactor_all design):
+// - Operator expressions on lvalue children REFERENCE their data (lazy eval)
+// - Operator expressions on rvalue children OWN them (moved in)
 // - View expressions (diagonal, row, col, slice, transpose, as_array) REFERENCE
+// - to_owned() / eval() produce independent, owned copies
 // - Expression chains with temporaries are safe
-// - eval() materializes and breaks laziness
 // - Assignment through mutable views
 
 #include <zipper/Array.hpp>
@@ -14,79 +15,84 @@
 #include "../catch_include.hpp"
 
 // ============================================================
-// C1: Operator expressions own copies (independence from originals)
+// C1: Operator expressions REFERENCE lvalue children
+//     (mutations to originals are visible through lazy expression)
 // ============================================================
 
-TEST_CASE("operator_expressions_own_copies_vector",
+TEST_CASE("operator_expressions_reference_lvalue_vector",
           "[ownership][operator][vector]") {
     zipper::Vector<double, 3> a{1.0, 2.0, 3.0};
     zipper::Vector<double, 3> b{10.0, 20.0, 30.0};
 
     auto sum = a + b;
-    // Mutate originals after creating the expression
-    a(0) = 999.0;
-    b(0) = 999.0;
-
-    // sum should be unaffected — it owns copies
+    // Before mutation: lazy sum reads current values
     CHECK(sum(0) == 11.0);
     CHECK(sum(1) == 22.0);
     CHECK(sum(2) == 33.0);
+
+    // Mutate originals — sum is lazy and references a, b
+    a(0) = 999.0;
+    b(0) = 999.0;
+    CHECK(sum(0) == 999.0 + 999.0);
+
+    // to_owned() produces an independent copy
+    a(0) = 1.0;
+    b(0) = 10.0;
+    auto owned_sum = (a + b).to_owned();
+    a(0) = 0.0;
+    b(0) = 0.0;
+    CHECK(owned_sum(0) == 11.0);
 }
 
-TEST_CASE("operator_expressions_own_copies_difference",
+TEST_CASE("operator_expressions_reference_lvalue_difference",
           "[ownership][operator][vector]") {
     zipper::Vector<double, 3> a{10.0, 20.0, 30.0};
     zipper::Vector<double, 3> b{1.0, 2.0, 3.0};
 
     auto diff = a - b;
+    CHECK(diff(0) == 9.0);
+
     a(0) = 0.0;
     b(0) = 0.0;
-
-    CHECK(diff(0) == 9.0);
-    CHECK(diff(1) == 18.0);
-    CHECK(diff(2) == 27.0);
+    CHECK(diff(0) == 0.0);  // reflects mutation
 }
 
-TEST_CASE("operator_expressions_own_copies_scalar_multiply",
+TEST_CASE("operator_expressions_reference_lvalue_scalar_multiply",
           "[ownership][operator][vector]") {
     zipper::Vector<double, 3> x{1.0, 2.0, 3.0};
 
     auto scaled = 3.0 * x;
-    x(0) = 999.0;
-
     CHECK(scaled(0) == 3.0);
-    CHECK(scaled(1) == 6.0);
-    CHECK(scaled(2) == 9.0);
+
+    x(0) = 999.0;
+    CHECK(scaled(0) == 2997.0);  // reflects mutation
 }
 
-TEST_CASE("operator_expressions_own_copies_scalar_divide",
+TEST_CASE("operator_expressions_reference_lvalue_scalar_divide",
           "[ownership][operator][vector]") {
     zipper::Vector<double, 3> x{10.0, 20.0, 30.0};
 
     auto divided = x / 2.0;
-    x(0) = 999.0;
-
     CHECK(divided(0) == 5.0);
-    CHECK(divided(1) == 10.0);
-    CHECK(divided(2) == 15.0);
+
+    x(0) = 999.0;
+    CHECK(divided(0) == 999.0 / 2.0);  // reflects mutation
 }
 
-TEST_CASE("operator_expressions_own_copies_matrix",
+TEST_CASE("operator_expressions_reference_lvalue_matrix",
           "[ownership][operator][matrix]") {
     zipper::Matrix<double, 2, 2> A{{1.0, 2.0}, {3.0, 4.0}};
     zipper::Matrix<double, 2, 2> B{{10.0, 20.0}, {30.0, 40.0}};
 
     auto sum = A + B;
+    CHECK(sum(0, 0) == 11.0);
+
     A(0, 0) = 999.0;
     B(0, 0) = 999.0;
-
-    CHECK(sum(0, 0) == 11.0);
-    CHECK(sum(0, 1) == 22.0);
-    CHECK(sum(1, 0) == 33.0);
-    CHECK(sum(1, 1) == 44.0);
+    CHECK(sum(0, 0) == 999.0 + 999.0);  // reflects mutation
 }
 
-TEST_CASE("operator_expressions_own_copies_array_scalar",
+TEST_CASE("operator_expressions_reference_lvalue_array_scalar",
           "[ownership][operator][array]") {
     zipper::Array<double, 3> x;
     x(0) = 1.0;
@@ -94,11 +100,10 @@ TEST_CASE("operator_expressions_own_copies_array_scalar",
     x(2) = 3.0;
 
     auto result = x + 10.0;
-    x(0) = 999.0;
-
     CHECK(result(0) == 11.0);
-    CHECK(result(1) == 12.0);
-    CHECK(result(2) == 13.0);
+
+    x(0) = 999.0;
+    CHECK(result(0) == 1009.0);  // reflects mutation
 }
 
 // ============================================================
@@ -214,10 +219,9 @@ TEST_CASE("chain_as_array_plus_scalar", "[ownership][chain]") {
 TEST_CASE("chain_row_plus_row", "[ownership][chain]") {
     zipper::Matrix<double, 2, 3> M{{1.0, 2.0, 3.0}, {10.0, 20.0, 30.0}};
 
-    // Each row() is a view; + creates an operator expression that owns copies
-    // of the view objects, but those views still reference M's data.
-    // Since the binary operation is lazy (evaluates on access), mutating M
-    // DOES affect the result.
+    // Each row() is a view; + creates an operator expression that stores
+    // references to the view objects (lvalues), which in turn reference M.
+    // Since everything is lazy, mutating M IS visible.
     auto r0 = M.row(std::integral_constant<zipper::index_type, 0>{});
     auto r1 = M.row(std::integral_constant<zipper::index_type, 1>{});
     auto sum = r0 + r1;
@@ -237,22 +241,32 @@ TEST_CASE("chain_row_plus_row", "[ownership][chain]") {
 }
 
 // ============================================================
-// C6: Multi-level expression chains
+// C6: Multi-level expression chains reference through intermediates
 // ============================================================
 
 TEST_CASE("multi_level_expression_chain", "[ownership][chain]") {
     zipper::Vector<double, 3> x{1.0, 2.0, 3.0};
     zipper::Vector<double, 3> y{10.0, 20.0, 30.0};
 
+    // 2.0 * x references x (lvalue); 3.0 * y references y (lvalue)
+    // The top-level + takes both as rvalues (owns them), but each
+    // still holds a reference to x / y respectively.
     auto z = 2.0 * x + 3.0 * y;
     CHECK(z(0) == 2.0 + 30.0);
     CHECK(z(1) == 4.0 + 60.0);
     CHECK(z(2) == 6.0 + 90.0);
 
-    // Mutate originals — z should be unaffected
+    // Mutate originals — z sees the change (references x, y)
     x(0) = 0.0;
     y(0) = 0.0;
-    CHECK(z(0) == 32.0);
+    CHECK(z(0) == 0.0);
+
+    // eval() breaks laziness
+    x(0) = 1.0;
+    y(0) = 10.0;
+    auto z_eval = (2.0 * x + 3.0 * y).eval();
+    x(0) = 0.0;
+    CHECK(z_eval(0) == 32.0);  // unaffected by mutation
 }
 
 TEST_CASE("multi_level_matrix_expression_chain", "[ownership][chain]") {
@@ -265,8 +279,9 @@ TEST_CASE("multi_level_matrix_expression_chain", "[ownership][chain]") {
     CHECK(z(1, 0) == 6.0 + 90.0);
     CHECK(z(1, 1) == 8.0 + 120.0);
 
+    // Mutation visible through lazy expression
     A(0, 0) = 0.0;
-    CHECK(z(0, 0) == 32.0);
+    CHECK(z(0, 0) == 0.0 + 30.0);  // reflects mutation
 }
 
 // ============================================================
@@ -440,16 +455,47 @@ TEST_CASE("compound_assign_operators_vector",
 }
 
 // ============================================================
-// Negate operator ownership
+// Negate operator references lvalue child
 // ============================================================
 
-TEST_CASE("negate_operator_owns_copy", "[ownership][operator][negate]") {
+TEST_CASE("negate_operator_references_lvalue", "[ownership][operator][negate]") {
     zipper::Vector<double, 3> x{1.0, 2.0, 3.0};
 
     auto neg = -x;
-    x(0) = 999.0;
-
     CHECK(neg(0) == -1.0);
     CHECK(neg(1) == -2.0);
     CHECK(neg(2) == -3.0);
+
+    // Negate stores a reference to x (lvalue) — mutation is visible
+    x(0) = 999.0;
+    CHECK(neg(0) == -999.0);
+
+    // to_owned() produces an independent copy
+    x(0) = 1.0;
+    auto owned_neg = (-x).to_owned();
+    x(0) = 0.0;
+    CHECK(owned_neg(0) == -1.0);
+}
+
+// ============================================================
+// to_owned() and stores_references trait
+// ============================================================
+
+TEST_CASE("to_owned_produces_independent_copy",
+          "[ownership][to_owned]") {
+    zipper::Vector<double, 3> a{1.0, 2.0, 3.0};
+    zipper::Vector<double, 3> b{10.0, 20.0, 30.0};
+
+    auto sum = a + b;
+    // sum stores references (lvalue operands)
+    static_assert(decltype(sum)::stores_references);
+
+    auto owned = sum.to_owned();
+    // owned should NOT store references
+    static_assert(!decltype(owned)::stores_references);
+
+    a(0) = 999.0;
+    // sum sees the mutation, owned does not
+    CHECK(sum(0) == 999.0 + 10.0);
+    CHECK(owned(0) == 11.0);
 }

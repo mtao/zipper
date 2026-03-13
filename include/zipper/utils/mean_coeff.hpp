@@ -1,5 +1,5 @@
-#if !defined(ZIPPER_UTILS_MEANCOEFF_HPP)
-#define ZIPPER_UTILS_MEANCOEFF_HPP
+#if !defined(ZIPPER_UTILS_MEAN_COEFF_HPP)
+#define ZIPPER_UTILS_MEAN_COEFF_HPP
 #include <zipper/ZipperBase.hpp>
 #include <zipper/concepts/Zipper.hpp>
 #include <zipper/expression/reductions/CoefficientSum.hpp>

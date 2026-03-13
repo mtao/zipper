@@ -1,41 +1,38 @@
 #if !defined(ZIPPER_EXPRESSION_REDUCTIONS_COEFFICIENTPRODUCT_HPP)
 #define ZIPPER_EXPRESSION_REDUCTIONS_COEFFICIENTPRODUCT_HPP
 
-#include "zipper/concepts/Expression.hpp"
-#include "zipper/expression/detail/ExpressionTraits.hpp"
+#include "ReductionBase.hpp"
 #include "zipper/utils/extents/all_extents_indices.hpp"
 
 namespace zipper::expression::reductions {
 
-template <zipper::concepts::QualifiedExpression Expression>
-class CoefficientProduct {
+template <typename Expr>
+class CoefficientProduct
+    : public ReductionBase<CoefficientProduct<Expr>, Expr> {
 public:
-  using self_type = CoefficientProduct<Expression>;
-  using expression_type = std::remove_reference_t<Expression>;
-  using expression_traits =
-      zipper::expression::detail::ExpressionTraits<expression_type>;
-  using value_type = typename expression_type::value_type;
+  using Base = ReductionBase<CoefficientProduct<Expr>, Expr>;
+  using typename Base::expression_type;
+  using typename Base::expression_traits;
+  using typename Base::value_type;
 
-  CoefficientProduct(const expression_type &v) : m_expression(v) {}
-
-  CoefficientProduct(CoefficientProduct &&v) = default;
-  CoefficientProduct(const CoefficientProduct &v) = default;
+  using Base::Base;
+  using Base::expression;
 
   value_type operator()() const {
     value_type v = 1.0;
     for (const auto &i :
-         zipper::utils::extents::all_extents_indices(m_expression.extents())) {
-      v *= std::apply(m_expression, i);
+         zipper::utils::extents::all_extents_indices(expression().extents())) {
+      v *= std::apply(expression(), i);
     }
     return v;
   }
-
-private:
-  const expression_type &m_expression;
 };
 
-template <zipper::concepts::QualifiedExpression Expression>
-CoefficientProduct(const Expression &) -> CoefficientProduct<Expression>;
+template <zipper::concepts::QualifiedExpression E>
+CoefficientProduct(E &) -> CoefficientProduct<E &>;
+
+template <zipper::concepts::QualifiedExpression E>
+CoefficientProduct(E &&) -> CoefficientProduct<E>;
 
 } // namespace zipper::expression::reductions
 #endif

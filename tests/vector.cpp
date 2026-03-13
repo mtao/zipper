@@ -1,4 +1,4 @@
-#include <iostream>
+#include <print>
 #include <zipper/Form.hpp>
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
@@ -16,16 +16,16 @@ namespace {
 void print(zipper::concepts::Matrix auto const &M) {
   for (zipper::index_type j = 0; j < M.extent(0); ++j) {
     for (zipper::index_type k = 0; k < M.extent(1); ++k) {
-      std::cout << M(j, k) << " ";
+      std::print("{} ", M(j, k));
     }
-    std::cout << std::endl;
+    std::println("");
   }
 }
 void print(zipper::concepts::Vector auto const &M) {
   for (zipper::index_type j = 0; j < M.extent(0); ++j) {
-    std::cout << M(j) << " ";
+    std::print("{} ", M(j));
   }
-  std::cout << std::endl;
+  std::println("");
 }
 } // namespace
   //

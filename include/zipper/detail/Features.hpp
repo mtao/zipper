@@ -1,5 +1,5 @@
-#if !defined(ZIPPER_DETAIL_FEATUERS_HPP)
-#define ZIPPER_DETAIL_FEATUERS_HPP
+#if !defined(ZIPPER_DETAIL_FEATURES_HPP)
+#define ZIPPER_DETAIL_FEATURES_HPP
 #include <type_traits>
 
 namespace zipper::detail {

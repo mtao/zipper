@@ -7,13 +7,13 @@
 namespace zipper::expression::binary::detail {
 template <typename T>
 struct min {
-    constexpr decltype(auto) operator()(const T& a, const T& b) const {
+    static constexpr decltype(auto) operator()(const T& a, const T& b) {
         return std::min(a, b);
     }
 };
 template <typename T>
 struct max {
-    constexpr decltype(auto) operator()(const T& a, const T& b) const {
+    static constexpr decltype(auto) operator()(const T& a, const T& b) {
         return std::max(a, b);
     }
 };

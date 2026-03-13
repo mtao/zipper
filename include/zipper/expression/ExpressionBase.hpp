@@ -5,6 +5,7 @@
 #include "zipper/concepts/Expression.hpp"
 #include "zipper/concepts/IndexArgument.hpp"
 #include "zipper/detail/ExtentsTraits.hpp"
+#include "zipper/detail/NonReturnable.hpp"
 #include "zipper/types.hpp"
 
 namespace zipper::expression {
@@ -19,14 +20,26 @@ namespace zipper::expression {
  *
  * - operator(Args...) const -> const value_type&
  * - operator(Args...) const -> value_type&
+ *
+ * ## Returnability
+ * When ExpressionTraits<Derived>::stores_references is true, this class
+ * inherits NonReturnable (deleted copy/move), preventing the expression
+ * from escaping scope as an lvalue.  Prvalue returns still work via C++17
+ * guaranteed copy elision.
  */
-template <typename Derived_> class ExpressionBase {
+template <typename Derived_>
+class ExpressionBase
+    : public zipper::detail::returnability_mixin_t<
+          detail::ExpressionTraits<Derived_>::stores_references> {
 public:
   using Derived = Derived_;
 
-  auto derived() -> Derived & { return static_cast<Derived &>(*this); }
-  auto derived() const -> const Derived & {
-    return static_cast<const Derived &>(*this);
+  auto derived(this auto& self) -> auto& {
+    if constexpr (std::is_const_v<std::remove_reference_t<decltype(self)>>) {
+      return static_cast<const Derived &>(self);
+    } else {
+      return static_cast<Derived &>(self);
+    }
   }
 
   using traits = detail::ExpressionTraits<Derived>;
@@ -43,6 +56,7 @@ public:
   constexpr static bool is_const_valued = access_features.is_const;
   constexpr static bool is_alias_free = access_features.is_alias_free;
   constexpr static bool is_assignable = traits::is_assignable();
+  constexpr static bool stores_references = traits::stores_references;
   constexpr static rank_type rank = extents_type::rank();
 
   static_assert(extents_type::rank() >= 0);

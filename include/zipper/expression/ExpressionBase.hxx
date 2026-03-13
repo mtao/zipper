@@ -2,6 +2,7 @@
 #define ZIPPER_expression_EXPRESSIONBASE_HXX
 
 #include "ExpressionBase.hpp"
+#include "zipper/detail/assert.hpp"
 #include "zipper/utils/extents/indices_in_range.hpp"
 #include <functional>
 
@@ -39,21 +40,21 @@ auto ExpressionBase<Derived>::const_coeff_ref(Indices &&...indices) const
 }
 
 namespace unary {
-template <zipper::concepts::Expression ExpressionType,
+template <zipper::concepts::QualifiedExpression ExpressionType,
           typename... Slices>
 class Slice;
 }
 template <typename Derived>
 template <concepts::IndexSlice... Slices>
 auto ExpressionBase<Derived>::const_access_slice(Slices &&...slices) const {
-  return unary::Slice<const Derived, std::decay_t<Slices>...>(
+  return unary::Slice<const Derived&, std::decay_t<Slices>...>(
       derived(), std::forward<Slices>(slices)...);
 }
 
 template <typename Derived>
 template <concepts::IndexSlice... Slices>
 auto ExpressionBase<Derived>::access_slice(Slices &&...slices) {
-  return unary::Slice<Derived, std::decay_t<Slices>...>(
+  return unary::Slice<Derived&, std::decay_t<Slices>...>(
       derived(), std::forward<Slices>(slices)...);
 }
 
@@ -62,9 +63,7 @@ template <concepts::IndexArgument... Args>
 auto ExpressionBase<Derived>::operator()(Args &&...idxs) const -> decltype(auto)
 
 {
-  decltype(auto) v = const_access_pack(std::forward<Args>(idxs)...);
-  static_assert(!std::is_void_v<std::decay_t<decltype(v)>>);
-  return v;
+  return const_access_pack(std::forward<Args>(idxs)...);
 }
 template <typename Derived>
 template <concepts::IndexArgument... Args>
@@ -72,9 +71,7 @@ auto ExpressionBase<Derived>::operator()(Args &&...idxs) -> decltype(auto)
   requires(is_assignable && !is_const_valued)
 
 {
-  decltype(auto) v = access_pack(std::forward<Args>(idxs)...);
-  static_assert(!std::is_void_v<std::decay_t<decltype(v)>>);
-  return v;
+  return access_pack(std::forward<Args>(idxs)...);
 }
 
 template <typename Derived>
@@ -94,9 +91,7 @@ template <typename Derived>
 template <concepts::Index... Args>
 auto ExpressionBase<Derived>::access_index_pack(Args &&...idxs)
     -> decltype(auto) {
-#if !defined(NDEBUG)
-  zipper::utils::extents::indices_in_range(extents(), idxs...);
-#endif
+  ZIPPER_ASSERT(zipper::utils::extents::indices_in_range(extents(), idxs...));
   if constexpr (traits::is_referrable()) {
     return coeff_ref(std::forward<Args>(idxs)...);
   } else {
@@ -108,9 +103,7 @@ template <typename Derived>
 template <concepts::Index... Args>
 auto ExpressionBase<Derived>::const_access_index_pack(Args &&...idxs) const
     -> decltype(auto) {
-#if !defined(NDEBUG)
-  zipper::utils::extents::indices_in_range(extents(), idxs...);
-#endif
+  ZIPPER_ASSERT(zipper::utils::extents::indices_in_range(extents(), idxs...));
   if constexpr (traits::is_referrable()) {
     return const_coeff_ref(std::forward<Args>(idxs)...);
   } else {

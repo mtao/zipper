@@ -27,11 +27,16 @@ SCALAR_BINARY_DECLARATION(TensorBase, Divides, operator/)
 BINARY_DECLARATION(TensorBase, Plus, operator+)
 BINARY_DECLARATION(TensorBase, Minus, operator-)
 
-template <concepts::Tensor Expr1, concepts::Tensor Expr2>
-auto operator*(Expr1 const &lhs, Expr2 const &rhs) {
-  using V = expression::binary::TensorProduct<const typename Expr1::expression_type,
-                                              const typename Expr2::expression_type>;
-  return TensorBase<V>(V(lhs.expression(), rhs.expression()));
+template <typename Expr1, typename Expr2>
+    requires(concepts::Tensor<std::decay_t<Expr1>> &&
+             concepts::Tensor<std::decay_t<Expr2>>)
+auto operator*(Expr1&& lhs, Expr2&& rhs) {
+  using A = detail::forwarded_expression_t<Expr1>;
+  using B = detail::forwarded_expression_t<Expr2>;
+  using V = expression::binary::TensorProduct<A, B>;
+  return TensorBase<V>(std::in_place,
+      std::forward<Expr1>(lhs).expression(),
+      std::forward<Expr2>(rhs).expression());
 }
 
 } // namespace zipper

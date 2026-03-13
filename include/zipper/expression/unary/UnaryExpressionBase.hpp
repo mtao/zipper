@@ -2,6 +2,7 @@
 #define ZIPPER_EXPRESSION_UNARY_UNARYEXPRESSIONBASE_HPP
 
 #include "zipper/concepts/Expression.hpp"
+#include "zipper/detail/ExpressionStorage.hpp"
 #include "zipper/expression/ExpressionBase.hpp"
 
 namespace zipper::expression::unary {
@@ -16,7 +17,7 @@ template <concepts::QualifiedExpression Child>
 consteval auto const_corrected_access_features()
     -> zipper::detail::AccessFeatures {
   constexpr auto base =
-      expression::detail::ExpressionTraits<Child>::access_features;
+      expression::detail::ExpressionTraits<std::decay_t<Child>>::access_features;
   return {
       .is_const = base.is_const ||
                   std::is_const_v<std::remove_reference_t<Child>>,
@@ -28,37 +29,47 @@ consteval auto const_corrected_access_features()
 
 /// Default traits for unary expressions. Inherits from BasicExpressionTraits
 /// to provide the access_features/shape_features interface.
-template <zipper::concepts::Expression Child>
+///
+/// Child is the *qualified* child type as passed to the unary expression
+/// class template (e.g. `const MDArray<…>&` for reference storage,
+/// `const MDArray<…>` for owning storage).  Traits are looked up on the
+/// decayed (unqualified) type.
+template <zipper::concepts::QualifiedExpression Child>
 struct DefaultUnaryExpressionTraits
     : public expression::detail::BasicExpressionTraits<
-          typename expression::detail::ExpressionTraits<Child>::value_type,
-          typename expression::detail::ExpressionTraits<Child>::extents_type,
+          typename expression::detail::ExpressionTraits<std::decay_t<Child>>::value_type,
+          typename expression::detail::ExpressionTraits<std::decay_t<Child>>::extents_type,
           _dut_detail::const_corrected_access_features<Child>(),
           expression::detail::ShapeFeatures{.is_resizable = false}> {
-  using child_traits = expression::detail::ExpressionTraits<Child>;
+  using child_traits = expression::detail::ExpressionTraits<std::decay_t<Child>>;
   using base_value_type = typename child_traits::value_type;
 
   constexpr static bool is_value_based = true;
   constexpr static bool is_coefficient_consistent =
-      expression::detail::get_is_coefficient_consistent<child_traits>();
+      child_traits::is_coefficient_consistent;
+
+  /// stores_references is true when the child is stored by reference,
+  /// OR when the child itself (even if stored by value) internally stores
+  /// references to external data.  This ensures that an expression like
+  /// -(a+b) correctly reports stores_references==true when (a+b) is moved
+  /// in by value but still holds references to a and b.
+  constexpr static bool stores_references =
+      std::is_reference_v<Child> || child_traits::stores_references;
 };
 } // namespace detail
 
-namespace _ueb_detail {
-/// Helper: adds const through lvalue references.
-/// - `T`         → `const T`
-/// - `T&`        → `const T&`
-/// - `const T`   → `const T`
-/// - `const T&`  → `const T&`
-template <typename T>
-using add_const_through_ref_t = std::conditional_t<
-    std::is_lvalue_reference_v<T>,
-    const std::remove_reference_t<T>&,
-    const T
->;
-} // namespace _ueb_detail
-
-template <typename Derived, zipper::concepts::Expression ChildType>
+/// Base class for unary expression nodes.
+///
+/// ChildType should be ref-qualified (e.g. `ExprType&` or `const ExprType&`)
+/// when the caller wants reference storage (the common case — the child
+/// outlives the expression node).  Pass a non-reference type to trigger
+/// by-value storage (e.g. for temporaries that must be owned).
+///
+/// The storage mechanism is provided by expression_storage_t:
+///   - `ExprType&`       →  stores as `ExprType&`       (mutable reference)
+///   - `const ExprType&` →  stores as `const ExprType&` (const reference)
+///   - `ExprType`        →  stores as `ExprType`        (by value, owns it)
+template <typename Derived, typename ChildType>
 class UnaryExpressionBase
     : public expression::ExpressionBase<Derived> {
 public:
@@ -73,51 +84,38 @@ public:
   constexpr static bool is_value_based = traits::is_value_based;
   constexpr static bool is_const_valued = traits::access_features.is_const;
   constexpr static bool is_assignable = traits::is_assignable();
-  /// child_type: when ChildType is a reference (e.g. `Expr&` or `const Expr&`),
-  /// the expression node stores a reference (non-owning view).
-  /// When ChildType is a value (e.g. `Expr` or `const Expr`),
-  /// the expression node stores by value (owns a copy).
+
+  using storage_type = zipper::detail::expression_storage_t<ChildType>;
+  using expression_type = std::remove_reference_t<ChildType>;
+  // child_type preserves the const-qualification convention:
+  // if not assignable, the child is viewed as const.
   using child_type =
-      std::conditional_t<is_assignable, ChildType,
-                         _ueb_detail::add_const_through_ref_t<ChildType>>;
+      std::conditional_t<is_assignable, expression_type, const expression_type>;
 
-  /// storage_type: when child_type is a reference, we use a pointer
-  /// to preserve assignability (raw references delete copy/move assignment).
-  /// When child_type is a value type, we store directly.
-  using child_element_type = std::remove_reference_t<child_type>;
-  using storage_type = std::conditional_t<
-      std::is_lvalue_reference_v<child_type>,
-      child_element_type*,
-      child_type>;
-  /// constructor_arg_type: the reference type that derived constructors
-  /// should use when accepting the child expression.
-  /// - For value types or const ref: `const child_element_type &`
-  /// - For non-const lvalue ref (mutable view): `child_element_type &`
-  using constructor_arg_type = std::conditional_t<
-      std::is_lvalue_reference_v<child_type> &&
-          !std::is_const_v<child_element_type>,
-      child_element_type &,
-      const child_element_type &>;
-
-  auto derived() -> Derived & { return static_cast<Derived &>(*this); }
-  auto derived() const -> const Derived & {
-    return static_cast<const Derived &>(*this);
+  auto derived(this auto& self) -> auto& {
+    if constexpr (std::is_const_v<std::remove_reference_t<decltype(self)>>) {
+      return static_cast<const Derived &>(self);
+    } else {
+      return static_cast<Derived &>(self);
+    }
   }
   using child_value_type = typename traits::base_value_type;
   UnaryExpressionBase() = delete;
 
   UnaryExpressionBase(const UnaryExpressionBase &) = default;
   UnaryExpressionBase(UnaryExpressionBase &&) = default;
-  auto operator=(const UnaryExpressionBase &) -> UnaryExpressionBase & = default;
-  auto operator=(UnaryExpressionBase &&) -> UnaryExpressionBase & = default;
+  auto operator=(const UnaryExpressionBase &) -> UnaryExpressionBase & = delete;
+  auto operator=(UnaryExpressionBase &&) -> UnaryExpressionBase & = delete;
 
-  UnaryExpressionBase(constructor_arg_type b)
-      : m_expression(_init_storage(b)) {}
+  template <typename U>
+    requires std::constructible_from<storage_type, U &&>
+  UnaryExpressionBase(U &&b)
+      : m_expression(std::forward<U>(b)) {}
 
   /// Primary extent accessor — delegates directly to child expression.
   /// Derived classes that change shape should shadow this.
   constexpr auto extent(rank_type i) const -> index_type {
-    return _get_expression().extent(i);
+    return m_expression.extent(i);
   }
 
   /// Default extents() constructs from extent() calls.
@@ -132,38 +130,16 @@ public:
     return derived().get_value(value);
   }
 
-  auto expression() -> child_element_type & { return _get_expression(); }
-  auto expression() const -> const child_element_type & { return _get_expression(); }
+  auto expression() -> child_type & { return m_expression; }
+  auto expression() const -> const child_type & { return m_expression; }
   template <typename... Args>
   auto coeff(Args &&...args) const -> value_type
     requires(is_value_based)
   {
-    return get_value(_get_expression()(std::forward<Args>(args)...));
+    return get_value(m_expression(std::forward<Args>(args)...));
   }
 
 private:
-  static auto _init_storage(constructor_arg_type b) -> storage_type {
-    if constexpr (std::is_lvalue_reference_v<child_type>) {
-      return std::addressof(b);
-    } else {
-      return b;
-    }
-  }
-  auto _get_expression() -> child_element_type & {
-    if constexpr (std::is_lvalue_reference_v<child_type>) {
-      return *m_expression;
-    } else {
-      return m_expression;
-    }
-  }
-  auto _get_expression() const -> const child_element_type & {
-    if constexpr (std::is_lvalue_reference_v<child_type>) {
-      return *m_expression;
-    } else {
-      return m_expression;
-    }
-  }
-
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpadded"
   storage_type m_expression;

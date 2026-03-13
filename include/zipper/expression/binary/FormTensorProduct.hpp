@@ -3,6 +3,7 @@
 
 
 #include "zipper/concepts/Expression.hpp"
+#include "zipper/detail/assert.hpp"
 #include "zipper/detail/pack_index.hpp"
 #include "zipper/expression/ExpressionBase.hpp"
 #include "zipper/expression/binary/TensorProduct.hpp"
@@ -25,18 +26,20 @@ struct form_tensor_partial_trace_type_<A, B,
                                        std::integer_sequence<rank_type, N...>> {
     // Off = max(0, a_rank - b_rank) but since rank_type is unsigned,
     // we need to be careful about underflow
-    constexpr static rank_type a_rank = A::extents_type::rank();
-    constexpr static rank_type b_rank = B::extents_type::rank();
+    constexpr static rank_type a_rank = std::decay_t<A>::extents_type::rank();
+    constexpr static rank_type b_rank = std::decay_t<B>::extents_type::rank();
     constexpr static rank_type Off = (a_rank >= b_rank) ? (a_rank - b_rank) : 0;
     using tensor_product_type =
         binary::TensorProduct<A, B>;
-    using partial_trace_type = unary::PartialTrace<const tensor_product_type &, (N + Off)...>;
+    // The PartialTrace stores a reference to the TensorProduct member
+    // inside FormTensorProduct, so use reference-qualified type.
+    using partial_trace_type = unary::PartialTrace<tensor_product_type&, (N + Off)...>;
 };
 
 template <typename A, typename B>
 struct form_tensor_partial_trace_type {
-    constexpr static rank_type a_rank = A::extents_type::rank();
-    constexpr static rank_type b_rank = B::extents_type::rank();
+    constexpr static rank_type a_rank = std::decay_t<A>::extents_type::rank();
+    constexpr static rank_type b_rank = std::decay_t<B>::extents_type::rank();
     // Contract min(a_rank, b_rank) pairs of indices
     constexpr static rank_type contracted_rank = (a_rank < b_rank) ? a_rank : b_rank;
 
@@ -91,9 +94,13 @@ class FormTensorProduct : public ExpressionBase<FormTensorProduct<A, B>> {
         : FormTensorProduct(o.m_tensor.lhs(), o.m_tensor.rhs()) {}
     FormTensorProduct& operator=(FormTensorProduct& o) = delete;
     FormTensorProduct& operator=(FormTensorProduct&& o) = delete;
-    FormTensorProduct(const A& a, const B& b)
-        : m_tensor(a, b), m_trace(m_tensor) {
-        assert(&m_trace.expression() == &m_tensor);
+
+    template <typename U, typename V>
+      requires std::constructible_from<typename traits::tensor_product_type::lhs_storage_type, U&&> &&
+               std::constructible_from<typename traits::tensor_product_type::rhs_storage_type, V&&>
+    FormTensorProduct(U&& a, V&& b)
+        : m_tensor(std::forward<U>(a), std::forward<V>(b)), m_trace(m_tensor) {
+        ZIPPER_ASSERT(&m_trace.expression() == &m_tensor);
     }
 
     template <typename... Args>
@@ -107,13 +114,21 @@ class FormTensorProduct : public ExpressionBase<FormTensorProduct<A, B>> {
         return extents_traits::make_extents_from(*this);
     }
 
+    /// Recursively deep-copy children so the result owns all data.
+    auto make_owned() const {
+        auto owned_a = m_tensor.lhs().make_owned();
+        auto owned_b = m_tensor.rhs().make_owned();
+        return FormTensorProduct<decltype(owned_a), decltype(owned_b)>(
+            std::move(owned_a), std::move(owned_b));
+    }
+
    private:
     traits::tensor_product_type m_tensor;
     traits::partial_trace_type m_trace;
 };
 
-template <zipper::concepts::QualifiedExpression A, zipper::concepts::QualifiedExpression B>
-FormTensorProduct(const A& a, const B& b) -> FormTensorProduct<A, B>;
+template <zipper::concepts::Expression A, zipper::concepts::Expression B>
+FormTensorProduct(const A& a, const B& b) -> FormTensorProduct<const A&, const B&>;
 
 }  // namespace binary
 }  // namespace zipper::expression

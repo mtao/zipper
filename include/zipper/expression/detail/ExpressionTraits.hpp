@@ -45,7 +45,20 @@ struct BasicExpressionTraits {
     return access_features.is_alias_free;
   }
 
+  /// Coefficient-consistent means iterating over coefficients gives correct
+  /// results without aliasing issues (i.e. writing a[i] doesn't affect a[j]).
+  constexpr static bool is_coefficient_consistent = AF.is_alias_free;
+
   constexpr static bool is_writable = is_assignable();
+
+  /// Whether this expression (or any sub-expression) stores references to
+  /// external data.  When true, the expression tree may dangle if it outlives
+  /// the referenced objects, so returning it from a function is disallowed
+  /// by default (see NonReturnable).  Leaf expressions that own their data
+  /// (e.g. MDArray, Constant) set this to false.  The default for
+  /// BasicExpressionTraits is false — derived traits must propagate or
+  /// override as appropriate.
+  constexpr static bool stores_references = false;
 };
 
 template <typename T> struct ExpressionTraits;
@@ -115,17 +128,22 @@ struct DefaultExpressionTraits {
   using extents_type = Extents;
   using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
 
+  constexpr static bool is_resizable = false;
+
+  /// guarantees that V(j) = f(...) cannot depend on V(k) for j != k)
+  constexpr static bool is_alias_free = false;
+
   // New-style feature structs required by ExpressionBase
   constexpr static AccessFeatures access_features = {
       .is_const = std::is_const_v<value_type>,
       .is_reference = false,
-      /// guarantees that V(j) = f(...) cannot depend on V(k) for j != k)
-      .is_alias_free = false,
+      .is_alias_free = is_alias_free,
   };
   constexpr static ShapeFeatures shape_features = {
-      .is_resizable = false,
+      .is_resizable = is_resizable,
   };
 
+  // New-style consteval functions required by ExpressionBase
   consteval static auto is_const_valued() -> bool {
     return access_features.is_const;
   }
@@ -139,11 +157,19 @@ struct DefaultExpressionTraits {
     return is_reference_valued();
   }
 
-  consteval static auto is_resizable() -> bool {
+  consteval static auto is_resizable_f() -> bool {
     return shape_features.is_resizable;
   }
 
+  /// Coefficient-consistent means iterating over coefficients gives correct
+  /// results without aliasing issues.
+  constexpr static bool is_coefficient_consistent = is_alias_free;
+
   constexpr static bool is_writable = is_assignable();
+
+  /// Whether this expression stores references to external data.
+  /// Default is false — overridden by expressions that borrow data.
+  constexpr static bool stores_references = false;
 
   /// returns true if a dimension is sparse, false if dense. Should be used to
   /// hint if a dimension should be iterated via a full loop or an iterator

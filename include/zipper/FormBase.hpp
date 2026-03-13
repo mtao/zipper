@@ -8,7 +8,10 @@
 #include "concepts/Tensor.hpp"
 #include "concepts/Vector.hpp"
 #include "concepts/detail/IsZipperBase.hpp"
+#include "concepts/stl.hpp"
 #include "detail/extents/static_extents_to_integral_sequence.hpp"
+#include "expression/nullary/StlMDArray.hpp"
+#include <utility>
 
 namespace zipper {
 
@@ -51,6 +54,11 @@ public:
   FormBase(FormBase &&) = default;
   FormBase(const FormBase &) = default;
 
+  template <typename... Args>
+    requires(!(concepts::Form<Args> && ...))
+  FormBase(Args &&...args)
+      : Base(std::in_place, std::forward<Args>(args)...) {}
+
   auto operator=(concepts::Form auto const &v) -> FormBase & {
     expression() = v.expression();
     return *this;
@@ -80,29 +88,27 @@ public:
   }
 
   template <typename... Slices> auto slice() {
-    auto v = Base::template slice_expression<Slices...>();
-    return FormBase<std::decay_t<decltype(v)>>(std::move(v));
+    using V = expression::unary::Slice<expression_type&, std::decay_t<Slices>...>;
+    return FormBase<V>(std::in_place, expression(), Slices{}...);
   }
 
   template <typename... Slices> auto slice(Slices &&...slices) const {
-    auto v =
-        Base::template slice_expression<Slices...>(std::forward<Slices>(slices)...);
-    return FormBase<std::decay_t<decltype(v)>>(std::move(v));
+    using V = expression::unary::Slice<const expression_type&, std::decay_t<Slices>...>;
+    return FormBase<V>(std::in_place, expression(), std::forward<Slices>(slices)...);
   }
   template <typename... Slices> auto slice() const {
-    auto v = Base::template slice_expression<Slices...>();
-    return FormBase<std::decay_t<decltype(v)>>(std::move(v));
+    using V = expression::unary::Slice<const expression_type&, std::decay_t<Slices>...>;
+    return FormBase<V>(std::in_place, expression(), Slices{}...);
   }
 
   template <typename... Slices> auto slice(Slices &&...slices) {
-    auto v =
-        Base::template slice_expression<Slices...>(std::forward<Slices>(slices)...);
-    return FormBase<std::decay_t<decltype(v)>>(std::move(v));
+    using V = expression::unary::Slice<expression_type&, std::decay_t<Slices>...>;
+    return FormBase<V>(std::in_place, expression(), std::forward<Slices>(slices)...);
   }
 
   auto operator*() const {
     // TODO: this needs to be implemented
-    assert(false);
+    std::unreachable();
     return *this;
   }
 };
@@ -111,6 +117,12 @@ template <concepts::Expression Expr>
 FormBase(Expr &&) -> FormBase<Expr>;
 template <concepts::Expression Expr>
 FormBase(const Expr &) -> FormBase<Expr>;
+
+// STL deduction guides: rvalue → owning StlMDArray, lvalue → borrowing StlMDArray
+template <concepts::StlStorage S>
+FormBase(S &&) -> FormBase<expression::nullary::StlMDArray<std::decay_t<S>>>;
+template <concepts::StlStorage S>
+FormBase(S &) -> FormBase<expression::nullary::StlMDArray<S &>>;
 
 namespace concepts::detail {
 template <typename T>

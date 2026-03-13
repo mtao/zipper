@@ -2,6 +2,7 @@
 #define ZIPPER_VECTOR_HPP
 
 #include "VectorBase.hxx"
+#include "zipper/detail/assert.hpp"
 #include "zipper/expression/nullary/MDArray.hpp"
 #include "zipper/expression/nullary/MDSpan.hpp"
 #include "zipper/types.hpp"
@@ -41,14 +42,10 @@ public:
     requires(extents_traits::is_dynamic)
       : Base(zipper::extents<Rows>(size)) {}
 
-#if defined(NDEBUG)
-  Vector(index_type)
-#else
-  Vector(index_type rows)
-#endif
+  Vector([[maybe_unused]] index_type rows)
     requires(extents_traits::is_static)
       : Base() {
-    assert(rows == extent(0));
+    ZIPPER_ASSERT(rows == extent(0));
   }
 
   template <index_type R2>
@@ -64,7 +61,7 @@ public:
   Vector(const std::initializer_list<T> &l)
     requires(extents_traits::is_static)
   {
-    assert(l.size() == extent(0));
+    ZIPPER_ASSERT(l.size() == extent(0));
     std::ranges::copy(l, begin());
   }
   template <typename T>

@@ -1,6 +1,11 @@
 
 
-#include <iostream>
+#include <zipper/expression/unary/PartialTrace.hpp>
+
+#include "../../fmt_include.hpp"
+#include "../../catch_include.hpp"
+#include <zipper/expression/nullary/Unit.hpp>
+#include <print>
 #include <zipper/Tensor.hpp>
 #include <zipper/Vector.hpp>
 #include <zipper/Matrix.hpp>
@@ -11,7 +16,115 @@
 #include <zipper/expression/nullary/Random.hpp>
 #include <zipper/expression/nullary/Unit.hpp>
 
-#include "../../catch_include.hpp"
+namespace {
+
+void print(auto const& M) {
+    constexpr static zipper::rank_type rank =
+        std::decay_t<decltype(M)>::extents_type::rank();
+
+    if constexpr (rank == 1) {
+        for (zipper::index_type j = 0; j < M.extent(0); ++j) {
+            std::print("{} ", M(j));
+            std::println("");
+        }
+    } else if constexpr (rank == 2) {
+        for (zipper::index_type j = 0; j < M.extent(0); ++j) {
+            for (zipper::index_type k = 0; k < M.extent(1); ++k) {
+                std::print("{} ", M(j, k));
+            }
+            std::println("");
+        }
+    } else if constexpr (rank == 3) {
+        for (zipper::index_type j = 0; j < M.extent(0); ++j) {
+            for (zipper::index_type k = 0; k < M.extent(1); ++k) {
+                for (zipper::index_type l = 0; l < M.extent(2); ++l) {
+                    std::print("{} ", M(j, k, l));
+                }
+                std::println("");
+            }
+            std::println("-----");
+        }
+    } else if constexpr (rank == 4) {
+        for (zipper::index_type j = 0; j < M.extent(0); ++j) {
+            for (zipper::index_type k = 0; k < M.extent(1); ++k) {
+                for (zipper::index_type l = 0; l < M.extent(2); ++l) {
+                    for (zipper::index_type m = 0; m < M.extent(3); ++m) {
+                        std::print("{} ", M(j, k, l, m));
+                    }
+                    std::println("");
+                }
+                std::println("-----");
+            }
+            std::println("=====");
+        }
+    }
+}
+}  // namespace
+TEST_CASE("test_form_tensor_product_basic", "[storage][dense]") {
+    zipper::Tensor<double, 3, 3> I = zipper::expression::nullary::Identity<double>{};
+    zipper::Tensor<double, 3, std::dynamic_extent> M(3);
+    zipper::Tensor<double, 3> x;
+
+    zipper::Tensor<double, 3, 3, 3> J =
+        zipper::expression::nullary::Constant<double>{6};
+    //fmt::print("Constant tensor from infinite view\n");
+    print(J);
+
+    M = zipper::expression::nullary::normal_random_infinite<double>(0, 1);
+
+    x = zipper::expression::nullary::normal_random_infinite<double>(10, 1);
+
+    print(M);
+
+    x(0) = 2;
+    x(1) = 5;
+    x(2) = 9;
+
+    //fmt::print("Prod of matrix vector\n");
+    print(M * x);
+    //fmt::print("Prod of matrix Matrix identity\n");
+    print(I * M);
+    auto IM = I * M;
+    static_assert(decltype(I)::extents_type::rank() == 2);
+    static_assert(decltype(M)::extents_type::rank() == 2);
+    static_assert(decltype(IM)::extents_type::rank() == 4);
+
+    // CHECK(IM.slice(std::integral_constant<zipper::rank_type, 0>{},
+    //                std::integral_constant<zipper::rank_type, 0>{},
+    //                zipper::full_extent, zipper::full_extent) == M);
+
+    // zipper::Tensor C ;
+}
+
+TEST_CASE("test_product_via_partial_trace", "[storage][tensor]") {
+    // Test that matrix product can be computed via tensor product + partial trace
+    zipper::Tensor<double, 3, 3> I = zipper::expression::nullary::Identity<double>{};
+    zipper::Tensor<double, 3, 3> M =
+        zipper::expression::nullary::normal_random_infinite<double>(0, 1);
+
+    zipper::Tensor<double, 3, 3> N =
+        zipper::expression::nullary::normal_random_infinite<double>(0, 1);
+
+    // Matrix product via MatrixBase operator*
+    auto mM = zipper::as_matrix(M);
+    auto mN = zipper::as_matrix(N);
+    auto MN_matrix = (mM * mN).eval();
+
+    // Matrix product via tensor product + partial trace
+    auto TP = M * N;
+    static_assert(decltype(TP)::extents_type::rank() == 4);
+
+    using TP_type = std::decay_t<decltype(TP)>::expression_type;
+    zipper::expression::unary::PartialTrace<const TP_type&, 1, 2> pt(TP.expression());
+    zipper::Matrix<double, 3, 3> MN_tensor = pt;
+
+    // Both methods should give the same result
+    for (zipper::index_type j = 0; j < 3; ++j) {
+        for (zipper::index_type k = 0; k < 3; ++k) {
+            CHECK(MN_matrix(j, k) == Catch::Approx(MN_tensor(j, k)));
+        }
+    }
+}
 
 TEST_CASE("test_form_product", "[storage][tensor]") {
     // Test form-tensor contraction (dot product and higher-rank contractions)
@@ -45,7 +158,7 @@ TEST_CASE("test_form_product", "[storage][tensor]") {
     // Test dot product: form(O) * O = sum of components squared
     CHECK(double(O.as_form() * O) == Catch::Approx(3.0));
 
-    // Test rank-2 form * rank-1 tensor contraction → rank-1 form
+    // Test rank-2 form * rank-1 tensor contraction -> rank-1 form
     // FormTensorProduct requires form_rank >= tensor_rank
     // (F * v)(i) = sum_j F(i,j) * v(j)
     zipper::Vector<double, 3> a =
@@ -96,7 +209,7 @@ TEST_CASE("test_form_product", "[storage][tensor]") {
     }
     CHECK(chained == Catch::Approx(expected_chained));
 
-    // Test rank-1 form * rank-2 tensor → rank-1 tensor
+    // Test rank-1 form * rank-2 tensor -> rank-1 tensor
     // When form_rank < tensor_rank, result is a TensorBase
     // (f * T)(j) = sum_i f(i) * T(i, j)
     auto AB = (a.as_tensor() * b.as_tensor()).eval();
@@ -106,7 +219,7 @@ TEST_CASE("test_form_product", "[storage][tensor]") {
     auto xf_AB = xf * AB;
     static_assert(std::decay_t<decltype(xf_AB)>::extents_type::rank() == 1);
 
-    // (x^ * (a⊗b))(j) = sum_i x(i) * a(i) * b(j) = (x·a) * b(j)
+    // (x^ * (a*b))(j) = sum_i x(i) * a(i) * b(j) = (x.a) * b(j)
     double x_dot_a = double(x.as_form() * a);
     for (zipper::index_type j = 0; j < 3; ++j) {
         CHECK(double(xf_AB(j)) == Catch::Approx(x_dot_a * b(j)));

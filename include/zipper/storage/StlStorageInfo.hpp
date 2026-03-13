@@ -1,7 +1,7 @@
 #if !defined(ZIPPER_STORAGE_STLSTORAGEINFO_HPP)
 #define ZIPPER_STORAGE_STLSTORAGEINFO_HPP
 #include <array>
-#include <cassert>
+#include "zipper/detail/assert.hpp"
 #include <vector>
 
 #include "zipper/concepts/Index.hpp"
@@ -84,6 +84,7 @@ struct StlStorageInfo<std::vector<S>> : public StlStorageInfo<S> {
   static auto initialize(const value_type &d, index_type size, Args &&...args)
       -> self_type {
     self_type v(size, StlStorageInfo<S>::initialize(d, args...));
+    return v;
   }
 
   template <typename... Args>
@@ -160,7 +161,7 @@ struct StlStorageInfo<std::array<S, N>> : public StlStorageInfo<S> {
   template <typename... Args>
   static auto initialize(const value_type &d, index_type size, Args &&...args)
       -> self_type {
-    assert(size == my_static_extent);
+    ZIPPER_ASSERT(size == my_static_extent);
     self_type v;
     for (auto &x : v) {
       x = StlStorageInfo<S>::initialize(d, args...);
@@ -177,7 +178,7 @@ struct StlStorageInfo<std::array<S, N>> : public StlStorageInfo<S> {
 
   template <typename... Args>
   static void resize(self_type &s, index_type size, Args &&...args) {
-    assert(size == my_static_extent);
+    ZIPPER_ASSERT(size == my_static_extent);
     for (auto &x : s) {
       StlStorageInfo<S>::resize(x, args...);
     }

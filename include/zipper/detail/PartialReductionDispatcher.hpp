@@ -9,21 +9,23 @@ template <template <concepts::QualifiedExpression> typename DerivedT,
           zipper::concepts::QualifiedExpression ExprType, rank_type... Indices>
 class PartialReductionDispatcher {
 public:
-  PartialReductionDispatcher(std::remove_reference_t<ExprType> &v) : m_dispatcher(v) {}
+  PartialReductionDispatcher(ExprType &v) : m_dispatcher(v) {}
   auto sum() const {
-    auto expr = m_dispatcher.sum();
-    DerivedT<decltype(expr)> a(std::move(expr));
-    return a;
+    using PR = expression::unary::PartialReduction<
+        ExprType&, expression::reductions::CoefficientSum, Indices...>;
+    return DerivedT<PR>(std::in_place, m_dispatcher.expression());
   }
   template <index_type P = 2> auto norm() const {
-    auto expr = m_dispatcher.template norm<P>();
-    DerivedT<decltype(expr)> a(std::move(expr));
-    return a;
+    using holder = expression::reductions::detail::lp_norm_holder<P>;
+    using PR = expression::unary::PartialReduction<
+        ExprType&, holder::template LpNorm, Indices...>;
+    return DerivedT<PR>(std::in_place, m_dispatcher.expression());
   }
   template <index_type P = 2> auto norm_powered() const {
-    auto expr = m_dispatcher.template norm_powered<P>();
-    DerivedT<decltype(expr)> a(std::move(expr));
-    return a;
+    using holder = expression::reductions::detail::lp_norm_powered_holder<P>;
+    using PR = expression::unary::PartialReduction<
+        ExprType&, holder::template LpNormPowered, Indices...>;
+    return DerivedT<PR>(std::in_place, m_dispatcher.expression());
   }
 
 private:

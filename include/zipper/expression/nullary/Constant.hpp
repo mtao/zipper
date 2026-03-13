@@ -38,6 +38,9 @@ public:
 
   auto get_value() const -> value_type { return m_value; }
 
+  /// Constant already owns its data — make_owned() returns a copy.
+  auto make_owned() const -> Constant { return *this; }
+
 private:
   value_type m_value = {};
 };

@@ -2,6 +2,7 @@
 #define ZIPPER_EXPRESSION_NULLARY_LINEARLAYOUTEXPRESSION_HPP
 
 #include "zipper/expression/ExpressionBase.hpp"
+#include "zipper/detail/assert.hpp"
 #include "zipper/expression/detail/ExpressionTraits.hpp"
 #include "zipper/storage/LinearAccessorTraits.hpp"
 #include "zipper/storage/layout_types.hpp"
@@ -73,7 +74,15 @@ public:
   auto operator=(LinearLayoutExpression &&)
       -> LinearLayoutExpression & = default;
 
-  LinearLayoutExpression(const extents_type &extents = {})
+  LinearLayoutExpression()
+    requires(std::is_default_constructible_v<linear_accessor_type>)
+      : m_linear_accessor(), m_mapping(extents_type{}) {
+    if constexpr (!extents_traits::is_static) {
+      m_linear_accessor = linear_accessor_type(extents_traits::size(extents_type{}));
+    }
+  }
+
+  explicit LinearLayoutExpression(const extents_type &extents)
     requires(std::is_default_constructible_v<linear_accessor_type>)
       : m_linear_accessor(), m_mapping(extents) {
     if constexpr (!extents_traits::is_static) {
@@ -142,9 +151,7 @@ protected:
       return 0;
     } else {
       static_assert((std::is_integral_v<std::decay_t<Indices>> && ...));
-#if !defined(NDEBUG)
-      assert(zipper::utils::extents::indices_in_range(extents(), indices...));
-#endif
+      ZIPPER_ASSERT(zipper::utils::extents::indices_in_range(extents(), indices...));
       return mapping()(std::forward<Indices>(indices)...);
     }
   }

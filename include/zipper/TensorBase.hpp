@@ -3,7 +3,9 @@
 
 #include "ZipperBase.hpp"
 #include "concepts/Tensor.hpp"
+#include "concepts/stl.hpp"
 #include "detail/extents/static_extents_to_integral_sequence.hpp"
+#include "expression/nullary/StlMDArray.hpp"
 
 namespace zipper {
 
@@ -34,6 +36,11 @@ public:
   using Base::operator=;
   using Base::expression;
 
+  template <typename... Args>
+    requires(!(concepts::Tensor<Args> && ...))
+  TensorBase(Args &&...args)
+      : Base(std::in_place, std::forward<Args>(args)...) {}
+
   auto operator=(concepts::Tensor auto const &v) -> TensorBase & {
     expression() = v.expression();
     return *this;
@@ -53,24 +60,22 @@ public:
     return Base::operator=(v.expression());
   }
 
-  // Slice methods - delegate to ZipperBase::slice_expression
+  // Slice methods - construct wrapper in-place to avoid moving non-movable expressions
   template <typename... Slices> auto slice() {
-    auto v = Base::template slice_expression<Slices...>();
-    return TensorBase<std::decay_t<decltype(v)>>(std::move(v));
+    using V = expression::unary::Slice<expression_type&, std::decay_t<Slices>...>;
+    return TensorBase<V>(std::in_place, expression(), Slices{}...);
   }
   template <typename... Slices> auto slice(Slices &&...slices) const {
-    auto v =
-        Base::template slice_expression<Slices...>(std::forward<Slices>(slices)...);
-    return TensorBase<std::decay_t<decltype(v)>>(std::move(v));
+    using V = expression::unary::Slice<const expression_type&, std::decay_t<Slices>...>;
+    return TensorBase<V>(std::in_place, expression(), std::forward<Slices>(slices)...);
   }
   template <typename... Slices> auto slice() const {
-    auto v = Base::template slice_expression<Slices...>();
-    return TensorBase<std::decay_t<decltype(v)>>(std::move(v));
+    using V = expression::unary::Slice<const expression_type&, std::decay_t<Slices>...>;
+    return TensorBase<V>(std::in_place, expression(), Slices{}...);
   }
   template <typename... Slices> auto slice(Slices &&...slices) {
-    auto v =
-        Base::template slice_expression<Slices...>(std::forward<Slices>(slices)...);
-    return TensorBase<std::decay_t<decltype(v)>>(std::move(v));
+    using V = expression::unary::Slice<expression_type&, std::decay_t<Slices>...>;
+    return TensorBase<V>(std::in_place, expression(), std::forward<Slices>(slices)...);
   }
 };
 
@@ -78,6 +83,12 @@ template <concepts::Expression Expr>
 TensorBase(Expr &&) -> TensorBase<Expr>;
 template <concepts::Expression Expr>
 TensorBase(const Expr &) -> TensorBase<Expr>;
+
+// STL deduction guides: rvalue → owning StlMDArray, lvalue → borrowing StlMDArray
+template <concepts::StlStorage S>
+TensorBase(S &&) -> TensorBase<expression::nullary::StlMDArray<std::decay_t<S>>>;
+template <concepts::StlStorage S>
+TensorBase(S &) -> TensorBase<expression::nullary::StlMDArray<S &>>;
 
 } // namespace zipper
 

@@ -74,6 +74,9 @@ public:
     return v;
   }
 
+  /// Random already owns its data — make_owned() returns a copy.
+  auto make_owned() const -> Random { return *this; }
+
 private:
   mutable Distribution m_distribution = {};
   mutable Generator m_generator = {};

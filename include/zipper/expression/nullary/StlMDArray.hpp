@@ -1,3 +1,4 @@
+#pragma once
 #include "zipper/expression/ExpressionBase.hpp"
 #include "zipper/expression/detail/AssignHelper.hpp"
 #include "zipper/storage/StlStorageInfo.hpp"
@@ -20,14 +21,26 @@ public:
   auto extents() const -> extents_type { return info_helper::make_extents(m_data); }
   auto extent(rank_type i) const -> index_type { return extents().extent(i); }
 
-  StlMDArray(const extents_type &e = {}, const value_type &default_value = 0.0)
+  StlMDArray()
+    requires(!IsStatic)
+      : m_data(info_helper::initialize(extents_type{}, value_type{0.0})) {}
+
+  explicit StlMDArray(const extents_type &e, const value_type &default_value = 0.0)
     requires(!IsStatic)
       : m_data(info_helper::initialize(e, default_value)) {}
 
-  StlMDArray(const value_type &default_value = 0.0)
+  StlMDArray()
+    requires(IsStatic)
+      : m_data(info_helper::initialize(value_type{0.0})) {}
+
+  explicit StlMDArray(const value_type &default_value)
     requires(IsStatic)
       : m_data(info_helper::initialize(default_value)) {}
-  StlMDArray(S &d) : m_data(d) {}
+
+  explicit StlMDArray(S &d) : m_data(d) {}
+  explicit StlMDArray(S &&d)
+    requires(!std::is_reference_v<S>)
+      : m_data(std::move(d)) {}
 
   void resize(const extents_type &e) {
     info_helper::resize(m_data, e);
@@ -61,6 +74,7 @@ private:
 };
 
 template <typename S> StlMDArray(const S &) -> StlMDArray<S>;
+template <typename S> StlMDArray(S &&) -> StlMDArray<S>;
 
 template <typename S> auto get_non_owning_stl_storage(const S &s) {
   return StlMDArray<const S &>(s);
@@ -82,16 +96,18 @@ struct detail::ExpressionTraits<zipper::expression::nullary::StlMDArray<S>>
   using StlType = std::decay_t<S>;
   using value_type =
       typename zipper::storage::StlStorageInfo<StlType>::value_type;
+  constexpr static bool is_const = std::is_const_v<std::remove_reference_t<S>>;
   using extents_type =
       typename zipper::storage::StlStorageInfo<StlType>::extents_type;
   using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
 
-  constexpr static AccessFeatures access_features = {
-      .is_const = std::is_const_v<std::remove_reference_t<S>>,
+  // StlMDArray stores data directly and can return references via coeff_ref()
+  constexpr static zipper::detail::AccessFeatures access_features = {
+      .is_const = is_const,
       .is_reference = true,
       .is_alias_free = true,
   };
-  constexpr static ShapeFeatures shape_features = {
+  constexpr static zipper::detail::ShapeFeatures shape_features = {
       .is_resizable = extents_type::rank_dynamic() > 0,
   };
 
@@ -105,12 +121,15 @@ struct detail::ExpressionTraits<zipper::expression::nullary::StlMDArray<S>>
     return access_features.is_assignable();
   }
   consteval static auto is_referrable() -> bool {
-    return access_features.is_reference;
+    return is_reference_valued();
   }
   consteval static auto is_resizable() -> bool {
     return shape_features.is_resizable;
   }
 
   constexpr static bool is_writable = is_assignable();
+  constexpr static bool is_coefficient_consistent = true;
+  /// StlMDArray stores references when S is a reference type (borrowing mode).
+  constexpr static bool stores_references = std::is_reference_v<S>;
 };
 } // namespace zipper::expression

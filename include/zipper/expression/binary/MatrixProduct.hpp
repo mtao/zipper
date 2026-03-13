@@ -3,12 +3,13 @@
 
 #include "BinaryExpressionBase.hpp"
 #include "zipper/concepts/Expression.hpp"
+#include "zipper/detail/assert.hpp"
 // #include "zipper/expression/detail/intersect_nonzeros.hpp"
 
 namespace zipper::expression {
 namespace binary {
-template <zipper::concepts::RankedExpression<2> A,
-          zipper::concepts::RankedExpression<2> B>
+template <zipper::concepts::QualifiedRankedExpression<2> A,
+          zipper::concepts::QualifiedRankedExpression<2> B>
 class MatrixProduct;
 
 }
@@ -35,13 +36,13 @@ struct coeffwise_extents_values<extents<AR, AC>, extents<BR, BC>> {
 };
 }  // namespace _detail_matprod
 
-template <zipper::concepts::RankedExpression<2> A,
-          zipper::concepts::RankedExpression<2> B>
+template <zipper::concepts::QualifiedRankedExpression<2> A,
+          zipper::concepts::QualifiedRankedExpression<2> B>
 struct detail::ExpressionTraits<binary::MatrixProduct<A, B>>
     : public binary::detail::DefaultBinaryExpressionTraits<A, B>
 {
-    using ATraits = detail::ExpressionTraits<A>;
-    using BTraits = detail::ExpressionTraits<B>;
+    using ATraits = detail::ExpressionTraits<std::decay_t<A>>;
+    using BTraits = detail::ExpressionTraits<std::decay_t<B>>;
     using ConvertExtentsUtil =
         _detail_matprod::coeffwise_extents_values<typename ATraits::extents_type,
                                                   typename BTraits::extents_type>;
@@ -51,12 +52,12 @@ struct detail::ExpressionTraits<binary::MatrixProduct<A, B>>
 };
 
 namespace binary {
-template <zipper::concepts::RankedExpression<2> A,
-          zipper::concepts::RankedExpression<2> B>
-class MatrixProduct : public BinaryExpressionBase<MatrixProduct<A, B>, const A, const B> {
+template <zipper::concepts::QualifiedRankedExpression<2> A,
+          zipper::concepts::QualifiedRankedExpression<2> B>
+class MatrixProduct : public BinaryExpressionBase<MatrixProduct<A, B>, A, B> {
    public:
     using self_type = MatrixProduct<A, B>;
-    using Base = BinaryExpressionBase<self_type, const A, const B>;
+    using Base = BinaryExpressionBase<self_type, A, B>;
     using ExpressionBase = expression::ExpressionBase<self_type>;
     using traits = zipper::expression::detail::ExpressionTraits<self_type>;
     using value_type = traits::value_type;
@@ -68,9 +69,12 @@ class MatrixProduct : public BinaryExpressionBase<MatrixProduct<A, B>, const A, 
     using extents_type = traits::extents_type;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
 
-    MatrixProduct(const A& a, const B& b)
-        : Base(a, b) {
-        assert(a.extent(1) == b.extent(0));
+    template <typename U, typename V>
+      requires std::constructible_from<typename Base::lhs_storage_type, U&&> &&
+               std::constructible_from<typename Base::rhs_storage_type, V&&>
+    MatrixProduct(U&& a, V&& b)
+        : Base(std::forward<U>(a), std::forward<V>(b)) {
+        ZIPPER_ASSERT(lhs().extent(1) == rhs().extent(0));
     }
 
     constexpr auto extent(rank_type i) const -> index_type {
@@ -117,11 +121,19 @@ class MatrixProduct : public BinaryExpressionBase<MatrixProduct<A, B>, const A, 
         return v;
     }
 
+    /// Recursively deep-copy children so the result owns all data.
+    auto make_owned() const {
+        auto owned_a = lhs().make_owned();
+        auto owned_b = rhs().make_owned();
+        return MatrixProduct<decltype(owned_a), decltype(owned_b)>(
+            std::move(owned_a), std::move(owned_b));
+    }
+
 };
 
 template <zipper::concepts::RankedExpression<2> A,
           zipper::concepts::RankedExpression<2> B>
-MatrixProduct(const A& a, const B& b) -> MatrixProduct<A, B>;
+MatrixProduct(const A& a, const B& b) -> MatrixProduct<const A&, const B&>;
 
 }  // namespace binary
 }  // namespace zipper::expression

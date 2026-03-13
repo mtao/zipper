@@ -13,21 +13,21 @@
 
 namespace zipper::expression {
 namespace unary {
-template <zipper::concepts::Expression ExprType, rank_type... Indices>
+template <zipper::concepts::QualifiedExpression ExprType, rank_type... Indices>
     requires(sizeof...(Indices) % 2 == 0)
 class PartialTrace;
 
 }
-template <zipper::concepts::Expression ExprType, rank_type... Indices>
+template <zipper::concepts::QualifiedExpression ExprType, rank_type... Indices>
 struct detail::ExpressionTraits<unary::PartialTrace<ExprType, Indices...>>
     : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<ExprType> {
-    using Base = detail::ExpressionTraits<ExprType>;
+    using Base = detail::ExpressionTraits<std::decay_t<ExprType>>;
     using index_remover =
         unary::detail::invert_integer_sequence<Base::extents_type::rank(),
                                                Indices...>;
     using extents_type = typename index_remover::template assign_types<
         zipper::extents, zipper::detail::extents::static_extents_to_array_v<
-                             typename std::remove_reference_t<ExprType>::extents_type>>;
+                             typename std::decay_t<ExprType>::extents_type>>;
     using summed_extents_type = zipper::extents<Indices...>;
     using value_type = Base::value_type;
     constexpr static bool is_writable = false;
@@ -55,7 +55,7 @@ struct detail::ExpressionTraits<unary::PartialTrace<ExprType, Indices...>>
 
 namespace unary {
 // indices are the indices being traced
-template <zipper::concepts::Expression ExprType, rank_type... Indices>
+template <zipper::concepts::QualifiedExpression ExprType, rank_type... Indices>
     requires(sizeof...(Indices) % 2 == 0)
 class PartialTrace
     : public UnaryExpressionBase<PartialTrace<ExprType, Indices...>, ExprType> {
@@ -67,8 +67,10 @@ class PartialTrace
     using Base = UnaryExpressionBase<self_type, ExprType>;
     using Base::expression;
 
-    PartialTrace(std::remove_reference_t<ExprType>& b)
-        : Base(b), m_extents(traits::index_remover::get_extents(b.extents())) {}
+    template <typename U>
+      requires std::constructible_from<typename Base::storage_type, U &&>
+    PartialTrace(U &&b)
+        : Base(std::forward<U>(b)), m_extents(traits::index_remover::get_extents(expression().extents())) {}
     PartialTrace() = delete;
     PartialTrace& operator=(const PartialTrace&) = delete;
     PartialTrace& operator=(PartialTrace&&) = delete;
@@ -88,14 +90,14 @@ class PartialTrace
     template <rank_type... N>
     struct slice_type_<std::integer_sequence<rank_type, N...>> {
         using type =
-            Slice<const std::remove_reference_t<ExprType> &,
+            Slice<const std::decay_t<ExprType>&,
                       std::conditional_t<traits::index_remover::in_sequence(N),
                                          rank_type, full_extent_t>...>;
     };
 
     using slice_type = slice_type_<std::decay_t<
         decltype(std::make_integer_sequence<
-                 rank_type, std::remove_reference_t<ExprType>::extents_type::rank()>{})>>::type;
+                 rank_type, std::decay_t<ExprType>::extents_type::rank()>{})>>::type;
 
     template <typename... Args, rank_type N>
     auto get_index(std::integral_constant<rank_type, N>, Args&&... idxs) const {
@@ -113,13 +115,13 @@ class PartialTrace
     template <typename... Args, rank_type... N>
     value_type _coeff(std::integer_sequence<rank_type, N...>,
                       Args&&... idxs) const
-        requires(sizeof...(N) == std::remove_reference_t<ExprType>::extents_type::rank())
+        requires(sizeof...(N) == std::decay_t<ExprType>::extents_type::rank())
     {
         const auto slice =
             slice_type(expression(), get_index(std::integral_constant<rank_type, N>{},
                                          std::forward<Args>(idxs)...)...);
 
-        Diagonal<const slice_type &> diag(slice);
+        Diagonal<const slice_type&> diag(slice);
         return reductions::CoefficientSum(diag)();
     }
 
@@ -131,13 +133,21 @@ class PartialTrace
         } else {
             return _coeff(
                 std::make_integer_sequence<rank_type,
-                                           std::remove_reference_t<ExprType>::extents_type::rank()>{},
+                                           std::decay_t<ExprType>::extents_type::rank()>{},
                 std::forward<Args>(idxs)...);
         }
     }
 
 private:
     extents_type m_extents;
+
+public:
+    /// Recursively deep-copy child so the result owns all data.
+    auto make_owned() const {
+        auto owned_child = expression().make_owned();
+        return PartialTrace<const decltype(owned_child), Indices...>(
+            std::move(owned_child));
+    }
 };
 
 }  // namespace unary

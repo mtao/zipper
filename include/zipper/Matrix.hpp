@@ -2,6 +2,7 @@
 #define ZIPPER_MATRIX_HPP
 
 #include "concepts/Matrix.hpp"
+#include "detail/assert.hpp"
 #include "expression/nullary/MDArray.hpp"
 #include "storage/layout_types.hpp"
 //
@@ -55,10 +56,10 @@ public:
   Matrix(const std::initializer_list<std::initializer_list<T>> &l)
     requires(extents_traits::is_static)
   {
-    assert(l.size() == extent(0));
+    ZIPPER_ASSERT(l.size() == extent(0));
     auto it = l.begin();
     for (index_type j = 0; j < l.size(); ++j, ++it) {
-      assert(it->size() == extent(1));
+      ZIPPER_ASSERT(it->size() == extent(1));
       row(j) = *it;
     }
   }
@@ -70,7 +71,7 @@ public:
                               : l.begin()->size())) {
     auto it = l.begin();
     for (index_type j = 0; j < l.size(); ++j, ++it) {
-      assert(it->size() == extent(1));
+      ZIPPER_ASSERT(it->size() == extent(1));
       row(j) = *it;
     }
   }
@@ -80,7 +81,7 @@ public:
       : Base(extents_type(l.size(), l.begin()->size())) {
     auto it = l.begin();
     for (index_type j = 0; j < l.size(); ++j, ++it) {
-      assert(it->size() == extent(1));
+      ZIPPER_ASSERT(it->size() == extent(1));
       row(j) = *it;
     }
   }
@@ -116,15 +117,11 @@ public:
     requires(extents_traits::is_static)
       : Base() {}
 
-#if defined(NDEBUG)
-  Matrix(index_type, index_type)
-#else
-  Matrix(index_type rows, index_type cols)
-#endif
+  Matrix([[maybe_unused]] index_type rows, [[maybe_unused]] index_type cols)
     requires(extents_traits::is_static)
       : Base() {
-    assert(rows == extent(0));
-    assert(cols == extent(1));
+    ZIPPER_ASSERT(rows == extent(0));
+    ZIPPER_ASSERT(cols == extent(1));
   }
 
   template <concepts::Matrix Other> Matrix(const Other &other) : Base(other) {}

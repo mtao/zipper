@@ -39,3 +39,411 @@ TEST_CASE("sparse_coordinate_accessor", "[sparse]") {
         create_dextents(5, 5));
     checker(B);
 }
+
+TEST_CASE("sparse_empty", "[sparse]") {
+    SECTION("static extents") {
+        storage::SparseCoordinateAccessor<double, extents<3, 3>> A;
+        // Should start compressed (empty)
+        REQUIRE(A.is_compressed());
+        // compress() on empty must not crash
+        A.compress();
+        REQUIRE(A.is_compressed());
+        // All coefficients should be zero
+        for (index_type i = 0; i < 3; ++i) {
+            for (index_type j = 0; j < 3; ++j) {
+                CHECK(A.coeff(i, j) == 0.0);
+            }
+        }
+    }
+    SECTION("dynamic extents") {
+        storage::SparseCoordinateAccessor<double, dextents<2>> A(
+            create_dextents(4, 4));
+        REQUIRE(A.is_compressed());
+        A.compress();
+        REQUIRE(A.is_compressed());
+        CHECK(A.coeff(0, 0) == 0.0);
+    }
+}
+
+TEST_CASE("sparse_single_element", "[sparse]") {
+    storage::SparseCoordinateAccessor<double, extents<3, 3>> A;
+    A.emplace(1, 2) = 42.0;
+    A.compress();
+    REQUIRE(A.is_compressed());
+    CHECK(A.coeff(1, 2) == 42.0);
+    CHECK(A.coeff(0, 0) == 0.0);
+    CHECK(A.coeff(2, 2) == 0.0);
+    // coeff_ref on existing element should work
+    CHECK(A.coeff_ref(1, 2) == 42.0);
+}
+
+TEST_CASE("sparse_coeff_ref_throws_on_missing", "[sparse]") {
+    storage::SparseCoordinateAccessor<double, extents<3, 3>> A;
+    A.emplace(0, 0) = 1.0;
+    A.compress();
+    // coeff_ref on a nonexistent element should throw
+    CHECK_THROWS_AS(A.coeff_ref(1, 1), std::invalid_argument);
+    CHECK_THROWS_AS(A.coeff_ref(2, 2), std::invalid_argument);
+    // const_coeff_ref should also throw on missing
+    const auto& cA = A;
+    CHECK_THROWS_AS(cA.const_coeff_ref(1, 1), std::invalid_argument);
+}
+
+TEST_CASE("sparse_find_before_compress", "[sparse]") {
+    // Note: iterator comparison requires compressed state, so we can't
+    // directly use find()/coeff() on uncompressed data without hitting
+    // the assert in operator<=>.
+    // This test verifies that after adding elements and compressing,
+    // all values are accessible.
+    storage::SparseCoordinateAccessor<double, extents<4, 4>> A;
+    A.emplace(2, 3) = 5.0;
+    A.emplace(0, 1) = 7.0;
+    REQUIRE(!A.is_compressed());
+    A.compress();
+    REQUIRE(A.is_compressed());
+    CHECK(A.coeff(2, 3) == 5.0);
+    CHECK(A.coeff(0, 1) == 7.0);
+    CHECK(A.coeff(3, 3) == 0.0);
+}
+
+TEST_CASE("sparse_iterator", "[sparse]") {
+    storage::SparseCoordinateAccessor<double, extents<3, 3>> A;
+    A.emplace(2, 0) = 1.0;
+    A.emplace(0, 1) = 2.0;
+    A.emplace(1, 2) = 3.0;
+    A.compress();
+
+    // After compress, iteration should be in lexicographic order
+    std::vector<double> vals;
+    for (const auto& it : A) {
+        vals.push_back(it.value());
+    }
+    REQUIRE(vals.size() == 3);
+    CHECK(vals[0] == 2.0); // (0,1)
+    CHECK(vals[1] == 3.0); // (1,2)
+    CHECK(vals[2] == 1.0); // (2,0)
+}
+
+TEST_CASE("sparse_fully_dense", "[sparse]") {
+    // Fill every entry of a small matrix
+    storage::SparseCoordinateAccessor<double, extents<2, 2>> A;
+    double v = 1.0;
+    for (index_type i = 0; i < 2; ++i) {
+        for (index_type j = 0; j < 2; ++j) {
+            A.emplace(i, j) = v;
+            v += 1.0;
+        }
+    }
+    A.compress();
+    CHECK(A.coeff(0, 0) == 1.0);
+    CHECK(A.coeff(0, 1) == 2.0);
+    CHECK(A.coeff(1, 0) == 3.0);
+    CHECK(A.coeff(1, 1) == 4.0);
+}
+
+TEST_CASE("sparse_multiple_compress_cycles", "[sparse]") {
+    storage::SparseCoordinateAccessor<double, extents<3, 3>> A;
+    A.emplace(0, 0) = 1.0;
+    A.compress();
+    CHECK(A.coeff(0, 0) == 1.0);
+
+    // Add more and compress again
+    A.emplace(1, 1) = 2.0;
+    A.compress();
+    CHECK(A.coeff(0, 0) == 1.0);
+    CHECK(A.coeff(1, 1) == 2.0);
+
+    // Add duplicate and compress
+    A.emplace(0, 0) = 3.0;
+    A.compress();
+    CHECK(A.coeff(0, 0) == 4.0); // 1.0 + 3.0
+    CHECK(A.coeff(1, 1) == 2.0);
+}
+
+TEST_CASE("sparse_rank1", "[sparse]") {
+    storage::SparseCoordinateAccessor<double, extents<5>> A;
+    A.emplace(3) = 10.0;
+    A.emplace(1) = 20.0;
+    A.compress();
+    REQUIRE(A.is_compressed());
+    CHECK(A.coeff(0) == 0.0);
+    CHECK(A.coeff(1) == 20.0);
+    CHECK(A.coeff(3) == 10.0);
+    CHECK(A.coeff(4) == 0.0);
+}
+
+TEST_CASE("sparse_rank3", "[sparse]") {
+    storage::SparseCoordinateAccessor<double, extents<2, 2, 2>> A;
+    A.emplace(1, 0, 1) = 5.0;
+    A.emplace(0, 1, 0) = 3.0;
+    A.compress();
+    REQUIRE(A.is_compressed());
+    CHECK(A.coeff(0, 0, 0) == 0.0);
+    CHECK(A.coeff(0, 1, 0) == 3.0);
+    CHECK(A.coeff(1, 0, 1) == 5.0);
+    CHECK(A.coeff(1, 1, 1) == 0.0);
+}
+
+// --- Edge case tests ---
+
+TEST_CASE("sparse_find_uncompressed_linear_scan", "[sparse]") {
+    // Exercise the linear-scan path in find() on uncompressed data.
+    // coeff() calls find() internally, and the linear-scan path
+    // does not use iterator <=> (which asserts compressed).
+    storage::SparseCoordinateAccessor<double, extents<4, 4>> A;
+    A.emplace(2, 3) = 5.0;
+    A.emplace(0, 1) = 7.0;
+    REQUIRE(!A.is_compressed());
+
+    // coeff() should work on uncompressed data via the linear scan
+    CHECK(A.coeff(2, 3) == 5.0);
+    CHECK(A.coeff(0, 1) == 7.0);
+    CHECK(A.coeff(3, 3) == 0.0); // not present
+    CHECK(A.coeff(0, 0) == 0.0); // not present
+}
+
+TEST_CASE("sparse_duplicate_cancellation", "[sparse]") {
+    // Duplicates that sum to zero should still yield zero
+    storage::SparseCoordinateAccessor<double, extents<3, 3>> A;
+    A.emplace(1, 1) = 5.0;
+    A.emplace(1, 1) = -5.0;
+    A.compress();
+    CHECK(A.coeff(1, 1) == 0.0);
+}
+
+TEST_CASE("sparse_negative_values", "[sparse]") {
+    storage::SparseCoordinateAccessor<double, extents<3, 3>> A;
+    A.emplace(0, 0) = -3.0;
+    A.emplace(1, 2) = -7.5;
+    A.compress();
+    CHECK(A.coeff(0, 0) == -3.0);
+    CHECK(A.coeff(1, 2) == -7.5);
+    CHECK(A.coeff(2, 2) == 0.0);
+}
+
+TEST_CASE("sparse_all_duplicates_same_index", "[sparse]") {
+    // Every emplaced entry at the same multi-index
+    storage::SparseCoordinateAccessor<double, extents<3, 3>> A;
+    for (int i = 0; i < 10; ++i) {
+        A.emplace(1, 1) = 1.0;
+    }
+    A.compress();
+    REQUIRE(A.is_compressed());
+    CHECK(A.coeff(1, 1) == 10.0); // accumulated sum
+
+    // Iteration should yield exactly one entry
+    int count = 0;
+    for ([[maybe_unused]] const auto& it : A) {
+        ++count;
+    }
+    CHECK(count == 1);
+}
+
+TEST_CASE("sparse_emplace_default_zero", "[sparse]") {
+    // emplace() returns a reference initialized to 0; if we don't assign,
+    // the value should stay 0
+    storage::SparseCoordinateAccessor<double, extents<3, 3>> A;
+    [[maybe_unused]] auto& ref = A.emplace(1, 1);
+    // Don't assign through ref
+    A.compress();
+    CHECK(A.coeff(1, 1) == 0.0);
+}
+
+TEST_CASE("sparse_integer_value_type", "[sparse]") {
+    storage::SparseCoordinateAccessor<int, extents<4, 4>> A;
+    A.emplace(0, 0) = 42;
+    A.emplace(3, 3) = -7;
+    A.emplace(0, 0) = 8;
+    A.compress();
+    CHECK(A.coeff(0, 0) == 50); // 42 + 8
+    CHECK(A.coeff(3, 3) == -7);
+    CHECK(A.coeff(1, 1) == 0);
+}
+
+TEST_CASE("sparse_float_value_type", "[sparse]") {
+    storage::SparseCoordinateAccessor<float, extents<3, 3>> A;
+    A.emplace(1, 2) = 3.14f;
+    A.compress();
+    CHECK(A.coeff(1, 2) == Catch::Approx(3.14f));
+    CHECK(A.coeff(0, 0) == 0.0f);
+}
+
+TEST_CASE("sparse_copy_semantics", "[sparse]") {
+    storage::SparseCoordinateAccessor<double, extents<3, 3>> A;
+    A.emplace(0, 0) = 1.0;
+    A.emplace(2, 2) = 2.0;
+    A.compress();
+
+    // Copy construct
+    auto B = A;
+    CHECK(B.coeff(0, 0) == 1.0);
+    CHECK(B.coeff(2, 2) == 2.0);
+
+    // Modify copy -- should not affect original
+    B.emplace(1, 1) = 99.0;
+    B.compress();
+    CHECK(B.coeff(1, 1) == 99.0);
+    CHECK(A.coeff(1, 1) == 0.0); // original unchanged
+}
+
+TEST_CASE("sparse_move_semantics", "[sparse]") {
+    storage::SparseCoordinateAccessor<double, extents<3, 3>> A;
+    A.emplace(0, 0) = 1.0;
+    A.emplace(2, 2) = 2.0;
+    A.compress();
+
+    auto B = std::move(A);
+    CHECK(B.coeff(0, 0) == 1.0);
+    CHECK(B.coeff(2, 2) == 2.0);
+}
+
+TEST_CASE("sparse_empty_iterator", "[sparse]") {
+    storage::SparseCoordinateAccessor<double, extents<3, 3>> A;
+    // Empty and compressed
+    REQUIRE(A.is_compressed());
+    CHECK(A.begin() == A.end());
+    CHECK(A.cbegin() == A.cend());
+}
+
+TEST_CASE("sparse_empty_coeff_ref_throws", "[sparse]") {
+    // coeff_ref and const_coeff_ref on empty accessor should throw
+    storage::SparseCoordinateAccessor<double, extents<3, 3>> A;
+    REQUIRE(A.is_compressed());
+    CHECK_THROWS_AS(A.coeff_ref(0, 0), std::invalid_argument);
+    CHECK_THROWS_AS(A.coeff_ref(1, 2), std::invalid_argument);
+    const auto& cA = A;
+    CHECK_THROWS_AS(cA.const_coeff_ref(0, 0), std::invalid_argument);
+}
+
+TEST_CASE("sparse_compress_idempotent", "[sparse]") {
+    // Calling compress() multiple times without emplace should be a no-op
+    storage::SparseCoordinateAccessor<double, extents<3, 3>> A;
+    A.emplace(1, 1) = 5.0;
+    A.compress();
+    CHECK(A.coeff(1, 1) == 5.0);
+
+    A.compress(); // no-op
+    CHECK(A.coeff(1, 1) == 5.0);
+
+    A.compress(); // still no-op
+    CHECK(A.coeff(1, 1) == 5.0);
+}
+
+TEST_CASE("sparse_boundary_indices", "[sparse]") {
+    // Test first and last valid indices
+    storage::SparseCoordinateAccessor<double, extents<5, 5>> A;
+    A.emplace(0, 0) = 1.0;
+    A.emplace(4, 4) = 2.0;
+    A.compress();
+    CHECK(A.coeff(0, 0) == 1.0);
+    CHECK(A.coeff(4, 4) == 2.0);
+    CHECK(A.coeff(0, 4) == 0.0);
+    CHECK(A.coeff(4, 0) == 0.0);
+}
+
+TEST_CASE("sparse_large_extents_few_nonzeros", "[sparse]") {
+    // Large matrix with very few entries -- exercises binary search efficiency
+    storage::SparseCoordinateAccessor<double, extents<1000, 1000>> A;
+    A.emplace(0, 0) = 1.0;
+    A.emplace(999, 999) = 2.0;
+    A.emplace(500, 500) = 3.0;
+    A.compress();
+
+    CHECK(A.coeff(0, 0) == 1.0);
+    CHECK(A.coeff(500, 500) == 3.0);
+    CHECK(A.coeff(999, 999) == 2.0);
+    CHECK(A.coeff(100, 100) == 0.0);
+    CHECK(A.coeff(999, 0) == 0.0);
+}
+
+TEST_CASE("sparse_dynamic_nonsquare_extents", "[sparse]") {
+    // Non-square dynamic extents
+    storage::SparseCoordinateAccessor<double, dextents<2>> A(
+        create_dextents(3, 7));
+    A.emplace(0, 6) = 1.0;
+    A.emplace(2, 0) = 2.0;
+    A.emplace(1, 3) = 3.0;
+    A.compress();
+
+    CHECK(A.coeff(0, 6) == 1.0);
+    CHECK(A.coeff(2, 0) == 2.0);
+    CHECK(A.coeff(1, 3) == 3.0);
+    CHECK(A.coeff(0, 0) == 0.0);
+    CHECK(A.coeff(2, 6) == 0.0);
+}
+
+TEST_CASE("sparse_dynamic_rank1", "[sparse]") {
+    storage::SparseCoordinateAccessor<double, dextents<1>> A(
+        create_dextents(index_type(10)));
+    A.emplace(3) = 5.0;
+    A.emplace(7) = 9.0;
+    A.compress();
+    CHECK(A.coeff(0) == 0.0);
+    CHECK(A.coeff(3) == 5.0);
+    CHECK(A.coeff(7) == 9.0);
+    CHECK(A.coeff(9) == 0.0);
+}
+
+TEST_CASE("sparse_dynamic_rank3", "[sparse]") {
+    storage::SparseCoordinateAccessor<double, dextents<3>> A(
+        create_dextents(2, 3, 4));
+    A.emplace(1, 2, 3) = 42.0;
+    A.emplace(0, 0, 0) = 1.0;
+    A.compress();
+    CHECK(A.coeff(1, 2, 3) == 42.0);
+    CHECK(A.coeff(0, 0, 0) == 1.0);
+    CHECK(A.coeff(0, 1, 2) == 0.0);
+}
+
+TEST_CASE("sparse_const_coeff_ref_existing", "[sparse]") {
+    // const_coeff_ref should return correct reference for existing entries
+    storage::SparseCoordinateAccessor<double, extents<3, 3>> A;
+    A.emplace(1, 2) = 42.0;
+    A.compress();
+    const auto& cA = A;
+    CHECK(cA.const_coeff_ref(1, 2) == 42.0);
+}
+
+TEST_CASE("sparse_coeff_ref_modification", "[sparse]") {
+    // Modifying through coeff_ref should persist
+    storage::SparseCoordinateAccessor<double, extents<3, 3>> A;
+    A.emplace(1, 1) = 10.0;
+    A.compress();
+    CHECK(A.coeff(1, 1) == 10.0);
+
+    A.coeff_ref(1, 1) = 99.0;
+    CHECK(A.coeff(1, 1) == 99.0);
+}
+
+TEST_CASE("sparse_iterator_decrement", "[sparse]") {
+    storage::SparseCoordinateAccessor<double, extents<3, 3>> A;
+    A.emplace(0, 0) = 1.0;
+    A.emplace(1, 1) = 2.0;
+    A.emplace(2, 2) = 3.0;
+    A.compress();
+
+    auto it = A.end();
+    --it;
+    CHECK(it.value() == 3.0); // last element (2,2)
+    --it;
+    CHECK(it.value() == 2.0); // middle element (1,1)
+    --it;
+    CHECK(it.value() == 1.0); // first element (0,0)
+    CHECK(it == A.begin());
+}
+
+TEST_CASE("sparse_iterator_difference", "[sparse]") {
+    storage::SparseCoordinateAccessor<double, extents<3, 3>> A;
+    A.emplace(0, 0) = 1.0;
+    A.emplace(1, 1) = 2.0;
+    A.emplace(2, 2) = 3.0;
+    A.compress();
+
+    CHECK(A.end() - A.begin() == 3);
+    CHECK(A.begin() - A.end() == -3);
+
+    auto it = A.begin();
+    it += 2;
+    CHECK(it.value() == 3.0);
+    CHECK(it - A.begin() == 2);
+}

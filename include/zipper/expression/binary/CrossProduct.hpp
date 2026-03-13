@@ -4,20 +4,21 @@
 #include "BinaryExpressionBase.hpp"
 #include "detail/CoeffWiseTraits.hpp"
 #include "zipper/concepts/Expression.hpp"
+#include "zipper/detail/assert.hpp"
 #include "zipper/expression/detail/intersect_nonzeros.hpp"
 
 namespace zipper::expression {
 namespace binary {
-template <zipper::concepts::RankedExpression<1> A,
-          zipper::concepts::RankedExpression<1> B>
+template <zipper::concepts::QualifiedRankedExpression<1> A,
+          zipper::concepts::QualifiedRankedExpression<1> B>
 class CrossProduct;
 
 }
-template <concepts::RankedExpression<1> A, concepts::RankedExpression<1> B>
+template <concepts::QualifiedRankedExpression<1> A, concepts::QualifiedRankedExpression<1> B>
 struct detail::ExpressionTraits<binary::CrossProduct<A, B>>
     : public binary::detail::DefaultBinaryExpressionTraits<A, B> {
-    using ATraits = detail::ExpressionTraits<A>;
-    using BTraits = detail::ExpressionTraits<B>;
+    using ATraits = detail::ExpressionTraits<std::decay_t<A>>;
+    using BTraits = detail::ExpressionTraits<std::decay_t<B>>;
     using ConvertExtentsUtil = binary::detail::coeffwise_extents_values<
         typename ATraits::extents_type, typename BTraits::extents_type>;
     using extents_type = typename ConvertExtentsUtil::merged_extents_type;
@@ -30,12 +31,12 @@ struct detail::ExpressionTraits<binary::CrossProduct<A, B>>
 };
 
 namespace binary {
-template <zipper::concepts::RankedExpression<1> A,
-          zipper::concepts::RankedExpression<1> B>
-class CrossProduct : public BinaryExpressionBase<CrossProduct<A, B>, const A, const B> {
+template <zipper::concepts::QualifiedRankedExpression<1> A,
+          zipper::concepts::QualifiedRankedExpression<1> B>
+class CrossProduct : public BinaryExpressionBase<CrossProduct<A, B>, A, B> {
    public:
     using self_type = CrossProduct<A, B>;
-    using Base = BinaryExpressionBase<self_type, const A, const B>;
+    using Base = BinaryExpressionBase<self_type, A, B>;
     using ExpressionBase = expression::ExpressionBase<self_type>;
     using traits = zipper::expression::detail::ExpressionTraits<self_type>;
     using value_type = traits::value_type;
@@ -43,19 +44,24 @@ class CrossProduct : public BinaryExpressionBase<CrossProduct<A, B>, const A, co
     using lhs_traits = traits::ATraits;
     using rhs_traits = traits::BTraits;
 
-    using Base::Base;
     using Base::lhs;
     using Base::rhs;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
 
-    CrossProduct(const A& a, const B& b)
-        : Base(a, b) {
-        assert(a.extent(0) == b.extent(0));
-        assert(a.extent(0) == 3);
+    CrossProduct(const CrossProduct&) = default;
+    CrossProduct(CrossProduct&&) = default;
+
+    template <typename U, typename V>
+      requires std::constructible_from<typename Base::lhs_storage_type, U&&> &&
+               std::constructible_from<typename Base::rhs_storage_type, V&&>
+    CrossProduct(U&& a, V&& b)
+        : Base(std::forward<U>(a), std::forward<V>(b)) {
+        ZIPPER_ASSERT(lhs().extent(0) == rhs().extent(0));
+        ZIPPER_ASSERT(lhs().extent(0) == 3);
     }
 
     constexpr auto extent(rank_type i) const -> index_type {
-        assert(i == 0);
+        ZIPPER_ASSERT(i == 0);
         return lhs().extent(0);
     }
 
@@ -68,11 +74,19 @@ class CrossProduct : public BinaryExpressionBase<CrossProduct<A, B>, const A, co
         return lhs()(b) * rhs()(c) - lhs()(c) * rhs()(b);
     }
 
+    /// Recursively deep-copy children so the result owns all data.
+    auto make_owned() const {
+        auto owned_a = lhs().make_owned();
+        auto owned_b = rhs().make_owned();
+        return CrossProduct<decltype(owned_a), decltype(owned_b)>(
+            std::move(owned_a), std::move(owned_b));
+    }
+
 };
 
 template <zipper::concepts::RankedExpression<1> A,
           zipper::concepts::RankedExpression<1> B>
-CrossProduct(const A& a, const B& b) -> CrossProduct<A, B>;
+CrossProduct(const A& a, const B& b) -> CrossProduct<const A&, const B&>;
 
 }  // namespace binary
 }  // namespace zipper::expression

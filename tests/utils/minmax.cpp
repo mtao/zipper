@@ -1,8 +1,8 @@
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
-#include <zipper/utils/maxCoeff.hpp>
-#include <zipper/utils/meanCoeff.hpp>
-#include <zipper/utils/minCoeff.hpp>
+#include <zipper/utils/max_coeff.hpp>
+#include <zipper/utils/mean_coeff.hpp>
+#include <zipper/utils/min_coeff.hpp>
 
 #include "../catch_include.hpp"
 
