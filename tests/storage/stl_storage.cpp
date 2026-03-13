@@ -1,5 +1,6 @@
 
 #include <zipper/expression/nullary/StlMDArray.hpp>
+#include <zipper/expression/nullary/Random.hpp>
 #include <zipper/storage/StlStorageInfo.hpp>
 #include <zipper/Matrix.hpp>
 
@@ -439,6 +440,83 @@ TEST_CASE("stl_mdarray_transpose_assign", "[storage][stl]") {
   CHECK(dst_data[1][1] == 5);
   CHECK(dst_data[2][0] == 3);
   CHECK(dst_data[2][1] == 6);
+}
+
+TEST_CASE("stl_mdarray_assign_random_uniform_with_resize",
+          "[storage][stl][assign]") {
+  // Verify that a MatrixBase wrapping a non-owning StlMDArray over
+  // std::vector<std::array<double, Dim+1>> can be assigned from a
+  // uniform_random<double> expression when pts does not know the size it
+  // is being assigned to. The assignment should resize the underlying
+  // vector automatically.
+
+  constexpr zipper::index_type Dim = 2;
+
+  std::vector<std::array<double, Dim + 1>> pts;  // starts empty
+
+  zipper::MatrixBase E =
+      zipper::expression::nullary::get_non_owning_stl_storage(pts);
+
+  // pts is empty, so E should have 0 rows
+  REQUIRE(E.rows() == 0);
+  REQUIRE(E.cols() == Dim + 1);
+
+  // First assignment: resize from 0 → 5 rows
+  {
+    constexpr zipper::index_type num_rows = 5;
+    E = zipper::expression::nullary::uniform_random<double>(
+        zipper::extents<std::dynamic_extent, Dim + 1>{num_rows}, 10.0, 100.0);
+
+    CHECK(E.rows() == num_rows);
+    CHECK(E.cols() == Dim + 1);
+    CHECK(pts.size() == num_rows);
+
+    for (zipper::index_type r = 0; r < num_rows; ++r) {
+      for (zipper::index_type c = 0; c < Dim + 1; ++c) {
+        CHECK(pts[r][c] >= 10.0);
+        CHECK(pts[r][c] < 100.0);
+        CHECK(E(r, c) == pts[r][c]);
+      }
+    }
+  }
+
+  // Second assignment: resize from 5 → 3 rows (shrink)
+  {
+    constexpr zipper::index_type num_rows = 3;
+    E = zipper::expression::nullary::uniform_random<double>(
+        zipper::extents<std::dynamic_extent, Dim + 1>{num_rows}, 10.0, 100.0);
+
+    CHECK(E.rows() == num_rows);
+    CHECK(E.cols() == Dim + 1);
+    CHECK(pts.size() == num_rows);
+
+    for (zipper::index_type r = 0; r < num_rows; ++r) {
+      for (zipper::index_type c = 0; c < Dim + 1; ++c) {
+        CHECK(pts[r][c] >= 10.0);
+        CHECK(pts[r][c] < 100.0);
+        CHECK(E(r, c) == pts[r][c]);
+      }
+    }
+  }
+
+  // Third assignment: resize from 3 → 8 rows (grow)
+  {
+    constexpr zipper::index_type num_rows = 8;
+    E = zipper::expression::nullary::uniform_random<double>(
+        zipper::extents<std::dynamic_extent, Dim + 1>{num_rows}, 10.0, 100.0);
+
+    CHECK(E.rows() == num_rows);
+    CHECK(E.cols() == Dim + 1);
+    CHECK(pts.size() == num_rows);
+
+    for (zipper::index_type r = 0; r < num_rows; ++r) {
+      for (zipper::index_type c = 0; c < Dim + 1; ++c) {
+        CHECK(pts[r][c] >= 10.0);
+        CHECK(pts[r][c] < 100.0);
+        CHECK(E(r, c) == pts[r][c]);
+      }
+    }
+  }
 }
 
 // TODO: test resizing vectors and how it affects the expression
