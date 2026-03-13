@@ -3,6 +3,8 @@
 
 #include "ZipperBase.hpp"
 #include "concepts/detail/IsZipperBase.hpp"
+#include "concepts/stl.hpp"
+#include "expression/nullary/StlMDArray.hpp"
 #include "expression/reductions/All.hpp"
 #include "expression/reductions/Any.hpp"
 #include "expression/reductions/CoefficientProduct.hpp"
@@ -40,6 +42,11 @@ public:
   using Base = ZipperBase<ArrayBase, Expr>;
   using Base::Base;
   using Base::expression;
+
+  template <typename... Args>
+    requires(!(concepts::Array<Args> && ...))
+  ArrayBase(Args &&...args)
+      : Base(std::in_place, std::forward<Args>(args)...) {}
 
   template <index_type... N>
   auto eval(const std::integer_sequence<index_type, N...> &) const
@@ -178,6 +185,12 @@ template <concepts::Expression Expr>
 ArrayBase(Expr &&) -> ArrayBase<Expr>;
 template <concepts::Expression Expr>
 ArrayBase(const Expr &) -> ArrayBase<Expr>;
+
+// STL deduction guides: rvalue → owning StlMDArray, lvalue → borrowing StlMDArray
+template <concepts::StlStorage S>
+ArrayBase(S &&) -> ArrayBase<expression::nullary::StlMDArray<std::decay_t<S>>>;
+template <concepts::StlStorage S>
+ArrayBase(S &) -> ArrayBase<expression::nullary::StlMDArray<S &>>;
 
 namespace concepts::detail {
 template <typename T> struct IsArray<ArrayBase<T>> : std::true_type {};

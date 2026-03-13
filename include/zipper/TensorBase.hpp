@@ -3,7 +3,9 @@
 
 #include "ZipperBase.hpp"
 #include "concepts/Tensor.hpp"
+#include "concepts/stl.hpp"
 #include "detail/extents/static_extents_to_integral_sequence.hpp"
+#include "expression/nullary/StlMDArray.hpp"
 
 namespace zipper {
 
@@ -33,6 +35,11 @@ public:
   using Base::Base;
   using Base::operator=;
   using Base::expression;
+
+  template <typename... Args>
+    requires(!(concepts::Tensor<Args> && ...))
+  TensorBase(Args &&...args)
+      : Base(std::in_place, std::forward<Args>(args)...) {}
 
   auto operator=(concepts::Tensor auto const &v) -> TensorBase & {
     expression() = v.expression();
@@ -76,6 +83,12 @@ template <concepts::Expression Expr>
 TensorBase(Expr &&) -> TensorBase<Expr>;
 template <concepts::Expression Expr>
 TensorBase(const Expr &) -> TensorBase<Expr>;
+
+// STL deduction guides: rvalue → owning StlMDArray, lvalue → borrowing StlMDArray
+template <concepts::StlStorage S>
+TensorBase(S &&) -> TensorBase<expression::nullary::StlMDArray<std::decay_t<S>>>;
+template <concepts::StlStorage S>
+TensorBase(S &) -> TensorBase<expression::nullary::StlMDArray<S &>>;
 
 } // namespace zipper
 

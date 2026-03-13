@@ -8,8 +8,10 @@
 #include "concepts/Matrix.hpp"
 #include "concepts/Vector.hpp"
 #include "concepts/detail/IsZipperBase.hpp"
+#include "concepts/stl.hpp"
 #include "zipper/types.hpp"
 //
+#include "expression/nullary/StlMDArray.hpp"
 #include "expression/reductions/Trace.hpp"
 #include "expression/unary/Diagonal.hpp"
 #include "zipper/detail/PartialReductionDispatcher.hpp"
@@ -42,6 +44,11 @@ public:
   using Base::extents;
   using Base::expression;
   using Base::swizzle;
+
+  template <typename... Args>
+    requires(!(concepts::Matrix<Args> && ...))
+  MatrixBase(Args &&...args)
+      : Base(std::in_place, std::forward<Args>(args)...) {}
 
   auto eval() const { return Matrix(*this); }
 
@@ -306,6 +313,12 @@ template <concepts::Expression Expr>
 MatrixBase(Expr &&) -> MatrixBase<Expr>;
 template <concepts::Expression Expr>
 MatrixBase(const Expr &) -> MatrixBase<Expr>;
+
+// STL deduction guides: rvalue → owning StlMDArray, lvalue → borrowing StlMDArray
+template <concepts::StlStorageOfRank<2> S>
+MatrixBase(S &&) -> MatrixBase<expression::nullary::StlMDArray<std::decay_t<S>>>;
+template <concepts::StlStorageOfRank<2> S>
+MatrixBase(S &) -> MatrixBase<expression::nullary::StlMDArray<S &>>;
 
 namespace concepts::detail {
 template <typename T>

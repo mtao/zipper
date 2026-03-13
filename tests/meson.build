@@ -56,3 +56,6 @@ test_hello_world = executable(
   cpp_args: ['-Wno-strict-overflow'],
 )
 test('hello_world', test_hello_world)
+
+test_function_boundary = executable('test_function_boundary', 'test_function_boundary.cpp', dependencies: [zipper_test_dep])
+test('function_boundary', test_function_boundary)

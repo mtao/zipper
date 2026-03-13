@@ -38,6 +38,9 @@ public:
       : m_data(info_helper::initialize(default_value)) {}
 
   explicit StlMDArray(S &d) : m_data(d) {}
+  explicit StlMDArray(S &&d)
+    requires(!std::is_reference_v<S>)
+      : m_data(std::move(d)) {}
 
   void resize(const extents_type &e) {
     info_helper::resize(m_data, e);
@@ -71,6 +74,7 @@ private:
 };
 
 template <typename S> StlMDArray(const S &) -> StlMDArray<S>;
+template <typename S> StlMDArray(S &&) -> StlMDArray<S>;
 
 template <typename S> auto get_non_owning_stl_storage(const S &s) {
   return StlMDArray<const S &>(s);
@@ -92,12 +96,40 @@ struct detail::ExpressionTraits<zipper::expression::nullary::StlMDArray<S>>
   using StlType = std::decay_t<S>;
   using value_type =
       typename zipper::storage::StlStorageInfo<StlType>::value_type;
-  constexpr static bool is_const = std::is_const_v<S>;
+  constexpr static bool is_const = std::is_const_v<std::remove_reference_t<S>>;
   using extents_type =
       typename zipper::storage::StlStorageInfo<StlType>::extents_type;
   using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
-  constexpr static bool is_writable = !is_const;
+
+  // StlMDArray stores data directly and can return references via coeff_ref()
+  constexpr static zipper::detail::AccessFeatures access_features = {
+      .is_const = is_const,
+      .is_reference = true,
+      .is_alias_free = true,
+  };
+  constexpr static zipper::detail::ShapeFeatures shape_features = {
+      .is_resizable = extents_type::rank_dynamic() > 0,
+  };
+
+  consteval static auto is_const_valued() -> bool {
+    return access_features.is_const;
+  }
+  consteval static auto is_reference_valued() -> bool {
+    return access_features.is_reference;
+  }
+  consteval static auto is_assignable() -> bool {
+    return access_features.is_assignable();
+  }
+  consteval static auto is_referrable() -> bool {
+    return is_reference_valued();
+  }
+  consteval static auto is_resizable() -> bool {
+    return shape_features.is_resizable;
+  }
+
+  constexpr static bool is_writable = is_assignable();
   constexpr static bool is_coefficient_consistent = true;
-  constexpr static bool is_resizable = extents_type::rank_dynamic() > 0;
+  /// StlMDArray stores references when S is a reference type (borrowing mode).
+  constexpr static bool stores_references = std::is_reference_v<S>;
 };
 } // namespace zipper::expression

@@ -40,7 +40,7 @@ public:
   using expression_traits =
       expression::detail::ExpressionTraits<expression_type>;
 
-  constexpr static bool stores_references = expression_traits::stores_references;
+  constexpr static bool stores_references = expression_traits::stores_references || std::is_reference_v<Expression>;
   constexpr static bool is_const = std::is_const_v<Expression>;
   constexpr static bool is_writable =
       expression_traits::is_writable && !is_const;
@@ -48,8 +48,10 @@ public:
   using extents_type = typename expression_traits::extents_type;
   using extents_traits = detail::ExtentsTraits<extents_type>;
 
-  auto expression() const -> const Expression & { return m_expression; }
-  auto expression() -> Expression & { return m_expression; }
+  auto expression() const & -> const Expression & { return m_expression; }
+  auto expression() & -> Expression & { return m_expression; }
+  auto expression() const && -> const Expression && { return std::move(m_expression); }
+  auto expression() && -> Expression && { return std::move(m_expression); }
   auto extents() const -> extents_type {
     return expression().extents();
   }
@@ -105,11 +107,10 @@ public:
     m_expression.assign(other);
   }
 
-  template <typename... Args>
-    requires(!(concepts::Zipper<Args> && ...) &&
-             !(!std::is_reference_v<Expression> && sizeof...(Args) == 1 &&
-               (concepts::Expression<std::remove_cvref_t<Args>> && ...)))
-  ZipperBase(Args &&...args) : m_expression(std::forward<Args>(args)...) {}
+  // Removed: variadic forwarding constructor that silently enabled CTAD
+  // from STL containers (std::vector, std::array) into MDSpan, which could
+  // produce dangling references from rvalues.  All wrapper classes now have
+  // their own variadic constructors that forward through std::in_place.
 
   // GCC's -Weffc++ warns about returning *this in assignment operators of
   // CRTP bases because derived() doesn't return the same type as *this.

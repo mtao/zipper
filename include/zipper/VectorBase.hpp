@@ -5,6 +5,7 @@
 #include "as.hpp"
 #include "concepts/Vector.hpp"
 #include "concepts/detail/IsZipperBase.hpp"
+#include "concepts/stl.hpp"
 #include "detail/assert.hpp"
 //
 #include "ArrayBase.hpp"
@@ -12,6 +13,7 @@
 #include "detail/constexpr_arithmetic.hpp"
 #include "detail/extents/constexpr_extent.hpp"
 #include "expression/binary/CrossProduct.hpp"
+#include "expression/nullary/StlMDArray.hpp"
 #include "expression/reductions/CoefficientSum.hpp"
 #include "expression/reductions/LpNorm.hpp"
 #include "expression/reductions/LpNormPowered.hpp"
@@ -44,8 +46,6 @@ public:
   auto eval() const { return Vector(*this); }
   template <concepts::Vector Other>
   VectorBase(const Other &other) : VectorBase(other.expression()) {}
-
-  constexpr static bool stores_references = expression_traits::stores_references;
 
   VectorBase(concepts::QualifiedExpression auto &v)
     requires(!expression_traits::stores_references)
@@ -267,6 +267,12 @@ template <concepts::Expression Expr>
 VectorBase(Expr &&) -> VectorBase<Expr>;
 template <concepts::Expression Expr>
 VectorBase(const Expr &) -> VectorBase<Expr>;
+
+// STL deduction guides: rvalue → owning StlMDArray, lvalue → borrowing StlMDArray
+template <concepts::StlStorageOfRank<1> S>
+VectorBase(S &&) -> VectorBase<expression::nullary::StlMDArray<std::decay_t<S>>>;
+template <concepts::StlStorageOfRank<1> S>
+VectorBase(S &) -> VectorBase<expression::nullary::StlMDArray<S &>>;
 
 namespace concepts::detail {
 

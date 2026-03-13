@@ -7,7 +7,9 @@
 #include "concepts/Tensor.hpp"
 #include "concepts/Vector.hpp"
 #include "concepts/detail/IsZipperBase.hpp"
+#include "concepts/stl.hpp"
 #include "detail/extents/static_extents_to_integral_sequence.hpp"
+#include "expression/nullary/StlMDArray.hpp"
 #include <utility>
 
 namespace zipper {
@@ -50,6 +52,11 @@ public:
   using Base::swizzle;
   FormBase(FormBase &&) = default;
   FormBase(const FormBase &) = default;
+
+  template <typename... Args>
+    requires(!(concepts::Form<Args> && ...))
+  FormBase(Args &&...args)
+      : Base(std::in_place, std::forward<Args>(args)...) {}
 
   auto operator=(concepts::Form auto const &v) -> FormBase & {
     expression() = v.expression();
@@ -109,6 +116,12 @@ template <concepts::Expression Expr>
 FormBase(Expr &&) -> FormBase<Expr>;
 template <concepts::Expression Expr>
 FormBase(const Expr &) -> FormBase<Expr>;
+
+// STL deduction guides: rvalue → owning StlMDArray, lvalue → borrowing StlMDArray
+template <concepts::StlStorage S>
+FormBase(S &&) -> FormBase<expression::nullary::StlMDArray<std::decay_t<S>>>;
+template <concepts::StlStorage S>
+FormBase(S &) -> FormBase<expression::nullary::StlMDArray<S &>>;
 
 namespace concepts::detail {
 template <typename T>
