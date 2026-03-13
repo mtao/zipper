@@ -60,7 +60,7 @@ class CrossProduct : public BinaryExpressionBase<CrossProduct<A, B>, A, B> {
         ZIPPER_ASSERT(lhs().extent(0) == 3);
     }
 
-    constexpr auto extent(rank_type i) const -> index_type {
+    constexpr auto extent([[maybe_unused]] rank_type i) const -> index_type {
         ZIPPER_ASSERT(i == 0);
         return lhs().extent(0);
     }

@@ -99,7 +99,7 @@ public:
           std::move(owned_child));
   }
 
-  constexpr auto extent(rank_type i) const -> index_type {
+  constexpr auto extent([[maybe_unused]] rank_type i) const -> index_type {
     ZIPPER_ASSERT(i == 0);
     return traits::get_min_extent(expression().extents());
   }

@@ -105,8 +105,17 @@ TEST_CASE("test_product_via_partial_trace", "[storage][tensor]") {
     zipper::Tensor<double, 3, 3> N =
         zipper::expression::nullary::normal_random_infinite<double>(0, 1);
 
-    // Matrix product via MatrixBase operator*
+    // Verify identity: I*M == M
+    auto mI = zipper::as_matrix(I);
     auto mM = zipper::as_matrix(M);
+    auto IM_matrix = (mI * mM).eval();
+    for (zipper::index_type j = 0; j < 3; ++j) {
+        for (zipper::index_type k = 0; k < 3; ++k) {
+            CHECK(IM_matrix(j, k) == Catch::Approx(mM(j, k)));
+        }
+    }
+
+    // Matrix product via MatrixBase operator*
     auto mN = zipper::as_matrix(N);
     auto MN_matrix = (mM * mN).eval();
 

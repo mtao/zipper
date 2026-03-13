@@ -177,7 +177,7 @@ struct StlStorageInfo<std::array<S, N>> : public StlStorageInfo<S> {
   }
 
   template <typename... Args>
-  static void resize(self_type &s, index_type size, Args &&...args) {
+  static void resize(self_type &s, [[maybe_unused]] index_type size, Args &&...args) {
     ZIPPER_ASSERT(size == my_static_extent);
     for (auto &x : s) {
       StlStorageInfo<S>::resize(x, args...);
