@@ -15,6 +15,14 @@ class CrossProduct;
 
 }
 template <concepts::QualifiedRankedExpression<1> A, concepts::QualifiedRankedExpression<1> B>
+  requires(binary::detail::coeffwise_extents_values<
+               typename detail::ExpressionTraits<std::decay_t<A>>::extents_type,
+               typename detail::ExpressionTraits<std::decay_t<B>>::extents_type
+           >::merged_extents_type::static_extent(0) == std::dynamic_extent ||
+           binary::detail::coeffwise_extents_values<
+               typename detail::ExpressionTraits<std::decay_t<A>>::extents_type,
+               typename detail::ExpressionTraits<std::decay_t<B>>::extents_type
+           >::merged_extents_type::static_extent(0) == 3)
 struct detail::ExpressionTraits<binary::CrossProduct<A, B>>
     : public binary::detail::DefaultBinaryExpressionTraits<A, B> {
     using ATraits = detail::ExpressionTraits<std::decay_t<A>>;
@@ -23,9 +31,6 @@ struct detail::ExpressionTraits<binary::CrossProduct<A, B>>
         typename ATraits::extents_type, typename BTraits::extents_type>;
     using extents_type = typename ConvertExtentsUtil::merged_extents_type;
 
-    // constraint on the extent, supporting 2d is ugly but who cares
-    static_assert(extents_type::static_extent(0) == std::dynamic_extent ||
-                  extents_type::static_extent(0) == 3);
     constexpr static bool is_coefficient_consistent = false;
     constexpr static bool is_value_based = false;
 };

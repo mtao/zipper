@@ -13,4 +13,13 @@ test('inverse', test_inverse)
 test_power_method = executable('test_power_method', 'test_power_method.cpp', dependencies: [zipper_test_dep])
 test('power_method', test_power_method)
 
+test_arnoldi = executable('test_arnoldi', 'test_arnoldi.cpp', dependencies: [zipper_test_dep])
+test('arnoldi', test_arnoldi)
+
+test_solver = executable('test_solver', 'test_solver.cpp', dependencies: [zipper_test_dep])
+test('solver', test_solver)
+
+test_qr = executable('test_qr', 'test_qr.cpp', dependencies: [zipper_test_dep])
+test('qr', test_qr)
+
 subdir('extents')

@@ -10,20 +10,17 @@ namespace zipper::expression {
 
 template <typename Derived>
 template <concepts::Index... Indices>
-auto ExpressionBase<Derived>::coeff(Indices &&...indices) const -> value_type {
-  constexpr static rank_type size = sizeof...(Indices);
-  // rank 0 expression act like scalar values
-  static_assert(rank == 0 || size == rank);
+auto ExpressionBase<Derived>::coeff(Indices &&...indices) const -> value_type
+  requires(rank == 0 || sizeof...(Indices) == rank)
+{
   return derived().coeff(std::forward<Indices>(indices)...);
 }
 template <typename Derived>
 template <concepts::Index... Indices>
 auto ExpressionBase<Derived>::coeff_ref(Indices &&...indices) -> value_type &
-  requires(traits::is_referrable() && !traits::is_const_valued())
+  requires(traits::is_referrable() && !traits::is_const_valued() &&
+           (rank == 0 || sizeof...(Indices) == rank))
 {
-  constexpr static rank_type size = sizeof...(Indices);
-  // rank 0 expression act like scalar values
-  static_assert(rank == 0 || size == rank);
   return derived().coeff_ref(std::forward<Indices>(indices)...);
 }
 
@@ -31,11 +28,9 @@ template <typename Derived>
 template <concepts::Index... Indices>
 auto ExpressionBase<Derived>::const_coeff_ref(Indices &&...indices) const
     -> const value_type &
-  requires(traits::is_referrable())
+  requires(traits::is_referrable() &&
+           (rank == 0 || sizeof...(Indices) == rank))
 {
-  constexpr static rank_type size = sizeof...(Indices);
-  // rank 0 expression act like scalar values
-  static_assert(rank == 0 || size == rank);
   return derived().const_coeff_ref(std::forward<Indices>(indices)...);
 }
 

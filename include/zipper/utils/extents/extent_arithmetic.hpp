@@ -2,6 +2,7 @@
 #define ZIPPER_UTILS_EXTENTS_EXTENT_ARITHMETIC_HPP
 
 #include "zipper/concepts/Index.hpp"
+#include "zipper/detail/constexpr_arithmetic.hpp"
 #include "zipper/types.hpp"
 
 namespace zipper::utils::extents {
@@ -39,13 +40,18 @@ constexpr index_type modulus(const index_type a, const index_type b) {
     return apply_binop<std::modulus<index_type>>(a, b);
 }
 
-// constexpr index_type min(const index_type a, const index_type b) {
-//     return apply_binop<std::min<index_type>>(a, b);
-// }
-//
-// constexpr index_type max(const index_type a, const index_type b) {
-//     return apply_binop<std::max<index_type>>(a, b);
-// }
+/// Extent-aware min: returns `dynamic_extent` when either operand is dynamic.
+/// Uses `detail::min_op` because `std::min` is a function, not a functor type,
+/// so it cannot be passed as a template type parameter to `apply_binop`.
+constexpr index_type min(const index_type a, const index_type b) {
+    return apply_binop<::zipper::detail::min_op>(a, b);
+}
+
+/// Extent-aware max: returns `dynamic_extent` when either operand is dynamic.
+/// See `min` for rationale on the custom functor.
+constexpr index_type max(const index_type a, const index_type b) {
+    return apply_binop<::zipper::detail::max_op>(a, b);
+}
 
 }  // namespace zipper::utils::extents
 #endif

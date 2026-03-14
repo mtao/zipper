@@ -19,7 +19,7 @@
 
 namespace zipper {
 
-template <template <concepts::QualifiedExpression> typename DerivedT,
+template <template <typename> typename DerivedT,
           concepts::QualifiedExpression Expression>
 class ZipperBase {
 public:

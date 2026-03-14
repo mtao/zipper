@@ -59,7 +59,6 @@ public:
   constexpr static bool stores_references = traits::stores_references;
   constexpr static rank_type rank = extents_type::rank();
 
-  static_assert(extents_type::rank() >= 0);
   using array_type = std::array<index_type, rank>;
 
   [[nodiscard]] constexpr auto extent(rank_type i) const -> index_type {
@@ -78,14 +77,17 @@ public:
 
 public:
   template <concepts::Index... Indices>
-  auto coeff(Indices &&...indices) const -> value_type;
+  auto coeff(Indices &&...indices) const -> value_type
+    requires(rank == 0 || sizeof...(Indices) == rank);
   template <concepts::Index... Indices>
   auto coeff_ref(Indices &&...indices) -> value_type &
-    requires(traits::is_referrable() && !traits::is_const_valued());
+    requires(traits::is_referrable() && !traits::is_const_valued() &&
+             (rank == 0 || sizeof...(Indices) == rank));
 
   template <concepts::Index... Indices>
   auto const_coeff_ref(Indices &&...indices) const -> const value_type &
-    requires(traits::is_referrable());
+    requires(traits::is_referrable() &&
+             (rank == 0 || sizeof...(Indices) == rank));
 
   /// Internally forwards to const_access_pack
   template <concepts::IndexArgument... Args>

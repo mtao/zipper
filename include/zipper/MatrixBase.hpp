@@ -25,6 +25,7 @@ template <typename ValueType, index_type Rows, index_type Cols,
 class Matrix;
 
 template <concepts::Expression Expr>
+  requires(concepts::QualifiedRankedExpression<Expr, 2>)
 class MatrixBase : public ZipperBase<MatrixBase, Expr> {
 public:
   MatrixBase() = default;
@@ -35,7 +36,6 @@ public:
   using value_type = typename expression_traits::value_type;
   using extents_type = typename expression_traits::extents_type;
   using extents_traits = detail::ExtentsTraits<extents_type>;
-  static_assert(extents_traits::rank == 2);
 
   using Base::Base;
   // using Base::operator=;
