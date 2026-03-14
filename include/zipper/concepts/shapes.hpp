@@ -7,7 +7,7 @@
 #include "zipper/utils/extents/is_compatible.hpp"
 
 namespace zipper {
-template <template <concepts::QualifiedExpression> typename DerivedT,
+template <template <typename> typename DerivedT,
           concepts::QualifiedExpression Expr>
 class ZipperBase;
 }  // namespace zipper

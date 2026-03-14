@@ -101,7 +101,6 @@ public:
     requires((traits::is_referrable()) &&
              (extents_type::rank() == sizeof...(Args)))
   {
-    static_assert(extents_type::rank() == sizeof...(Args));
     return _const_coeff_ref(
         swizzler_type::unswizzle(std::forward<Args>(idxs)...),
         std::make_integer_sequence<rank_type, internal_rank>{});

@@ -49,26 +49,11 @@
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
 #include <zipper/expression/nullary/Constant.hpp>
+#include <zipper/expression/nullary/Identity.hpp>
+#include <zipper/utils/extents/extent_arithmetic.hpp>
 #include <zipper/utils/orthogonalization/gram_schmidt.hpp>
 
 namespace zipper::utils::decomposition {
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Helper: compile-time min of two extents (respects dynamic_extent).
-// ─────────────────────────────────────────────────────────────────────────────
-
-namespace detail {
-
-/// Compute min(A, B) at compile time, treating dynamic_extent as "unknown".
-/// If either is dynamic_extent, the result is dynamic_extent (unknown at
-/// compile time).
-consteval index_type min_extent(index_type A, index_type B) {
-  if (A == dynamic_extent || B == dynamic_extent)
-    return dynamic_extent;
-  return (A < B) ? A : B;
-}
-
-} // namespace detail
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Result types
@@ -78,7 +63,7 @@ consteval index_type min_extent(index_type A, index_type B) {
 ///
 /// Q is m x p and R is p x n, where p = min(m, n).
 template <typename T, index_type M, index_type N> struct QRReducedResult {
-  static constexpr index_type P = detail::min_extent(M, N);
+  static constexpr index_type P = extents::min(M, N);
 
   /// Orthonormal matrix Q (m x p).
   Matrix<T, M, P> Q;
@@ -112,7 +97,7 @@ template <concepts::Matrix Derived> auto qr(const Derived &A) {
   using T = typename AType::value_type;
   constexpr index_type M = AType::extents_type::static_extent(0);
   constexpr index_type N = AType::extents_type::static_extent(1);
-  constexpr index_type P = detail::min_extent(M, N);
+  constexpr index_type P = extents::min(M, N);
   using Vec = Vector<T, M>;
 
   const index_type m = A.extent(0);
@@ -128,10 +113,7 @@ template <concepts::Matrix Derived> auto qr(const Derived &A) {
   // For the reduced QR we only need the first p columns, but we accumulate
   // into m x m and extract afterwards.
   Matrix<T, M, M> Q_full(m, m);
-  Q_full = expression::nullary::Constant(T{0}, Q_full.extents());
-  for (index_type i = 0; i < m; ++i) {
-    Q_full(i, i) = T{1};
-  }
+  Q_full = expression::nullary::Identity<T, M, M>(Q_full.extents());
 
   for (index_type k = 0; k < p; ++k) {
     // Extract the sub-column R_work(k:m-1, k) into a temporary vector.
@@ -245,10 +227,7 @@ template <concepts::Matrix Derived> auto qr_full(const Derived &A) {
 
   // Accumulate Q starting from identity.
   Matrix<T, M, M> Q(m, m);
-  Q = expression::nullary::Constant(T{0}, Q.extents());
-  for (index_type i = 0; i < m; ++i) {
-    Q(i, i) = T{1};
-  }
+  Q = expression::nullary::Identity<T, M, M>(Q.extents());
 
   for (index_type k = 0; k < p; ++k) {
     Vec v(m);

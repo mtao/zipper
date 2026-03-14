@@ -18,6 +18,12 @@ namespace detail {
 /// up on the decayed (unqualified) type.
 template <zipper::concepts::QualifiedExpression ChildA,
           zipper::concepts::QualifiedExpression ChildB>
+  requires(std::is_convertible_v<
+               typename expression::detail::ExpressionTraits<std::decay_t<ChildA>>::value_type,
+               typename expression::detail::ExpressionTraits<std::decay_t<ChildB>>::value_type> ||
+           std::is_convertible_v<
+               typename expression::detail::ExpressionTraits<std::decay_t<ChildB>>::value_type,
+               typename expression::detail::ExpressionTraits<std::decay_t<ChildA>>::value_type>)
 struct DefaultBinaryExpressionTraits
     : public expression::detail::BasicExpressionTraits<
           typename expression::detail::ExpressionTraits<std::decay_t<ChildA>>::value_type,
@@ -29,10 +35,6 @@ struct DefaultBinaryExpressionTraits
   using BTraits = expression::detail::ExpressionTraits<std::decay_t<ChildB>>;
   using lhs_value_type = typename ATraits::value_type;
   using rhs_value_type = typename BTraits::value_type;
-  static_assert(std::is_convertible_v<typename ATraits::value_type,
-                                      typename BTraits::value_type> ||
-                std::is_convertible_v<typename BTraits::value_type,
-                                      typename ATraits::value_type>);
 
   // defaulting to first parameter
   using value_type = typename ATraits::value_type;

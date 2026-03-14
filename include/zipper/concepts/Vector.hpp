@@ -6,7 +6,9 @@
 #include "Expression.hpp"
 
 namespace zipper {
-template <concepts::Expression T> class VectorBase;
+template <concepts::Expression T>
+  requires(concepts::QualifiedRankedExpression<T, 1>)
+class VectorBase;
 template <typename T, index_type R> class Vector;
 } // namespace zipper
 namespace zipper::concepts {

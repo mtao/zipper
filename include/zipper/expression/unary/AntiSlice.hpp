@@ -98,6 +98,10 @@ struct OutputExtentsHelper {
 /// ExpressionTraits specialization for AntiSlice.
 /// Note: ExprType may be const-qualified but not reference-qualified.
 template <zipper::concepts::QualifiedExpression ExprType, rank_type... InsertedDims>
+  requires(((InsertedDims <
+             unary::_detail_antislice::output_rank_v<
+                 detail::ExpressionTraits<std::decay_t<ExprType>>::extents_type::rank(),
+                 sizeof...(InsertedDims)>) && ...))
 struct detail::ExpressionTraits<unary::AntiSlice<ExprType, InsertedDims...>>
     : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<
           ExprType> {
@@ -113,10 +117,6 @@ struct detail::ExpressionTraits<unary::AntiSlice<ExprType, InsertedDims...>>
 
     using extents_type = typename unary::_detail_antislice::OutputExtentsHelper<
         child_extents_type, output_rank, InsertedDims...>::type;
-
-    // Validate that InsertedDims are all < output_rank (compile-time)
-    static_assert(((InsertedDims < output_rank) && ...),
-                  "InsertedDims must be valid positions in the output rank");
 
     constexpr static bool is_coefficient_consistent = false;
     constexpr static bool is_value_based = false;

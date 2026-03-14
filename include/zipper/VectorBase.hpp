@@ -23,6 +23,7 @@ namespace zipper {
 template <typename ValueType, index_type Rows> class Vector;
 
 template <concepts::Expression Expr>
+  requires(concepts::QualifiedRankedExpression<Expr, 1>)
 class VectorBase : public ZipperBase<VectorBase, Expr> {
 public:
   VectorBase() = default;
@@ -33,7 +34,6 @@ public:
   using value_type = typename expression_traits::value_type;
   using extents_type = typename expression_traits::extents_type;
   using extents_traits = detail::ExtentsTraits<extents_type>;
-  static_assert(extents_traits::rank == 1);
 
   using Base::Base;
   // using Base::operator=;

@@ -5,7 +5,7 @@
 
 namespace zipper::detail {
 
-template <template <concepts::QualifiedExpression> typename DerivedT,
+template <template <typename> typename DerivedT,
           zipper::concepts::QualifiedExpression ExprType, rank_type... Indices>
 class PartialReductionDispatcher {
 public:
