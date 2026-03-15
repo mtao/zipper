@@ -13,12 +13,12 @@ OUTPUT_DIRECTORY       = docs
 # Input
 #---------------------------------------------------------------------------
 INPUT                  = include/zipper
-FILE_PATTERNS          = *.hpp *.hxx *.md
+FILE_PATTERNS          = *.hpp *.hxx *.md *.dox
 RECURSIVE              = YES
 EXCLUDE_PATTERNS       = */subprojects/* */build*/* */tests/*
 
 # Treat .md files as documentation pages
-USE_MDFILE_AS_MAINPAGE =
+USE_MDFILE_AS_MAINPAGE = include/zipper/mainpage.md
 
 #---------------------------------------------------------------------------
 # Extraction

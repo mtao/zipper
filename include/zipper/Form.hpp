@@ -1,6 +1,44 @@
 #if !defined(ZIPPER_FORM_HPP)
 #define ZIPPER_FORM_HPP
 
+/// @file Form.hpp
+/// @brief Owning dense row vector (1-form) type with static or dynamic extent.
+/// @ingroup user_types
+///
+/// `Form<T, N>` represents a row vector (covector / 1-form) that contracts
+/// with a `Vector` to produce a scalar.  It owns its data via `MDArray` and
+/// inherits the full `FormBase` interface.
+///
+/// The key semantic difference between `Form` and `Vector` is their behaviour
+/// under multiplication:
+///   - `Form<T, N> * Vector<T, N>` produces a scalar (contraction / dot product).
+///   - `Vector<T, N> * Form<T, N>` produces an outer product (rank-2 matrix).
+///
+/// Template parameters:
+///   - `T`: scalar type (e.g. `double`, `float`).
+///   - `N`: number of elements (`dynamic_extent` for runtime-sized).
+///
+/// @code
+///   // Static 3-form
+///   Form<double, 3> f({1.0, 2.0, 3.0});
+///
+///   // Contraction with a vector (produces a scalar)
+///   Vector<double, 3> v({4.0, 5.0, 6.0});
+///   double result = (f * v);  // 1*4 + 2*5 + 3*6 = 32
+///
+///   // Row of a matrix returns a FormBase
+///   Matrix<double, 3, 3> A({...});
+///   auto row0 = A.row(0);  // FormBase wrapping a slice expression
+/// @endcode
+///
+/// @note `Form` is implemented as a type alias for `detail::Form_<T, extents<N>>`.
+///       The actual class template is `detail::Form_`.
+///
+/// @see zipper::FormBase — CRTP base providing the 1-form interface.
+/// @see zipper::Vector — owning column vector type (dual to Form).
+/// @see zipper::Matrix — owning matrix type (rows are accessed as FormBase).
+/// @see zipper::expression::nullary::MDArray — the underlying owning storage.
+
 #include "FormBase.hxx"
 #include "concepts/Form.hpp"
 #include "zipper/expression/nullary/MDArray.hpp"

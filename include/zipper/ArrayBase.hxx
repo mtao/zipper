@@ -6,6 +6,7 @@
 #include "expression/unary/detail/operation_implementations.hpp"
 #include "zipper/detail/declare_operations.hpp"
 #include "zipper/expression/binary/ArithmeticExpressions.hpp"
+#include "zipper/expression/binary/ZeroAwareOperation.hpp"
 #include "zipper/expression/unary/ScalarArithmetic.hpp"
 
 namespace zipper {
@@ -36,8 +37,8 @@ SCALAR_BINARY_DECLARATION(ArrayBase, BitAnd, operator&)
 SCALAR_BINARY_DECLARATION(ArrayBase, BitOr, operator|)
 SCALAR_BINARY_DECLARATION(ArrayBase, BitXor, operator^)
 
-BINARY_DECLARATION(ArrayBase, Plus, operator+)
-BINARY_DECLARATION(ArrayBase, Minus, operator-)
+ZERO_AWARE_BINARY_DECLARATION(ArrayBase, Plus, operator+)
+ZERO_AWARE_BINARY_DECLARATION(ArrayBase, Minus, operator-)
 BINARY_DECLARATION(ArrayBase, Multiplies, operator*)
 BINARY_DECLARATION(ArrayBase, Divides, operator/)
 BINARY_DECLARATION(ArrayBase, Modulus, operator%)

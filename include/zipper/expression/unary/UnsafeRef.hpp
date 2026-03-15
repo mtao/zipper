@@ -3,6 +3,7 @@
 
 #include "UnaryExpressionBase.hpp"
 #include "zipper/concepts/Expression.hpp"
+#include "zipper/expression/detail/ExpressionTraits.hpp"
 
 namespace zipper::expression {
 namespace unary {
@@ -38,6 +39,9 @@ struct detail::ExpressionTraits<unary::UnsafeRef<Child>>
   constexpr static bool stores_references = false;
   constexpr static bool is_value_based = false;
   constexpr static bool is_coefficient_consistent = false;
+
+  /// Propagate has_known_zeros from child — UnsafeRef is transparent.
+  constexpr static bool has_known_zeros = child_traits::has_known_zeros;
 };
 
 // ── Class definition ───────────────────────────────────────────────────
@@ -104,6 +108,37 @@ class UnsafeRef
   /// make_owned() just delegates to the child — UnsafeRef is transparent.
   auto make_owned() const {
     return expression().make_owned();
+  }
+
+  // ── Nonzero range forwarding ──────────────────────────────────────
+
+  /// Forward nonzero_range queries to the child when it has known zeros.
+  template <rank_type D, typename... Args>
+    requires(traits::has_known_zeros)
+  auto nonzero_range(Args &&...args) const {
+    return expression().template nonzero_range<D>(
+        std::forward<Args>(args)...);
+  }
+
+  /// Forward col_range_for_row to child (rank-2 convenience).
+  auto col_range_for_row(index_type row) const
+    requires(traits::has_known_zeros && extents_type::rank() == 2)
+  {
+    return expression().col_range_for_row(row);
+  }
+
+  /// Forward row_range_for_col to child (rank-2 convenience).
+  auto row_range_for_col(index_type col) const
+    requires(traits::has_known_zeros && extents_type::rank() == 2)
+  {
+    return expression().row_range_for_col(col);
+  }
+
+  /// Forward nonzero_segment to child (rank-1 convenience).
+  auto nonzero_segment() const
+    requires(traits::has_known_zeros && extents_type::rank() == 1)
+  {
+    return expression().nonzero_segment();
   }
 };
 

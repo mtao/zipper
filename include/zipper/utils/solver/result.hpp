@@ -1,5 +1,6 @@
 /// @file result.hpp
 /// @brief Common result and error types for iterative linear solvers.
+/// @ingroup solvers
 ///
 /// All iterative solvers in `zipper::utils::solver` return
 /// `std::expected<SolverResult<T, Dim>, SolverError>`.  On success the result
@@ -12,6 +13,13 @@
 /// compile-time vector dimension Dim (which may be `dynamic_extent` when the
 /// size is only known at runtime).  This mirrors the zipper convention used
 /// throughout the krylov and orthogonalization modules.
+///
+/// @see zipper::utils::solver::conjugate_gradient — CG solver (SPD matrices).
+/// @see zipper::utils::solver::gauss_seidel — Gauss-Seidel iteration.
+/// @see zipper::utils::solver::gmres — GMRES solver (general matrices).
+/// @see zipper::utils::solver::bicgstab — BiCGSTAB solver (general matrices).
+/// @see zipper::utils::solver::triangular_solve — direct triangular solver
+///      (returns `std::expected<Vector, SolverError>` rather than SolverResult).
 
 #if !defined(ZIPPER_UTILS_SOLVER_RESULT_HPP)
 #define ZIPPER_UTILS_SOLVER_RESULT_HPP

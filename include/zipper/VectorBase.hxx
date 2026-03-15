@@ -6,6 +6,7 @@
 #include "expression/nullary/MDSpan.hpp"
 #include "zipper/detail/declare_operations.hpp"
 #include "zipper/expression/binary/ArithmeticExpressions.hpp"
+#include "zipper/expression/binary/ZeroAwareOperation.hpp"
 #include "zipper/expression/unary/ScalarArithmetic.hpp"
 
 namespace zipper {
@@ -48,8 +49,8 @@ UNARY_DECLARATION(VectorBase, Negate, operator-)
 
 SCALAR_BINARY_DECLARATION(VectorBase, Divides, operator/)
 
-BINARY_DECLARATION(VectorBase, Plus, operator+)
-BINARY_DECLARATION(VectorBase, Minus, operator-)
+ZERO_AWARE_BINARY_DECLARATION(VectorBase, Plus, operator+)
+ZERO_AWARE_BINARY_DECLARATION(VectorBase, Minus, operator-)
 
 template <concepts::Vector Expr1, concepts::Vector Expr2>
 auto operator==(Expr1 const &lhs, Expr2 const &rhs) -> bool {

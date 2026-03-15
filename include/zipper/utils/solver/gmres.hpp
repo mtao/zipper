@@ -1,6 +1,7 @@
 /// @file gmres.hpp
 /// @brief Generalized Minimum Residual (GMRES) method for general
 ///        non-symmetric linear systems Ax = b.
+/// @ingroup solvers
 ///
 /// GMRES is the standard Krylov solver for general (non-symmetric, possibly
 /// non-square in principle, though we require square here) linear systems.
@@ -31,6 +32,25 @@
 /// Two overloads:
 ///   - `gmres(A, b, x0, tol, max_iter)` -- with initial guess.
 ///   - `gmres(A, b, tol, max_iter)` -- zero initial guess.
+///
+/// @note  The back-substitution step (solving the upper-triangular Hessenberg
+///        system) uses `triangular_solve()` with a `TriangularMode::Upper`
+///        view, rather than hand-rolled loops.
+///
+/// @see zipper::utils::solver::triangular_solve — used internally for
+///      back-substitution on the Givens-rotated Hessenberg matrix.
+/// @see zipper::expression::unary::TriangularView — the expression type
+///      wrapping the Hessenberg matrix for back-substitution.
+/// @see zipper::utils::solver::conjugate_gradient — Krylov solver restricted
+///      to SPD matrices (cheaper per iteration, guaranteed convergence).
+/// @see zipper::utils::solver::bicgstab — alternative Krylov solver for
+///      general non-symmetric systems (two matvecs, no long recurrence).
+/// @see zipper::utils::solver::gauss_seidel — stationary iterative method
+///      (no Krylov basis, simpler but slower convergence).
+/// @see zipper::utils::solver::SolverResult — the result type returned on
+///      convergence.
+/// @see zipper::utils::solver::SolverError — the error type returned on
+///      failure.
 
 #if !defined(ZIPPER_UTILS_SOLVER_GMRES_HPP)
 #define ZIPPER_UTILS_SOLVER_GMRES_HPP
@@ -42,7 +62,9 @@
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
 #include <zipper/expression/nullary/Constant.hpp>
+#include <zipper/expression/unary/TriangularView.hpp>
 #include <zipper/utils/detail/dot.hpp>
+#include <zipper/utils/solver/triangular_solve.hpp>
 
 #include "result.hpp"
 
@@ -158,20 +180,43 @@ auto gmres(const ADerived &A, const BDerived &b, const XDerived &x0,
 
     if (res_est <= tol || j == max_iter - 1) {
       // --- Back-substitution to solve H * y = g ---
+      // Pack the Givens-rotated Hessenberg columns into a square matrix
+      // and use triangular_solve for the upper-triangular system.
       index_type m = j + 1; // number of Arnoldi steps completed
-      std::vector<T> y(m, T{0});
-      for (index_type k = m; k > 0; --k) {
-        index_type ki = k - 1;
-        y[ki] = g[ki];
-        for (index_type l = ki + 1; l < m; ++l) {
-          y[ki] -= H_col[l][ki] * y[l];
+
+      Matrix<T, dynamic_extent, dynamic_extent> H_mat(m, m);
+      H_mat = expression::nullary::Constant(T{0}, H_mat.extents());
+      for (index_type col = 0; col < m; ++col) {
+        // H_col[col] has entries H(0,col)..H(col,col) (upper triangle).
+        // After Givens rotations, H_col[col][col+1] == 0.
+        for (index_type row = 0; row <= col; ++row) {
+          H_mat(row, col) = H_col[col][row];
         }
-        y[ki] /= H_col[ki][ki];
       }
+
+      Vector<T, dynamic_extent> g_vec(m);
+      for (index_type k = 0; k < m; ++k) {
+        g_vec(k) = g[k];
+      }
+
+      auto H_upper = expression::triangular_view<
+          expression::TriangularMode::Upper>(H_mat);
+      auto solve_result = triangular_solve(H_upper, g_vec);
+
+      if (!solve_result) {
+        return std::expected<Result, SolverError>{
+            std::unexpected(SolverError{
+                .kind = SolverError::Kind::breakdown,
+                .message = "GMRES: back-substitution failed — " +
+                           solve_result.error().message,
+            })};
+      }
+
+      auto &y_vec = *solve_result;
 
       // x = x0 + Q * y
       for (index_type k = 0; k < m; ++k) {
-        x += y[k] * Q[k];
+        x += y_vec(k) * Q[k];
       }
 
       // Compute actual residual for the result.

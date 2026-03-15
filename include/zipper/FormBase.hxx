@@ -6,6 +6,7 @@
 #include "expression/nullary/MDSpan.hpp"
 #include "zipper/detail/declare_operations.hpp"
 #include "zipper/expression/binary/ArithmeticExpressions.hpp"
+#include "zipper/expression/binary/ZeroAwareOperation.hpp"
 #include "zipper/expression/binary/FormTensorProduct.hpp"
 #include "zipper/expression/binary/WedgeProduct.hpp"
 #include "zipper/expression/unary/ScalarArithmetic.hpp"
@@ -26,8 +27,8 @@ SCALAR_BINARY_DECLARATION(FormBase, Minus, operator-)
 SCALAR_BINARY_DECLARATION(FormBase, Multiplies, operator*)
 SCALAR_BINARY_DECLARATION(FormBase, Divides, operator/)
 
-BINARY_DECLARATION(FormBase, Plus, operator+)
-BINARY_DECLARATION(FormBase, Minus, operator-)
+ZERO_AWARE_BINARY_DECLARATION(FormBase, Plus, operator+)
+ZERO_AWARE_BINARY_DECLARATION(FormBase, Minus, operator-)
 
 template <typename Expr1, typename Expr2>
     requires(concepts::Form<std::decay_t<Expr1>> &&

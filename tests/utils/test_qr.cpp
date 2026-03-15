@@ -306,3 +306,155 @@ TEST_CASE("qr diagonal of R has consistent sign", "[decomposition][qr]") {
         }
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// qr_solve (reduced)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Helper to compute A * x via element-level loop (matrix-vector product).
+template <typename T, index_type M, index_type N>
+void mat_vec(const Matrix<T, M, N> &A, const Vector<T, N> &x,
+             Vector<T, M> &y) {
+  const index_type m = A.extent(0);
+  const index_type n = A.extent(1);
+  for (index_type i = 0; i < m; ++i) {
+    T sum = T{0};
+    for (index_type j = 0; j < n; ++j) {
+      sum += A(i, j) * x(j);
+    }
+    y(i) = sum;
+  }
+}
+
+TEST_CASE("qr_solve 2x2", "[decomposition][qr_solve]") {
+    // A = [[4, 1], [1, 3]], b = [1, 2], x = [1/11, 7/11]
+    Matrix<double, 2, 2> A{{4.0, 1.0}, {1.0, 3.0}};
+    Vector<double, 2> b{1.0, 2.0};
+
+    auto result = utils::decomposition::qr_solve(A, b);
+    REQUIRE(result.has_value());
+
+    CHECK(result->operator()(0) == Catch::Approx(1.0 / 11.0).margin(1e-10));
+    CHECK(result->operator()(1) == Catch::Approx(7.0 / 11.0).margin(1e-10));
+}
+
+TEST_CASE("qr_solve 3x3", "[decomposition][qr_solve]") {
+    Matrix<double, 3, 3> A{
+        {1.0, 1.0, 0.0},
+        {1.0, 0.0, 1.0},
+        {0.0, 1.0, 1.0},
+    };
+    // Choose x_true = [1, 2, 3] and compute b = A * x_true.
+    Vector<double, 3> x_true{1.0, 2.0, 3.0};
+    Vector<double, 3> b(3);
+    mat_vec(A, x_true, b);
+
+    auto result = utils::decomposition::qr_solve(A, b);
+    REQUIRE(result.has_value());
+
+    for (index_type i = 0; i < 3; ++i) {
+        CHECK(result->operator()(i) == Catch::Approx(x_true(i)).margin(1e-10));
+    }
+}
+
+TEST_CASE("qr_solve 3x3 SPD", "[decomposition][qr_solve]") {
+    // The same system used in the iterative solver tests.
+    Matrix<double, 3, 3> A{
+        {4.0, 1.0, 1.0}, {1.0, 4.0, 1.0}, {1.0, 1.0, 4.0}};
+    Vector<double, 3> b{6.0, 6.0, 6.0};
+
+    auto result = utils::decomposition::qr_solve(A, b);
+    REQUIRE(result.has_value());
+
+    CHECK(result->operator()(0) == Catch::Approx(1.0).margin(1e-10));
+    CHECK(result->operator()(1) == Catch::Approx(1.0).margin(1e-10));
+    CHECK(result->operator()(2) == Catch::Approx(1.0).margin(1e-10));
+}
+
+TEST_CASE("qr_solve 3x3 non-symmetric", "[decomposition][qr_solve]") {
+    // Upper triangular system — same as GMRES test system.
+    Matrix<double, 3, 3> A{
+        {3.0, 1.0, 0.0}, {0.0, 3.0, 1.0}, {0.0, 0.0, 3.0}};
+    Vector<double, 3> b{4.0, 4.0, 3.0};
+
+    auto result = utils::decomposition::qr_solve(A, b);
+    REQUIRE(result.has_value());
+
+    CHECK(result->operator()(0) == Catch::Approx(1.0).margin(1e-10));
+    CHECK(result->operator()(1) == Catch::Approx(1.0).margin(1e-10));
+    CHECK(result->operator()(2) == Catch::Approx(1.0).margin(1e-10));
+}
+
+TEST_CASE("qr_solve overdetermined (least-squares)", "[decomposition][qr_solve]") {
+    // A is 4x2, b is chosen so the system is consistent: b = A * x_true.
+    Matrix<double, 4, 2> A{
+        {1.0, 0.0},
+        {0.0, 1.0},
+        {1.0, 1.0},
+        {1.0, -1.0},
+    };
+    // x_true = [2, 3], b = A * x_true = [2, 3, 5, -1]
+    Vector<double, 4> b{2.0, 3.0, 5.0, -1.0};
+
+    auto result = utils::decomposition::qr_solve(A, b);
+    REQUIRE(result.has_value());
+
+    CHECK(result->operator()(0) == Catch::Approx(2.0).margin(1e-10));
+    CHECK(result->operator()(1) == Catch::Approx(3.0).margin(1e-10));
+}
+
+TEST_CASE("qr_solve overdetermined (inconsistent — least-squares)", "[decomposition][qr_solve]") {
+    // A is 3x2, b is NOT in the column space of A.
+    // This should still return a least-squares solution.
+    Matrix<double, 3, 2> A{
+        {1.0, 0.0},
+        {0.0, 1.0},
+        {1.0, 1.0},
+    };
+    // b = [1, 1, 3] is not in col(A) since col(A) = {[a, b, a+b]}.
+    // Least-squares solution: minimise ||Ax - b||^2.
+    // Normal equations: A^T A x = A^T b
+    // A^T A = [[2, 1], [1, 2]], A^T b = [4, 4]
+    // Solution: x = [4/3, 4/3]
+    Vector<double, 3> b{1.0, 1.0, 3.0};
+
+    auto result = utils::decomposition::qr_solve(A, b);
+    REQUIRE(result.has_value());
+
+    CHECK(result->operator()(0) == Catch::Approx(4.0 / 3.0).margin(1e-10));
+    CHECK(result->operator()(1) == Catch::Approx(4.0 / 3.0).margin(1e-10));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// qr_solve_full
+// ─────────────────────────────────────────────────────────────────────────────
+
+TEST_CASE("qr_solve_full 3x3", "[decomposition][qr_solve_full]") {
+    Matrix<double, 3, 3> A{
+        {4.0, 1.0, 1.0}, {1.0, 4.0, 1.0}, {1.0, 1.0, 4.0}};
+    Vector<double, 3> b{6.0, 6.0, 6.0};
+
+    auto result = utils::decomposition::qr_solve_full(A, b);
+    REQUIRE(result.has_value());
+
+    CHECK(result->operator()(0) == Catch::Approx(1.0).margin(1e-10));
+    CHECK(result->operator()(1) == Catch::Approx(1.0).margin(1e-10));
+    CHECK(result->operator()(2) == Catch::Approx(1.0).margin(1e-10));
+}
+
+TEST_CASE("qr_solve_full matches qr_solve for overdetermined", "[decomposition][qr_solve_full]") {
+    Matrix<double, 3, 2> A{
+        {1.0, 0.0},
+        {0.0, 1.0},
+        {1.0, 1.0},
+    };
+    Vector<double, 3> b{1.0, 1.0, 3.0};
+
+    auto result_reduced = utils::decomposition::qr_solve(A, b);
+    auto result_full = utils::decomposition::qr_solve_full(A, b);
+    REQUIRE(result_reduced.has_value());
+    REQUIRE(result_full.has_value());
+
+    CHECK(result_reduced->operator()(0) == Catch::Approx(result_full->operator()(0)).margin(1e-10));
+    CHECK(result_reduced->operator()(1) == Catch::Approx(result_full->operator()(1)).margin(1e-10));
+}

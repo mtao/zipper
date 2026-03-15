@@ -4,6 +4,7 @@
 /// @file TriangularView.hpp
 /// @brief A unary expression that presents a triangular view of a rank-2
 ///        (matrix) expression.
+/// @ingroup expressions_unary sparsity
 ///
 /// TriangularView<Mode, ExpressionType> wraps an existing matrix expression
 /// and returns the child's coefficient for positions that lie within the
@@ -19,9 +20,23 @@
 /// `triangular_view<Mode>(expr)` is provided as the primary user API.
 ///
 /// This expression is read-only: it does not expose `coeff_ref` or `assign`.
+///
+/// @see zipper::utils::solver::triangular_solve — forward/back substitution
+///      solver that takes a TriangularView as input.
+/// @see zipper::expression::detail::ContiguousIndexRange — the range type
+///      returned by TriangularView::nonzero_range.
+/// @see zipper::expression::detail::NonzeroRange — concept satisfied by the
+///      range types used in the zero-aware sparsity protocol.
+/// @see zipper::expression::binary::MatrixProduct — uses nonzero_range for
+///      zero-aware dot products when multiplying triangular matrices.
+/// @see zipper::expression::nullary::Identity — another expression with
+///      known structural zeros (diagonal-only).
+/// @see zipper::utils::decomposition::qr_solve — wraps the R factor in a
+///      TriangularView for back-substitution.
 
 #include "UnaryExpressionBase.hpp"
 #include "zipper/concepts/Expression.hpp"
+#include "zipper/expression/detail/NonzeroRange.hpp"
 
 namespace zipper::expression {
 
@@ -117,16 +132,23 @@ template <TriangularMode Mode,
     requires ValidTriangularView<Mode, ExpressionType>
 struct detail::ExpressionTraits<unary::TriangularView<Mode, ExpressionType>>
     : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<
-          ExpressionType> {
+          ExpressionType,
+          zipper::detail::AccessFeatures{.is_const = true,
+                                         .is_reference = false}> {
     using Base =
         zipper::expression::unary::detail::DefaultUnaryExpressionTraits<
-            ExpressionType>;
+            ExpressionType,
+            zipper::detail::AccessFeatures{.is_const = true,
+                                           .is_reference = false}>;
 
     /// Override: position-dependent, not value-based.
     constexpr static bool is_value_based = false;
 
     /// Override: zeroes out entries, so not coefficient-consistent.
     constexpr static bool is_coefficient_consistent = false;
+
+    /// TriangularView has structurally known zero regions.
+    constexpr static bool has_known_zeros = true;
 };
 
 namespace unary {
@@ -246,6 +268,100 @@ public:
 
         // ── Outside the triangle ────────────────────────────────────
         return value_type{0};
+    }
+
+    // ── Non-zero range queries ───────────────────────────────────────
+    // These methods report the structurally non-zero index range along
+    // dimension D, given the index in the other dimension.
+    //
+    // For rank-2 expressions:
+    //   nonzero_range<1>(row) = column range with non-zeros in that row
+    //   nonzero_range<0>(col) = row range with non-zeros in that column
+
+    /// @brief Returns the non-zero index range along dimension @p D.
+    ///
+    /// For D==1 (column range given a row):
+    ///   Lower:          [0, row+1)
+    ///   StrictlyLower:  [0, row)
+    ///   UnitLower:      [0, row+1)
+    ///   Upper:          [row, ncols)
+    ///   StrictlyUpper:  [row+1, ncols)
+    ///   UnitUpper:      [row, ncols)
+    ///
+    /// For D==0 (row range given a column):
+    ///   Lower:          [col, nrows)
+    ///   StrictlyLower:  [col+1, nrows)
+    ///   UnitLower:      [col, nrows)
+    ///   Upper:          [0, col+1)
+    ///   StrictlyUpper:  [0, col)
+    ///   UnitUpper:      [0, col+1)
+    template <rank_type D>
+        requires(D < 2)
+    auto nonzero_range(index_type other_idx) const
+        -> zipper::expression::detail::ContiguousIndexRange {
+        if constexpr (D == 1) {
+            // Column range for a given row
+            const auto nrows = Base::extent(0);
+            const auto ncols = Base::extent(1);
+            (void)nrows;
+
+            if constexpr (has_flag(Mode, TriangularMode::Lower)) {
+                if constexpr (has_flag(Mode, TriangularMode::ZeroDiag)) {
+                    // StrictlyLower: cols [0, row)
+                    return {index_type{0}, other_idx};
+                } else {
+                    // Lower or UnitLower: cols [0, row+1)
+                    return {index_type{0},
+                            std::min(other_idx + 1, ncols)};
+                }
+            } else {
+                if constexpr (has_flag(Mode, TriangularMode::ZeroDiag)) {
+                    // StrictlyUpper: cols [row+1, ncols)
+                    return {std::min(other_idx + 1, ncols), ncols};
+                } else {
+                    // Upper or UnitUpper: cols [row, ncols)
+                    return {other_idx, ncols};
+                }
+            }
+        } else {
+            // Row range for a given column
+            const auto nrows = Base::extent(0);
+            const auto ncols = Base::extent(1);
+            (void)ncols;
+
+            if constexpr (has_flag(Mode, TriangularMode::Lower)) {
+                if constexpr (has_flag(Mode, TriangularMode::ZeroDiag)) {
+                    // StrictlyLower: rows [col+1, nrows)
+                    return {std::min(other_idx + 1, nrows), nrows};
+                } else {
+                    // Lower or UnitLower: rows [col, nrows)
+                    return {other_idx, nrows};
+                }
+            } else {
+                if constexpr (has_flag(Mode, TriangularMode::ZeroDiag)) {
+                    // StrictlyUpper: rows [0, col)
+                    return {index_type{0}, other_idx};
+                } else {
+                    // Upper or UnitUpper: rows [0, col+1)
+                    return {index_type{0},
+                            std::min(other_idx + 1, nrows)};
+                }
+            }
+        }
+    }
+
+    // ── Convenience aliases (rank-2) ─────────────────────────────────
+
+    /// @brief Returns the non-zero column range for a given row.
+    auto col_range_for_row(index_type row) const
+        -> zipper::expression::detail::ContiguousIndexRange {
+        return nonzero_range<1>(row);
+    }
+
+    /// @brief Returns the non-zero row range for a given column.
+    auto row_range_for_col(index_type col) const
+        -> zipper::expression::detail::ContiguousIndexRange {
+        return nonzero_range<0>(col);
     }
 };
 

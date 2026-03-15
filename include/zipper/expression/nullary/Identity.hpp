@@ -1,12 +1,52 @@
 #if !defined(ZIPPER_EXPRESSION_NULLARY_IDENTITY_HPP)
 #define ZIPPER_EXPRESSION_NULLARY_IDENTITY_HPP
 
+/// @file Identity.hpp
+/// @brief Nullary expression representing the identity tensor.
+/// @ingroup expressions_nullary sparsity
+///
+/// `Identity<T, Indices...>` is a rank-N expression that returns 1 when all
+/// indices are equal and 0 otherwise.  For rank-2, this is the identity matrix
+/// (Kronecker delta): I(i, j) = (i == j) ? 1 : 0.
+///
+/// The identity expression owns no data — it generates coefficients on the fly
+/// from the index arguments.  It is commonly used to initialise orthogonal
+/// matrices (e.g., in QR decomposition) and as a mathematical identity element
+/// in matrix algebra.
+///
+/// @code
+///   // Static 3x3 identity matrix
+///   auto I = Identity<double, 3, 3>();
+///   // I(0,0) == 1, I(0,1) == 0, I(1,1) == 1, ...
+///
+///   // Dynamic n x n identity matrix
+///   auto I_dyn = Identity<double, dynamic_extent, dynamic_extent>(n, n);
+/// @endcode
+///
+/// **Zero-aware sparsity:**  Identity has `has_known_zeros = true` in its
+/// ExpressionTraits.  Its `nonzero_range<D>(other_idx)` returns a
+/// `SingleIndexRange{other_idx}`, meaning each row/column has exactly one
+/// non-zero entry.  This enables zero-aware matrix products to skip the
+/// entire off-diagonal.
+///
+/// @see zipper::expression::detail::SingleIndexRange — the range type returned
+///      by Identity::nonzero_range (exactly one non-zero per row/column).
+/// @see zipper::expression::detail::NonzeroRange — concept satisfied by all
+///      range types in the sparsity protocol.
+/// @see zipper::expression::unary::TriangularView — another expression with
+///      known structural zeros (triangular region).
+/// @see zipper::expression::nullary::Unit — unit vector expression (single
+///      non-zero in a rank-1 expression).
+/// @see zipper::expression::binary::MatrixProduct — uses nonzero_range for
+///      zero-aware dot products when an operand is Identity.
+
 #include <utility>
 
 #include "NullaryExpressionBase.hpp"
 #include "zipper/detail/make_integer_range_sequence.hpp"
 #include "zipper/detail/merge_integer_sequence.hpp"
 #include "zipper/detail/pack_index.hpp"
+#include "zipper/expression/detail/NonzeroRange.hpp"
 
 namespace zipper::expression {
 namespace nullary {
@@ -72,6 +112,45 @@ public:
   /// Identity already owns its data — make_owned() returns a copy.
   auto make_owned() const -> Identity { return *this; }
 
+  // ── Non-zero range queries ───────────────────────────────────────
+  // Identity has exactly one non-zero per "row" along any dimension:
+  // coeff(i0, i1, ..., iN) == 1 iff i0 == i1 == ... == iN.
+  //
+  // For rank-2: nonzero_range<1>(row) = SingleIndexRange{row}
+  //             nonzero_range<0>(col) = SingleIndexRange{col}
+  //
+  // For general rank: nonzero_range<D>(other_idx) = SingleIndexRange{other_idx}
+  // (the only index along dimension D that can be non-zero is the one
+  // equal to the index shared by all other dimensions).
+
+  /// @brief Returns the non-zero index range along dimension @p D.
+  ///
+  /// Since Identity is 1 only when all indices are equal, for any
+  /// dimension D and a given index in the other dimensions, the only
+  /// non-zero position is where the D-th index equals the others.
+  template <rank_type D>
+      requires(D < extents_type::rank())
+  auto nonzero_range(index_type other_idx) const
+      -> zipper::expression::detail::SingleIndexRange {
+      return {other_idx};
+  }
+
+  /// @brief Returns the non-zero column range for a given row (rank-2).
+  auto col_range_for_row(index_type row) const
+      -> zipper::expression::detail::SingleIndexRange
+      requires(extents_type::rank() == 2)
+  {
+      return nonzero_range<1>(row);
+  }
+
+  /// @brief Returns the non-zero row range for a given column (rank-2).
+  auto row_range_for_col(index_type col) const
+      -> zipper::expression::detail::SingleIndexRange
+      requires(extents_type::rank() == 2)
+  {
+      return nonzero_range<0>(col);
+  }
+
 private:
   // =====================================================
   // TODO: this should be used for sparse?
@@ -103,7 +182,11 @@ struct detail::ExpressionTraits<nullary::Identity<T, Indices...>>
           T, zipper::extents<Indices...>,
           expression::detail::AccessFeatures{
               .is_const = false, .is_reference = false},
-          expression::detail::ShapeFeatures{.is_resizable = true}> {};
+          expression::detail::ShapeFeatures{.is_resizable = true}> {
+
+  /// Identity has structurally known zero regions (off-diagonal is zero).
+  constexpr static bool has_known_zeros = true;
+};
 } // namespace zipper::expression
 
 #endif

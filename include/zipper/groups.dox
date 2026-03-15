@@ -1,0 +1,220 @@
+/// @file
+/// @brief Doxygen group definitions for the Zipper library.
+
+// ============================================================================
+// Top-level user-facing types
+// ============================================================================
+
+/// @defgroup user_types User-Facing Types
+/// @brief Owning semantic wrappers for mathematical objects.
+///
+/// These are the primary types users interact with. Each wraps a dense
+/// `MDArray` storage and exposes semantically appropriate operations
+/// (e.g., `Matrix` provides determinant/inverse, `Vector` provides dot/cross).
+///
+/// | Type | Rank | Semantics |
+/// |------|------|-----------|
+/// | `Array<T,...>` | Any | Dense coefficient-wise array |
+/// | `Vector<T,N>` | 1 | Column vector |
+/// | `Form<T,N>` | 1 | Row vector / 1-form |
+/// | `Matrix<T,R,C>` | 2 | Matrix with linear algebra ops |
+/// | `Tensor<T,...>` | Any | General tensor |
+///
+/// All owning types support both static and dynamic extents via
+/// `std::dynamic_extent`.  Dynamic aliases (e.g., `VectorX<T>`,
+/// `MatrixX<T>`) are provided for convenience.
+///
+/// @see VectorBase, MatrixBase, FormBase, ArrayBase, TensorBase
+
+// ============================================================================
+// Expression system
+// ============================================================================
+
+/// @defgroup expressions Expression System
+/// @brief Lazy expression templates forming the computational backbone.
+///
+/// Zipper uses CRTP-based expression templates to build computation graphs
+/// that are evaluated only when assigned to an owning type. All expression
+/// types inherit from `ExpressionBase<Derived>` and specialize
+/// `ExpressionTraits<Derived>`.
+///
+/// Expressions are organized into four categories:
+/// - **Nullary** -- leaf nodes (data sources): MDArray, Identity, Unit, Constant
+/// - **Unary** -- single child: Transpose, Slice, TriangularView, Diagonal
+/// - **Binary** -- two children: CWise operations, MatrixProduct, CrossProduct
+/// - **Reductions** -- collapse dimensions: Sum, Determinant, Trace, Norm
+///
+/// @see ExpressionTraits, ExpressionBase
+
+/// @defgroup expressions_nullary Nullary Expressions
+/// @ingroup expressions
+/// @brief Leaf expressions that produce values without child expressions.
+///
+/// Nullary expressions are the leaves of the expression tree. They either
+/// own data (`MDArray`), reference external data (`MDSpan`), or generate
+/// values from a pattern (`Identity`, `Unit`, `Constant`, `Iota`).
+///
+/// Several nullary expressions participate in the sparsity protocol via
+/// `HasKnownZeros`, enabling zero-aware optimizations in downstream
+/// operations like `MatrixProduct`.
+///
+/// @see MDArray, Identity, Unit, Constant, Iota, MDSpan
+
+/// @defgroup expressions_unary Unary Expressions
+/// @ingroup expressions
+/// @brief Single-operand transformations.
+///
+/// Unary expressions wrap a single child expression and transform its
+/// elements or layout. Examples include transposition, slicing,
+/// extracting diagonals, and triangular views.
+///
+/// `TriangularView` is a key unary expression that restricts a matrix
+/// to its triangular portion and provides nonzero range information
+/// for zero-aware arithmetic.
+///
+/// @see TriangularView, Transpose, Slice, AntiSlice, Diagonal, Reshape, Swizzle
+
+/// @defgroup expressions_binary Binary Expressions
+/// @ingroup expressions
+/// @brief Two-operand expressions.
+///
+/// Binary expressions combine two child expressions. The most common are:
+/// - `Operation` / `ZeroAwareOperation` -- coefficient-wise arithmetic
+/// - `MatrixProduct` / `MatrixVectorProduct` -- matrix multiplication
+/// - `TensorProduct`, `WedgeProduct`, `CrossProduct` -- tensor algebra
+///
+/// Zero-aware binary operations skip multiply-add steps where one operand
+/// is structurally zero (as reported by the sparsity protocol), providing
+/// significant speedups for triangular and sparse-structured computations.
+///
+/// @see ZeroAwareOperation, MatrixProduct, MatrixVectorProduct, Operation
+
+/// @defgroup expressions_reductions Reduction Expressions
+/// @ingroup expressions
+/// @brief Expressions that reduce dimensions (e.g., sum, determinant).
+///
+/// Reductions collapse one or more dimensions of a child expression into
+/// a scalar or lower-rank result. They inherit from `ReductionBase`.
+///
+/// @see Determinant, Trace, CoefficientReduction
+
+// ============================================================================
+// Sparsity protocol
+// ============================================================================
+
+/// @defgroup sparsity Sparsity Protocol
+/// @brief Compile-time and runtime nonzero tracking for structured matrices.
+///
+/// The sparsity protocol enables expressions to declare which of their
+/// elements are structurally nonzero. This information propagates through
+/// the expression tree, allowing operations like matrix-vector multiply
+/// to skip zero contributions.
+///
+/// The protocol has three layers:
+/// 1. **`HasKnownZeros` concept** -- opt-in trait that expression types
+///    satisfy by providing a `nonzero_range()` method
+/// 2. **Range types** -- lightweight objects describing nonzero patterns:
+///    `ContiguousIndexRange`, `SingleIndexRange`, `SparseIndexRange`, `FullRange`
+/// 3. **Consumers** -- `ZeroAwareOperation`, `MatrixProduct`, and
+///    `MatrixVectorProduct` use ranges to iterate only over nonzero elements
+///
+/// Expressions that participate in the sparsity protocol:
+/// - `TriangularView` -- contiguous ranges from triangular structure
+/// - `Identity` -- single-index ranges (one nonzero per row/column)
+/// - `Unit` -- single-index range (one nonzero element)
+///
+/// @see NonzeroRange, HasKnownZeros, ContiguousIndexRange, SingleIndexRange,
+///      SparseIndexRange, FullRange, TriangularView, Identity, Unit
+
+// ============================================================================
+// Solvers
+// ============================================================================
+
+/// @defgroup solvers Iterative Solvers
+/// @brief Iterative methods for solving linear systems Ax = b.
+///
+/// All iterative solvers live in `zipper::utils::solver` and return
+/// `std::expected<SolverResult<T, Dim>, SolverError>`.  They accept
+/// tolerance (`tol`) and maximum iteration (`max_iter`) parameters.
+///
+/// ### Solver comparison
+///
+/// | Solver | Applicability | Per-iteration cost | Key requirement |
+/// |--------|---------------|-------------------|-----------------|
+/// | `triangular_solve` | Triangular systems | O(n^2) total | TriangularView input |
+/// | `conjugate_gradient` | SPD matrices | 1 matvec + dot products | A must be SPD |
+/// | `gauss_seidel` | Diag-dominant / SPD | 1 full sweep O(n^2) | Nonzero diagonal |
+/// | `gmres` | General non-symmetric | 1 matvec + orthogonalization | None |
+/// | `bicgstab` | General non-symmetric | 2 matvecs | None |
+///
+/// ### Choosing a solver
+///
+/// - For **triangular** systems: use `triangular_solve` (direct, O(n^2))
+/// - For **SPD** systems: use `conjugate_gradient` (optimal for this class)
+/// - For **diagonally dominant** systems: use `gauss_seidel`
+/// - For **general non-symmetric** systems: use `gmres` or `bicgstab`
+/// - For **overdetermined** systems (least squares): use `qr_solve`
+///
+/// @see SolverResult, SolverError, triangular_solve, conjugate_gradient,
+///      gauss_seidel, gmres, bicgstab
+
+// ============================================================================
+// Decompositions
+// ============================================================================
+
+/// @defgroup decompositions Matrix Decompositions
+/// @brief Factorization algorithms for matrices.
+///
+/// Decomposition routines live in `zipper::utils::decomposition` and
+/// provide matrix factorizations used by direct solvers.
+///
+/// Currently available:
+/// - **QR decomposition** via modified Gram-Schmidt (`qr`, `qr_full`)
+/// - **QR solve** for square and overdetermined systems (`qr_solve`, `qr_solve_full`)
+///
+/// The QR decomposition produces a `QRResult<T, M, N>` containing the
+/// orthogonal factor Q and upper-triangular factor R.  `qr_solve` then
+/// uses `triangular_solve` for back-substitution on R.
+///
+/// @see qr, qr_full, qr_solve, qr_solve_full, QRResult, triangular_solve
+
+// ============================================================================
+// Storage
+// ============================================================================
+
+/// @defgroup storage Storage Backends
+/// @brief Dense and sparse data storage for array types.
+///
+/// Storage types provide the underlying data management for owning
+/// expression types.  The primary backends are:
+/// - `StlStorage<T, Extents>` -- dense storage backed by `std::vector<T>`
+/// - `SparseCoordinate<T, Extents>` -- COO sparse storage
+///
+/// Storage types satisfy the `concepts::Data` and optionally
+/// `concepts::DenseData` concepts.
+///
+/// @see StlStorage, SparseCoordinate
+
+// ============================================================================
+// Concepts
+// ============================================================================
+
+/// @defgroup concepts Concepts
+/// @brief C++ concepts constraining template parameters throughout Zipper.
+///
+/// The concept hierarchy provides compile-time type constraints:
+///
+/// - `concepts::Expression` -- any raw expression type (not wrappers)
+/// - `concepts::QualifiedExpression` -- expression or ref-to-expression
+/// - `concepts::RankedExpression<T,N>` -- expression with specific rank
+/// - `concepts::Vector` -- VectorBase or Vector
+/// - `concepts::Matrix` -- MatrixBase or Matrix
+/// - `concepts::Form` -- FormBase or Form
+/// - `concepts::Zipper` -- any semantic wrapper (Vector, Matrix, Form, etc.)
+///
+/// **Important:** `concepts::Expression` does NOT match wrapper types like
+/// `Vector` or `Matrix`. Use `concepts::Vector`, `concepts::Matrix`, or
+/// `concepts::Zipper` for wrappers.
+///
+/// @see concepts::Expression, concepts::Vector, concepts::Matrix,
+///      concepts::Form, concepts::Zipper, concepts::QualifiedExpression

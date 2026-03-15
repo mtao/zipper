@@ -13,3 +13,10 @@ test_binary_views = executable(
   cpp_args: ['-Wno-strict-overflow'],
 )
 test('binary_views', test_binary_views)
+
+test_zero_aware_multiply = executable(
+  'test_zero_aware_multiply',
+  'test_zero_aware_multiply.cpp',
+  dependencies: [zipper_test_dep],
+)
+test('zero_aware_multiply', test_zero_aware_multiply)

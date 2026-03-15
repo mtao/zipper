@@ -6,6 +6,7 @@
 #include "expression/nullary/MDSpan.hpp"
 #include "zipper/detail/declare_operations.hpp"
 #include "zipper/expression/binary/ArithmeticExpressions.hpp"
+#include "zipper/expression/binary/ZeroAwareOperation.hpp"
 #include "zipper/expression/binary/MatrixProduct.hpp"
 #include "zipper/expression/binary/MatrixVectorProduct.hpp"
 #include "zipper/expression/unary/ScalarArithmetic.hpp"
@@ -23,8 +24,8 @@ UNARY_DECLARATION(MatrixBase, Negate, operator-)
 
 SCALAR_BINARY_DECLARATION(MatrixBase, Divides, operator/)
 
-BINARY_DECLARATION(MatrixBase, Plus, operator+)
-BINARY_DECLARATION(MatrixBase, Minus, operator-)
+ZERO_AWARE_BINARY_DECLARATION(MatrixBase, Plus, operator+)
+ZERO_AWARE_BINARY_DECLARATION(MatrixBase, Minus, operator-)
 //
 
 template <concepts::Matrix Expr1, concepts::Matrix Expr2>

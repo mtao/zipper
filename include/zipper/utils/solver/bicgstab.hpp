@@ -1,6 +1,7 @@
 /// @file bicgstab.hpp
 /// @brief Bi-Conjugate Gradient Stabilized (BiCGSTAB) method for general
 ///        non-symmetric linear systems Ax = b.
+/// @ingroup solvers
 ///
 /// BiCGSTAB is a Krylov subspace method for solving non-symmetric (and
 /// possibly non-positive-definite) linear systems.  It was developed by
@@ -36,6 +37,19 @@
 /// Two overloads:
 ///   - `bicgstab(A, b, x0, tol, max_iter)` -- with initial guess.
 ///   - `bicgstab(A, b, tol, max_iter)` -- zero initial guess.
+///
+/// @see zipper::utils::solver::gmres — alternative Krylov solver for general
+///      non-symmetric systems (one matvec per iteration but growing storage).
+/// @see zipper::utils::solver::conjugate_gradient — Krylov solver restricted
+///      to SPD matrices (one matvec per iteration, guaranteed convergence).
+/// @see zipper::utils::solver::gauss_seidel — stationary iterative method
+///      for diagonally-dominant or SPD systems.
+/// @see zipper::utils::solver::triangular_solve — direct triangular solver
+///      (O(n^2)) for triangular systems.
+/// @see zipper::utils::solver::SolverResult — the result type returned on
+///      convergence.
+/// @see zipper::utils::solver::SolverError — the error type returned on
+///      failure.
 
 #if !defined(ZIPPER_UTILS_SOLVER_BICGSTAB_HPP)
 #define ZIPPER_UTILS_SOLVER_BICGSTAB_HPP

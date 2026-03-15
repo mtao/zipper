@@ -1,6 +1,7 @@
 /// @file conjugate_gradient.hpp
 /// @brief Conjugate Gradient (CG) method for symmetric positive definite
 ///        linear systems Ax = b.
+/// @ingroup solvers
 ///
 /// The Conjugate Gradient method is the gold-standard Krylov solver for
 /// symmetric positive definite (SPD) matrices.  It maintains a residual vector
@@ -28,6 +29,19 @@
 /// Two overloads:
 ///   - `conjugate_gradient(A, b, x0, tol, max_iter)` -- with initial guess.
 ///   - `conjugate_gradient(A, b, tol, max_iter)` -- zero initial guess.
+///
+/// @see zipper::utils::solver::gauss_seidel — another iterative solver for
+///      SPD or diagonally-dominant systems (stationary method, no Krylov basis).
+/// @see zipper::utils::solver::gmres — Krylov solver for general non-symmetric
+///      systems (more expensive per iteration than CG).
+/// @see zipper::utils::solver::bicgstab — Krylov solver for general
+///      non-symmetric systems (two matvecs per iteration, no long recurrence).
+/// @see zipper::utils::solver::triangular_solve — direct triangular solver
+///      (O(n^2)), used internally by GMRES and QR-based solvers.
+/// @see zipper::utils::solver::SolverResult — the result type returned on
+///      convergence.
+/// @see zipper::utils::solver::SolverError — the error type returned on
+///      failure (divergence or breakdown).
 
 #if !defined(ZIPPER_UTILS_SOLVER_CONJUGATE_GRADIENT_HPP)
 #define ZIPPER_UTILS_SOLVER_CONJUGATE_GRADIENT_HPP

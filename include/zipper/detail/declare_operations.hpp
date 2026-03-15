@@ -4,6 +4,7 @@
 #include "zipper/concepts/Expression.hpp"
 #include "zipper/concepts/Zipper.hpp"
 #include "zipper/expression/binary/detail/operation_implementations.hpp"
+#include "zipper/expression/detail/ExpressionTraits.hpp"
 #include "zipper/expression/unary/detail/operation_implementations.hpp"
 
 // Helper: checks if ExprType (after decay) is derived from BASETYPE<T> for
@@ -92,4 +93,38 @@ using forwarded_expression_t = std::conditional_t<
             std::forward<ExprType>(a).expression(),                        \
             std::forward<ExprType2>(b).expression());                      \
     }
+
+// ── Zero-aware binary: zipper OP zipper ──────────────────────────────
+//
+// Like BINARY_DECLARATION, but uses `if constexpr` in the function body
+// to select `ZeroAware##NAME` when at least one operand has known zeros,
+// falling back to `NAME` otherwise.  This avoids C++20 constraint
+// subsumption issues that would arise from having two competing overloads.
+
+#define ZERO_AWARE_BINARY_DECLARATION(BASETYPE, NAME, OP)                  \
+    template <typename ExprType, typename ExprType2>                       \
+        requires(concepts::Zipper<ExprType> &&                             \
+                 concepts::Zipper<ExprType2> &&                            \
+                 ZIPPER_DERIVED_FROM_BASE(ExprType, BASETYPE) &&           \
+                 ZIPPER_DERIVED_FROM_BASE(ExprType2, BASETYPE))            \
+    auto OP(ExprType&& a, ExprType2&& b) {                                \
+        using lhs_expr_t = std::decay_t<                                   \
+            decltype(std::forward<ExprType>(a).expression())>;             \
+        using rhs_expr_t = std::decay_t<                                   \
+            decltype(std::forward<ExprType2>(b).expression())>;            \
+        if constexpr (                                                     \
+            expression::detail::HasKnownZeros<lhs_expr_t> ||               \
+            expression::detail::HasKnownZeros<rhs_expr_t>) {              \
+            return expression::binary::detail::operation_implementation<   \
+                expression::binary::ZeroAware##NAME, zipper::BASETYPE>(   \
+                std::forward<ExprType>(a).expression(),                    \
+                std::forward<ExprType2>(b).expression());                  \
+        } else {                                                           \
+            return expression::binary::detail::operation_implementation<   \
+                expression::binary::NAME, zipper::BASETYPE>(              \
+                std::forward<ExprType>(a).expression(),                    \
+                std::forward<ExprType2>(b).expression());                  \
+        }                                                                  \
+    }
+
 #endif

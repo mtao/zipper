@@ -5,6 +5,7 @@
 #include "expression/nullary/MDSpan.hpp"
 #include "zipper/detail/declare_operations.hpp"
 #include "zipper/expression/binary/ArithmeticExpressions.hpp"
+#include "zipper/expression/binary/ZeroAwareOperation.hpp"
 #include "zipper/expression/binary/TensorProduct.hpp"
 #include "zipper/expression/unary/ScalarArithmetic.hpp"
 
@@ -24,8 +25,8 @@ SCALAR_BINARY_DECLARATION(TensorBase, Minus, operator-)
 SCALAR_BINARY_DECLARATION(TensorBase, Multiplies, operator*)
 SCALAR_BINARY_DECLARATION(TensorBase, Divides, operator/)
 
-BINARY_DECLARATION(TensorBase, Plus, operator+)
-BINARY_DECLARATION(TensorBase, Minus, operator-)
+ZERO_AWARE_BINARY_DECLARATION(TensorBase, Plus, operator+)
+ZERO_AWARE_BINARY_DECLARATION(TensorBase, Minus, operator-)
 
 template <typename Expr1, typename Expr2>
     requires(concepts::Tensor<std::decay_t<Expr1>> &&

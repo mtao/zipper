@@ -1,11 +1,11 @@
 /// @file gauss_seidel.hpp
 /// @brief Gauss-Seidel iterative method for solving the linear system Ax = b.
+/// @ingroup solvers
 ///
 /// The Gauss-Seidel method improves upon Jacobi by using the most recently
 /// computed values of x as soon as they are available.  The update rule is:
 ///
-///     x^{k+1}_i = (1 / A_{ii}) * (b_i - sum_{j < i} A_{ij} * x^{k+1}_j
-///                                      - sum_{j > i} A_{ij} * x^k_j)
+///     x_i  <-  x_i + (b_i - dot(A_row_i, x)) / A_{ii}
 ///
 /// This corresponds to a forward sweep through the rows, and the method is
 /// equivalent to solving  (D + L) * x^{k+1} = b - U * x^k, where D is the
@@ -24,6 +24,20 @@
 /// Two overloads are provided:
 ///   - `gauss_seidel(A, b, x0, tol, max_iter)` -- with initial guess.
 ///   - `gauss_seidel(A, b, tol, max_iter)` -- zero initial guess.
+///
+/// @see zipper::utils::solver::conjugate_gradient — Krylov solver for SPD
+///      matrices (faster convergence than Gauss-Seidel for well-conditioned
+///      problems, guaranteed convergence in at most n steps).
+/// @see zipper::utils::solver::gmres — Krylov solver for general non-symmetric
+///      systems.
+/// @see zipper::utils::solver::bicgstab — Krylov solver for general
+///      non-symmetric systems (two matvecs per iteration).
+/// @see zipper::utils::solver::triangular_solve — direct triangular solver
+///      (O(n^2)) for triangular systems.
+/// @see zipper::utils::solver::SolverResult — the result type returned on
+///      convergence.
+/// @see zipper::utils::solver::SolverError — the error type returned on
+///      failure.
 
 #if !defined(ZIPPER_UTILS_SOLVER_GAUSS_SEIDEL_HPP)
 #define ZIPPER_UTILS_SOLVER_GAUSS_SEIDEL_HPP
@@ -79,13 +93,11 @@ auto gauss_seidel(const ADerived &A, const BDerived &b, const XDerived &x0,
         })};
       }
 
-      T sigma = T{0};
+      T dot = T{0};
       for (index_type j = 0; j < n; ++j) {
-        if (j != i) {
-          sigma += A(i, j) * x(j);
-        }
+        dot += A(i, j) * x(j);
       }
-      x(i) = (b(i) - sigma) / diag;
+      x(i) += (b(i) - dot) / diag;
     }
 
     // Check convergence.

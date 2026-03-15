@@ -1,6 +1,56 @@
 #if !defined(ZIPPER_VECTOR_HPP)
 #define ZIPPER_VECTOR_HPP
 
+/// @file Vector.hpp
+/// @brief Owning dense column vector type with static or dynamic extent.
+/// @ingroup user_types
+///
+/// `Vector<T, Rows>` is the primary user-facing column vector type.  It owns
+/// its data via an `MDArray` storage backend and inherits the full `VectorBase`
+/// interface (arithmetic operators, dot product, norm, cross product, etc.).
+///
+/// Template parameters:
+///   - `T`: scalar type (e.g. `double`, `float`).
+///   - `Rows`: number of elements (`dynamic_extent` for runtime-sized).
+///
+/// Construction:
+///   - Default: `Vector<double, 3> v;` (static, zero-initialised).
+///   - From initializer list: `Vector<double, 3> v({1.0, 2.0, 3.0});`
+///   - Dynamic: `Vector<double, dynamic_extent> v(n);`
+///   - Copy from expression: `Vector<double, 3> v(some_expression);`
+///
+/// @code
+///   // Static 3-vector
+///   Vector<double, 3> v({1.0, 2.0, 3.0});
+///
+///   // Dynamic vector
+///   Vector<double, dynamic_extent> w(100);
+///
+///   // Vector arithmetic
+///   auto sum = v + w;          // coefficient-wise addition
+///   double d = v.dot(w);       // dot product
+///   double n = v.norm();       // Euclidean norm
+///   auto c = v.cross(w);       // cross product (3D only)
+///
+///   // Iteration
+///   for (auto& x : v) { x *= 2.0; }
+///
+///   // Span views (non-owning)
+///   auto s = v.as_span();
+/// @endcode
+///
+/// The type alias `VectorX<T>` is provided for dynamic-extent vectors:
+///   `VectorX<double>` is equivalent to `Vector<double, dynamic_extent>`.
+///
+/// @see zipper::VectorBase — CRTP base providing the vector interface.
+/// @see zipper::Matrix — owning matrix type.
+/// @see zipper::Form — owning row vector (1-form) type.
+/// @see zipper::expression::nullary::MDArray — the underlying owning storage.
+/// @see zipper::expression::nullary::Unit — unit (basis) vector expression.
+/// @see zipper::utils::solver — iterative solvers that produce Vector results.
+/// @see zipper::utils::solver::SolverResult — solver result containing a
+///      Vector solution.
+
 #include "VectorBase.hxx"
 #include "zipper/detail/assert.hpp"
 #include "zipper/expression/nullary/MDArray.hpp"

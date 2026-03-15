@@ -86,3 +86,61 @@ TEST_CASE("test_matrix_inverse", "[matrix][storage][dense]") {
     CHECK((I - myI2).as_array().norm() < 1e-5);
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// General n x n inverse via QR (for n > 3)
+// ─────────────────────────────────────────────────────────────────────────────
+
+TEST_CASE("inverse 4x4 static extents", "[matrix][inverse][general]") {
+    // A well-conditioned 4x4 matrix.
+    zipper::Matrix<double, 4, 4> A{
+        {4.0, 1.0, 0.0, 0.0},
+        {1.0, 4.0, 1.0, 0.0},
+        {0.0, 1.0, 4.0, 1.0},
+        {0.0, 0.0, 1.0, 4.0},
+    };
+
+    auto Inv = zipper::utils::inverse(A);
+
+    // Verify A * Inv ≈ I.
+    zipper::MatrixBase I = zipper::expression::nullary::Identity<double, 4, 4>();
+    auto prod = A * Inv;
+    CHECK((I - prod).as_array().norm() < 1e-8);
+
+    // Verify Inv * A ≈ I.
+    auto prod2 = Inv * A;
+    CHECK((I - prod2).as_array().norm() < 1e-8);
+}
+
+TEST_CASE("inverse 5x5 static extents", "[matrix][inverse][general]") {
+    // Diagonally dominant 5x5 matrix (guaranteed well-conditioned).
+    zipper::Matrix<double, 5, 5> A{
+        {10.0, 1.0, 0.0, 0.0, 0.0},
+        {1.0, 10.0, 1.0, 0.0, 0.0},
+        {0.0, 1.0, 10.0, 1.0, 0.0},
+        {0.0, 0.0, 1.0, 10.0, 1.0},
+        {0.0, 0.0, 0.0, 1.0, 10.0},
+    };
+
+    auto Inv = zipper::utils::inverse(A);
+
+    // Verify A * Inv ≈ I.
+    zipper::MatrixBase I = zipper::expression::nullary::Identity<double, 5, 5>();
+    auto prod = A * Inv;
+    CHECK((I - prod).as_array().norm() < 1e-8);
+}
+
+TEST_CASE("inverse 4x4 identity", "[matrix][inverse][general]") {
+    zipper::Matrix<double, 4, 4> I =
+        zipper::expression::nullary::Identity<double, 4, 4>{};
+
+    auto Inv = zipper::utils::inverse(I);
+
+    // Inverse of identity should be identity.
+    for (zipper::index_type i = 0; i < 4; ++i) {
+        for (zipper::index_type j = 0; j < 4; ++j) {
+            double expected = (i == j) ? 1.0 : 0.0;
+            CHECK(Inv(i, j) == Catch::Approx(expected).margin(1e-12));
+        }
+    }
+}

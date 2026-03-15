@@ -2,6 +2,7 @@
 #define ZIPPER_expression_UNARY_SCALAROPERATIONVIEW_HPP
 
 #include "UnaryExpressionBase.hpp"
+#include "zipper/expression/detail/NonzeroRange.hpp"
 
 namespace zipper::expression {
 namespace unary {
@@ -22,6 +23,12 @@ struct detail::ExpressionTraits<
   using value_type = decltype(std::declval<Operation>()(
       std::declval<typename ChildTraits::value_type>(),
       std::declval<Scalar>()));
+
+  /// Propagate has_known_zeros when the scalar Op preserves zeros.
+  constexpr static bool has_known_zeros =
+      ChildTraits::has_known_zeros &&
+      zipper::expression::detail::ZeroPreservingScalarOp<Operation,
+                                                         ScalarOnRight>;
 };
 
 namespace unary {
@@ -68,6 +75,35 @@ public:
           return ScalarOperation<const decltype(owned_child), Operation, Scalar, ScalarOnRight>(
               m_scalar, std::move(owned_child), m_op);
       }
+  }
+
+  // ── Nonzero range forwarding ──────────────────────────────────────
+  // Zero-preserving scalar ops (e.g. multiplies, divides-on-right)
+  // don't change the sparsity pattern.
+
+  template <rank_type D, typename... Args>
+    requires(traits::has_known_zeros)
+  auto nonzero_range(Args &&...args) const {
+    return expression().template nonzero_range<D>(
+        std::forward<Args>(args)...);
+  }
+
+  auto col_range_for_row(index_type row) const
+    requires(traits::has_known_zeros && extents_type::rank() == 2)
+  {
+    return expression().col_range_for_row(row);
+  }
+
+  auto row_range_for_col(index_type col) const
+    requires(traits::has_known_zeros && extents_type::rank() == 2)
+  {
+    return expression().row_range_for_col(col);
+  }
+
+  auto nonzero_segment() const
+    requires(traits::has_known_zeros && extents_type::rank() == 1)
+  {
+    return expression().nonzero_segment();
   }
 
 private:

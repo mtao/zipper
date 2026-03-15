@@ -1,11 +1,59 @@
 #if !defined(ZIPPER_EXPRESSION_BINARY_MATRIXVECTORPRODUCT_HPP)
 #define ZIPPER_EXPRESSION_BINARY_MATRIXVECTORPRODUCT_HPP
 
+/// @file MatrixVectorProduct.hpp
+/// @brief Matrix-vector product expression (rank-2 x rank-1 -> rank-1).
+/// @ingroup expressions_binary sparsity
+///
+/// `MatrixVectorProduct<A, B>` lazily computes y = A * x, where A is m x n
+/// and x is n-dimensional, producing an m-dimensional result.
+///
+/// The `coeff(i)` method computes the dot product of row i of A with x.
+/// When either operand satisfies `HasKnownZeros`, the dot product loop is
+/// restricted to the intersection of the non-zero ranges (same strategy as
+/// MatrixProduct):
+///
+///   - Both have known zeros: iterate over the smaller range, checking
+///     membership in the larger.
+///   - Only LHS (matrix) has known zeros: iterate LHS's `nonzero_range<1>(row)`.
+///   - Only RHS (vector) has known zeros: iterate RHS's `nonzero_range<0>()`.
+///   - Neither: standard full-range loop.
+///
+/// This is particularly effective for triangular matrices multiplied by
+/// sparse vectors (e.g., unit vectors), where it reduces per-row work from
+/// O(n) to O(1).
+///
+/// @code
+///   auto A = Matrix<double, 3, 3>({{1,0,0},{2,3,0},{4,5,6}});
+///   auto L = triangular_view<TriangularMode::Lower>(A);
+///   auto x = Vector<double, 3>({1, 2, 3});
+///   auto y = VectorBase(MatrixVectorProduct(L, x.expression()));
+///   // y(0) == 1*1 = 1, y(1) == 2*1 + 3*2 = 8, y(2) == 4*1 + 5*2 + 6*3 = 32
+///
+///   // With a unit vector (zero-aware):
+///   auto e1 = nullary::unit_vector<double, 3, 1>();
+///   auto col1 = VectorBase(MatrixVectorProduct(A.expression(), e1));
+///   // Only accesses A(i, 1) for each row — O(1) per dot product.
+/// @endcode
+///
+/// @see zipper::expression::detail::HasKnownZeros — compile-time trait that
+///      enables zero-aware dot product loops.
+/// @see zipper::expression::detail::NonzeroRange — concept for range types
+///      used in nonzero_range queries.
+/// @see zipper::expression::binary::MatrixProduct — analogous product for
+///      matrix * matrix (rank-2 x rank-2 -> rank-2).
+/// @see zipper::expression::binary::ZeroAwareOperation — uses union semantics
+///      for addition/subtraction.
+/// @see zipper::expression::nullary::Unit — a rank-1 expression with a single
+///      non-zero, ideal for zero-aware matvec.
+/// @see zipper::expression::unary::TriangularView — triangular matrix view
+///      whose nonzero_range restricts the dot product loop.
+
 #include "BinaryExpressionBase.hpp"
 #include <cassert>
 #include "zipper/concepts/Expression.hpp"
 #include "zipper/detail/assert.hpp"
-// #include "zipper/expression/detail/intersect_nonzeros.hpp"
+#include "zipper/expression/detail/ExpressionTraits.hpp"
 
 namespace zipper::expression {
 namespace binary {
@@ -73,33 +121,39 @@ class MatrixVectorProduct
     }
     value_type coeff(index_type a) const {
         value_type v = 0;
-        // TODO: re-enable sparse optimizations once is_sparse is available
-        // in all expression traits
-        // constexpr bool lhs_sparse = lhs_traits::is_sparse(1);
-        // constexpr bool rhs_sparse = rhs_traits::is_sparse(0);
-        // if constexpr (lhs_sparse && rhs_sparse) {
-        //     const auto& lnnz = lhs().template nonZeros<1>(a);
-        //     const auto& rnnz = rhs().template nonZeros<0>(a);
-        //     auto nnz = expression::detail::intersect_nonzeros(lnnz, rnnz);
-        //
-        //     for (const auto& j : nnz) {
-        //         v += lhs()(a, j) * rhs()(j);
-        //     }
-        // } else if constexpr (lhs_sparse) {
-        //     const auto& lnnz = lhs().template nonZeros<1>(a);
-        //     for (const auto& j : lnnz) {
-        //         v += lhs()(a, j) * rhs()(j);
-        //     }
-        // } else if constexpr (rhs_sparse) {
-        //     const auto& rnnz = rhs().template nonZeros<0>(a);
-        //     for (const auto& j : rnnz) {
-        //         v += lhs()(a, j) * rhs()(j);
-        //     }
-        // } else {
+        using zipper::expression::detail::HasKnownZeros;
+        constexpr bool lhs_has_zeros = HasKnownZeros<std::decay_t<A>>;
+        constexpr bool rhs_has_zeros = HasKnownZeros<std::decay_t<B>>;
+
+        if constexpr (lhs_has_zeros && rhs_has_zeros) {
+            auto lr = lhs().template nonzero_range<1>(a);
+            auto rr = rhs().template nonzero_range<0>();
+            if (lr.size() <= rr.size()) {
+                for (auto j : lr) {
+                    if (rr.contains(j)) {
+                        v += lhs()(a, j) * rhs()(j);
+                    }
+                }
+            } else {
+                for (auto j : rr) {
+                    if (lr.contains(j)) {
+                        v += lhs()(a, j) * rhs()(j);
+                    }
+                }
+            }
+        } else if constexpr (lhs_has_zeros) {
+            for (auto j : lhs().template nonzero_range<1>(a)) {
+                v += lhs()(a, j) * rhs()(j);
+            }
+        } else if constexpr (rhs_has_zeros) {
+            for (auto j : rhs().template nonzero_range<0>()) {
+                v += lhs()(a, j) * rhs()(j);
+            }
+        } else {
             for (index_type j = 0; j < lhs().extent(1); ++j) {
                 v += lhs()(a, j) * rhs()(j);
             }
-        // }
+        }
         return v;
     }
 
