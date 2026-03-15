@@ -49,7 +49,7 @@
 /// @see zipper::Form — owning row vector (1-form) type.
 /// @see zipper::expression::nullary::MDArray — the underlying owning storage.
 /// @see zipper::expression::unary::TriangularView — view a Matrix as
-///      triangular for use with triangular_solve.
+///      triangular; call `.solve(b)` for forward/back substitution.
 /// @see zipper::utils::solver — iterative solvers that operate on matrices.
 /// @see zipper::utils::decomposition::qr — QR factorisation of matrices.
 /// @see zipper::utils::inverse — compute the matrix inverse.

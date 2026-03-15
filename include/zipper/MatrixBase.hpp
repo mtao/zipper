@@ -11,9 +11,11 @@
 #include "concepts/stl.hpp"
 #include "zipper/types.hpp"
 //
+#include "concepts/DirectSolver.hpp"
 #include "expression/nullary/StlMDArray.hpp"
 #include "expression/reductions/Trace.hpp"
 #include "expression/unary/Diagonal.hpp"
+#include "expression/unary/TriangularView.hpp"
 #include "zipper/detail/PartialReductionDispatcher.hpp"
 #include "zipper/detail/constexpr_arithmetic.hpp"
 #include "zipper/detail/extents/get_extent.hpp"
@@ -214,6 +216,30 @@ public:
   }
   auto transpose() const { return Base::template swizzle<MatrixBase, 1, 0>(); }
   auto transpose() { return Base::template swizzle<MatrixBase, 1, 0>(); }
+
+  /// @brief Returns a read-only triangular view of this matrix.
+  ///
+  /// @tparam Mode  Compile-time TriangularMode flag (e.g. Lower, Upper,
+  ///               UnitLower, UnitUpper, StrictlyLower, StrictlyUpper).
+  /// @return A MatrixBase wrapping a TriangularView expression.
+  template <expression::TriangularMode Mode>
+  auto as_triangular() const {
+      using ViewType =
+          expression::unary::TriangularView<Mode, const expression_type &>;
+      return MatrixBase<ViewType>(std::in_place, expression());
+  }
+
+  /// @brief Solve A * x = b, forwarding to the underlying expression's
+  ///        `.solve()` method.
+  ///
+  /// This overload is only available when the underlying expression type
+  /// satisfies the `DirectSolver` concept (e.g. when this MatrixBase wraps
+  /// a TriangularView, or a decomposition result).
+  template <concepts::Vector BDerived>
+      requires(concepts::DirectSolver<expression_type>)
+  auto solve(const BDerived &b) const {
+      return expression().solve(b);
+  }
 
   template <concepts::IndexSlice Slice> auto row_slice(const Slice &s = {}) {
     return slice(s, full_extent_t{});

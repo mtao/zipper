@@ -266,3 +266,45 @@ TEST_CASE("ldlt_solve matches llt_solve", "[decomposition][ldlt_solve]") {
         CHECK(Ax(i) == Catch::Approx(b(i)).margin(1e-10));
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LDLTResult::solve(b)
+// ─────────────────────────────────────────────────────────────────────────────
+
+TEST_CASE("LDLTResult::solve 3x3", "[decomposition][ldlt_solve]") {
+    Matrix<double, 3, 3> A{
+        {4.0, 1.0, 1.0}, {1.0, 4.0, 1.0}, {1.0, 1.0, 4.0}};
+    Vector<double, 3> x_true{1.0, 2.0, 3.0};
+    Vector<double, 3> b(3);
+    mat_vec(A, x_true, b);
+
+    auto decomp = utils::decomposition::ldlt(A);
+    REQUIRE(decomp.has_value());
+
+    auto result = decomp->solve(b);
+    REQUIRE(result.has_value());
+
+    for (index_type i = 0; i < 3; ++i) {
+        CHECK(result->operator()(i) ==
+              Catch::Approx(x_true(i)).margin(1e-10));
+    }
+}
+
+TEST_CASE("LDLTResult::solve matches ldlt_solve", "[decomposition][ldlt_solve]") {
+    Matrix<double, 3, 3> A{
+        {4.0, 1.0, 1.0}, {1.0, 4.0, 1.0}, {1.0, 1.0, 4.0}};
+    Vector<double, 3> b{6.0, 6.0, 6.0};
+
+    auto free_result = utils::decomposition::ldlt_solve(A, b);
+    REQUIRE(free_result.has_value());
+
+    auto decomp = utils::decomposition::ldlt(A);
+    REQUIRE(decomp.has_value());
+    auto method_result = decomp->solve(b);
+    REQUIRE(method_result.has_value());
+
+    for (index_type i = 0; i < 3; ++i) {
+        CHECK(free_result->operator()(i) ==
+              Catch::Approx(method_result->operator()(i)).margin(1e-14));
+    }
+}

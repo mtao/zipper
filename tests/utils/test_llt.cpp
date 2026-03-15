@@ -235,3 +235,46 @@ TEST_CASE("llt_solve non-SPD fails", "[decomposition][llt_solve]") {
     auto result = utils::decomposition::llt_solve(A, b);
     REQUIRE_FALSE(result.has_value());
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LLTResult::solve(b)
+// ─────────────────────────────────────────────────────────────────────────────
+
+TEST_CASE("LLTResult::solve 3x3", "[decomposition][llt_solve]") {
+    Matrix<double, 3, 3> A{
+        {4.0, 1.0, 1.0}, {1.0, 4.0, 1.0}, {1.0, 1.0, 4.0}};
+    Vector<double, 3> x_true{1.0, 2.0, 3.0};
+    Vector<double, 3> b(3);
+    mat_vec(A, x_true, b);
+
+    auto decomp = utils::decomposition::llt(A);
+    REQUIRE(decomp.has_value());
+
+    auto result = decomp->solve(b);
+    REQUIRE(result.has_value());
+
+    for (index_type i = 0; i < 3; ++i) {
+        CHECK(result->operator()(i) ==
+              Catch::Approx(x_true(i)).margin(1e-10));
+    }
+}
+
+TEST_CASE("LLTResult::solve matches llt_solve", "[decomposition][llt_solve]") {
+    Matrix<double, 3, 3> A{
+        {4.0, 1.0, 1.0}, {1.0, 4.0, 1.0}, {1.0, 1.0, 4.0}};
+    Vector<double, 3> b{6.0, 6.0, 6.0};
+
+    // Compare free function and method results.
+    auto free_result = utils::decomposition::llt_solve(A, b);
+    REQUIRE(free_result.has_value());
+
+    auto decomp = utils::decomposition::llt(A);
+    REQUIRE(decomp.has_value());
+    auto method_result = decomp->solve(b);
+    REQUIRE(method_result.has_value());
+
+    for (index_type i = 0; i < 3; ++i) {
+        CHECK(free_result->operator()(i) ==
+              Catch::Approx(method_result->operator()(i)).margin(1e-14));
+    }
+}

@@ -36,8 +36,8 @@
 ///      systems (more expensive per iteration than CG).
 /// @see zipper::utils::solver::bicgstab — Krylov solver for general
 ///      non-symmetric systems (two matvecs per iteration, no long recurrence).
-/// @see zipper::utils::solver::triangular_solve — direct triangular solver
-///      (O(n^2)), used internally by GMRES and QR-based solvers.
+/// @see zipper::expression::unary::TriangularView::solve — direct triangular
+///      solver (O(n^2)), used internally by GMRES and QR-based solvers.
 /// @see zipper::utils::solver::SolverResult — the result type returned on
 ///      convergence.
 /// @see zipper::utils::solver::SolverError — the error type returned on

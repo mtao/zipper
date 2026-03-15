@@ -41,12 +41,12 @@
 ///
 /// and accumulates Q by applying reflections to an identity-initialised matrix.
 ///
-/// @see zipper::utils::solver::triangular_solve — used by `qr_solve` and
-///      `qr_solve_full` for back-substitution on the upper-triangular R factor.
+/// @see zipper::expression::unary::TriangularView::solve — used by `qr_solve`
+///      and `qr_solve_full` for back-substitution on the upper-triangular R.
 /// @see zipper::expression::unary::TriangularView — the expression type used
 ///      to wrap R for triangular solve.
-/// @see zipper::utils::inverse — uses `qr()` + `triangular_solve()` to compute
-///      the general matrix inverse.
+/// @see zipper::utils::inverse — uses `qr()` + `TriangularView::solve()` to
+///      compute the general matrix inverse.
 /// @see zipper::utils::orthogonalization::gram_schmidt — used by the
 ///      `qr_gram_schmidt` variant to orthonormalise columns.
 /// @see zipper::utils::solver::SolverError — error type returned when R has a
@@ -57,6 +57,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <expected>
 
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
@@ -65,7 +66,7 @@
 #include <zipper/expression/unary/TriangularView.hpp>
 #include <zipper/utils/extents/extent_arithmetic.hpp>
 #include <zipper/utils/orthogonalization/gram_schmidt.hpp>
-#include <zipper/utils/solver/triangular_solve.hpp>
+#include <zipper/utils/solver/result.hpp>
 
 namespace zipper::utils::decomposition {
 
@@ -76,23 +77,135 @@ namespace zipper::utils::decomposition {
 /// Result of a reduced (thin) QR decomposition.
 ///
 /// Q is m x p and R is p x n, where p = min(m, n).
+///
+/// Calling `.solve(b)` computes x by forming c = Q^T * b and then solving
+/// R * x = c via back substitution.  For square systems this is the exact
+/// solution; for overdetermined systems (m > n) this is the least-squares
+/// solution.
 template <typename T, index_type M, index_type N> struct QRReducedResult {
+  /// Scalar type of the decomposition.
+  using value_type = T;
+
   static constexpr index_type P = extents::min(M, N);
 
   /// Orthonormal matrix Q (m x p).
   Matrix<T, M, P> Q;
   /// Upper triangular matrix R (p x n).
   Matrix<T, P, N> R;
+
+  /// @brief Solve A*x = b (or least-squares min||Ax-b||) using the stored
+  ///        QR factors.
+  ///
+  /// Computes c = Q^T * b, then solves the leading p x p block of R against c
+  /// via upper-triangular back substitution.
+  ///
+  /// @param b  Right-hand side vector of length m.
+  /// @return   `std::expected<Vector<T,P>, SolverError>` — the solution on
+  ///           success, or a breakdown error if R has a zero pivot.
+  template <concepts::Vector BDerived>
+  auto solve(const BDerived &b) const
+      -> std::expected<Vector<T, P>, solver::SolverError> {
+    using ResultVec = Vector<T, P>;
+    using Result = std::expected<ResultVec, solver::SolverError>;
+
+    const index_type m = Q.extent(0);
+    const index_type p = Q.extent(1);
+
+    // 1. Compute c = Q^T * b (p-dimensional vector).
+    ResultVec c(p);
+    for (index_type i = 0; i < p; ++i) {
+      T sum = T{0};
+      for (index_type k = 0; k < m; ++k) {
+        sum += Q(k, i) * b(k);
+      }
+      c(i) = sum;
+    }
+
+    // 2. Solve R * x = c via upper-triangular back substitution.
+    //    Extract the leading p x p block of R into a square matrix.
+    Matrix<T, P, P> R_sq(p, p);
+    for (index_type i = 0; i < p; ++i) {
+      for (index_type j = 0; j < p; ++j) {
+        R_sq(i, j) = R(i, j);
+      }
+    }
+
+    auto R_upper = expression::triangular_view<
+        expression::TriangularMode::Upper>(R_sq);
+    auto solve_result = R_upper.solve(c);
+
+    if (!solve_result) {
+      return Result{std::unexpected(std::move(solve_result.error()))};
+    }
+
+    return Result{std::move(*solve_result)};
+  }
 };
 
 /// Result of a full QR decomposition.
 ///
 /// Q is m x m (orthogonal) and R is m x n (upper trapezoidal).
+///
+/// Calling `.solve(b)` computes c = Q^T * b (first p entries) and then
+/// solves R_top * x = c via back substitution, where p = min(m, n).
 template <typename T, index_type M, index_type N> struct QRFullResult {
+  /// Scalar type of the decomposition.
+  using value_type = T;
+
+  static constexpr index_type P = extents::min(M, N);
+
   /// Orthogonal matrix Q (m x m).
   Matrix<T, M, M> Q;
   /// Upper trapezoidal matrix R (m x n).
   Matrix<T, M, N> R;
+
+  /// @brief Solve A*x = b (or least-squares min||Ax-b||) using the stored
+  ///        full QR factors.
+  ///
+  /// Computes c = Q^T * b (first p entries), then solves the leading p x p
+  /// block of R against c via upper-triangular back substitution.
+  ///
+  /// @param b  Right-hand side vector of length m.
+  /// @return   `std::expected<Vector<T,P>, SolverError>` — the solution on
+  ///           success, or a breakdown error if R has a zero pivot.
+  template <concepts::Vector BDerived>
+  auto solve(const BDerived &b) const
+      -> std::expected<Vector<T, P>, solver::SolverError> {
+    using ResultVec = Vector<T, P>;
+    using Result = std::expected<ResultVec, solver::SolverError>;
+
+    const index_type m = Q.extent(0);
+    const index_type n = R.extent(1);
+    const index_type p = std::min(m, n);
+
+    // 1. Compute c = Q^T * b, but only the first p entries matter.
+    ResultVec c(p);
+    for (index_type i = 0; i < p; ++i) {
+      T sum = T{0};
+      for (index_type k = 0; k < m; ++k) {
+        sum += Q(k, i) * b(k);
+      }
+      c(i) = sum;
+    }
+
+    // 2. Solve R_top * x = c, where R_top is the leading p x p block of R.
+    Matrix<T, P, P> R_sq(p, p);
+    for (index_type i = 0; i < p; ++i) {
+      for (index_type j = 0; j < p; ++j) {
+        R_sq(i, j) = R(i, j);
+      }
+    }
+
+    auto R_upper = expression::triangular_view<
+        expression::TriangularMode::Upper>(R_sq);
+    auto solve_result = R_upper.solve(c);
+
+    if (!solve_result) {
+      return Result{std::unexpected(std::move(solve_result.error()))};
+    }
+
+    return Result{std::move(*solve_result)};
+  }
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -351,16 +464,13 @@ template <concepts::Matrix Derived> auto qr_gram_schmidt(const Derived &A) {
 
 /// @brief Solve Ax = b via reduced QR decomposition.
 ///
+/// Factors A = Q * R (reduced), then delegates to `QRReducedResult::solve(b)`.
+///
 /// For square systems (m == n) this computes the exact solution.
 /// For overdetermined systems (m > n) this computes the least-squares
 /// solution  min ||Ax - b||_2.
 ///
 /// Requires m >= n (the matrix must be square or tall).
-///
-/// The algorithm:
-///   1. Factor A = Q * R  (reduced Householder QR).
-///   2. Compute c = Q^T * b  (via element-level loop).
-///   3. Solve R * x = c  (upper-triangular back substitution).
 ///
 /// @param A  An m x n matrix with m >= n.
 /// @param b  Right-hand side vector of length m.
@@ -368,57 +478,8 @@ template <concepts::Matrix Derived> auto qr_gram_schmidt(const Derived &A) {
 ///           success, or a breakdown error if R has a zero pivot.
 template <concepts::Matrix ADerived, concepts::Vector BDerived>
 auto qr_solve(const ADerived &A, const BDerived &b) {
-  using AType = std::decay_t<ADerived>;
-  using T = typename AType::value_type;
-  constexpr index_type M = AType::extents_type::static_extent(0);
-  constexpr index_type N = AType::extents_type::static_extent(1);
-  constexpr index_type P = extents::min(M, N);
-  using ResultVec = Vector<T, P>;
-  using Result = std::expected<ResultVec, solver::SolverError>;
-
-  const index_type m = A.extent(0);
-  const index_type n = A.extent(1);
-  const index_type p = std::min(m, n);
-
-  // 1. Factor A = Q * R.
-  auto [Q, R] = qr(A);
-
-  // 2. Compute c = Q^T * b (p-dimensional vector).
-  //    c(i) = sum_k Q(k, i) * b(k)   for i in [0, p).
-  ResultVec c(p);
-  for (index_type i = 0; i < p; ++i) {
-    T sum = T{0};
-    for (index_type k = 0; k < m; ++k) {
-      sum += Q(k, i) * b(k);
-    }
-    c(i) = sum;
-  }
-
-  // 3. Solve R * x = c via upper-triangular back substitution.
-  //    R is p x n with p = min(m, n).  For m >= n (the typical case),
-  //    p = n and R is square upper triangular.  For m < n, R is a wide
-  //    upper trapezoidal matrix; we solve the leading p x p block and
-  //    ignore the trailing columns (giving one particular solution).
-  //
-  //    Extract the leading p x p block of R into a square matrix for
-  //    the triangular view.  (When P == N this is just R itself, but
-  //    for the general case we need a square matrix.)
-  Matrix<T, P, P> R_sq(p, p);
-  for (index_type i = 0; i < p; ++i) {
-    for (index_type j = 0; j < p; ++j) {
-      R_sq(i, j) = R(i, j);
-    }
-  }
-
-  auto R_upper = expression::triangular_view<
-      expression::TriangularMode::Upper>(R_sq);
-  auto solve_result = solver::triangular_solve(R_upper, c);
-
-  if (!solve_result) {
-    return Result{std::unexpected(std::move(solve_result.error()))};
-  }
-
-  return Result{std::move(*solve_result)};
+  auto result = qr(A);
+  return result.solve(b);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -426,6 +487,8 @@ auto qr_solve(const ADerived &A, const BDerived &b) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// @brief Solve Ax = b via full QR decomposition.
+///
+/// Factors A = Q * R (full), then delegates to `QRFullResult::solve(b)`.
 ///
 /// Uses the full Q (m x m) factorisation.  For square systems the result
 /// is the same as `qr_solve`.  For overdetermined systems this also gives
@@ -440,50 +503,8 @@ auto qr_solve(const ADerived &A, const BDerived &b) {
 ///           success, or a breakdown error if R has a zero pivot.
 template <concepts::Matrix ADerived, concepts::Vector BDerived>
 auto qr_solve_full(const ADerived &A, const BDerived &b) {
-  using AType = std::decay_t<ADerived>;
-  using T = typename AType::value_type;
-  constexpr index_type M = AType::extents_type::static_extent(0);
-  constexpr index_type N = AType::extents_type::static_extent(1);
-  constexpr index_type P = extents::min(M, N);
-  using ResultVec = Vector<T, P>;
-  using Result = std::expected<ResultVec, solver::SolverError>;
-
-  const index_type m = A.extent(0);
-  const index_type n = A.extent(1);
-  const index_type p = std::min(m, n);
-
-  // 1. Factor A = Q * R  (full: Q is m x m, R is m x n).
-  auto [Q, R] = qr_full(A);
-
-  // 2. Compute c = Q^T * b, but only the first p entries matter.
-  //    (The remaining m - p entries correspond to the null space of A^T.)
-  //    c(i) = sum_k Q(k, i) * b(k)   for i in [0, p).
-  ResultVec c(p);
-  for (index_type i = 0; i < p; ++i) {
-    T sum = T{0};
-    for (index_type k = 0; k < m; ++k) {
-      sum += Q(k, i) * b(k);
-    }
-    c(i) = sum;
-  }
-
-  // 3. Solve R_top * x = c, where R_top is the leading p x p block of R.
-  Matrix<T, P, P> R_sq(p, p);
-  for (index_type i = 0; i < p; ++i) {
-    for (index_type j = 0; j < p; ++j) {
-      R_sq(i, j) = R(i, j);
-    }
-  }
-
-  auto R_upper = expression::triangular_view<
-      expression::TriangularMode::Upper>(R_sq);
-  auto solve_result = solver::triangular_solve(R_upper, c);
-
-  if (!solve_result) {
-    return Result{std::unexpected(std::move(solve_result.error()))};
-  }
-
-  return Result{std::move(*solve_result)};
+  auto result = qr_full(A);
+  return result.solve(b);
 }
 
 } // namespace zipper::utils::decomposition

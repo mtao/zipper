@@ -39,8 +39,8 @@
 ///
 /// @see zipper::utils::decomposition::qr — QR factorisation used by
 ///      inverse_general.
-/// @see zipper::utils::solver::triangular_solve — back-substitution used by
-///      inverse_general to solve each column.
+/// @see zipper::expression::unary::TriangularView::solve — back-substitution
+///      used by inverse_general to solve each column.
 /// @see zipper::expression::reductions::Determinant — determinant computation
 ///      used by inverse2d and inverse3d.
 /// @see zipper::expression::unary::TriangularView — expression type wrapping
@@ -175,7 +175,7 @@ auto inverse_general(const D& M) {
             c(i) = Q(j, i);
         }
 
-        auto solve_result = solver::triangular_solve(R_upper, c);
+        auto solve_result = R_upper.solve(c);
         if (!solve_result) {
             throw std::runtime_error(
                 "inverse: matrix is singular — " +

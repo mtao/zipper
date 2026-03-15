@@ -34,11 +34,11 @@
 ///   - `gmres(A, b, tol, max_iter)` -- zero initial guess.
 ///
 /// @note  The back-substitution step (solving the upper-triangular Hessenberg
-///        system) uses `triangular_solve()` with a `TriangularMode::Upper`
-///        view, rather than hand-rolled loops.
+///        system) uses `TriangularView::solve()` with a
+///        `TriangularMode::Upper` view, rather than hand-rolled loops.
 ///
-/// @see zipper::utils::solver::triangular_solve — used internally for
-///      back-substitution on the Givens-rotated Hessenberg matrix.
+/// @see zipper::expression::unary::TriangularView::solve — used internally
+///      for back-substitution on the Givens-rotated Hessenberg matrix.
 /// @see zipper::expression::unary::TriangularView — the expression type
 ///      wrapping the Hessenberg matrix for back-substitution.
 /// @see zipper::utils::solver::conjugate_gradient — Krylov solver restricted
@@ -64,7 +64,6 @@
 #include <zipper/expression/nullary/Constant.hpp>
 #include <zipper/expression/unary/TriangularView.hpp>
 #include <zipper/utils/detail/dot.hpp>
-#include <zipper/utils/solver/triangular_solve.hpp>
 
 #include "result.hpp"
 
@@ -181,7 +180,7 @@ auto gmres(const ADerived &A, const BDerived &b, const XDerived &x0,
     if (res_est <= tol || j == max_iter - 1) {
       // --- Back-substitution to solve H * y = g ---
       // Pack the Givens-rotated Hessenberg columns into a square matrix
-      // and use triangular_solve for the upper-triangular system.
+      // and use TriangularView::solve() for the upper-triangular system.
       index_type m = j + 1; // number of Arnoldi steps completed
 
       Matrix<T, dynamic_extent, dynamic_extent> H_mat(m, m);
@@ -201,7 +200,7 @@ auto gmres(const ADerived &A, const BDerived &b, const XDerived &x0,
 
       auto H_upper = expression::triangular_view<
           expression::TriangularMode::Upper>(H_mat);
-      auto solve_result = triangular_solve(H_upper, g_vec);
+      auto solve_result = H_upper.solve(g_vec);
 
       if (!solve_result) {
         return std::expected<Result, SolverError>{

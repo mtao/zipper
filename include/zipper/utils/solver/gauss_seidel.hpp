@@ -32,8 +32,8 @@
 ///      systems.
 /// @see zipper::utils::solver::bicgstab — Krylov solver for general
 ///      non-symmetric systems (two matvecs per iteration).
-/// @see zipper::utils::solver::triangular_solve — direct triangular solver
-///      (O(n^2)) for triangular systems.
+/// @see zipper::expression::unary::TriangularView::solve — direct triangular
+///      solver (O(n^2)) for triangular systems.
 /// @see zipper::utils::solver::SolverResult — the result type returned on
 ///      convergence.
 /// @see zipper::utils::solver::SolverError — the error type returned on

@@ -44,8 +44,8 @@
 ///      to SPD matrices (one matvec per iteration, guaranteed convergence).
 /// @see zipper::utils::solver::gauss_seidel — stationary iterative method
 ///      for diagonally-dominant or SPD systems.
-/// @see zipper::utils::solver::triangular_solve — direct triangular solver
-///      (O(n^2)) for triangular systems.
+/// @see zipper::expression::unary::TriangularView::solve — direct triangular
+///      solver (O(n^2)) for triangular systems.
 /// @see zipper::utils::solver::SolverResult — the result type returned on
 ///      convergence.
 /// @see zipper::utils::solver::SolverError — the error type returned on

@@ -21,8 +21,8 @@
 ///
 /// This expression is read-only: it does not expose `coeff_ref` or `assign`.
 ///
-/// @see zipper::utils::solver::triangular_solve — forward/back substitution
-///      solver that takes a TriangularView as input.
+/// @see zipper::expression::unary::TriangularView::solve — forward/back
+///      substitution solver method on TriangularView.
 /// @see zipper::expression::detail::ContiguousIndexRange — the range type
 ///      returned by TriangularView::nonzero_range.
 /// @see zipper::expression::detail::NonzeroRange — concept satisfied by the
@@ -36,64 +36,12 @@
 
 #include "UnaryExpressionBase.hpp"
 #include "zipper/concepts/Expression.hpp"
+#include "zipper/concepts/Vector.hpp"
+#include "zipper/expression/TriangularMode.hpp"
 #include "zipper/expression/detail/NonzeroRange.hpp"
+#include "zipper/utils/solver/detail/triangular_substitute.hpp"
 
 namespace zipper::expression {
-
-/// @brief Bitmask flags that compose to form a TriangularMode.
-///
-/// The four fundamental bits are:
-///   - Lower   (0x1): include the lower triangle (row >= col)
-///   - Upper   (0x2): include the upper triangle (row <= col)
-///   - UnitDiag(0x4): force diagonal elements to 1
-///   - ZeroDiag(0x8): force diagonal elements to 0
-///
-/// Composite modes combine a triangle bit with a diagonal bit:
-///   - UnitLower     = Lower  | UnitDiag   (lower triangle with unit diagonal)
-///   - UnitUpper     = Upper  | UnitDiag   (upper triangle with unit diagonal)
-///   - StrictlyLower = Lower  | ZeroDiag   (lower triangle excluding diagonal)
-///   - StrictlyUpper = Upper  | ZeroDiag   (upper triangle excluding diagonal)
-///
-/// Using Lower or Upper alone passes through the child's diagonal values.
-enum class TriangularMode : unsigned {
-    Lower   = 0x1,
-    Upper   = 0x2,
-    UnitDiag = 0x4,
-    ZeroDiag = 0x8,
-
-    UnitLower     = Lower | UnitDiag,
-    UnitUpper     = Upper | UnitDiag,
-    StrictlyLower = Lower | ZeroDiag,
-    StrictlyUpper = Upper | ZeroDiag,
-};
-
-/// @brief Bitwise OR for TriangularMode flags.
-constexpr auto operator|(TriangularMode a, TriangularMode b) -> TriangularMode {
-    return static_cast<TriangularMode>(
-        static_cast<unsigned>(a) | static_cast<unsigned>(b));
-}
-
-/// @brief Bitwise AND for TriangularMode flags.
-constexpr auto operator&(TriangularMode a, TriangularMode b) -> TriangularMode {
-    return static_cast<TriangularMode>(
-        static_cast<unsigned>(a) & static_cast<unsigned>(b));
-}
-
-/// @brief Test whether a specific bit is set in a TriangularMode.
-constexpr auto has_flag(TriangularMode mode, TriangularMode flag) -> bool {
-    return (mode & flag) == flag;
-}
-
-/// @brief Checks that a TriangularMode value is well-formed:
-///   - Exactly one of Lower or Upper is set.
-///   - UnitDiag and ZeroDiag are not both set.
-template <TriangularMode Mode>
-consteval auto is_valid_triangular_mode() -> bool {
-    return (has_flag(Mode, TriangularMode::Lower) !=
-            has_flag(Mode, TriangularMode::Upper)) &&
-           !(has_flag(Mode, TriangularMode::UnitDiag) &&
-             has_flag(Mode, TriangularMode::ZeroDiag));
-}
 
 /// @brief Combined constraint for TriangularView: the mode must be valid
 ///        and the child expression must be rank-2.
@@ -362,6 +310,41 @@ public:
     auto row_range_for_col(index_type col) const
         -> zipper::expression::detail::ContiguousIndexRange {
         return nonzero_range<0>(col);
+    }
+
+    // ── Solve ────────────────────────────────────────────────────────────
+    /// @brief Solve T * x = b using forward or back substitution.
+    ///
+    /// This dispatches to forward substitution (Lower modes) or back
+    /// substitution (Upper modes) at compile time.
+    ///
+    /// @param  b  Right-hand side vector.
+    /// @return `std::expected<Vector<T, Dim>, SolverError>` — the solution
+    ///         on success, or a breakdown error on zero pivot.
+    template <zipper::concepts::Vector BDerived>
+    auto solve(const BDerived &b) const {
+        using T = typename BDerived::value_type;
+        constexpr auto Dim = BDerived::extents_type::static_extent(0);
+
+        using ResultVec = zipper::Vector<T, Dim>;
+        using Result =
+            std::expected<ResultVec, zipper::utils::solver::SolverError>;
+
+        ResultVec x(b);
+
+        std::expected<void, zipper::utils::solver::SolverError> status;
+        if constexpr (has_flag(Mode, TriangularMode::Lower)) {
+            status = zipper::utils::solver::detail::
+                forward_substitute_inplace<Mode>(*this, x);
+        } else {
+            status = zipper::utils::solver::detail::
+                back_substitute_inplace<Mode>(*this, x);
+        }
+
+        if (!status) {
+            return Result{std::unexpected(std::move(status.error()))};
+        }
+        return Result{std::move(x)};
     }
 };
 

@@ -47,7 +47,6 @@
 #include <zipper/expression/nullary/Constant.hpp>
 #include <zipper/expression/unary/TriangularView.hpp>
 #include <zipper/utils/solver/result.hpp>
-#include <zipper/utils/solver/triangular_solve.hpp>
 
 namespace zipper::utils::decomposition {
 
@@ -59,11 +58,79 @@ namespace zipper::utils::decomposition {
 ///
 /// L is an n x n unit lower triangular matrix and D is a diagonal stored as
 /// an n-element vector, such that A = L * D * L^T.
+///
+/// Calling `.solve(b)` performs forward substitution, diagonal solve, and
+/// back substitution using the stored factors to solve A*x = b without
+/// re-factoring.
 template <typename T, index_type N> struct LDLTResult {
+  /// Scalar type of the decomposition.
+  using value_type = T;
+
   /// Unit lower triangular factor L (n x n, ones on diagonal).
   Matrix<T, N, N> L;
   /// Diagonal factor D (n elements).
   Vector<T, N> D;
+
+  /// @brief Solve A*x = b using the stored LDLT factors.
+  ///
+  /// Performs:
+  ///   1. Forward substitution:  L * y = b      (unit lower triangular)
+  ///   2. Diagonal solve:        D * z = y      (element-wise division)
+  ///   3. Back substitution:     L^T * x = z    (unit upper triangular)
+  ///
+  /// @param b  Right-hand side vector of length n.
+  /// @return   `std::expected<Vector<T,N>, SolverError>` — the solution on
+  ///           success, or a breakdown error if D contains a zero pivot.
+  template <concepts::Vector BDerived>
+  auto solve(const BDerived &b) const
+      -> std::expected<Vector<T, N>, solver::SolverError> {
+    using ResultVec = Vector<T, N>;
+    using Result = std::expected<ResultVec, solver::SolverError>;
+
+    const index_type n = L.extent(0);
+
+    // 1. Forward substitution: L * y = b  (L is unit lower triangular).
+    auto L_lower = expression::triangular_view<
+        expression::TriangularMode::UnitLower>(L);
+    auto y_result = L_lower.solve(b);
+
+    if (!y_result) {
+      return Result{std::unexpected(std::move(y_result.error()))};
+    }
+
+    // 2. Diagonal solve: D * z = y  →  z(i) = y(i) / D(i).
+    ResultVec z(n);
+    for (index_type i = 0; i < n; ++i) {
+      if (std::abs(D(i)) <= std::numeric_limits<T>::epsilon()) {
+        return Result{std::unexpected(solver::SolverError{
+            .kind = solver::SolverError::Kind::breakdown,
+            .message = "LDLT solve: zero diagonal entry D(" +
+                       std::to_string(i) + ") — matrix is singular"})};
+      }
+      z(i) = (*y_result)(i) / D(i);
+    }
+
+    // 3. Back substitution: L^T * x = z  (L^T is unit upper triangular).
+    //    Build L^T explicitly since TriangularView masks entries but does
+    //    not transpose.
+    Matrix<T, N, N> Lt(n, n);
+    Lt = expression::nullary::Constant(T{0}, Lt.extents());
+    for (index_type i = 0; i < n; ++i) {
+      for (index_type j = i; j < n; ++j) {
+        Lt(i, j) = L(j, i);
+      }
+    }
+
+    auto Lt_upper = expression::triangular_view<
+        expression::TriangularMode::UnitUpper>(Lt);
+    auto x_result = Lt_upper.solve(z);
+
+    if (!x_result) {
+      return Result{std::unexpected(std::move(x_result.error()))};
+    }
+
+    return Result{std::move(*x_result)};
+  }
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -139,10 +206,7 @@ auto ldlt(const Derived &A)
 
 /// @brief Solve Ax = b via LDLT decomposition.
 ///
-/// Factors A = L * D * L^T, then solves:
-///   1. L * y = b      (forward substitution, unit lower triangular)
-///   2. D * z = y      (element-wise division)
-///   3. L^T * x = z    (back substitution, unit upper triangular)
+/// Factors A = L * D * L^T, then delegates to `LDLTResult::solve(b)`.
 ///
 /// Requires A to be symmetric.  For a unique solution, A must also be
 /// non-singular (all D(j) != 0).
@@ -160,57 +224,12 @@ auto ldlt_solve(const ADerived &A, const BDerived &b) {
   using ResultVec = Vector<T, N>;
   using Result = std::expected<ResultVec, solver::SolverError>;
 
-  // 1. Factor A = L * D * L^T.
   auto ldlt_result = ldlt(A);
   if (!ldlt_result) {
     return Result{std::unexpected(std::move(ldlt_result.error()))};
   }
 
-  auto &L = ldlt_result->L;
-  auto &D = ldlt_result->D;
-  const index_type n = A.extent(0);
-
-  // 2. Forward substitution: L * y = b  (L is unit lower triangular).
-  auto L_lower = expression::triangular_view<
-      expression::TriangularMode::UnitLower>(L);
-  auto y_result = solver::triangular_solve(L_lower, b);
-
-  if (!y_result) {
-    return Result{std::unexpected(std::move(y_result.error()))};
-  }
-
-  // 3. Diagonal solve: D * z = y  →  z(i) = y(i) / D(i).
-  ResultVec z(n);
-  for (index_type i = 0; i < n; ++i) {
-    if (std::abs(D(i)) <= std::numeric_limits<T>::epsilon()) {
-      return Result{std::unexpected(solver::SolverError{
-          .kind = solver::SolverError::Kind::breakdown,
-          .message = "LDLT solve: zero diagonal entry D(" +
-                     std::to_string(i) + ") — matrix is singular"})};
-    }
-    z(i) = (*y_result)(i) / D(i);
-  }
-
-  // 4. Back substitution: L^T * x = z  (L^T is unit upper triangular).
-  //    Build L^T explicitly since TriangularView masks entries but does
-  //    not transpose.
-  Matrix<T, N, N> Lt(n, n);
-  Lt = expression::nullary::Constant(T{0}, Lt.extents());
-  for (index_type i = 0; i < n; ++i) {
-    for (index_type j = i; j < n; ++j) {
-      Lt(i, j) = L(j, i);
-    }
-  }
-
-  auto Lt_upper = expression::triangular_view<
-      expression::TriangularMode::UnitUpper>(Lt);
-  auto x_result = solver::triangular_solve(Lt_upper, z);
-
-  if (!x_result) {
-    return Result{std::unexpected(std::move(x_result.error()))};
-  }
-
-  return Result{std::move(*x_result)};
+  return ldlt_result->solve(b);
 }
 
 } // namespace zipper::utils::decomposition

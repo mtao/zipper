@@ -41,7 +41,6 @@
 #include <zipper/expression/nullary/Constant.hpp>
 #include <zipper/expression/unary/TriangularView.hpp>
 #include <zipper/utils/solver/result.hpp>
-#include <zipper/utils/solver/triangular_solve.hpp>
 
 namespace zipper::utils::decomposition {
 
@@ -52,9 +51,63 @@ namespace zipper::utils::decomposition {
 /// Result of a Cholesky (LLT) decomposition.
 ///
 /// L is an n x n lower triangular matrix such that A = L * L^T.
+///
+/// Calling `.solve(b)` performs forward/back substitution using the stored
+/// factor to solve A*x = b without re-factoring.
 template <typename T, index_type N> struct LLTResult {
+  /// Scalar type of the decomposition.
+  using value_type = T;
+
   /// Lower triangular Cholesky factor L (n x n).
   Matrix<T, N, N> L;
+
+  /// @brief Solve A*x = b using the stored Cholesky factor.
+  ///
+  /// Performs:
+  ///   1. Forward substitution:  L * y = b
+  ///   2. Back substitution:     L^T * x = y
+  ///
+  /// @param b  Right-hand side vector of length n.
+  /// @return   `std::expected<Vector<T,N>, SolverError>` — the solution on
+  ///           success, or a breakdown error if a zero pivot is encountered.
+  template <concepts::Vector BDerived>
+  auto solve(const BDerived &b) const
+      -> std::expected<Vector<T, N>, solver::SolverError> {
+    using ResultVec = Vector<T, N>;
+    using Result = std::expected<ResultVec, solver::SolverError>;
+
+    const index_type n = L.extent(0);
+
+    // 1. Forward substitution: L * y = b.
+    auto L_lower =
+        expression::triangular_view<expression::TriangularMode::Lower>(L);
+    auto y_result = L_lower.solve(b);
+
+    if (!y_result) {
+      return Result{std::unexpected(std::move(y_result.error()))};
+    }
+
+    // 2. Back substitution: L^T * x = y.
+    //    Build L^T explicitly since TriangularView masks entries but does
+    //    not transpose.
+    Matrix<T, N, N> Lt(n, n);
+    Lt = expression::nullary::Constant(T{0}, Lt.extents());
+    for (index_type i = 0; i < n; ++i) {
+      for (index_type j = i; j < n; ++j) {
+        Lt(i, j) = L(j, i);
+      }
+    }
+
+    auto Lt_upper =
+        expression::triangular_view<expression::TriangularMode::Upper>(Lt);
+    auto x_result = Lt_upper.solve(*y_result);
+
+    if (!x_result) {
+      return Result{std::unexpected(std::move(x_result.error()))};
+    }
+
+    return Result{std::move(*x_result)};
+  }
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -123,9 +176,7 @@ auto llt(const Derived &A)
 
 /// @brief Solve Ax = b via Cholesky (LLT) decomposition.
 ///
-/// Factors A = L * L^T, then solves:
-///   1. L * y = b   (forward substitution)
-///   2. L^T * x = y (back substitution)
+/// Factors A = L * L^T, then delegates to `LLTResult::solve(b)`.
 ///
 /// Requires A to be symmetric positive definite.
 ///
@@ -142,46 +193,12 @@ auto llt_solve(const ADerived &A, const BDerived &b) {
   using ResultVec = Vector<T, N>;
   using Result = std::expected<ResultVec, solver::SolverError>;
 
-  // 1. Factor A = L * L^T.
   auto llt_result = llt(A);
   if (!llt_result) {
     return Result{std::unexpected(std::move(llt_result.error()))};
   }
 
-  auto &L = llt_result->L;
-
-  // 2. Forward substitution: L * y = b.
-  auto L_lower = expression::triangular_view<
-      expression::TriangularMode::Lower>(L);
-  auto y_result = solver::triangular_solve(L_lower, b);
-
-  if (!y_result) {
-    return Result{std::unexpected(std::move(y_result.error()))};
-  }
-
-  // 3. Back substitution: L^T * x = y.
-  //    We need to solve an upper triangular system with L^T.
-  //    Since triangular_solve expects a TriangularView, we construct an
-  //    upper triangular view of L^T.  However, zipper's TriangularView
-  //    masks entries rather than transposing, so we explicitly build L^T.
-  const index_type n = A.extent(0);
-  Matrix<T, N, N> Lt(n, n);
-  Lt = expression::nullary::Constant(T{0}, Lt.extents());
-  for (index_type i = 0; i < n; ++i) {
-    for (index_type j = i; j < n; ++j) {
-      Lt(i, j) = L(j, i);
-    }
-  }
-
-  auto Lt_upper = expression::triangular_view<
-      expression::TriangularMode::Upper>(Lt);
-  auto x_result = solver::triangular_solve(Lt_upper, *y_result);
-
-  if (!x_result) {
-    return Result{std::unexpected(std::move(x_result.error()))};
-  }
-
-  return Result{std::move(*x_result)};
+  return llt_result->solve(b);
 }
 
 } // namespace zipper::utils::decomposition

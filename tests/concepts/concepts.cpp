@@ -3,7 +3,12 @@
 #include <zipper/Matrix.hpp>
 #include <zipper/Tensor.hpp>
 #include <zipper/Vector.hpp>
+#include <zipper/concepts/DirectSolver.hpp>
 #include <zipper/concepts/Zipper.hpp>
+#include <zipper/expression/unary/TriangularView.hpp>
+#include <zipper/utils/decomposition/ldlt.hpp>
+#include <zipper/utils/decomposition/llt.hpp>
+#include <zipper/utils/decomposition/qr.hpp>
 
 #include "../catch_include.hpp"
 
@@ -91,6 +96,41 @@ static_assert(!zipper::concepts::Zipper<
 // -----------------------------------------------------------------------
 static_assert(!zipper::concepts::Matrix<zipper::Vector<double, 3>>);
 static_assert(!zipper::concepts::Vector<zipper::Matrix<double, 3, 3>>);
+
+// -----------------------------------------------------------------------
+// DirectSolver concept: decomposition result types satisfy it
+// -----------------------------------------------------------------------
+using LLT3 = zipper::utils::decomposition::LLTResult<double, 3>;
+using LDLT3 = zipper::utils::decomposition::LDLTResult<double, 3>;
+using QRReduced33 = zipper::utils::decomposition::QRReducedResult<double, 3, 3>;
+using QRFull33 = zipper::utils::decomposition::QRFullResult<double, 3, 3>;
+
+static_assert(zipper::concepts::DirectSolver<LLT3>);
+static_assert(zipper::concepts::DirectSolver<LDLT3>);
+static_assert(zipper::concepts::DirectSolver<QRReduced33>);
+static_assert(zipper::concepts::DirectSolver<QRFull33>);
+
+// Negative: plain types do not satisfy DirectSolver.
+static_assert(!zipper::concepts::DirectSolver<int>);
+static_assert(!zipper::concepts::DirectSolver<double>);
+static_assert(!zipper::concepts::DirectSolver<zipper::Matrix<double, 3, 3>>);
+
+// TriangularView satisfies DirectSolver (has value_type + .solve(b)).
+using MDArr33 =
+    zipper::expression::nullary::MDArray<double, zipper::extents<3, 3>>;
+using LowerTriView =
+    zipper::expression::unary::TriangularView<
+        zipper::expression::TriangularMode::Lower, const MDArr33 &>;
+using UpperTriView =
+    zipper::expression::unary::TriangularView<
+        zipper::expression::TriangularMode::Upper, const MDArr33 &>;
+using UnitLowerTriView =
+    zipper::expression::unary::TriangularView<
+        zipper::expression::TriangularMode::UnitLower, const MDArr33 &>;
+
+static_assert(zipper::concepts::DirectSolver<LowerTriView>);
+static_assert(zipper::concepts::DirectSolver<UpperTriView>);
+static_assert(zipper::concepts::DirectSolver<UnitLowerTriView>);
 
 // -----------------------------------------------------------------------
 // Runtime tests (Catch2) — instantiate objects and confirm concepts work
