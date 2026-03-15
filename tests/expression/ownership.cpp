@@ -658,3 +658,76 @@ TEST_CASE("to_owned_produces_independent_copy",
     CHECK(sum(0) == 999.0 + 10.0);
     CHECK(owned(0) == 11.0);
 }
+
+// ============================================================
+// Slice safety: stores_references accounts for expression-typed
+// index slices, and make_owned() recursively owns them.
+// ============================================================
+
+TEST_CASE("slice_with_expression_index_stores_references",
+          "[ownership][slice][stores_references]") {
+    zipper::Vector<double, 5> data{10.0, 20.0, 30.0, 40.0, 50.0};
+    zipper::Vector<zipper::index_type, 2> idx{{1, 3}};
+
+    // data(idx) goes through ZipperBase::operator() which calls
+    // expression()(unwrapped_idx), returning a raw Slice expression.
+    auto s = data(idx);
+    // s is a Slice<const MDArray<double,5>&, MDArray<index_type,2>>
+    // The main child is by reference → stores_references == true
+    using slice_t = std::decay_t<decltype(s)>;
+    static_assert(slice_t::stores_references,
+        "Slice with lvalue main child should store references");
+
+    CHECK(s(0) == 20.0);
+    CHECK(s(1) == 40.0);
+
+    // Mutation through main child reference is visible
+    data(1) = 99.0;
+    CHECK(s(0) == 99.0);
+}
+
+TEST_CASE("slice_make_owned_with_expression_index",
+          "[ownership][slice][make_owned]") {
+    zipper::Vector<double, 5> data{10.0, 20.0, 30.0, 40.0, 50.0};
+    zipper::Vector<zipper::index_type, 2> idx{{1, 3}};
+
+    auto s = data(idx);
+    CHECK(s(0) == 20.0);
+    CHECK(s(1) == 40.0);
+
+    // make_owned should deep-copy both the main child AND the index slice
+    auto owned = s.make_owned();
+    static_assert(!decltype(owned)::stores_references,
+        "Owned slice should not store references");
+
+    CHECK(owned(0) == 20.0);
+    CHECK(owned(1) == 40.0);
+
+    // Mutations to originals should NOT affect the owned copy
+    data(1) = 999.0;
+    CHECK(owned(0) == 20.0);  // independent
+    CHECK(s(0) == 999.0);     // live view sees mutation
+}
+
+TEST_CASE("slice_to_owned_produces_no_references",
+          "[ownership][slice][to_owned]") {
+    zipper::Vector<double, 5> data{1.0, 2.0, 3.0, 4.0, 5.0};
+    zipper::Vector<zipper::index_type, 2> idx{{0, 2}};
+
+    // data(idx) returns a raw Slice expression (not wrapped)
+    auto s = data(idx);
+    using slice_t = std::decay_t<decltype(s)>;
+    static_assert(slice_t::stores_references);
+
+    // make_owned should produce a Slice with stores_references == false
+    auto owned = s.make_owned();
+    static_assert(!std::decay_t<decltype(owned)>::stores_references,
+        "make_owned() should produce a slice with no dangling references");
+
+    CHECK(owned(0) == 1.0);
+    CHECK(owned(1) == 3.0);
+
+    // Original mutation doesn't affect owned
+    data(0) = 999.0;
+    CHECK(owned(0) == 1.0);
+}

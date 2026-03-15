@@ -97,11 +97,14 @@ public:
     if constexpr (concepts::IndexPack<std::decay_t<Args>...>) {
       return Base::operator()(std::forward<Args>(idxs)...);
     } else {
-      using R = expression::unary::Slice<const expression_type&, std::decay_t<Args>...>;
+      using R = expression::unary::Slice<const expression_type&,
+                    detail::slice_type_for_t<std::decay_t<Args>>...>;
       if constexpr (R::extents_type::rank() == 1) {
-        return VectorBase<R>(std::in_place, expression(), std::forward<Args>(idxs)...);
+        return VectorBase<R>(std::in_place, expression(),
+            Base::filter_args_for_zipperbase(std::forward<Args>(idxs))...);
       } else if constexpr (R::extents_type::rank() == 2) {
-        return MatrixBase<R>(std::in_place, expression(), std::forward<Args>(idxs)...);
+        return MatrixBase<R>(std::in_place, expression(),
+            Base::filter_args_for_zipperbase(std::forward<Args>(idxs))...);
       }
     }
   }
@@ -112,11 +115,14 @@ public:
     if constexpr (concepts::IndexPack<std::decay_t<Args>...>) {
       return Base::operator()(std::forward<Args>(idxs)...);
     } else {
-      using R = expression::unary::Slice<expression_type&, std::decay_t<Args>...>;
+      using R = expression::unary::Slice<expression_type&,
+                    detail::slice_type_for_t<std::decay_t<Args>>...>;
       if constexpr (R::extents_type::rank() == 1) {
-        return VectorBase<R>(std::in_place, expression(), std::forward<Args>(idxs)...);
+        return VectorBase<R>(std::in_place, expression(),
+            Base::filter_args_for_zipperbase(std::forward<Args>(idxs))...);
       } else if constexpr (R::extents_type::rank() == 2) {
-        return MatrixBase<R>(std::in_place, expression(), std::forward<Args>(idxs)...);
+        return MatrixBase<R>(std::in_place, expression(),
+            Base::filter_args_for_zipperbase(std::forward<Args>(idxs))...);
       }
     }
   }
@@ -159,12 +165,15 @@ public:
   }
 
   template <typename... Slices> auto slice(Slices &&...slices) const {
-    using V = expression::unary::Slice<const expression_type&, std::decay_t<Slices>...>;
+    using V = expression::unary::Slice<const expression_type&,
+                  detail::slice_type_for_t<std::decay_t<Slices>>...>;
     if constexpr (V::extents_type::rank() == 2) {
-      return MatrixBase<V>(std::in_place, expression(), std::forward<Slices>(slices)...);
+      return MatrixBase<V>(std::in_place, expression(),
+          Base::filter_args_for_zipperbase(std::forward<Slices>(slices))...);
     } else {
       static_assert(V::extents_type::rank() == 1);
-      return VectorBase<V>(std::in_place, expression(), std::forward<Slices>(slices)...);
+      return VectorBase<V>(std::in_place, expression(),
+          Base::filter_args_for_zipperbase(std::forward<Slices>(slices))...);
     }
   }
   template <typename... Slices> auto slice() const {
@@ -178,12 +187,15 @@ public:
   }
 
   template <typename... Slices> auto slice(Slices &&...slices) {
-    using V = expression::unary::Slice<expression_type&, std::decay_t<Slices>...>;
+    using V = expression::unary::Slice<expression_type&,
+                  detail::slice_type_for_t<std::decay_t<Slices>>...>;
     if constexpr (V::extents_type::rank() == 2) {
-      return MatrixBase<V>(std::in_place, expression(), std::forward<Slices>(slices)...);
+      return MatrixBase<V>(std::in_place, expression(),
+          Base::filter_args_for_zipperbase(std::forward<Slices>(slices))...);
     } else {
       static_assert(V::extents_type::rank() == 1);
-      return VectorBase<V>(std::in_place, expression(), std::forward<Slices>(slices)...);
+      return VectorBase<V>(std::in_place, expression(),
+          Base::filter_args_for_zipperbase(std::forward<Slices>(slices))...);
     }
   }
 

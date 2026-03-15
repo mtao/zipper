@@ -112,7 +112,11 @@ public:
   }
 
   constexpr auto extent(rank_type i) const -> index_type {
-    return lhs().extent(i);
+    if constexpr (a_extents_type::rank() == 0) {
+      return rhs().extent(i);
+    } else {
+      return lhs().extent(i);
+    }
   }
 
   constexpr auto extents() const -> extents_type {

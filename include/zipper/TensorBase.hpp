@@ -66,16 +66,20 @@ public:
     return TensorBase<V>(std::in_place, expression(), Slices{}...);
   }
   template <typename... Slices> auto slice(Slices &&...slices) const {
-    using V = expression::unary::Slice<const expression_type&, std::decay_t<Slices>...>;
-    return TensorBase<V>(std::in_place, expression(), std::forward<Slices>(slices)...);
+    using V = expression::unary::Slice<const expression_type&,
+                  detail::slice_type_for_t<std::decay_t<Slices>>...>;
+    return TensorBase<V>(std::in_place, expression(),
+        Base::filter_args_for_zipperbase(std::forward<Slices>(slices))...);
   }
   template <typename... Slices> auto slice() const {
     using V = expression::unary::Slice<const expression_type&, std::decay_t<Slices>...>;
     return TensorBase<V>(std::in_place, expression(), Slices{}...);
   }
   template <typename... Slices> auto slice(Slices &&...slices) {
-    using V = expression::unary::Slice<expression_type&, std::decay_t<Slices>...>;
-    return TensorBase<V>(std::in_place, expression(), std::forward<Slices>(slices)...);
+    using V = expression::unary::Slice<expression_type&,
+                  detail::slice_type_for_t<std::decay_t<Slices>>...>;
+    return TensorBase<V>(std::in_place, expression(),
+        Base::filter_args_for_zipperbase(std::forward<Slices>(slices))...);
   }
 };
 

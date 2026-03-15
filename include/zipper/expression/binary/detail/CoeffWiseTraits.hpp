@@ -6,10 +6,33 @@
 namespace zipper::expression::binary::detail {
 
 template <typename, typename> struct coeffwise_extents_values;
+
+/// Same-rank merge: static extents win over dynamic extents.
 template <index_type... Idxs, index_type... Idxs2>
+    requires(sizeof...(Idxs) == sizeof...(Idxs2))
 struct coeffwise_extents_values<extents<Idxs...>, extents<Idxs2...>> {
   using merged_extents_type =
       extents<(Idxs == std::dynamic_extent ? Idxs2 : Idxs)...>;
+};
+
+/// Rank-0 (infinite) on LHS: result takes the RHS extents.
+template <index_type... Idxs>
+    requires(sizeof...(Idxs) > 0)
+struct coeffwise_extents_values<extents<>, extents<Idxs...>> {
+  using merged_extents_type = extents<Idxs...>;
+};
+
+/// Rank-0 (infinite) on RHS: result takes the LHS extents.
+template <index_type... Idxs>
+    requires(sizeof...(Idxs) > 0)
+struct coeffwise_extents_values<extents<Idxs...>, extents<>> {
+  using merged_extents_type = extents<Idxs...>;
+};
+
+/// Both rank-0 (infinite): result is rank-0.
+template <>
+struct coeffwise_extents_values<extents<>, extents<>> {
+  using merged_extents_type = extents<>;
 };
 
 template <typename A, typename B> struct CoeffWiseTraits {

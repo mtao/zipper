@@ -21,6 +21,23 @@
 
 namespace zipper {
 
+namespace detail {
+/// Maps Zipper wrapper types to their underlying expression_type so that
+/// Slice template parameters always use raw expression types (which are
+/// freely copyable) rather than wrapper types (which may be NonReturnable).
+template <typename T>
+struct slice_type_for {
+    using type = T;
+};
+template <typename T>
+    requires(concepts::Zipper<T>)
+struct slice_type_for<T> {
+    using type = typename T::expression_type;
+};
+template <typename T>
+using slice_type_for_t = typename slice_type_for<T>::type;
+}  // namespace detail
+
 template <template <concepts::QualifiedExpression> typename DerivedT,
           concepts::QualifiedExpression Expression>
 class ZipperBase
@@ -282,7 +299,7 @@ protected:
   auto slice_expression(Slices &&...slices) const {
     using my_expression_type =
         expression::unary::Slice<const expression_type &,
-                                 std::decay_t<Slices>...>;
+                                 detail::slice_type_for_t<std::decay_t<Slices>>...>;
 
     return my_expression_type(
         expression(),
@@ -292,25 +309,26 @@ protected:
   template <typename... Slices> auto slice_expression() const {
     using my_expression_type =
         expression::unary::Slice<const expression_type &,
-                                 std::decay_t<Slices>...>;
+                                 detail::slice_type_for_t<std::decay_t<Slices>>...>;
     return my_expression_type(expression(), Slices{}...);
   }
 
   template <typename... Slices> auto slice_expression(Slices &&...slices) {
     using my_expression_type =
-        expression::unary::Slice<expression_type &, std::decay_t<Slices>...>;
+        expression::unary::Slice<expression_type &,
+                                 detail::slice_type_for_t<std::decay_t<Slices>>...>;
     return my_expression_type(
         expression(),
         filter_args_for_zipperbase(std::forward<Slices>(slices))...);
   }
   template <typename... Slices> auto slice_expression() {
     using my_expression_type =
-        expression::unary::Slice<expression_type &, std::decay_t<Slices>...>;
+        expression::unary::Slice<expression_type &,
+                                 detail::slice_type_for_t<std::decay_t<Slices>>...>;
     return my_expression_type(expression(), Slices{}...);
   }
 
 public:
-private:
   /// Helper to prevent zipperbase arguments get passed into the expression
   /// namespace
   template <typename T>
@@ -321,6 +339,7 @@ private:
       return std::forward<T>(v);
     }
   }
+private:
   Expression m_expression;
 };
 

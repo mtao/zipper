@@ -26,6 +26,7 @@ template <typename OffsetType, typename ExtentType, typename StrideType>
 struct slice_helper<strided_slice<OffsetType, ExtentType, StrideType>> {
    public:
     using type = strided_slice<OffsetType, ExtentType, StrideType>;
+    constexpr static bool stores_references = false;
     constexpr slice_helper(const type &t) : m_slice(t) {}
     constexpr static auto get_extent(const auto &stride, const auto &extent) {
         return extent > 0 ? 1 + (extent - 1) / stride : 0;
@@ -65,6 +66,7 @@ struct slice_helper<strided_slice<OffsetType, ExtentType, StrideType>> {
     }
 
     constexpr auto slice() const -> const type & { return m_slice; }
+    constexpr auto make_owned() const -> slice_helper { return *this; }
 
    private:
     type m_slice;
@@ -73,6 +75,7 @@ template <>
 struct slice_helper<full_extent_t> {
    public:
     using type = full_extent_t;
+    constexpr static bool stores_references = false;
     constexpr slice_helper(const type &) {}
     template <rank_type N, zipper::concepts::Extents ET>
     constexpr static index_type static_extent() {
@@ -86,12 +89,14 @@ struct slice_helper<full_extent_t> {
     constexpr index_type get_index(index_type input) const { return input; }
 
     constexpr auto slice() const -> type { return full_extent_t{}; }
+    constexpr auto make_owned() const -> slice_helper { return *this; }
 };
 template <typename T>
     requires(std::is_integral_v<T>)
 struct slice_helper<T> {
    public:
     using type = index_type;
+    constexpr static bool stores_references = false;
     constexpr slice_helper(const type &t) : m_slice(t) {}
     template <rank_type N, zipper::concepts::Extents ET>
     constexpr static index_type static_extent() {
@@ -105,6 +110,7 @@ struct slice_helper<T> {
     constexpr index_type get_index() const { return m_slice; }
 
     constexpr auto slice() const -> const type & { return m_slice; }
+    constexpr auto make_owned() const -> slice_helper { return *this; }
 
    private:
     index_type m_slice;
@@ -114,6 +120,7 @@ template <index_type N>
 struct slice_helper<std::integral_constant<index_type, N>> {
    public:
     using type = std::integral_constant<index_type, N>;
+    constexpr static bool stores_references = false;
     constexpr slice_helper(std::integral_constant<index_type, N>) {}
     template <rank_type M, zipper::concepts::Extents ET>
     constexpr static index_type static_extent() {
@@ -127,12 +134,17 @@ struct slice_helper<std::integral_constant<index_type, N>> {
     constexpr index_type get_index() const { return N; }
 
     constexpr auto slice() const -> type { return type{}; }
+    constexpr auto make_owned() const -> slice_helper { return *this; }
 };
 template <zipper::concepts::QualifiedExpression Expr>
     requires(Expr::extents_type::rank() == 1)
 struct slice_helper<Expr> {
    public:
     using type = Expr;
+    using expr_traits =
+        zipper::expression::detail::ExpressionTraits<std::decay_t<Expr>>;
+    /// The stored expression may itself hold references to external data.
+    constexpr static bool stores_references = expr_traits::stores_references;
     constexpr slice_helper(const type &t) : m_slice(t) {}
     template <rank_type M, zipper::concepts::Extents ET>
     constexpr static index_type static_extent() {
@@ -149,43 +161,27 @@ struct slice_helper<Expr> {
 
     constexpr auto slice() const -> const type & { return m_slice; }
 
+    /// Deep-copy the stored expression so the result owns all data.
+    auto make_owned() const {
+        auto owned_expr = m_slice.make_owned();
+        return slice_helper<decltype(owned_expr)>(std::move(owned_expr));
+    }
+
    private:
     type m_slice;
 };
 
-// ZipperBase-derived types (e.g. Vector<index_type, N>) used as index slices
-template <typename Wrapper>
-    requires(!zipper::concepts::QualifiedExpression<Wrapper> &&
-             zipper::concepts::detail::IsZipperBase<std::decay_t<Wrapper>>::value &&
-             Wrapper::extents_type::rank() == 1 &&
-             zipper::concepts::Index<typename Wrapper::value_type>)
-struct slice_helper<Wrapper> {
-   public:
-    using type = Wrapper;
-    constexpr slice_helper(const type &t) : m_slice(t) {}
-    template <rank_type M, zipper::concepts::Extents ET>
-    constexpr static index_type static_extent() {
-        return Wrapper::extents_type::static_extent(0);
-    }
-    template <rank_type M, zipper::concepts::Extents ET>
-    constexpr static index_type extent(const type &t, const ET &) {
-        return t.extent(0);
-    }
-
-    constexpr index_type get_index(index_type input) const {
-        return m_slice(input);
-    }
-
-    constexpr auto slice() const -> const type & { return m_slice; }
-
-   private:
-    type m_slice;
-};
+// Note: A slice_helper<Wrapper> specialization for ZipperBase-derived types
+// is no longer needed. ZipperBase::slice_expression() now unwraps wrapper
+// types at the type level via detail::slice_type_for_t, so slice_helper
+// always receives the raw expression type (handled by the QualifiedExpression
+// specialization above).
 
 template <size_t N>
 struct slice_helper<std::array<index_type, N>> {
    public:
     using type = std::array<index_type, N>;
+    constexpr static bool stores_references = false;
     constexpr slice_helper(const type &t) : m_slice(t) {}
     template <rank_type M, zipper::concepts::Extents ET>
     constexpr static index_type static_extent() {
@@ -201,6 +197,7 @@ struct slice_helper<std::array<index_type, N>> {
     }
 
     constexpr auto slice() const -> const type & { return m_slice; }
+    constexpr auto make_owned() const -> slice_helper { return *this; }
 
    private:
     type m_slice;
@@ -209,6 +206,7 @@ template <>
 struct slice_helper<std::vector<index_type>> {
    public:
     using type = std::vector<index_type>;
+    constexpr static bool stores_references = false;
     constexpr slice_helper(const type &t) : m_slice(t) {}
     template <rank_type N, zipper::concepts::Extents ET>
     constexpr static index_type static_extent() {
@@ -224,6 +222,7 @@ struct slice_helper<std::vector<index_type>> {
     }
 
     constexpr auto slice() const -> const type & { return m_slice; }
+    constexpr auto make_owned() const -> slice_helper { return *this; }
 
    private:
     std::vector<index_type> m_slice;
@@ -386,6 +385,16 @@ struct detail::ExpressionTraits<unary::Slice<ExprType, Slices...>>
 
     using extents_type = typename _Detail::extents_helper::extents_type;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
+
+    /// stores_references accounts for BOTH the main child expression AND
+    /// any expression-typed index slices stored in m_slices.  Without this,
+    /// a Slice whose main child is owned by value but whose index slice
+    /// holds a dangling reference would incorrectly report stores_references
+    /// == false.
+    constexpr static bool stores_references =
+        zipper::expression::unary::detail::DefaultUnaryExpressionTraits<
+            ExprType>::stores_references ||
+        (unary::_detail_slice::slice_helper<std::decay_t<Slices>>::stores_references || ...);
 };
 
 namespace unary {
@@ -501,8 +510,8 @@ class Slice : public UnaryExpressionBase<Slice<ExprType, Slices...>,
     }
 
     /// Recursively deep-copy child so the result owns all data.
-    /// Slice parameters (offsets, extents, strides) are value types and
-    /// are copied directly.
+    /// Both the main child expression AND any expression-typed index
+    /// slices are recursively owned via their slice_helper::make_owned().
     auto make_owned() const {
         return _make_owned_impl(
             std::make_integer_sequence<rank_type, sizeof...(Slices)>{});
@@ -512,9 +521,16 @@ class Slice : public UnaryExpressionBase<Slice<ExprType, Slices...>,
     template <rank_type... Is>
     auto _make_owned_impl(std::integer_sequence<rank_type, Is...>) const {
         auto owned_child = expression().make_owned();
-        return Slice<const decltype(owned_child), Slices...>(
+        // Each slice_helper::make_owned() returns a new slice_helper that
+        // owns its data.  For value types (strided_slice, array, etc.) this
+        // is a copy.  For expression types, this recursively deep-copies.
+        auto owned_slices = std::make_tuple(
+            std::get<Is>(m_slices).make_owned()...);
+        using owned_tuple_t = decltype(owned_slices);
+        return Slice<const decltype(owned_child),
+                     typename std::tuple_element_t<Is, owned_tuple_t>::type...>(
             std::move(owned_child),
-            std::get<Is>(m_slices).slice()...);
+            std::get<Is>(owned_slices).slice()...);
     }
 
     extents_type m_extents;
