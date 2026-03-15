@@ -44,6 +44,31 @@ template <concepts::Index A, concepts::Index B>
 constexpr auto modulus(const A &a, const B &b) {
   return apply_binop<std::modulus<index_type>, A, B>(a, b);
 }
+
+/// Functor for compile-time min — `std::min` is a function, not a type, so it
+/// cannot be passed as a template type parameter to `apply_binop`.
+struct min_op {
+  constexpr index_type operator()(index_type a, index_type b) const {
+    return a < b ? a : b;
+  }
+};
+/// Functor for compile-time max (see `min_op` rationale).
+struct max_op {
+  constexpr index_type operator()(index_type a, index_type b) const {
+    return a > b ? a : b;
+  }
+};
+
+/// Extent-aware min: returns `dynamic_extent` when either operand is dynamic.
+template <concepts::Index A, concepts::Index B>
+constexpr auto min(const A &a, const B &b) {
+  return apply_binop<min_op, A, B>(a, b);
+}
+/// Extent-aware max: returns `dynamic_extent` when either operand is dynamic.
+template <concepts::Index A, concepts::Index B>
+constexpr auto max(const A &a, const B &b) {
+  return apply_binop<max_op, A, B>(a, b);
+}
 template <concepts::Index Type> struct ConstexprArithmetic {
   constexpr ConstexprArithmetic(const Type &t = {}) : m_value(t) {}
   constexpr bool is_dynamic() const { return m_value == std::dynamic_extent; }

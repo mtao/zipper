@@ -38,6 +38,12 @@ struct DefaultBinaryExpressionDetail {
 /// up on the decayed (unqualified) type.
 template <zipper::concepts::QualifiedExpression ChildA,
           zipper::concepts::QualifiedExpression ChildB>
+  requires(std::is_convertible_v<
+               typename expression::detail::ExpressionTraits<std::decay_t<ChildA>>::value_type,
+               typename expression::detail::ExpressionTraits<std::decay_t<ChildB>>::value_type> ||
+           std::is_convertible_v<
+               typename expression::detail::ExpressionTraits<std::decay_t<ChildB>>::value_type,
+               typename expression::detail::ExpressionTraits<std::decay_t<ChildA>>::value_type>)
 struct DefaultBinaryExpressionTraits
     : public expression::detail::BasicExpressionTraits<
           typename expression::detail::ExpressionTraits<std::decay_t<ChildA>>::value_type,

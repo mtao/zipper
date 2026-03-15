@@ -38,7 +38,7 @@ template <typename T>
 using slice_type_for_t = typename slice_type_for<T>::type;
 }  // namespace detail
 
-template <template <concepts::QualifiedExpression> typename DerivedT,
+template <template <typename> typename DerivedT,
           concepts::QualifiedExpression Expression>
 class ZipperBase
     : public detail::returnability_mixin_t<

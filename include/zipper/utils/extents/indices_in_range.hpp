@@ -46,11 +46,11 @@ auto indices_in_range(std::integer_sequence<rank_type, N...>,
 }
 
 template <concepts::Extents Extents, concepts::Index... Indices>
+  requires(Extents::rank() == 0 || Extents::rank() == sizeof...(Indices))
 auto indices_in_range(const Extents &e, const Indices &...i) -> bool {
   if constexpr (Extents::rank() == 0) {
     return true;
   } else {
-    static_assert(Extents::rank() == sizeof...(Indices));
     return indices_in_range(
         std::make_integer_sequence<rank_type, Extents::rank()>{}, e, i...);
   }

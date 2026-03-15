@@ -101,6 +101,10 @@ struct OutputExtentsHelper {
 /// The class body needs these to map output dimension indices back to
 /// child dimension indices.
 template <zipper::concepts::QualifiedExpression ExprType, rank_type... InsertedDims>
+  requires(((InsertedDims <
+             unary::_detail_antislice::output_rank_v<
+                 detail::ExpressionTraits<std::decay_t<ExprType>>::extents_type::rank(),
+                 sizeof...(InsertedDims)>) && ...))
 struct detail::ExpressionDetail<unary::AntiSlice<ExprType, InsertedDims...>> {
     using child_traits = detail::ExpressionTraits<std::decay_t<ExprType>>;
     using child_extents_type = typename child_traits::extents_type;
@@ -127,9 +131,6 @@ struct detail::ExpressionTraits<unary::AntiSlice<ExprType, InsertedDims...>>
     using extents_type = typename unary::_detail_antislice::OutputExtentsHelper<
         typename _Detail::child_extents_type, _Detail::output_rank, InsertedDims...>::type;
 
-    // Validate that InsertedDims are all < output_rank (compile-time)
-    static_assert(((InsertedDims < _Detail::output_rank) && ...),
-                  "InsertedDims must be valid positions in the output rank");
 
     constexpr static bool is_coefficient_consistent = false;
     constexpr static bool is_value_based = false;

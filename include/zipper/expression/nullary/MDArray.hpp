@@ -64,9 +64,9 @@ public:
 
   template <zipper::concepts::Extents E2>
   void resize(const E2 &e)
-    requires(extents_traits::template is_convertable_from<E2>() && !IsStatic)
+    requires(extents_traits::template is_convertable_from<E2>() && !IsStatic &&
+             E2::rank() != 0)
   {
-    static_assert(E2::rank() != 0);
     this->resize_extents(e);
     linear_accessor().container().resize(
         zipper::detail::ExtentsTraits<E2>::size(e));

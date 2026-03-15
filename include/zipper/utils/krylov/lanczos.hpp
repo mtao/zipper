@@ -95,11 +95,11 @@ struct LanczosResult {
 ///                 sizing, or std::integral_constant<index_type, N>{} (aka
 ///                 static_index_t<N>{}) to fix the dimension at compile time.
 template <concepts::Matrix Derived, concepts::Vector BDerived>
+  requires(std::is_same_v<typename std::decay_t<Derived>::value_type,
+                          typename std::decay_t<BDerived>::value_type>)
 auto lanczos(const Derived &M, const BDerived &v1, auto n_param) {
   using MType = std::decay_t<Derived>;
   using Scalar = typename MType::value_type;
-  static_assert(
-      std::is_same_v<Scalar, typename std::decay_t<BDerived>::value_type>);
 
   constexpr index_type RowsStatic = MType::extents_type::static_extent(0);
   if constexpr (!MType::extents_traits::is_static) {

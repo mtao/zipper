@@ -22,6 +22,14 @@ class CrossProduct;
 /// and by the class body to access child traits (as lhs_traits / rhs_traits).
 template <zipper::concepts::QualifiedRankedExpression<1> A,
           zipper::concepts::QualifiedRankedExpression<1> B>
+  requires(binary::detail::coeffwise_extents_values<
+               typename detail::ExpressionTraits<std::decay_t<A>>::extents_type,
+               typename detail::ExpressionTraits<std::decay_t<B>>::extents_type
+           >::merged_extents_type::static_extent(0) == std::dynamic_extent ||
+           binary::detail::coeffwise_extents_values<
+               typename detail::ExpressionTraits<std::decay_t<A>>::extents_type,
+               typename detail::ExpressionTraits<std::decay_t<B>>::extents_type
+           >::merged_extents_type::static_extent(0) == 3)
 struct detail::ExpressionDetail<binary::CrossProduct<A, B>>
     : public binary::detail::DefaultBinaryExpressionDetail<A, B> {
     using _Base = binary::detail::DefaultBinaryExpressionDetail<A, B>;
@@ -37,9 +45,6 @@ struct detail::ExpressionTraits<binary::CrossProduct<A, B>>
     using _Detail = detail::ExpressionDetail<binary::CrossProduct<A, B>>;
     using extents_type = typename _Detail::ConvertExtentsUtil::merged_extents_type;
 
-    // constraint on the extent, supporting 2d is ugly but who cares
-    static_assert(extents_type::static_extent(0) == std::dynamic_extent ||
-                  extents_type::static_extent(0) == 3);
     constexpr static bool is_coefficient_consistent = false;
     constexpr static bool is_value_based = false;
 };

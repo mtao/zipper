@@ -9,13 +9,15 @@
 namespace zipper::expression::binary {
 namespace _detail_arith {
 template <zipper::concepts::QualifiedExpression ExprA, zipper::concepts::QualifiedExpression ExprB>
+  requires(std::is_same_v<
+      typename expression::detail::ExpressionTraits<std::decay_t<ExprA>>::value_type,
+      typename expression::detail::ExpressionTraits<std::decay_t<ExprB>>::value_type>)
 struct scalar_type {
     using ATraits = expression::detail::ExpressionTraits<std::decay_t<ExprA>>;
     using BTraits = expression::detail::ExpressionTraits<std::decay_t<ExprB>>;
 
     using a_value_type = ATraits::value_type;
     using b_value_type = BTraits::value_type;
-    static_assert(std::is_same_v<a_value_type, b_value_type>);
     using type = a_value_type;
 };
 

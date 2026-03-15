@@ -23,6 +23,7 @@
 #include <vector>
 
 #include <zipper/Matrix.hpp>
+#include <zipper/Tensor.hpp>
 #include <zipper/Vector.hpp>
 #include <zipper/as.hpp>
 #include <zipper/concepts/Zipper.hpp>
@@ -678,4 +679,179 @@ TEST_CASE("rvalue+rvalue: (a+b)+(c+d) chained",
     REQUIRE(chain(0) == 115.0);
     REQUIRE(chain(1) == 227.0);
     REQUIRE(chain(2) == 339.0);
+}
+
+// ============================================================================
+// Section 12: Implicit squeeze / degenerate-dimension slicing in as_*
+// ============================================================================
+
+TEST_CASE("as_vector on Matrix<double,3,1> squeezes column dimension",
+          "[squeeze][as_vector][matrix]") {
+    Matrix<double, 3, 1> m({{1.0}, {2.0}, {3.0}});
+
+    auto v = as_vector(m);
+
+    // Result should be a rank-1 VectorBase view
+    STATIC_REQUIRE(decltype(v)::expression_traits::extents_type::rank() == 1);
+    REQUIRE(v.extent(0) == 3);
+    REQUIRE(v(0) == 1.0);
+    REQUIRE(v(1) == 2.0);
+    REQUIRE(v(2) == 3.0);
+}
+
+TEST_CASE("as_vector on Matrix<double,1,3> squeezes row dimension",
+          "[squeeze][as_vector][matrix]") {
+    Matrix<double, 1, 3> m({{1.0, 2.0, 3.0}});
+
+    auto v = as_vector(m);
+
+    STATIC_REQUIRE(decltype(v)::expression_traits::extents_type::rank() == 1);
+    REQUIRE(v.extent(0) == 3);
+    REQUIRE(v(0) == 1.0);
+    REQUIRE(v(1) == 2.0);
+    REQUIRE(v(2) == 3.0);
+}
+
+TEST_CASE("as_vector on already-rank-1 Vector passes through",
+          "[squeeze][as_vector][identity]") {
+    Vector<double, 3> orig({10.0, 20.0, 30.0});
+
+    auto v = as_vector(orig);
+
+    STATIC_REQUIRE(decltype(v)::expression_traits::extents_type::rank() == 1);
+    REQUIRE(v(0) == 10.0);
+    REQUIRE(v(1) == 20.0);
+    REQUIRE(v(2) == 30.0);
+}
+
+TEST_CASE("as_vector squeeze preserves mutability on non-const source",
+          "[squeeze][as_vector][mutable]") {
+    Matrix<double, 3, 1> m({{1.0}, {2.0}, {3.0}});
+
+    auto v = as_vector(m);
+
+    // Mutate through the squeezed view
+    v(0) = 42.0;
+    REQUIRE(m(0, 0) == 42.0);
+
+    // Mutate original and see it through the view
+    m(1, 0) = 99.0;
+    REQUIRE(v(1) == 99.0);
+}
+
+TEST_CASE("as_vector squeeze on const source is read-only",
+          "[squeeze][as_vector][const]") {
+    const Matrix<double, 3, 1> m({{1.0}, {2.0}, {3.0}});
+
+    auto v = as_vector(m);
+
+    REQUIRE(v(0) == 1.0);
+    REQUIRE(v(1) == 2.0);
+    REQUIRE(v(2) == 3.0);
+}
+
+TEST_CASE("as_matrix on Tensor<double,3,1,4> squeezes degenerate dim",
+          "[squeeze][as_matrix][tensor]") {
+    // Rank-3 tensor with middle dimension degenerate (extent 1).
+    // squeeze_rank == 2 (dims 0 and 2 are non-degenerate).
+    Tensor<double, 3, 1, 4> t;
+
+    // Fill with known values: t(i, 0, k) = i * 10 + k
+    for (index_type i = 0; i < 3; ++i) {
+        for (index_type k = 0; k < 4; ++k) {
+            t(i, 0, k) = static_cast<double>(i * 10 + k);
+        }
+    }
+
+    auto mat = as_matrix(t);
+
+    STATIC_REQUIRE(decltype(mat)::expression_traits::extents_type::rank() == 2);
+    REQUIRE(mat.extent(0) == 3);
+    REQUIRE(mat.extent(1) == 4);
+
+    for (index_type i = 0; i < 3; ++i) {
+        for (index_type k = 0; k < 4; ++k) {
+            REQUIRE(mat(i, k) == static_cast<double>(i * 10 + k));
+        }
+    }
+}
+
+TEST_CASE("as_matrix on already-rank-2 Matrix passes through",
+          "[squeeze][as_matrix][identity]") {
+    Matrix<double, 2, 3> m({{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}});
+
+    auto mat = as_matrix(m);
+
+    STATIC_REQUIRE(decltype(mat)::expression_traits::extents_type::rank() == 2);
+    REQUIRE(mat(0, 0) == 1.0);
+    REQUIRE(mat(0, 2) == 3.0);
+    REQUIRE(mat(1, 1) == 5.0);
+}
+
+TEST_CASE("as_matrix squeeze preserves mutability",
+          "[squeeze][as_matrix][mutable]") {
+    Tensor<double, 3, 1, 4> t;
+    for (index_type i = 0; i < 3; ++i) {
+        for (index_type k = 0; k < 4; ++k) {
+            t(i, 0, k) = 0.0;
+        }
+    }
+
+    auto mat = as_matrix(t);
+
+    // Mutate through the squeezed view
+    mat(1, 2) = 42.0;
+    REQUIRE(t(1, 0, 2) == 42.0);
+
+    // Mutate original and see it through the view
+    t(0, 0, 3) = 99.0;
+    REQUIRE(mat(0, 3) == 99.0);
+}
+
+TEST_CASE("as_vector on Tensor<double,1,5,1> squeezes two degenerate dims",
+          "[squeeze][as_vector][tensor]") {
+    // Rank-3 tensor where dims 0 and 2 are degenerate.
+    // squeeze_rank == 1 (only dim 1 is non-degenerate).
+    Tensor<double, 1, 5, 1> t;
+
+    for (index_type j = 0; j < 5; ++j) {
+        t(0, j, 0) = static_cast<double>(j * j);
+    }
+
+    auto v = as_vector(t);
+
+    STATIC_REQUIRE(decltype(v)::expression_traits::extents_type::rank() == 1);
+    REQUIRE(v.extent(0) == 5);
+    REQUIRE(v(0) == 0.0);
+    REQUIRE(v(1) == 1.0);
+    REQUIRE(v(2) == 4.0);
+    REQUIRE(v(3) == 9.0);
+    REQUIRE(v(4) == 16.0);
+}
+
+TEST_CASE("as_vector squeeze result stores references",
+          "[squeeze][as_vector][references]") {
+    Matrix<double, 3, 1> m({{1.0}, {2.0}, {3.0}});
+
+    auto v = as_vector(m);
+
+    // The squeezed view is a borrowing wrapper (stores references)
+    STATIC_REQUIRE(decltype(v)::stores_references);
+}
+
+TEST_CASE("as_vector squeeze result can be eval'd to owning Vector",
+          "[squeeze][as_vector][eval]") {
+    Matrix<double, 3, 1> m({{1.0}, {2.0}, {3.0}});
+
+    auto v = as_vector(m);
+    auto owned = v.eval();
+
+    STATIC_REQUIRE_FALSE(decltype(owned)::stores_references);
+    REQUIRE(owned(0) == 1.0);
+    REQUIRE(owned(1) == 2.0);
+    REQUIRE(owned(2) == 3.0);
+
+    // Mutation of original does not affect eval'd copy
+    m(0, 0) = 999.0;
+    REQUIRE(owned(0) == 1.0);
 }
