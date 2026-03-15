@@ -4,6 +4,7 @@
 #include "concepts/Expression.hpp"
 #include "concepts/IndexArgument.hpp"
 #include "concepts/Zipper.hpp"
+#include "expression/concepts/capabilities.hpp"
 #include "expression/unary/Cast.hpp"
 #include "expression/unary/CoefficientWiseOperation.hpp"
 #include "expression/unary/concepts/ScalarOperation.hpp"
@@ -43,8 +44,6 @@ public:
 
   constexpr static bool stores_references = expression_traits::stores_references || std::is_reference_v<Expression>;
   constexpr static bool is_const = std::is_const_v<Expression>;
-  constexpr static bool is_writable =
-      expression_traits::is_writable && !is_const;
   using value_type = typename expression_traits::value_type;
   using extents_type = typename expression_traits::extents_type;
   using extents_traits = detail::ExtentsTraits<extents_type>;
@@ -66,18 +65,22 @@ public:
   // ZipperBase(Args&&... v) : m_expression(std::forward<Args>(v)...) {}
 
   ZipperBase(expression_type &&v)
-    requires(!stores_references)
+    requires(expression::concepts::OwningExpression<expression_type> &&
+             !std::is_reference_v<Expression>)
       : m_expression(std::forward<Expression>(v)) {}
   ZipperBase(Derived &&v)
-    requires(!stores_references)
+    requires(expression::concepts::OwningExpression<expression_type> &&
+             !std::is_reference_v<Expression>)
       : ZipperBase(std::move(v.expression())) {}
   ZipperBase(ZipperBase &&v) = default;
 
   ZipperBase(const Derived &v)
-    requires(!stores_references)
+    requires(expression::concepts::OwningExpression<expression_type> &&
+             !std::is_reference_v<Expression>)
       : ZipperBase(v.expression()) {}
   ZipperBase(const expression_type &v)
-    requires(!stores_references)
+    requires(expression::concepts::OwningExpression<expression_type> &&
+             !std::is_reference_v<Expression>)
       : m_expression(v) {}
   ZipperBase(const ZipperBase &v) = default;
   auto operator=(const ZipperBase &) -> ZipperBase & = default;
@@ -103,7 +106,9 @@ public:
 
   template <concepts::Expression Other>
   ZipperBase(const Other &other)
-    requires(!std::is_reference_v<Expression> && is_writable &&
+    requires(!std::is_reference_v<Expression> &&
+             expression::concepts::WritableExpression<expression_type> &&
+             !is_const &&
              zipper::utils::extents::assignable_extents_v<
                  typename Other::extents_type, extents_type>)
       : m_expression(extents_traits::convert_from(other.extents())) {
@@ -123,16 +128,20 @@ public:
 #pragma GCC diagnostic ignored "-Weffc++"
   template <concepts::Expression Other>
   auto operator=(const Other &other) -> Derived &
-    requires(is_writable && zipper::utils::extents::assignable_extents_v<
-                                typename Other::extents_type, extents_type>)
+    requires(expression::concepts::WritableExpression<expression_type> &&
+             !is_const &&
+             zipper::utils::extents::assignable_extents_v<
+                 typename Other::extents_type, extents_type>)
   {
     m_expression.assign(other);
     return derived();
   }
   template <concepts::Expression Other>
   auto operator=(Other &&other) -> Derived &
-    requires(is_writable && zipper::utils::extents::assignable_extents_v<
-                                typename std::decay_t<Other>::extents_type, extents_type>)
+    requires(expression::concepts::WritableExpression<expression_type> &&
+             !is_const &&
+             zipper::utils::extents::assignable_extents_v<
+                 typename std::decay_t<Other>::extents_type, extents_type>)
   {
     m_expression.assign(other);
     return derived();
@@ -140,26 +149,30 @@ public:
 
   template <concepts::Zipper Other>
   auto operator+=(const Other &other) -> Derived &
-    requires(is_writable)
+    requires(expression::concepts::WritableExpression<expression_type> &&
+             !is_const)
   {
     derived() = derived() + other;
     return derived();
   }
   template <concepts::Zipper Other>
   auto operator-=(const Other &other) -> Derived &
-    requires(is_writable)
+    requires(expression::concepts::WritableExpression<expression_type> &&
+             !is_const)
   {
     derived() = derived() - other;
     return derived();
   }
   auto operator*=(const value_type &other) -> Derived &
-    requires(is_writable)
+    requires(expression::concepts::WritableExpression<expression_type> &&
+             !is_const)
   {
     derived() = other * derived();
     return derived();
   }
   auto operator/=(const value_type &other) -> Derived &
-    requires(is_writable)
+    requires(expression::concepts::WritableExpression<expression_type> &&
+             !is_const)
   {
     derived() = derived() / other;
     return derived();
@@ -216,7 +229,7 @@ public:
 
   template <concepts::IndexArgument... Args>
   auto operator()(Args &&...idxs) -> decltype(auto)
-    requires(expression_traits::is_writable)
+    requires(expression::concepts::WritableExpression<expression_type>)
   {
     return expression()(
         filter_args_for_zipperbase(std::forward<Args>(idxs))...);

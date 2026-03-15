@@ -38,15 +38,23 @@ struct coeffwise_extents_values<extents<AR, AC>, extents<BR, BC>> {
 
 template <zipper::concepts::QualifiedRankedExpression<2> A,
           zipper::concepts::QualifiedRankedExpression<2> B>
-struct detail::ExpressionTraits<binary::MatrixProduct<A, B>>
-    : public binary::detail::DefaultBinaryExpressionTraits<A, B>
-{
-    using ATraits = detail::ExpressionTraits<std::decay_t<A>>;
-    using BTraits = detail::ExpressionTraits<std::decay_t<B>>;
+struct detail::ExpressionDetail<binary::MatrixProduct<A, B>>
+    : public binary::detail::DefaultBinaryExpressionDetail<A, B> {
+    using _Base = binary::detail::DefaultBinaryExpressionDetail<A, B>;
+    using ATraits = typename _Base::ATraits;
+    using BTraits = typename _Base::BTraits;
     using ConvertExtentsUtil =
         _detail_matprod::coeffwise_extents_values<typename ATraits::extents_type,
                                                   typename BTraits::extents_type>;
-    using extents_type = typename ConvertExtentsUtil::product_extents_type;
+};
+
+template <zipper::concepts::QualifiedRankedExpression<2> A,
+          zipper::concepts::QualifiedRankedExpression<2> B>
+struct detail::ExpressionTraits<binary::MatrixProduct<A, B>>
+    : public binary::detail::DefaultBinaryExpressionTraits<A, B>
+{
+    using _Detail = detail::ExpressionDetail<binary::MatrixProduct<A, B>>;
+    using extents_type = typename _Detail::ConvertExtentsUtil::product_extents_type;
     constexpr static bool is_coefficient_consistent = false;
     constexpr static bool is_value_based = false;
 };
@@ -60,11 +68,12 @@ class MatrixProduct : public BinaryExpressionBase<MatrixProduct<A, B>, A, B> {
     using Base = BinaryExpressionBase<self_type, A, B>;
     using ExpressionBase = expression::ExpressionBase<self_type>;
     using traits = zipper::expression::detail::ExpressionTraits<self_type>;
+    using detail_type = zipper::expression::detail::ExpressionDetail<self_type>;
     using value_type = traits::value_type;
     using Base::lhs;
     using Base::rhs;
-    using lhs_traits = traits::ATraits;
-    using rhs_traits = traits::BTraits;
+    using lhs_traits = typename detail_type::ATraits;
+    using rhs_traits = typename detail_type::BTraits;
 
     using extents_type = traits::extents_type;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;

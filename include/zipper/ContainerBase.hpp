@@ -79,7 +79,7 @@ public:
 
   template <concepts::Container Other>
   ContainerBase(const Other &other)
-    requires(expression_traits::is_writable)
+    requires(expression::concepts::WritableExpression<expression_type>)
       : ContainerBase(other.expression()) {}
 
   auto as_array() const { return zipper::as_array(*this); }

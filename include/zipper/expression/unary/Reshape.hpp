@@ -46,22 +46,6 @@ struct detail::ExpressionTraits<unary::Reshape<ExpressionType, NewExtents>>
 
   constexpr static bool is_coefficient_consistent = false;
   constexpr static bool is_value_based = false;
-
-  constexpr static zipper::detail::AccessFeatures access_features =
-      child_traits::access_features;
-  consteval static auto is_const_valued() -> bool {
-    return access_features.is_const;
-  }
-  consteval static auto is_reference_valued() -> bool {
-    return access_features.is_reference;
-  }
-  consteval static auto is_assignable() -> bool {
-    return !is_const_valued() && is_reference_valued();
-  }
-  consteval static auto is_referrable() -> bool {
-    return access_features.is_reference;
-  }
-  constexpr static bool is_writable = is_assignable();
 };
 
 // ── Class definition ───────────────────────────────────────────────────

@@ -40,7 +40,7 @@ struct folded_extents<extents<N...>> {
       half_<decltype(std::make_integer_sequence<rank_type, base_rank / 2>{})>;
   using extents_type = half::extents_type;
 
-  template <rank_type M, concepts::IndexPackTuple tuple_type>
+  template <rank_type M, zipper::concepts::IndexPackTuple tuple_type>
   auto get_arg(const tuple_type &t) {
     constexpr static rank_type I = M >= rank ? base_rank - M - 1 : M;
     return std::get<I>(t);
@@ -76,7 +76,7 @@ public:
   auto operator=(const Contraction &) -> Contraction & = delete;
 
   template <rank_type... N>
-  value_type coeff_(concepts::IndexPackTuple auto const &t,
+  value_type coeff_(zipper::concepts::IndexPackTuple auto const &t,
                     std::integer_sequence<rank_type, N...>) {
     return expression()(folder::template get_arg<N>(t)...);
   }

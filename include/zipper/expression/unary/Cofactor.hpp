@@ -24,32 +24,16 @@ class Cofactor;
 template <zipper::concepts::QualifiedExpression ExprType>
   requires(std::decay_t<ExprType>::extents_type::rank() == 2)
 struct detail::ExpressionTraits<unary::Cofactor<ExprType>>
-    : public unary::detail::DefaultUnaryExpressionTraits<ExprType> {
+    : public unary::detail::DefaultUnaryExpressionTraits<
+          ExprType,
+          zipper::detail::AccessFeatures{.is_const = true,
+                                         .is_reference = false}> {
   using child_traits = detail::ExpressionTraits<std::decay_t<ExprType>>;
   using value_type = typename child_traits::value_type;
   using extents_type = typename child_traits::extents_type;
 
   constexpr static bool is_coefficient_consistent = false;
   constexpr static bool is_value_based = false;
-
-  constexpr static zipper::detail::AccessFeatures access_features = {
-      .is_const = true,
-      .is_reference = false,
-      .is_alias_free = child_traits::access_features.is_alias_free,
-  };
-  consteval static auto is_const_valued() -> bool {
-    return access_features.is_const;
-  }
-  consteval static auto is_reference_valued() -> bool {
-    return access_features.is_reference;
-  }
-  consteval static auto is_assignable() -> bool {
-    return !is_const_valued() && is_reference_valued();
-  }
-  consteval static auto is_referrable() -> bool {
-    return access_features.is_reference;
-  }
-  constexpr static bool is_writable = is_assignable();
 };
 
 // ── Class definition ───────────────────────────────────────────────────

@@ -68,8 +68,7 @@ template <typename ElementType, std::size_t N>
 struct LinearAccessorTraits<SpanData<ElementType, N>>
     : public BasicLinearAccessorTraits<
           AccessFeatures{.is_const = std::is_const_v<ElementType>,
-                         .is_reference = true,
-                         .is_alias_free = true},
+                         .is_reference = true},
           ShapeFeatures{.is_resizable = false}> {};
 } // namespace zipper::storage
 #endif

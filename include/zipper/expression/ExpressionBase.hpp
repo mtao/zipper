@@ -54,7 +54,6 @@ public:
   // coefficient-wise operations are valid
   using value_type = traits::value_type;
   constexpr static bool is_const_valued = access_features.is_const;
-  constexpr static bool is_alias_free = access_features.is_alias_free;
   constexpr static bool is_assignable = traits::is_assignable();
   constexpr static bool stores_references = traits::stores_references;
   constexpr static rank_type rank = extents_type::rank();
@@ -77,47 +76,47 @@ public:
   }
 
 public:
-  template <concepts::Index... Indices>
+  template <zipper::concepts::Index... Indices>
   auto coeff(Indices &&...indices) const -> value_type;
-  template <concepts::Index... Indices>
+  template <zipper::concepts::Index... Indices>
   auto coeff_ref(Indices &&...indices) -> value_type &
     requires(traits::is_referrable() && !traits::is_const_valued());
 
-  template <concepts::Index... Indices>
+  template <zipper::concepts::Index... Indices>
   auto const_coeff_ref(Indices &&...indices) const -> const value_type &
     requires(traits::is_referrable());
 
   /// Internally forwards to const_access_pack
-  template <concepts::IndexArgument... Args>
+  template <zipper::concepts::IndexArgument... Args>
   auto operator()(Args &&...idxs) const -> decltype(auto);
 
   /// Primary access point, because it's mutable must support is_assignable and
   /// the underlying expression is considered mutable
   /// Internally forwards to access_pack
-  template <concepts::IndexArgument... Args>
+  template <zipper::concepts::IndexArgument... Args>
   auto operator()(Args &&...idxs) -> decltype(auto)
     requires(is_assignable && !is_const_valued);
 
 private:
   /// generic entrypoint for accessing values
-  template <concepts::IndexArgument... Args>
+  template <zipper::concepts::IndexArgument... Args>
   auto access_pack(Args &&...idxs) -> decltype(auto);
-  template <concepts::IndexArgument... Args>
+  template <zipper::concepts::IndexArgument... Args>
   auto const_access_pack(Args &&...idxs) const -> decltype(auto);
 
-  template <concepts::Index... Args>
+  template <zipper::concepts::Index... Args>
   auto access_index_pack(Args &&...idxs) -> decltype(auto);
-  template <concepts::Index... Args>
+  template <zipper::concepts::Index... Args>
   auto const_access_index_pack(Args &&...idxs) const -> decltype(auto);
 
-  template <concepts::IndexSlice... Slices>
+  template <zipper::concepts::IndexSlice... Slices>
   auto access_slice(Slices &&...slices);
-  template <concepts::IndexSlice... Slices>
+  template <zipper::concepts::IndexSlice... Slices>
   auto const_access_slice(Slices &&...slices) const;
 
-  template <concepts::IndexArgumentPackTuple Tuple>
+  template <zipper::concepts::IndexArgumentPackTuple Tuple>
   auto access_tuple(const Tuple &t) -> decltype(auto);
-  template <concepts::IndexArgumentPackTuple Tuple>
+  template <zipper::concepts::IndexArgumentPackTuple Tuple>
   auto const_access_tuple(const Tuple &t) const -> decltype(auto);
 };
 

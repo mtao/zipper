@@ -16,8 +16,8 @@ class MDArray;
 namespace zipper::expression::detail {
 
 template <zipper::concepts::Expression From, zipper::concepts::Expression To>
+  requires(ExpressionTraits<To>::is_writable)
 struct AssignHelper {
-  static_assert(ExpressionTraits<To>::is_writable);
   using to_traits = ExpressionTraits<To>;
   using from_traits = ExpressionTraits<From>;
   using to_extents_type = typename to_traits::extents_type;
@@ -45,6 +45,7 @@ struct AssignHelper {
 };
 
 template <zipper::concepts::Expression From, zipper::concepts::Expression To>
+  requires(ExpressionTraits<To>::is_writable)
 void AssignHelper<From, To>::assign_direct(const From &from, To &to) {
   if constexpr (extents_type::rank() == 0) {
     to() = from();
@@ -56,6 +57,7 @@ void AssignHelper<From, To>::assign_direct(const From &from, To &to) {
   }
 }
 template <zipper::concepts::Expression From, zipper::concepts::Expression To>
+  requires(ExpressionTraits<To>::is_writable)
 void AssignHelper<From, To>::assign(const From &from, To &to) {
   using FromTraits = zipper::expression::detail::ExpressionTraits<From>;
   using ToTraits = zipper::expression::detail::ExpressionTraits<To>;

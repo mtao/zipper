@@ -28,13 +28,13 @@ public:
     }
   }
 
-  static_assert(!concepts::Extents<value_type>);
+  static_assert(!zipper::concepts::Extents<value_type>);
   constexpr auto get_value() const -> value_type {
     value_type v = derived().get_value();
     return v;
   }
 
-  template <concepts::Index... Args>
+  template <zipper::concepts::Index... Args>
   constexpr auto coeff(Args &&...) const -> value_type {
     return get_value();
   }

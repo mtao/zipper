@@ -18,39 +18,33 @@ template <zipper::concepts::QualifiedExpression ExprType, rank_type... Indices>
 class PartialTrace;
 
 }
+
+/// Implementation details for PartialTrace expressions.
+///
+/// Holds the index remover utility that maps between the traced and full
+/// index spaces. The class body needs this for the constructor (to
+/// compute output extents), slice_type computation, and coeff dispatching.
 template <zipper::concepts::QualifiedExpression ExprType, rank_type... Indices>
-struct detail::ExpressionTraits<unary::PartialTrace<ExprType, Indices...>>
-    : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<ExprType> {
+struct detail::ExpressionDetail<unary::PartialTrace<ExprType, Indices...>> {
     using Base = detail::ExpressionTraits<std::decay_t<ExprType>>;
     using index_remover =
         unary::detail::invert_integer_sequence<Base::extents_type::rank(),
                                                Indices...>;
-    using extents_type = typename index_remover::template assign_types<
+};
+
+template <zipper::concepts::QualifiedExpression ExprType, rank_type... Indices>
+struct detail::ExpressionTraits<unary::PartialTrace<ExprType, Indices...>>
+    : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<
+          ExprType,
+          zipper::detail::AccessFeatures{.is_const = true,
+                                         .is_reference = false}> {
+    using _Detail = detail::ExpressionDetail<unary::PartialTrace<ExprType, Indices...>>;
+    using extents_type = typename _Detail::index_remover::template assign_types<
         zipper::extents, zipper::detail::extents::static_extents_to_array_v<
                              typename std::decay_t<ExprType>::extents_type>>;
-    using summed_extents_type = zipper::extents<Indices...>;
-    using value_type = Base::value_type;
-    constexpr static bool is_writable = false;
+    using value_type = typename _Detail::Base::value_type;
     constexpr static bool is_coefficient_consistent = false;
     constexpr static bool is_value_based = false;
-    // PartialTrace computes aggregate values — not referrable or assignable
-    constexpr static zipper::detail::AccessFeatures access_features = {
-        .is_const = true,
-        .is_reference = false,
-        .is_alias_free = Base::access_features.is_alias_free,
-    };
-    consteval static auto is_const_valued() -> bool {
-      return access_features.is_const;
-    }
-    consteval static auto is_reference_valued() -> bool {
-      return access_features.is_reference;
-    }
-    consteval static auto is_assignable() -> bool {
-      return !is_const_valued() && is_reference_valued();
-    }
-    consteval static auto is_referrable() -> bool {
-      return access_features.is_reference;
-    }
 };
 
 namespace unary {
@@ -62,6 +56,7 @@ class PartialTrace
    public:
     using self_type = PartialTrace<ExprType, Indices...>;
     using traits = zipper::expression::detail::ExpressionTraits<self_type>;
+    using detail_type = zipper::expression::detail::ExpressionDetail<self_type>;
     using extents_type = traits::extents_type;
     using value_type = traits::value_type;
     using Base = UnaryExpressionBase<self_type, ExprType>;
@@ -70,7 +65,7 @@ class PartialTrace
     template <typename U>
       requires std::constructible_from<typename Base::storage_type, U &&>
     PartialTrace(U &&b)
-        : Base(std::forward<U>(b)), m_extents(traits::index_remover::get_extents(expression().extents())) {}
+        : Base(std::forward<U>(b)), m_extents(detail_type::index_remover::get_extents(expression().extents())) {}
     PartialTrace() = delete;
     PartialTrace& operator=(const PartialTrace&) = delete;
     PartialTrace& operator=(PartialTrace&&) = delete;
@@ -91,7 +86,7 @@ class PartialTrace
     struct slice_type_<std::integer_sequence<rank_type, N...>> {
         using type =
             Slice<const std::decay_t<ExprType>&,
-                      std::conditional_t<traits::index_remover::in_sequence(N),
+                      std::conditional_t<detail_type::index_remover::in_sequence(N),
                                          rank_type, full_extent_t>...>;
     };
 
@@ -105,7 +100,7 @@ class PartialTrace
             return zipper::full_extent_t{};
         } else {
             constexpr static rank_type Index =
-                traits::index_remover::full_rank_to_reduced_indices[N];
+                detail_type::index_remover::full_rank_to_reduced_indices[N];
             static_assert(Index <= sizeof...(Args));
             return zipper::detail::pack_index<Index>(
                 std::forward<Args>(idxs)...);

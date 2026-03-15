@@ -49,43 +49,34 @@ struct RepeatHelper {
 }  // namespace _detail_repeat
 
 }  // namespace unary
+
+/// Implementation details for Repeat expressions.
+///
+/// Holds the child's base rank and the offset rank (number of dimensions
+/// prepended or appended). The Repeat class body needs these to correctly
+/// map output indices to child indices.
 template <unary::RepeatMode Mode, rank_type Count,
           zipper::concepts::QualifiedExpression Child>
-struct detail::ExpressionTraits<unary::Repeat<Mode, Count, Child>>
-    : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<Child> {
+struct detail::ExpressionDetail<unary::Repeat<Mode, Count, Child>> {
     using BaseTraits = expression::detail::ExpressionTraits<std::decay_t<Child>>;
-    using base_extents_type = typename BaseTraits::extents_type;
-    constexpr static bool is_writable = false;
-    constexpr static bool is_coefficient_consistent = true;
-    constexpr static bool is_value_based = false;
-    // Repeat re-indexes but has no coeff_ref — not referrable or assignable
-    constexpr static zipper::detail::AccessFeatures access_features = {
-        .is_const = true,
-        .is_reference = false,
-        .is_alias_free = BaseTraits::access_features.is_alias_free,
-    };
-    consteval static auto is_const_valued() -> bool {
-      return access_features.is_const;
-    }
-    consteval static auto is_reference_valued() -> bool {
-      return access_features.is_reference;
-    }
-    consteval static auto is_assignable() -> bool {
-      return !is_const_valued() && is_reference_valued();
-    }
-    consteval static auto is_referrable() -> bool {
-      return access_features.is_reference;
-    }
     using helper_type =
         unary::_detail_repeat::RepeatHelper<Mode, Count,
                                     typename BaseTraits::extents_type>;
-    using extents_type = helper_type::extents_type;
     constexpr static rank_type base_rank = helper_type::base_rank;
     constexpr static rank_type offset_rank = helper_type::offset_rank;
+};
 
-    constexpr static extents_type make_extents(const base_extents_type& e) {
-        return helper_type::make_extents(e);
-    }
+template <unary::RepeatMode Mode, rank_type Count,
+          zipper::concepts::QualifiedExpression Child>
+struct detail::ExpressionTraits<unary::Repeat<Mode, Count, Child>>
+    : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<
+          Child,
+          zipper::detail::AccessFeatures{.is_const = true,
+                                         .is_reference = false}> {
+    using _Detail = detail::ExpressionDetail<unary::Repeat<Mode, Count, Child>>;
+    constexpr static bool is_coefficient_consistent = true;
+    constexpr static bool is_value_based = false;
+    using extents_type = typename _Detail::helper_type::extents_type;
 };
 namespace unary {
 template <RepeatMode Mode, rank_type Count,
@@ -97,12 +88,13 @@ class Repeat : public UnaryExpressionBase<Repeat<Mode, Count, Child>, Child> {
     using self_type = Repeat<Mode, Count, Child>;
     using Base = UnaryExpressionBase<Repeat<Mode, Count, Child>, Child>;
     using traits = zipper::expression::detail::ExpressionTraits<self_type>;
+    using detail_type = zipper::expression::detail::ExpressionDetail<self_type>;
     using extents_type = traits::extents_type;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
     constexpr static bool is_static = extents_traits::is_static;
     using value_type = traits::value_type;
-    constexpr static rank_type base_rank = traits::base_rank;
-    constexpr static rank_type pad_offset = traits::offset_rank;
+    constexpr static rank_type base_rank = detail_type::base_rank;
+    constexpr static rank_type pad_offset = detail_type::offset_rank;
 
     template <typename U>
       requires std::constructible_from<typename Base::storage_type, U &&>

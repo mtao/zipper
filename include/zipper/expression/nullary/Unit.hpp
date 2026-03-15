@@ -55,7 +55,7 @@ public:
   Unit(const index_type my_extent, IndexType index)
       : extents_type(my_extent), m_index(index) {}
 
-  template <concepts::Index Idx>
+  template <zipper::concepts::Index Idx>
   auto coeff(const Idx &idx) const -> value_type {
     if (static_cast<index_type>(idx) == static_cast<index_type>(m_index)) {
       return value_type(1);
@@ -104,13 +104,10 @@ struct detail::ExpressionTraits<nullary::Unit<T, Extent, IndexType>>
     : public BasicExpressionTraits<
           T, zipper::extents<Extent>,
           expression::detail::AccessFeatures{
-              .is_const = false, .is_reference = false, .is_alias_free = true},
+              .is_const = false, .is_reference = false},
           expression::detail::ShapeFeatures{.is_resizable = false}> {
 
   constexpr static bool is_value_based = false;
-
-  // Unit vectors are sparse
-  consteval static auto is_sparse(rank_type) -> bool { return true; }
 };
 
 } // namespace zipper::expression

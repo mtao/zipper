@@ -349,30 +349,43 @@ using slice_extent_helper = _slice_extent_helper<
 
 }  // namespace unary
 
+/// Implementation details for Slice expressions.
+///
+/// Holds child traits alias, the slice type lookup template, the extents
+/// computation helper, and the actionable-indices map. These are needed by
+/// both the ExpressionTraits specialization (to compute extents_type) and
+/// the Slice class body (to build extents in the constructor and map
+/// output indices to child indices).
 template <zipper::concepts::QualifiedExpression ExprType,
           typename... Slices>
-struct detail::ExpressionTraits<unary::Slice<ExprType, Slices...>>
-    : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<
-          ExprType> {
+struct detail::ExpressionDetail<unary::Slice<ExprType, Slices...>> {
     using Base = detail::ExpressionTraits<std::decay_t<ExprType>>;
 
     template <rank_type R>
     using get_slice_t =
         std::decay_t<std::tuple_element_t<R, std::tuple<Slices...>>>;
 
-    using value_type = Base::value_type;
-    constexpr static bool is_coefficient_consistent = false;
-    constexpr static bool is_value_based = false;
-
     using extents_helper =
         unary::_detail_slice::slice_extent_helper<typename Base::extents_type,
                                            Slices...>;
-    using extents_type = typename extents_helper::extents_type;
-    using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
 
     constexpr static std::array<rank_type, Base::extents_type::rank()>
         actionable_indices = extents_helper::get_actionable(
             std::make_index_sequence<Base::extents_type::rank()>{});
+};
+
+template <zipper::concepts::QualifiedExpression ExprType,
+          typename... Slices>
+struct detail::ExpressionTraits<unary::Slice<ExprType, Slices...>>
+    : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<
+          ExprType> {
+    using _Detail = detail::ExpressionDetail<unary::Slice<ExprType, Slices...>>;
+    using value_type = typename _Detail::Base::value_type;
+    constexpr static bool is_coefficient_consistent = false;
+    constexpr static bool is_value_based = false;
+
+    using extents_type = typename _Detail::extents_helper::extents_type;
+    using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
 };
 
 namespace unary {
@@ -383,6 +396,7 @@ class Slice : public UnaryExpressionBase<Slice<ExprType, Slices...>,
    public:
     using self_type = Slice<ExprType, Slices...>;
     using traits = zipper::expression::detail::ExpressionTraits<self_type>;
+    using detail_type = zipper::expression::detail::ExpressionDetail<self_type>;
     using extents_type = traits::extents_type;
     using value_type = traits::value_type;
     using Base = UnaryExpressionBase<self_type, ExprType>;
@@ -397,7 +411,7 @@ class Slice : public UnaryExpressionBase<Slice<ExprType, Slices...>,
         std::tuple<_detail_slice::slice_helper<std::decay_t<Slices>>...>;
 
     constexpr static std::array<rank_type, expr_extents_type::rank()>
-        actionable_indices = traits::actionable_indices;
+        actionable_indices = detail_type::actionable_indices;
 
     Slice(const Slice &) = default;
     Slice(Slice &&) = default;
@@ -410,7 +424,7 @@ class Slice : public UnaryExpressionBase<Slice<ExprType, Slices...>,
       requires std::constructible_from<typename Base::storage_type, U &&>
     Slice(U &&b, const Slices &...slices)
         : Base(std::forward<U>(b)),
-          m_extents(traits::extents_helper::get_extents(expression().extents(), slices...)),
+          m_extents(detail_type::extents_helper::get_extents(expression().extents(), slices...)),
           m_slices(_detail_slice::slice_helper<std::decay_t<Slices>>(slices)...) {}
 
     constexpr auto extent(rank_type i) const -> index_type {

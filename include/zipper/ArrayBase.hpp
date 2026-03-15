@@ -67,40 +67,40 @@ public:
 
   template <concepts::Array Other>
   ArrayBase(const Other &other)
-    requires(expression_traits::is_writable)
+    requires(expression::concepts::WritableExpression<expression_type>)
       : ArrayBase(other.expression()) {}
 
   auto operator*=(const value_type &other) -> ArrayBase &
-    requires(expression_traits::is_writable)
+    requires(expression::concepts::WritableExpression<expression_type>)
   {
     return *this = other * *this;
   }
   auto operator/=(const value_type &other) -> ArrayBase &
-    requires(expression_traits::is_writable)
+    requires(expression::concepts::WritableExpression<expression_type>)
   {
     return *this = *this / other;
   }
   template <concepts::Array Other>
   auto operator+=(const Other &other) -> ArrayBase &
-    requires(expression_traits::is_writable)
+    requires(expression::concepts::WritableExpression<expression_type>)
   {
     return *this = *this + other;
   }
   template <concepts::Array Other>
   auto operator-=(const Other &other) -> ArrayBase &
-    requires(expression_traits::is_writable)
+    requires(expression::concepts::WritableExpression<expression_type>)
   {
     return *this = *this - other;
   }
   template <concepts::Array Other>
   auto operator*=(const Other &other) -> ArrayBase &
-    requires(expression_traits::is_writable)
+    requires(expression::concepts::WritableExpression<expression_type>)
   {
     return *this = *this * other;
   }
   template <concepts::Array Other>
   auto operator/=(const Other &other) -> ArrayBase &
-    requires(expression_traits::is_writable)
+    requires(expression::concepts::WritableExpression<expression_type>)
   {
     return *this = *this / other;
   }

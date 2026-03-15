@@ -61,7 +61,7 @@ public:
 
   template <concepts::Expression Other>
   auto operator=(const Other &other) -> MatrixBase &
-    requires(expression_traits::is_writable)
+    requires(expression::concepts::WritableExpression<expression_type>)
   {
     Base::operator=(other);
     return *this;

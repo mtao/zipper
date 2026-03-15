@@ -110,7 +110,7 @@ public:
                     m.data_handle(), extents_traits::size(m.extents()))),
             m.extents()) {}
 
-  template <concepts::Expression V>
+  template <zipper::concepts::Expression V>
   void assign(const V &v)
     requires(!std::is_const_v<ElementType> &&
              zipper::utils::extents::assignable_extents_v<

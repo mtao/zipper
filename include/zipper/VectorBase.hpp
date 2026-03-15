@@ -48,10 +48,10 @@ public:
   VectorBase(const Other &other) : VectorBase(other.expression()) {}
 
   VectorBase(concepts::QualifiedExpression auto &v)
-    requires(!expression_traits::stores_references)
+    requires(expression::concepts::OwningExpression<expression_type>)
       : Base(v) {}
   VectorBase(concepts::QualifiedExpression auto &&v)
-    requires(!expression_traits::stores_references)
+    requires(expression::concepts::OwningExpression<expression_type>)
       : Base(std::move(v)) {}
   VectorBase(const extents_type &e) : Base(e) {}
   auto operator=(concepts::QualifiedExpression auto const &v) -> VectorBase & {
@@ -64,14 +64,14 @@ public:
 
   template <concepts::Vector Other>
   auto operator=(const Other &other) -> VectorBase &
-    requires(expression_traits::is_writable)
+    requires(expression::concepts::WritableExpression<expression_type>)
   {
     expression().assign(other.expression());
     return *this;
   }
   template <concepts::Vector Other>
   auto operator=(Other &&other) -> VectorBase &
-    requires(expression_traits::is_writable)
+    requires(expression::concepts::WritableExpression<expression_type>)
   {
     return operator=(other.expression());
   }
@@ -129,7 +129,7 @@ public:
 
   template <index_type Start, index_type Size>
   auto segment()
-    requires(expression_traits::is_writable)
+    requires(expression::concepts::WritableExpression<expression_type>)
   {
     auto S = slice(std::integral_constant<index_type, Start>{},
                    std::integral_constant<index_type, Size>{});
@@ -144,7 +144,7 @@ public:
   }
   template <index_type Size>
   auto segment(index_type start)
-    requires(expression_traits::is_writable)
+    requires(expression::concepts::WritableExpression<expression_type>)
   {
     auto S = slice(start, std::integral_constant<index_type, Size>{});
     using V = expression::unary::Slice<expression_type&, std::decay_t<decltype(S)>>;
@@ -156,7 +156,7 @@ public:
     return VectorBase<V>(std::in_place, expression(), S);
   }
   auto segment(index_type start, index_type size)
-    requires(expression_traits::is_writable)
+    requires(expression::concepts::WritableExpression<expression_type>)
   {
     auto S = slice(start, size);
     using V = expression::unary::Slice<expression_type&, std::decay_t<decltype(S)>>;
@@ -170,7 +170,7 @@ public:
 
   template <index_type I>
   auto head()
-    requires(expression_traits::is_writable)
+    requires(expression::concepts::WritableExpression<expression_type>)
   {
     auto S = slice(std::integral_constant<index_type, 0>{},
                    std::integral_constant<index_type, I>{});
@@ -184,7 +184,7 @@ public:
     return VectorBase<V>(std::in_place, expression(), S);
   }
   auto head(index_type N)
-    requires(expression_traits::is_writable)
+    requires(expression::concepts::WritableExpression<expression_type>)
   {
     auto S = slice<std::integral_constant<index_type, 0>, index_type>(
         std::integral_constant<index_type, 0>{}, N);
@@ -208,7 +208,7 @@ public:
   }
   template <index_type I>
   auto tail()
-    requires(expression_traits::is_writable)
+    requires(expression::concepts::WritableExpression<expression_type>)
   {
     auto S = get_tail_slice<I>();
     using V = expression::unary::Slice<expression_type&, std::decay_t<decltype(S)>>;
@@ -220,7 +220,7 @@ public:
     return VectorBase<V>(std::in_place, expression(), S);
   }
   auto tail(index_type N)
-    requires(expression_traits::is_writable)
+    requires(expression::concepts::WritableExpression<expression_type>)
   {
     auto S = get_tail_slice(N);
     using V = expression::unary::Slice<expression_type&, std::decay_t<decltype(S)>>;

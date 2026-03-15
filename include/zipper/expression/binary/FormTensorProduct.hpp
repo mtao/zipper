@@ -58,22 +58,37 @@ struct form_tensor_partial_trace_type {
 
 }  // namespace _detail_form_tensor
 
-template <concepts::QualifiedExpression A, concepts::QualifiedExpression B>
-struct detail::ExpressionTraits<binary::FormTensorProduct<A, B>>
-    : public detail::ExpressionTraits<typename _detail_form_tensor::form_tensor_partial_trace_type<A, B>::partial_trace_type> {
+/// Implementation details for FormTensorProduct expressions.
+///
+/// Holds the tensor product and partial trace type aliases, plus the
+/// result_is_form flag that the class body needs for its member variable
+/// types and the requires clause in FormBase.hxx.  These are NOT
+/// capability flags — they are type-computation helpers.
+template <zipper::concepts::QualifiedExpression A, zipper::concepts::QualifiedExpression B>
+struct detail::ExpressionDetail<binary::FormTensorProduct<A, B>> {
     using _helper = _detail_form_tensor::form_tensor_partial_trace_type<A, B>;
     using tensor_product_type = typename _helper::tensor_product_type;
     using partial_trace_type = typename _helper::partial_trace_type;
     using tensor_product_traits = detail::ExpressionTraits<tensor_product_type>;
     using partial_trace_traits = detail::ExpressionTraits<partial_trace_type>;
-    using extents_type = partial_trace_traits::extents_type;
-    static_assert(extents_type::rank() == _helper::result_rank);
+
+    /// When a_rank >= b_rank, result is a form (or scalar).
+    /// When a_rank < b_rank, result is a tensor.
+    constexpr static bool result_is_form = _helper::result_is_form;
+};
+
+template <zipper::concepts::QualifiedExpression A, zipper::concepts::QualifiedExpression B>
+struct detail::ExpressionTraits<binary::FormTensorProduct<A, B>>
+    : public detail::ExpressionTraits<typename _detail_form_tensor::form_tensor_partial_trace_type<A, B>::partial_trace_type> {
+    using _Detail = detail::ExpressionDetail<binary::FormTensorProduct<A, B>>;
+    using extents_type = typename _Detail::partial_trace_traits::extents_type;
+    static_assert(extents_type::rank() == _Detail::_helper::result_rank);
 
     static_assert(extents_type::rank() ==
-                  partial_trace_type::extents_type::rank());
-    using value_type = partial_trace_traits::value_type;
+                  _Detail::partial_trace_type::extents_type::rank());
+    using value_type = typename _Detail::partial_trace_traits::value_type;
 
-    constexpr static bool result_is_form = _helper::result_is_form;
+    constexpr static bool result_is_form = _Detail::result_is_form;
 };
 
 namespace binary {
@@ -82,12 +97,13 @@ class FormTensorProduct : public ExpressionBase<FormTensorProduct<A, B>> {
    public:
     using self_type = FormTensorProduct<A, B>;
     using traits = zipper::expression::detail::ExpressionTraits<self_type>;
+    using detail_type = zipper::expression::detail::ExpressionDetail<self_type>;
     using value_type = traits::value_type;
 
     using extents_type = traits::extents_type;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
 
-    constexpr static bool result_is_form = traits::result_is_form;
+    constexpr static bool result_is_form = detail_type::result_is_form;
 
     FormTensorProduct() = delete;
     FormTensorProduct(const FormTensorProduct& o)
@@ -96,8 +112,8 @@ class FormTensorProduct : public ExpressionBase<FormTensorProduct<A, B>> {
     FormTensorProduct& operator=(FormTensorProduct&& o) = delete;
 
     template <typename U, typename V>
-      requires std::constructible_from<typename traits::tensor_product_type::lhs_storage_type, U&&> &&
-               std::constructible_from<typename traits::tensor_product_type::rhs_storage_type, V&&>
+      requires std::constructible_from<typename detail_type::tensor_product_type::lhs_storage_type, U&&> &&
+               std::constructible_from<typename detail_type::tensor_product_type::rhs_storage_type, V&&>
     FormTensorProduct(U&& a, V&& b)
         : m_tensor(std::forward<U>(a), std::forward<V>(b)), m_trace(m_tensor) {
         ZIPPER_ASSERT(&m_trace.expression() == &m_tensor);
@@ -123,8 +139,8 @@ class FormTensorProduct : public ExpressionBase<FormTensorProduct<A, B>> {
     }
 
    private:
-    traits::tensor_product_type m_tensor;
-    traits::partial_trace_type m_trace;
+    typename detail_type::tensor_product_type m_tensor;
+    typename detail_type::partial_trace_type m_trace;
 };
 
 template <zipper::concepts::Expression A, zipper::concepts::Expression B>

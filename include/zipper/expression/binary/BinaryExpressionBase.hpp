@@ -9,6 +9,26 @@ namespace zipper::expression::binary {
 
 namespace detail {
 
+/// Default implementation details for binary expressions.
+///
+/// Holds child traits aliases and child value types that the binary
+/// expression class body needs for its implementation. These are NOT
+/// part of the public traits interface (capability flags, value_type,
+/// extents_type).
+///
+/// ChildA / ChildB are the *qualified* child types as passed to the binary
+/// expression class template (e.g. `const MDArray<…>&` for reference
+/// storage, `const MDArray<…>` for owning storage).  Traits are looked
+/// up on the decayed (unqualified) type.
+template <zipper::concepts::QualifiedExpression ChildA,
+          zipper::concepts::QualifiedExpression ChildB>
+struct DefaultBinaryExpressionDetail {
+  using ATraits = expression::detail::ExpressionTraits<std::decay_t<ChildA>>;
+  using BTraits = expression::detail::ExpressionTraits<std::decay_t<ChildB>>;
+  using lhs_value_type = typename ATraits::value_type;
+  using rhs_value_type = typename BTraits::value_type;
+};
+
 /// Default traits for binary expressions. Inherits from BasicExpressionTraits
 /// to provide the access_features/shape_features interface.
 ///
@@ -23,21 +43,18 @@ struct DefaultBinaryExpressionTraits
           typename expression::detail::ExpressionTraits<std::decay_t<ChildA>>::value_type,
           zipper::dextents<0>,
           expression::detail::AccessFeatures{
-              .is_const = true, .is_reference = false, .is_alias_free = true},
+              .is_const = true, .is_reference = false},
           expression::detail::ShapeFeatures{.is_resizable = false}> {
-  using ATraits = expression::detail::ExpressionTraits<std::decay_t<ChildA>>;
-  using BTraits = expression::detail::ExpressionTraits<std::decay_t<ChildB>>;
-  using lhs_value_type = typename ATraits::value_type;
-  using rhs_value_type = typename BTraits::value_type;
-  static_assert(std::is_convertible_v<typename ATraits::value_type,
-                                      typename BTraits::value_type> ||
-                std::is_convertible_v<typename BTraits::value_type,
-                                      typename ATraits::value_type>);
+  using _Detail = DefaultBinaryExpressionDetail<ChildA, ChildB>;
+  static_assert(std::is_convertible_v<typename _Detail::ATraits::value_type,
+                                      typename _Detail::BTraits::value_type> ||
+                std::is_convertible_v<typename _Detail::BTraits::value_type,
+                                      typename _Detail::ATraits::value_type>);
 
   // defaulting to first parameter
-  using value_type = typename ATraits::value_type;
+  using value_type = typename _Detail::ATraits::value_type;
   constexpr static bool is_coefficient_consistent =
-      ATraits::is_coefficient_consistent && BTraits::is_coefficient_consistent;
+      _Detail::ATraits::is_coefficient_consistent && _Detail::BTraits::is_coefficient_consistent;
   constexpr static bool is_value_based = true;
 
   /// stores_references is true when either child is stored by reference,
@@ -47,7 +64,7 @@ struct DefaultBinaryExpressionTraits
   /// expressions are moved in by value but still hold references to a,b,c,d.
   constexpr static bool stores_references =
       std::is_reference_v<ChildA> || std::is_reference_v<ChildB> ||
-      ATraits::stores_references || BTraits::stores_references;
+      _Detail::ATraits::stores_references || _Detail::BTraits::stores_references;
 };
 } // namespace detail
 
@@ -72,6 +89,7 @@ public:
 
   using self_type = BinaryExpressionBase<Derived, ChildTypeA, ChildTypeB>;
   using traits = zipper::expression::detail::ExpressionTraits<Derived>;
+  using detail_type = zipper::expression::detail::ExpressionDetail<Derived>;
   using extents_type = typename traits::extents_type;
   using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
   using value_type = typename traits::value_type;
@@ -87,8 +105,8 @@ public:
       return static_cast<Derived &>(self);
     }
   }
-  using lhs_value_type = typename traits::lhs_value_type;
-  using rhs_value_type = typename traits::rhs_value_type;
+  using lhs_value_type = typename detail_type::lhs_value_type;
+  using rhs_value_type = typename detail_type::rhs_value_type;
 
   BinaryExpressionBase(const BinaryExpressionBase &) = default;
   BinaryExpressionBase(BinaryExpressionBase &&) = default;

@@ -34,7 +34,7 @@ public:
   using base_type::linear_accessor;
   using self_type = MDArray<ElementType, Extents, LayoutPolicy, AccessorPolicy>;
 
-  template <concepts::Expression V>
+  template <zipper::concepts::Expression V>
   void assign(const V &v)
     requires(zipper::utils::extents::assignable_extents_v<
                 typename V::extents_type, extents_type>)

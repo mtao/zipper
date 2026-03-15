@@ -21,18 +21,32 @@ template <zipper::concepts::QualifiedExpression A,
 class Operation;
 
 }
-template <concepts::QualifiedExpression A, concepts::QualifiedExpression B, typename Op>
-struct detail::ExpressionTraits<binary::Operation<A, B, Op>>
-    : public binary::detail::DefaultBinaryExpressionTraits<A, B> {
-  using ATraits = detail::ExpressionTraits<std::decay_t<A>>;
-  using BTraits = detail::ExpressionTraits<std::decay_t<B>>;
+
+/// Implementation details for Operation expressions.
+///
+/// Holds child traits aliases and the coefficient-wise extents merge utility
+/// used by both the traits specialization (to compute extents_type/value_type)
+/// and the class body (to access child extents types for validation).
+template <zipper::concepts::QualifiedExpression A,
+          zipper::concepts::QualifiedExpression B, typename Op>
+struct detail::ExpressionDetail<binary::Operation<A, B, Op>>
+    : public binary::detail::DefaultBinaryExpressionDetail<A, B> {
+  using _Base = binary::detail::DefaultBinaryExpressionDetail<A, B>;
+  using ATraits = typename _Base::ATraits;
+  using BTraits = typename _Base::BTraits;
   using ConvertExtentsUtil =
       binary::detail::coeffwise_extents_values<typename ATraits::extents_type,
                                                typename BTraits::extents_type>;
-  using extents_type = typename ConvertExtentsUtil::merged_extents_type;
+};
+
+template <zipper::concepts::QualifiedExpression A, zipper::concepts::QualifiedExpression B, typename Op>
+struct detail::ExpressionTraits<binary::Operation<A, B, Op>>
+    : public binary::detail::DefaultBinaryExpressionTraits<A, B> {
+  using _Detail = detail::ExpressionDetail<binary::Operation<A, B, Op>>;
+  using extents_type = typename _Detail::ConvertExtentsUtil::merged_extents_type;
   using value_type = decltype(std::declval<Op>()(
-      std::declval<typename ATraits::value_type>(),
-      std::declval<typename BTraits::value_type>()));
+      std::declval<typename _Detail::ATraits::value_type>(),
+      std::declval<typename _Detail::BTraits::value_type>()));
 };
 
 namespace binary {
@@ -43,14 +57,15 @@ class Operation
 public:
   using self_type = Operation<A, B, Op>;
   using traits = zipper::expression::detail::ExpressionTraits<self_type>;
+  using detail_type = zipper::expression::detail::ExpressionDetail<self_type>;
   using extents_type = typename traits::extents_type;
   using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
   using Base = BinaryExpressionBase<self_type, A, B>;
   using value_type = traits::value_type;
   constexpr static bool is_static = extents_traits::is_static;
 
-  using a_extents_type = traits::ATraits::extents_type;
-  using b_extents_type = traits::BTraits::extents_type;
+  using a_extents_type = typename detail_type::ATraits::extents_type;
+  using b_extents_type = typename detail_type::BTraits::extents_type;
 
   constexpr static bool valid_input_extents(const a_extents_type &a,
                                             const b_extents_type &b) {

@@ -56,12 +56,12 @@ public:
   = default;
   Identity(const extents_type &e) : extents_type(e) {}
 
-  template <concepts::Index... Args>
+  template <zipper::concepts::Index... Args>
   Identity(Args &&...args)
       : Identity(extents_type(std::forward<Args>(args)...)) {}
 
   /// Returns 1 if every input coefficient is the same
-  auto coeff(concepts::Index auto &&...idxs) const -> value_type {
+  auto coeff(zipper::concepts::Index auto &&...idxs) const -> value_type {
     if constexpr (sizeof...(idxs) == 1) {
       return ((idxs == 0) && ...);
     } else {
@@ -75,7 +75,7 @@ public:
 private:
   // =====================================================
   // TODO: this should be used for sparse?
-  template <rank_type R, concepts::Index... Args>
+  template <rank_type R, zipper::concepts::Index... Args>
     requires(R < extents_traits::rank &&
              sizeof...(Args) == extents_traits::rank)
   constexpr auto nonZeros(Args &&...args) const -> std::vector<index_type> {
@@ -102,7 +102,7 @@ struct detail::ExpressionTraits<nullary::Identity<T, Indices...>>
     : public BasicExpressionTraits<
           T, zipper::extents<Indices...>,
           expression::detail::AccessFeatures{
-              .is_const = false, .is_reference = false, .is_alias_free = true},
+              .is_const = false, .is_reference = false},
           expression::detail::ShapeFeatures{.is_resizable = true}> {};
 } // namespace zipper::expression
 

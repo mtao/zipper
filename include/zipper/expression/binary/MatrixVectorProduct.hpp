@@ -14,13 +14,23 @@ template <zipper::concepts::QualifiedRankedExpression<2> A,
 class MatrixVectorProduct;
 
 }
+
+/// Implementation details for MatrixVectorProduct expressions.
+///
+/// Holds child traits aliases.  MatrixVectorProduct computes extents_type
+/// directly (rank-1 from the matrix's row extent) without a ConvertExtentsUtil.
+template <zipper::concepts::QualifiedRankedExpression<2> A,
+          zipper::concepts::QualifiedRankedExpression<1> B>
+struct detail::ExpressionDetail<binary::MatrixVectorProduct<A, B>>
+    : public binary::detail::DefaultBinaryExpressionDetail<A, B> {
+};
+
 template <zipper::concepts::QualifiedRankedExpression<2> A,
           zipper::concepts::QualifiedRankedExpression<1> B>
 struct detail::ExpressionTraits<binary::MatrixVectorProduct<A, B>>
     : public binary::detail::DefaultBinaryExpressionTraits<A, B> {
-    using ATraits = detail::ExpressionTraits<std::decay_t<A>>;
-    using BTraits = detail::ExpressionTraits<std::decay_t<B>>;
-    using extents_type = extents<ATraits::extents_type::static_extent(0)>;
+    using _Detail = detail::ExpressionDetail<binary::MatrixVectorProduct<A, B>>;
+    using extents_type = extents<_Detail::ATraits::extents_type::static_extent(0)>;
     constexpr static bool is_coefficient_consistent = false;
     constexpr static bool is_value_based = false;
 };
@@ -35,12 +45,13 @@ class MatrixVectorProduct
     using Base = BinaryExpressionBase<self_type, A, B>;
     using ExpressionBase = expression::ExpressionBase<self_type>;
     using traits = zipper::expression::detail::ExpressionTraits<self_type>;
+    using detail_type = zipper::expression::detail::ExpressionDetail<self_type>;
     using value_type = traits::value_type;
     using Base::lhs;
     using Base::rhs;
     using extents_type = typename traits::extents_type;
-    using lhs_traits = traits::ATraits;
-    using rhs_traits = traits::BTraits;
+    using lhs_traits = typename detail_type::ATraits;
+    using rhs_traits = typename detail_type::BTraits;
 
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
 

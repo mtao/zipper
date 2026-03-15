@@ -52,25 +52,35 @@ struct wedge_coeffwise_extents_values<extents<A...>, extents<B...>> {
 
 }  // namespace _detail_wedge
 
-template <concepts::QualifiedExpression A, concepts::QualifiedExpression B>
-struct detail::ExpressionTraits<binary::WedgeProduct<A, B>>
-    : public binary::detail::DefaultBinaryExpressionTraits<A, B> {
-    using ATraits = detail::ExpressionTraits<std::decay_t<A>>;
+/// Implementation details for WedgeProduct expressions.
+///
+/// Holds child traits aliases, child rank constants (lhs_rank, rhs_rank),
+/// and the wedge-product-specific extents computation utility (CEV) that
+/// concatenates the LHS and RHS extents packs.
+template <zipper::concepts::QualifiedExpression A, zipper::concepts::QualifiedExpression B>
+struct detail::ExpressionDetail<binary::WedgeProduct<A, B>>
+    : public binary::detail::DefaultBinaryExpressionDetail<A, B> {
+    using _Base = binary::detail::DefaultBinaryExpressionDetail<A, B>;
+    using ATraits = typename _Base::ATraits;
+    using BTraits = typename _Base::BTraits;
     constexpr static rank_type lhs_rank = ATraits::extents_type::rank();
-    using BTraits = detail::ExpressionTraits<std::decay_t<B>>;
     constexpr static rank_type rhs_rank = BTraits::extents_type::rank();
     using CEV =
         _detail_wedge::wedge_coeffwise_extents_values<typename ATraits::extents_type,
                                                typename BTraits::extents_type>;
+};
 
-    static_assert(std::is_same_v<typename CEV::a_extents_type,
-                                 typename ATraits::extents_type>);
-    static_assert(std::is_same_v<typename CEV::b_extents_type,
-                                 typename BTraits::extents_type>);
-    using extents_type = CEV::product_extents_type;
-    static_assert(
-        std::is_same_v<typename CEV::product_extents_type, extents_type>);
-    static_assert(extents_type::rank() == lhs_rank + rhs_rank);
+template <zipper::concepts::QualifiedExpression A, zipper::concepts::QualifiedExpression B>
+struct detail::ExpressionTraits<binary::WedgeProduct<A, B>>
+    : public binary::detail::DefaultBinaryExpressionTraits<A, B> {
+    using _Detail = detail::ExpressionDetail<binary::WedgeProduct<A, B>>;
+
+    static_assert(std::is_same_v<typename _Detail::CEV::a_extents_type,
+                                 typename _Detail::ATraits::extents_type>);
+    static_assert(std::is_same_v<typename _Detail::CEV::b_extents_type,
+                                 typename _Detail::BTraits::extents_type>);
+    using extents_type = typename _Detail::CEV::product_extents_type;
+    static_assert(extents_type::rank() == _Detail::lhs_rank + _Detail::rhs_rank);
 
     constexpr static bool is_coefficient_consistent = false;
     constexpr static bool is_value_based = false;
@@ -84,11 +94,12 @@ class WedgeProduct : public BinaryExpressionBase<WedgeProduct<A, B>, A, B> {
     using Base = BinaryExpressionBase<self_type, A, B>;
     using ExpressionBase = expression::ExpressionBase<self_type>;
     using traits = zipper::expression::detail::ExpressionTraits<self_type>;
+    using detail_type = zipper::expression::detail::ExpressionDetail<self_type>;
     using value_type = traits::value_type;
     using Base::lhs;
     using Base::rhs;
-    constexpr static rank_type lhs_rank = traits::lhs_rank;
-    constexpr static rank_type rhs_rank = traits::rhs_rank;
+    constexpr static rank_type lhs_rank = detail_type::lhs_rank;
+    constexpr static rank_type rhs_rank = detail_type::rhs_rank;
 
     using extents_type = traits::extents_type;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;

@@ -53,38 +53,15 @@ class Homogeneous;
 template <unary::HomogeneousMode Mode, zipper::concepts::QualifiedExpression Child>
 struct detail::ExpressionTraits<unary::Homogeneous<Mode, Child>>
     : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<
-          Child> {
+          Child,
+          zipper::detail::AccessFeatures{.is_const = true,
+                                         .is_reference = false}> {
   using ChildTraits = ExpressionTraits<std::decay_t<Child>>;
   using value_type = typename ChildTraits::value_type;
 
   using helper = detail::extend_extents_single_dimension<
       0, 1, typename ChildTraits::extents_type>;
   using extents_type = helper::extended_extents_type;
-
-  static extents_type make_extents(const ChildTraits::extents_type &a) {
-    return helper::run(a);
-  }
-  // Homogeneous computes values (returns literal 0/1 for appended row) — not
-  // referrable or assignable
-  constexpr static zipper::detail::AccessFeatures access_features = {
-      .is_const = true,
-      .is_reference = false,
-      .is_alias_free = ChildTraits::access_features.is_alias_free,
-  };
-  consteval static auto is_const_valued() -> bool {
-    return access_features.is_const;
-  }
-  consteval static auto is_reference_valued() -> bool {
-    return access_features.is_reference;
-  }
-  consteval static auto is_assignable() -> bool {
-    return !is_const_valued() && is_reference_valued();
-  }
-  consteval static auto is_referrable() -> bool {
-    return access_features.is_reference;
-  }
-
-  constexpr static bool is_writable = is_assignable();
 };
 
 namespace unary {

@@ -14,17 +14,28 @@ template <zipper::concepts::QualifiedExpression ExpressionType,
 class Swizzle;
 
 } // namespace unary
+
+/// Implementation details for Swizzle expressions.
+///
+/// Holds the decayed expression type alias and the swizzler utility type.
+/// These are needed by the Swizzle class body for index remapping.
+template <zipper::concepts::QualifiedExpression QualifiedExprType,
+          index_type... Indices>
+struct detail::ExpressionDetail<
+    unary::Swizzle<QualifiedExprType, Indices...>> {
+  using ExprType = std::decay_t<QualifiedExprType>;
+  using swizzler_type = zipper::detail::extents::ExtentsSwizzler<Indices...>;
+};
+
 template <zipper::concepts::QualifiedExpression QualifiedExprType,
           index_type... Indices>
 struct detail::ExpressionTraits<
     unary::Swizzle<QualifiedExprType, Indices...>>
     : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<
           QualifiedExprType> {
-  using ExprType = std::decay_t<QualifiedExprType>;
-  using swizzler_type = zipper::detail::extents::ExtentsSwizzler<Indices...>;
-
+  using _Detail = detail::ExpressionDetail<unary::Swizzle<QualifiedExprType, Indices...>>;
   using Base = ExpressionTraits<std::decay_t<QualifiedExprType>>;
-  using extents_type = swizzler_type::template extents_type_swizzler_t<
+  using extents_type = typename _Detail::swizzler_type::template extents_type_swizzler_t<
       typename Base::extents_type>;
   using value_type = Base::value_type;
   constexpr static bool is_coefficient_consistent = false;
@@ -41,11 +52,12 @@ class Swizzle
 public:
   using self_type = Swizzle<QualifiedExprType, Indices...>;
   using traits = zipper::expression::detail::ExpressionTraits<self_type>;
-  using ExprType = traits::ExprType;
+  using detail_type = zipper::expression::detail::ExpressionDetail<self_type>;
+  using ExprType = typename detail_type::ExprType;
   using extents_type = traits::extents_type;
   using value_type = traits::value_type;
   using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
-  using swizzler_type = traits::swizzler_type;
+  using swizzler_type = typename detail_type::swizzler_type;
   using Base = UnaryExpressionBase<self_type, QualifiedExprType>;
   using Base::expression;
   constexpr static rank_type internal_rank = ExprType::extents_type::rank();

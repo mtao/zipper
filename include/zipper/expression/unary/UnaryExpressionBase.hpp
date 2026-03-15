@@ -13,7 +13,7 @@ namespace detail {
 /// of the child expression. When Child is const-qualified, is_const must
 /// be true regardless of what the child's own traits report.
 namespace _dut_detail {
-template <concepts::QualifiedExpression Child>
+template <zipper::concepts::QualifiedExpression Child>
 consteval auto const_corrected_access_features()
     -> zipper::detail::AccessFeatures {
   constexpr auto base =
@@ -22,10 +22,25 @@ consteval auto const_corrected_access_features()
       .is_const = base.is_const ||
                   std::is_const_v<std::remove_reference_t<Child>>,
       .is_reference = base.is_reference,
-      .is_alias_free = base.is_alias_free,
   };
 }
 } // namespace _dut_detail
+
+/// Default implementation details for unary expressions.
+///
+/// Holds child traits alias and child value type that the unary expression
+/// class body needs for its implementation. These are NOT part of the
+/// public traits interface (capability flags, value_type, extents_type).
+///
+/// Child is the *qualified* child type as passed to the unary expression
+/// class template (e.g. `const MDArray<…>&` for reference storage,
+/// `const MDArray<…>` for owning storage).  Traits are looked up on the
+/// decayed (unqualified) type.
+template <zipper::concepts::QualifiedExpression Child>
+struct DefaultUnaryExpressionDetail {
+  using child_traits = expression::detail::ExpressionTraits<std::decay_t<Child>>;
+  using base_value_type = typename child_traits::value_type;
+};
 
 /// Default traits for unary expressions. Inherits from BasicExpressionTraits
 /// to provide the access_features/shape_features interface.
@@ -34,19 +49,29 @@ consteval auto const_corrected_access_features()
 /// class template (e.g. `const MDArray<…>&` for reference storage,
 /// `const MDArray<…>` for owning storage).  Traits are looked up on the
 /// decayed (unqualified) type.
-template <zipper::concepts::QualifiedExpression Child>
+///
+/// AF controls the access features (writability, referrability) for this
+/// expression.  Defaults to the child's access features with
+/// const-correction applied (i.e. if Child is const-qualified, is_const
+/// is forced to true).  Override this parameter for expressions that
+/// compute values on the fly and cannot return references (e.g.
+/// CoefficientWiseOperation, ScalarOperation) — typically with
+/// `{.is_const = true, .is_reference = false}`.
+template <zipper::concepts::QualifiedExpression Child,
+          zipper::detail::AccessFeatures AF =
+              _dut_detail::const_corrected_access_features<Child>()>
 struct DefaultUnaryExpressionTraits
     : public expression::detail::BasicExpressionTraits<
           typename expression::detail::ExpressionTraits<std::decay_t<Child>>::value_type,
           typename expression::detail::ExpressionTraits<std::decay_t<Child>>::extents_type,
-          _dut_detail::const_corrected_access_features<Child>(),
+          AF,
           expression::detail::ShapeFeatures{.is_resizable = false}> {
-  using child_traits = expression::detail::ExpressionTraits<std::decay_t<Child>>;
-  using base_value_type = typename child_traits::value_type;
+  using _Detail = DefaultUnaryExpressionDetail<Child>;
+  using base_value_type = typename _Detail::base_value_type;
 
   constexpr static bool is_value_based = true;
   constexpr static bool is_coefficient_consistent =
-      child_traits::is_coefficient_consistent;
+      _Detail::child_traits::is_coefficient_consistent;
 
   /// stores_references is true when the child is stored by reference,
   /// OR when the child itself (even if stored by value) internally stores
@@ -54,7 +79,7 @@ struct DefaultUnaryExpressionTraits
   /// -(a+b) correctly reports stores_references==true when (a+b) is moved
   /// in by value but still holds references to a and b.
   constexpr static bool stores_references =
-      std::is_reference_v<Child> || child_traits::stores_references;
+      std::is_reference_v<Child> || _Detail::child_traits::stores_references;
 };
 } // namespace detail
 

@@ -95,35 +95,44 @@ struct OutputExtentsHelper {
 
 }  // namespace unary
 
-/// ExpressionTraits specialization for AntiSlice.
-/// Note: ExprType may be const-qualified but not reference-qualified.
+/// Implementation details for AntiSlice expressions.
+///
+/// Holds child traits alias, the output rank, and the child-index map.
+/// The class body needs these to map output dimension indices back to
+/// child dimension indices.
 template <zipper::concepts::QualifiedExpression ExprType, rank_type... InsertedDims>
-struct detail::ExpressionTraits<unary::AntiSlice<ExprType, InsertedDims...>>
-    : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<
-          ExprType> {
-    using StrippedExprType = std::decay_t<ExprType>;
-    using Base = detail::ExpressionTraits<StrippedExprType>;
-    using value_type = typename Base::value_type;
-    using child_extents_type = typename Base::extents_type;
+struct detail::ExpressionDetail<unary::AntiSlice<ExprType, InsertedDims...>> {
+    using child_traits = detail::ExpressionTraits<std::decay_t<ExprType>>;
+    using child_extents_type = typename child_traits::extents_type;
 
     static constexpr rank_type child_rank = child_extents_type::rank();
     static constexpr rank_type n_inserted = sizeof...(InsertedDims);
     static constexpr rank_type output_rank =
         unary::_detail_antislice::output_rank_v<child_rank, n_inserted>;
 
+    static constexpr auto child_index_map =
+        unary::_detail_antislice::make_child_index_map<output_rank,
+                                                       InsertedDims...>();
+};
+
+/// ExpressionTraits specialization for AntiSlice.
+/// Note: ExprType may be const-qualified but not reference-qualified.
+template <zipper::concepts::QualifiedExpression ExprType, rank_type... InsertedDims>
+struct detail::ExpressionTraits<unary::AntiSlice<ExprType, InsertedDims...>>
+    : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<
+          ExprType> {
+    using _Detail = detail::ExpressionDetail<unary::AntiSlice<ExprType, InsertedDims...>>;
+    using value_type = typename _Detail::child_traits::value_type;
+
     using extents_type = typename unary::_detail_antislice::OutputExtentsHelper<
-        child_extents_type, output_rank, InsertedDims...>::type;
+        typename _Detail::child_extents_type, _Detail::output_rank, InsertedDims...>::type;
 
     // Validate that InsertedDims are all < output_rank (compile-time)
-    static_assert(((InsertedDims < output_rank) && ...),
+    static_assert(((InsertedDims < _Detail::output_rank) && ...),
                   "InsertedDims must be valid positions in the output rank");
 
     constexpr static bool is_coefficient_consistent = false;
     constexpr static bool is_value_based = false;
-
-    static constexpr auto child_index_map =
-        unary::_detail_antislice::make_child_index_map<output_rank,
-                                                       InsertedDims...>();
 };
 
 namespace unary {
@@ -135,17 +144,18 @@ class AntiSlice
    public:
     using self_type = AntiSlice<ExprType, InsertedDims...>;
     using traits = zipper::expression::detail::ExpressionTraits<self_type>;
+    using detail_type = zipper::expression::detail::ExpressionDetail<self_type>;
     using extents_type = typename traits::extents_type;
     using value_type = typename traits::value_type;
     using StrippedExprType = std::decay_t<ExprType>;
     using Base = UnaryExpressionBase<self_type, ExprType>;
     using Base::expression;
-    using child_traits = typename traits::Base;
+    using child_traits = typename detail_type::child_traits;
     using child_extents_type = typename child_traits::extents_type;
     using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
 
-    static constexpr rank_type output_rank = traits::output_rank;
-    static constexpr auto child_index_map = traits::child_index_map;
+    static constexpr rank_type output_rank = detail_type::output_rank;
+    static constexpr auto child_index_map = detail_type::child_index_map;
 
     AntiSlice(const AntiSlice &o) : AntiSlice(o.expression()) {}
     AntiSlice(AntiSlice &&o) : AntiSlice(o.expression()) {}

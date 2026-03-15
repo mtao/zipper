@@ -55,7 +55,7 @@ struct detail::ExpressionTraits<nullary::Constant<T, Indices...>>
     : public BasicExpressionTraits<
           T, zipper::extents<Indices...>,
           expression::detail::AccessFeatures{
-              .is_const = false, .is_reference = false, .is_alias_free = true},
+              .is_const = false, .is_reference = false},
           expression::detail::ShapeFeatures{.is_resizable = true}> {};
 
 } // namespace zipper::expression

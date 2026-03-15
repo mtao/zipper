@@ -9,14 +9,14 @@ namespace zipper::expression {
 namespace nullary {
 /// Uniform distribution
 template <typename T, typename Generator = std::default_random_engine,
-          concepts::Extents Extents = zipper::extents<>>
+          zipper::concepts::Extents Extents = zipper::extents<>>
 auto uniform_random(const Extents &extents = {}, const T &min = 0,
                          const T &max = 1,
                          const Generator &g = Generator{
                              std::random_device{}()});
 
 template <typename T, typename Generator = std::default_random_engine,
-          concepts::Extents Extents = zipper::extents<>>
+          zipper::concepts::Extents Extents = zipper::extents<>>
 auto normal_random(const Extents &extents = {}, const T &mean = 0,
                         const T &stddev = 1,
                         const Generator &g = Generator{std::random_device{}()});
@@ -33,7 +33,7 @@ auto normal_random_infinite(const T &min = 0, const T &max = 1,
 
 template <template <typename RT> typename Distribution, typename T,
           typename Generator = std::default_random_engine,
-          concepts::Extents Extents = zipper::extents<>>
+          zipper::concepts::Extents Extents = zipper::extents<>>
 auto make_random(const Extents &extents = {}, const Distribution<T> &d = {},
                  const Generator &g = Generator{std::random_device{}()});
 template <template <typename RT> typename Distribution, typename T,
@@ -43,7 +43,7 @@ auto make_random_infinite(const Distribution<T> &d = {},
                               std::random_device{}()});
 
 template <typename Distribution, typename Generator,
-          concepts::Extents ExtentsType>
+          zipper::concepts::Extents ExtentsType>
 class Random : public NullaryExpressionBase<
                    Random<Distribution, Generator, ExtentsType>>,
                public ExtentsType {
@@ -55,7 +55,7 @@ public:
   using extents_type = typename traits::extents_type;
   using extents_traits = typename traits::extents_traits;
   using value_type = typename traits::value_type;
-  static_assert(!concepts::Extents<value_type>);
+  static_assert(!zipper::concepts::Extents<value_type>);
 
   using extents_type::extent;
   using extents_type::rank;
@@ -81,12 +81,12 @@ private:
   mutable Distribution m_distribution = {};
   mutable Generator m_generator = {};
 };
-template <typename Distribution, typename Generator, concepts::Extents Extents>
+template <typename Distribution, typename Generator, zipper::concepts::Extents Extents>
 Random(const Distribution &, const Generator &, const Extents &)
     -> Random<Distribution, Generator, Extents>;
 
 template <template <typename RT> typename Distribution, typename T,
-          typename Generator, concepts::Extents Extents>
+          typename Generator, zipper::concepts::Extents Extents>
 auto make_random(const Extents &extents, const Distribution<T> &d,
                  const Generator &g) {
   return Random<Distribution<T>, Generator, Extents>(extents, d, g);
@@ -98,7 +98,7 @@ auto make_random_infinite(const Distribution<T> &d, const Generator &g) {
   return Random<Distribution<T>, Generator, zipper::extents<>>(d, g);
 }
 
-template <typename T, typename Generator, concepts::Extents Extents>
+template <typename T, typename Generator, zipper::concepts::Extents Extents>
 auto uniform_random(const Extents &extents, const T &min, const T &max,
                          const Generator &g) {
   static_assert(std::is_arithmetic_v<T>);
@@ -111,7 +111,7 @@ auto uniform_random(const Extents &extents, const T &min, const T &max,
   }
 }
 
-template <typename T, typename Generator, concepts::Extents Extents>
+template <typename T, typename Generator, zipper::concepts::Extents Extents>
 auto normal_random(const Extents &extents, const T &mean, const T &stddev,
                         const Generator &g) {
   static_assert(std::is_floating_point_v<T>);
@@ -131,13 +131,13 @@ auto normal_random_infinite(const T &mean, const T &stddev,
   return normal_random<T, Generator>(zipper::extents<>{}, mean, stddev, g);
 }
 } // namespace nullary
-template <typename Distribution, typename Generator, concepts::Extents Extents>
+template <typename Distribution, typename Generator, zipper::concepts::Extents Extents>
 struct detail::ExpressionTraits<
     nullary::Random<Distribution, Generator, Extents>>
     : public BasicExpressionTraits<
           typename Distribution::result_type, Extents,
           expression::detail::AccessFeatures{
-              .is_const = false, .is_reference = false, .is_alias_free = true},
+              .is_const = false, .is_reference = false},
           expression::detail::ShapeFeatures{.is_resizable = true}> {};
 
 } // namespace zipper::expression

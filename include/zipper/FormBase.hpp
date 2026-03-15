@@ -78,11 +78,11 @@ public:
 
   template <concepts::Form Other>
   FormBase(const Other &other)
-    requires(expression_traits::is_writable)
+    requires(expression::concepts::WritableExpression<expression_type>)
       : FormBase(other.expression()) {}
   template <concepts::Form Other>
   auto operator=(const Other &other) -> FormBase &
-    requires(expression_traits::is_writable)
+    requires(expression::concepts::WritableExpression<expression_type>)
   {
     return operator=(other.expression());
   }

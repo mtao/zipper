@@ -554,10 +554,12 @@ TEST_CASE("test_blocks", "[matrix][storage][dense]") {
     auto RC = R.bottomRows(zipper::static_index_t<2>{});
 
     using CRT = std::decay_t<decltype(CR)>;
+    using CRT_Detail =
+        zipper::expression::detail::ExpressionDetail<CRT::expression_type>;
     using CRT_R =
-        CRT::expression_type::traits::extents_helper::single_slice_helper<0>;
+        CRT_Detail::extents_helper::single_slice_helper<0>;
     using CRT_C =
-        CRT::expression_type::traits::extents_helper::single_slice_helper<1>;
+        CRT_Detail::extents_helper::single_slice_helper<1>;
 
     static_assert(
         std::is_same_v<CRT_R::type,

@@ -356,10 +356,9 @@ TEST_CASE("stl_mdarray_traits_consistency", "[storage][stl]") {
     using T = zipper::expression::nullary::StlMDArray<std::vector<double>>;
     using traits = zipper::expression::detail::ExpressionTraits<T>;
 
-    // access_features should indicate writable, alias-free
+    // access_features should indicate writable
     static_assert(!traits::access_features.is_const);
     static_assert(traits::access_features.is_reference);
-    static_assert(traits::access_features.is_alias_free);
 
     // derived bools must agree
     static_assert(traits::is_writable);

@@ -115,7 +115,7 @@ public:
              !std::is_same_v<LinearAccessorType, OtherLinearAccessor>)
       : m_linear_accessor(other.linear_accessor()), m_mapping(other.mapping()) {}
 
-  template <concepts::Extents E2>
+  template <zipper::concepts::Extents E2>
   void resize_extents(const E2 &e)
     requires(extents_traits::template is_convertable_from<E2>())
   {
@@ -144,7 +144,7 @@ public:
   }
 
 protected:
-  template <concepts::IndexArgument... Indices>
+  template <zipper::concepts::IndexArgument... Indices>
   auto get_index(Indices &&...indices) const -> index_type {
     // rank-0 expressions act as scalars; any indices are ignored
     if constexpr (extents_type::rank() == 0) {
@@ -157,12 +157,12 @@ protected:
   }
 
 public:
-  template <concepts::Index... Indices>
+  template <zipper::concepts::Index... Indices>
   auto coeff(Indices &&...indices) const -> value_type {
     index_type idx = get_index(std::forward<Indices>(indices)...);
     return m_linear_accessor.coeff(idx);
   }
-  template <concepts::Index... Indices>
+  template <zipper::concepts::Index... Indices>
   auto coeff_ref(Indices &&...indices) -> value_type &
     requires(traits::is_assignable())
   {
@@ -170,7 +170,7 @@ public:
     return m_linear_accessor.coeff_ref(idx);
   }
 
-  template <concepts::Index... Indices>
+  template <zipper::concepts::Index... Indices>
   auto const_coeff_ref(Indices &&...indices) const -> const value_type &
     requires(traits::is_referrable())
   {
@@ -208,18 +208,6 @@ struct detail::ExpressionTraits<nullary::LinearLayoutExpression<
           typename LinearAccessorType::value_type, Extents,
           storage::template LinearAccessorTraits<
               LinearAccessorType>::access_features,
-          storage::LinearAccessorTraits<LinearAccessorType>::shape_features> {
-
-  using BaseTraits = BasicExpressionTraits<
-      typename LinearAccessorType::value_type, Extents,
-      storage::LinearAccessorTraits<LinearAccessorType>::access_features,
-      storage::LinearAccessorTraits<LinearAccessorType>::shape_features>;
-
-  using extents_traits = BaseTraits::extents_traits;
-  using extents_type = BaseTraits::extents_type;
-  using layout_policy = LayoutPolicy;
-  using accessor_policy = AccessorPolicy;
-  using mapping_type = typename layout_policy::template mapping<extents_type>;
-};
+          storage::LinearAccessorTraits<LinearAccessorType>::shape_features> {};
 } // namespace zipper::expression
 #endif

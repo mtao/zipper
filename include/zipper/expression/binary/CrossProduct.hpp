@@ -14,14 +14,28 @@ template <zipper::concepts::QualifiedRankedExpression<1> A,
 class CrossProduct;
 
 }
-template <concepts::QualifiedRankedExpression<1> A, concepts::QualifiedRankedExpression<1> B>
-struct detail::ExpressionTraits<binary::CrossProduct<A, B>>
-    : public binary::detail::DefaultBinaryExpressionTraits<A, B> {
-    using ATraits = detail::ExpressionTraits<std::decay_t<A>>;
-    using BTraits = detail::ExpressionTraits<std::decay_t<B>>;
+
+/// Implementation details for CrossProduct expressions.
+///
+/// Holds child traits aliases and the coefficient-wise extents merge utility
+/// used by the traits specialization to compute the merged extents_type,
+/// and by the class body to access child traits (as lhs_traits / rhs_traits).
+template <zipper::concepts::QualifiedRankedExpression<1> A,
+          zipper::concepts::QualifiedRankedExpression<1> B>
+struct detail::ExpressionDetail<binary::CrossProduct<A, B>>
+    : public binary::detail::DefaultBinaryExpressionDetail<A, B> {
+    using _Base = binary::detail::DefaultBinaryExpressionDetail<A, B>;
+    using ATraits = typename _Base::ATraits;
+    using BTraits = typename _Base::BTraits;
     using ConvertExtentsUtil = binary::detail::coeffwise_extents_values<
         typename ATraits::extents_type, typename BTraits::extents_type>;
-    using extents_type = typename ConvertExtentsUtil::merged_extents_type;
+};
+
+template <zipper::concepts::QualifiedRankedExpression<1> A, zipper::concepts::QualifiedRankedExpression<1> B>
+struct detail::ExpressionTraits<binary::CrossProduct<A, B>>
+    : public binary::detail::DefaultBinaryExpressionTraits<A, B> {
+    using _Detail = detail::ExpressionDetail<binary::CrossProduct<A, B>>;
+    using extents_type = typename _Detail::ConvertExtentsUtil::merged_extents_type;
 
     // constraint on the extent, supporting 2d is ugly but who cares
     static_assert(extents_type::static_extent(0) == std::dynamic_extent ||
@@ -39,10 +53,11 @@ class CrossProduct : public BinaryExpressionBase<CrossProduct<A, B>, A, B> {
     using Base = BinaryExpressionBase<self_type, A, B>;
     using ExpressionBase = expression::ExpressionBase<self_type>;
     using traits = zipper::expression::detail::ExpressionTraits<self_type>;
+    using detail_type = zipper::expression::detail::ExpressionDetail<self_type>;
     using value_type = traits::value_type;
     using extents_type = typename traits::extents_type;
-    using lhs_traits = traits::ATraits;
-    using rhs_traits = traits::BTraits;
+    using lhs_traits = typename detail_type::ATraits;
+    using rhs_traits = typename detail_type::BTraits;
 
     using Base::lhs;
     using Base::rhs;

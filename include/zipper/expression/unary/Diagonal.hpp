@@ -12,18 +12,20 @@ namespace unary {
 template <zipper::concepts::QualifiedExpression ExpressionType> class Diagonal;
 
 } // namespace unary
-template <zipper::concepts::QualifiedExpression ExpressionType>
-struct detail::ExpressionTraits<unary::Diagonal<ExpressionType>>
-    : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<
-          ExpressionType> {
-  using Base = detail::ExpressionTraits<std::decay_t<ExpressionType>>;
-  using value_type = Base::value_type;
-  using base_extents_type = Base::extents_type;
-  using base_extents_traits = zipper::detail::ExtentsTraits<base_extents_type>;
-  constexpr static bool is_coefficient_consistent = false;
-  constexpr static bool is_value_based = false;
 
-  //
+/// Implementation details for Diagonal expressions.
+///
+/// Holds child traits alias, child extents types, and the min-extent
+/// computation functions. The class body uses child_traits to access the
+/// child's extents_type and get_min_extent() to determine the diagonal
+/// length at runtime.
+template <zipper::concepts::QualifiedExpression ExpressionType>
+struct detail::ExpressionDetail<unary::Diagonal<ExpressionType>> {
+  using child_traits = detail::ExpressionTraits<std::decay_t<ExpressionType>>;
+  using value_type = typename child_traits::value_type;
+  using base_extents_type = typename child_traits::extents_type;
+  using base_extents_traits = zipper::detail::ExtentsTraits<base_extents_type>;
+
   template <std::size_t... Indices>
   constexpr static auto
   get_min_extent_static(std::integer_sequence<index_type, Indices...>)
@@ -43,6 +45,7 @@ struct detail::ExpressionTraits<unary::Diagonal<ExpressionType>>
           std::make_integer_sequence<index_type, base_extents_type::rank()>{});
     }
   }
+
   static auto get_min_extent(const base_extents_type &e) -> index_type {
     if constexpr (base_extents_traits::is_static) {
       return get_min_extent_static();
@@ -57,14 +60,17 @@ struct detail::ExpressionTraits<unary::Diagonal<ExpressionType>>
       return min;
     }
   }
-  using extents_type = zipper::extents<get_min_extent_static()>;
-  static auto get_extents(const base_extents_type &e) -> extents_type {
-    if constexpr (base_extents_traits::is_static) {
-      return {};
-    } else {
-      return extents_type(get_min_extent(e));
-    }
-  }
+};
+
+template <zipper::concepts::QualifiedExpression ExpressionType>
+struct detail::ExpressionTraits<unary::Diagonal<ExpressionType>>
+    : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<
+          ExpressionType> {
+  using _Detail = detail::ExpressionDetail<unary::Diagonal<ExpressionType>>;
+  using value_type = typename _Detail::value_type;
+  constexpr static bool is_coefficient_consistent = false;
+  constexpr static bool is_value_based = false;
+  using extents_type = zipper::extents<_Detail::get_min_extent_static()>;
 };
 
 namespace unary {
@@ -74,12 +80,13 @@ class Diagonal
 public:
   using self_type = Diagonal<ExpressionType>;
   using traits = zipper::expression::detail::ExpressionTraits<self_type>;
+  using detail_type = zipper::expression::detail::ExpressionDetail<self_type>;
   using extents_type = traits::extents_type;
   using value_type = traits::value_type;
   using Base = UnaryExpressionBase<self_type, ExpressionType>;
   using Base::expression;
-  using child_traits = traits::Base;
-  using child_extents_type = child_traits::extents_type;
+  using child_traits = typename detail_type::child_traits;
+  using child_extents_type = typename child_traits::extents_type;
   using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
 
   Diagonal(const Diagonal &o) : Diagonal(o.expression()) {}
@@ -101,7 +108,7 @@ public:
 
   constexpr auto extent([[maybe_unused]] rank_type i) const -> index_type {
     ZIPPER_ASSERT(i == 0);
-    return traits::get_min_extent(expression().extents());
+    return detail_type::get_min_extent(expression().extents());
   }
 
   constexpr auto extents() const -> extents_type {

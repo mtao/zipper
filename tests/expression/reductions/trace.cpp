@@ -71,8 +71,8 @@ TEST_CASE("test_partial_trace_matrix", "[matrix][storage][dense]") {
             std::decay_t<decltype(N.expression())>>(N.expression());
     static_assert(
         std::decay_t<decltype(empty_partial_trace.extents())>::rank() == 2);
-    using reducer = std::decay_t<
-        decltype(empty_partial_trace.expression())>::traits::index_remover;
+    using reducer = zipper::expression::detail::ExpressionDetail<std::decay_t<
+        decltype(empty_partial_trace.expression())>>::index_remover;
     constexpr static auto f2r = reducer::full_rank_to_reduced_indices;
     constexpr static auto r2f = reducer::reduced_rank_to_full_indices;
     static_assert(f2r.size() == 2);

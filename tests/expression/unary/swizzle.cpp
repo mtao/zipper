@@ -3,6 +3,7 @@
 #include <iostream>
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
+#include <zipper/expression/concepts/capabilities.hpp>
 #include <zipper/expression/nullary/Identity.hpp>
 #include <zipper/expression/nullary/Random.hpp>
 #include <zipper/expression/unary/Swizzle.hpp>
@@ -381,7 +382,7 @@ TEST_CASE("const_matrix_transpose_not_writable", "[swizzle][const]") {
     auto T = M.transpose();
     // T should be read-only since M is const
     using T_type = decltype(T);
-    static_assert(!T_type::is_writable,
+    static_assert(!zipper::expression::concepts::WritableExpression<typename T_type::expression_type>,
                   "transpose of const matrix should not be writable");
     CHECK(T(0, 0) == 1.0);
     CHECK(T(1, 0) == 2.0);

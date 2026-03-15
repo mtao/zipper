@@ -17,41 +17,40 @@ template <zipper::concepts::QualifiedExpression ExprType,
 class PartialReduction;
 
 }
+
+/// Implementation details for PartialReduction expressions.
+///
+/// Holds the child extents type and the index remover utility. The class
+/// body needs child_extents_type to determine the child's rank and
+/// index_remover to map between reduced and full index spaces (used in
+/// the constructor, slice_type computation, and coeff dispatching).
+template <zipper::concepts::QualifiedExpression ExprType,
+          template <typename> typename Reduction, rank_type... Indices>
+struct detail::ExpressionDetail<
+    unary::PartialReduction<ExprType, Reduction, Indices...>> {
+    using Base = detail::ExpressionTraits<std::decay_t<ExprType>>;
+    using child_extents_type = typename Base::extents_type;
+    using index_remover =
+        unary::detail::invert_integer_sequence<Base::extents_type::rank(),
+                                               Indices...>;
+};
+
 template <zipper::concepts::QualifiedExpression ExprType,
           template <typename> typename Reduction, rank_type... Indices>
 struct detail::ExpressionTraits<
     unary::PartialReduction<ExprType, Reduction, Indices...>>
-    : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<ExprType> {
-    using Base = detail::ExpressionTraits<std::decay_t<ExprType>>;
-    using child_extents_type = Base::extents_type;
-    using index_remover =
-        unary::detail::invert_integer_sequence<Base::extents_type::rank(),
-                                               Indices...>;
-    using extents_type = typename index_remover::template assign_types<
+    : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<
+          ExprType,
+          zipper::detail::AccessFeatures{.is_const = true,
+                                         .is_reference = false}> {
+    using _Detail = detail::ExpressionDetail<
+        unary::PartialReduction<ExprType, Reduction, Indices...>>;
+    using extents_type = typename _Detail::index_remover::template assign_types<
         zipper::extents, zipper::detail::extents::static_extents_to_array_v<
-                             typename Base::extents_type>>;
-    using value_type = Base::value_type;
-    constexpr static bool is_writable = false;
+                             typename _Detail::child_extents_type>>;
+    using value_type = typename _Detail::Base::value_type;
     constexpr static bool is_coefficient_consistent = false;
     constexpr static bool is_value_based = false;
-    // PartialReduction computes aggregate values — not referrable or assignable
-    constexpr static zipper::detail::AccessFeatures access_features = {
-        .is_const = true,
-        .is_reference = false,
-        .is_alias_free = Base::access_features.is_alias_free,
-    };
-    consteval static auto is_const_valued() -> bool {
-      return access_features.is_const;
-    }
-    consteval static auto is_reference_valued() -> bool {
-      return access_features.is_reference;
-    }
-    consteval static auto is_assignable() -> bool {
-      return !is_const_valued() && is_reference_valued();
-    }
-    consteval static auto is_referrable() -> bool {
-      return access_features.is_reference;
-    }
 };
 
 namespace unary {
@@ -64,16 +63,17 @@ class PartialReduction
    public:
     using self_type = PartialReduction<ExprType, Reduction, Indices...>;
     using traits = zipper::expression::detail::ExpressionTraits<self_type>;
+    using detail_type = zipper::expression::detail::ExpressionDetail<self_type>;
     using extents_type = traits::extents_type;
     using value_type = traits::value_type;
      using Base = UnaryExpressionBase<self_type, ExprType>;
     using Base::expression;
-    using child_extents_type = traits::child_extents_type;
+    using child_extents_type = typename detail_type::child_extents_type;
 
     template <typename U>
       requires std::constructible_from<typename Base::storage_type, U &&>
     PartialReduction(U &&b)
-        : Base(std::forward<U>(b)), m_extents(traits::index_remover::get_extents(expression().extents())) {}
+        : Base(std::forward<U>(b)), m_extents(detail_type::index_remover::get_extents(expression().extents())) {}
     PartialReduction() = delete;
     PartialReduction& operator=(const PartialReduction&) = delete;
     PartialReduction& operator=(PartialReduction&&) = delete;
@@ -94,7 +94,7 @@ class PartialReduction
     struct slice_type_<std::integer_sequence<rank_type, N...>> {
         using type =
             Slice<const std::decay_t<ExprType>&,
-                      std::conditional_t<traits::index_remover::in_sequence(N),
+                      std::conditional_t<detail_type::index_remover::in_sequence(N),
                                          index_type, full_extent_t>...>;
     };
 
@@ -108,7 +108,7 @@ class PartialReduction
             return zipper::full_extent_t{};
         } else {
             constexpr static rank_type Index =
-                traits::index_remover::full_rank_to_reduced_indices[N];
+                detail_type::index_remover::full_rank_to_reduced_indices[N];
             static_assert(Index <= sizeof...(Args));
             return zipper::detail::pack_index<Index>(
                 std::forward<Args>(idxs)...);

@@ -48,11 +48,11 @@ public:
 
   template <concepts::Tensor Other>
   TensorBase(const Other &other)
-    requires(expression_traits::is_writable)
+    requires(expression::concepts::WritableExpression<expression_type>)
       : TensorBase(other.expression()) {}
   template <concepts::Tensor Other>
   auto operator=(const Other &other) -> TensorBase &
-    requires(expression_traits::is_writable)
+    requires(expression::concepts::WritableExpression<expression_type>)
   {
     return operator=(other.expression());
   }

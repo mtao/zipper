@@ -324,37 +324,12 @@ namespace zipper::expression {
 template <typename ValueType, typename Extents>
 struct detail::ExpressionTraits<
     zipper::storage::SparseCoordinateAccessor<ValueType, Extents>>
-    : public detail::DefaultExpressionTraits<ValueType, Extents> {
-  using value_type = ValueType;
-  using extents_type = Extents;
-
-  constexpr static AccessFeatures access_features = {
-      .is_const = std::is_const_v<ValueType>,
-      .is_reference = true,
-      .is_alias_free = true,
-  };
-  constexpr static ShapeFeatures shape_features = {
-      .is_resizable = false,
-  };
-
-  consteval static auto is_const_valued() -> bool {
-    return access_features.is_const;
-  }
-  consteval static auto is_reference_valued() -> bool {
-    return access_features.is_reference;
-  }
-  consteval static auto is_assignable() -> bool {
-    return access_features.is_assignable();
-  }
-  consteval static auto is_referrable() -> bool {
-    return access_features.is_reference;
-  }
-  consteval static auto is_resizable() -> bool {
-    return shape_features.is_resizable;
-  }
-
-  constexpr static bool is_writable = is_assignable();
-};
+    : public detail::BasicExpressionTraits<
+          ValueType, Extents,
+          zipper::detail::AccessFeatures{
+              .is_const = std::is_const_v<ValueType>,
+              .is_reference = true},
+          zipper::detail::ShapeFeatures{.is_resizable = false}> {};
 
 } // namespace zipper::expression
 

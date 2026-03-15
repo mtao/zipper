@@ -1,6 +1,7 @@
 #if !defined(ZIPPER_AS_HPP)
 #define ZIPPER_AS_HPP
 #include "concepts/Zipper.hpp"
+#include "expression/concepts/capabilities.hpp"
 #include <utility> // std::in_place
 
 namespace zipper {
@@ -20,7 +21,7 @@ template <concepts::Expression T> class TensorBase;
   auto as_##NAME_LOWER(ZipperDerived &v) {                                     \
     using Expr = typename ZipperDerived::expression_type;                      \
     constexpr static bool make_const =                                         \
-        !ZipperDerived::expression_traits::is_writable ||                      \
+        !expression::concepts::WritableExpression<Expr> ||                     \
         std::is_const_v<ZipperDerived>;                                        \
     using ExprC = std::conditional_t<make_const, const Expr, Expr>;            \
     return NAME_UPPER##Base<ExprC &>(std::in_place, v.expression());            \
