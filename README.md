@@ -176,7 +176,7 @@ a(0) = 0.0;
 Use `to_owned()` when you want to snapshot a lazy expression without
 materializing it (e.g., to store it for later evaluation).
 
-##### `unsafe()` -- Returnable Views (Caller Asserts Lifetime)
+##### `unsafe()` -- Copyable/Returnable Views (Caller Asserts Lifetime)
 
 `unsafe()` wraps the expression in an `UnsafeRef` node that overrides
 `stores_references` to `false`, making the result copyable and returnable. The
@@ -185,13 +185,22 @@ verbosity, but the trade-off is intentional: rather than silently allowing
 dangling references, Zipper requires explicit opt-in for potentially unsafe
 lifetime escapes.
 
+Note that `auto s = M.col(j)` works fine on its own (prvalue, guaranteed copy
+elision). You only need `unsafe()` when you need to **copy** the view or
+**return** it from a function:
+
 ```cpp
 zipper::Matrix<double, 3, 3> M{{1,2,3},{4,5,6},{7,8,9}};
 
-// With unsafe(): the view becomes returnable
-auto s = M.col(zipper::index_type(1)).unsafe();
-s(0) = 42.0;                    // writes through to M(0,1)
-M(2, 1) = 99.0;                 // visible through s(2)
+auto s = M.col(zipper::index_type(1));            // OK -- prvalue, no copy
+// auto s2 = s;                                   // ERROR -- copy deleted
+auto s2 = s.unsafe();                             // OK -- copyable view
+s2(0) = 42.0;                                     // writes through to M(0,1)
+
+// Returning from a function requires unsafe():
+auto get_col = [&M](int j) {
+    return M.col(zipper::index_type(j)).unsafe();  // moved into UnsafeRef
+};
 ```
 
 `unsafe()` is ref-qualified for safety:
@@ -216,7 +225,7 @@ auto r = row_view.unsafe();
 |---|---|---|---|
 | `eval()` | Concrete `Vector`/`Matrix`/etc. | Fully independent | You need a value type |
 | `to_owned()` | Lazy expression tree (deep copy) | Fully independent | You want to snapshot a lazy expression |
-| `unsafe()` | Returnable view wrapper | References original data | You need `auto s = M.col(j)` ergonomics |
+| `unsafe()` | Returnable view wrapper | References original data | You need to copy or return a view |
 
 ## Dependencies
 

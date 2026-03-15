@@ -129,23 +129,32 @@ TEST_CASE("readme_to_owned", "[readme]") {
 }
 
 // ============================================================
-// README Section: "unsafe()" -- returnable views
+// README Section: "unsafe()" -- copyable/returnable views
 // ============================================================
-TEST_CASE("readme_unsafe_col", "[readme]") {
+TEST_CASE("readme_unsafe_copy_and_return", "[readme]") {
     zipper::Matrix<double, 3, 3> M{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
 
-    // With unsafe(): the view becomes returnable
-    auto s = M.col(zipper::index_type(1)).unsafe();
-    s(0) = 42.0;                    // writes through to M(0,1)
+    // auto s = M.col(j) works fine (prvalue, guaranteed copy elision)
+    auto s = M.col(zipper::index_type(1));
+    CHECK(s(0) == 2.0);
+
+    // But copying requires unsafe()
+    static_assert(!std::is_copy_constructible_v<decltype(s)>,
+                  "col() view should not be copyable");
+    auto s2 = s.unsafe();
+    static_assert(std::is_copy_constructible_v<decltype(s2)>,
+                  "unsafe() result should be copyable");
+    s2(0) = 42.0;                    // writes through to M(0,1)
     CHECK(M(0, 1) == 42.0);
 
-    M(2, 1) = 99.0;                 // visible through s(2)
-    CHECK(s(2) == 99.0);
-
-    // unsafe result should be copy constructible (Returnable)
-    using S_type = decltype(s);
-    static_assert(std::is_copy_constructible_v<S_type>,
-                  "unsafe() result should be Returnable (copyable)");
+    // Returning from a function requires unsafe()
+    auto get_col = [&M](int j) {
+        return M.col(zipper::index_type(j)).unsafe();
+    };
+    auto c = get_col(0);
+    CHECK(c(0) == 1.0);
+    CHECK(c(1) == 4.0);
+    CHECK(c(2) == 7.0);
 }
 
 TEST_CASE("readme_unsafe_rvalue_chaining", "[readme]") {
