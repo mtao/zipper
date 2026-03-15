@@ -67,6 +67,119 @@ struct Addition {
 , where every value declared in the same line as `p`'s declaration is stored by value rather than by reference.
 In Eigen, from my experience, the internal ScalarProduct would be stored as a reference, so the temporary object would disappear at the end of the line and the expression would therefore point to invalid memory.
 
+### Ownership, Views, and Returning Expressions
+
+Zipper's expression templates are lazy -- they reference their operands rather
+than eagerly computing results. This means views like `col()`, `row()`,
+`diagonal()`, `transpose()`, and `head()`/`tail()` are zero-cost live
+references into the original data:
+
+```cpp
+zipper::Matrix<double, 3, 3> M{{1,2,3},{4,5,6},{7,8,9}};
+
+// r is a live mutable view -- no copy, no allocation
+auto r = M.row(std::integral_constant<zipper::index_type, 0>{});
+r(1) = 99.0;          // writes through to M(0,1)
+M(0, 2) = 42.0;       // visible through r(2)
+
+// Assignment through temporary views works directly
+M.col(zipper::index_type(1)) = zipper::Vector<double, 3>{10, 20, 30};
+```
+
+Because these views hold references, Zipper tracks this at the type level via
+`stores_references`. Expressions that store references inherit `NonReturnable`,
+which deletes the copy constructor to prevent accidental dangling references.
+This is analogous to the bugs that Eigen's `auto` with expression templates
+famously causes -- but Zipper catches them at compile time.
+
+Zipper provides three mechanisms for controlling when and how expressions
+materialize or escape their scope:
+
+#### `eval()` -- Materialize to a Concrete Type
+
+`eval()` eagerly evaluates the entire expression tree into a concrete owning
+type (`Vector`, `Matrix`, etc.). The result is fully independent of the
+original data.
+
+```cpp
+zipper::Vector<double, 3> a{1, 2, 3}, b{10, 20, 30};
+
+auto sum_lazy = a + b;     // lazy -- still references a and b
+auto sum = (a + b).eval(); // materialized -- owns its data
+
+a(0) = 999.0;
+// sum_lazy(0) == 1009.0   -- sees the mutation
+// sum(0)      == 11.0     -- independent copy
+```
+
+Use `eval()` when you want a concrete value type (e.g., to return from a
+function, store in a container, or break a long expression chain).
+
+#### `to_owned()` -- Deep-Copy the Expression Tree
+
+`to_owned()` recursively deep-copies every node in the expression tree so that
+no references remain, but preserves the lazy expression template structure.
+The result has `stores_references == false` and is safe to copy, move, and
+return.
+
+```cpp
+auto expr = 2.0 * a + 3.0 * b;     // lazy, references a and b
+auto owned = expr.to_owned();       // deep copy -- no references remain
+
+static_assert(!decltype(owned)::stores_references);
+a(0) = 0.0;
+// owned(0) still == 32.0  -- fully independent
+```
+
+Use `to_owned()` when you want to snapshot a lazy expression without
+materializing it (e.g., to store it for later evaluation).
+
+#### `unsafe_ref()` -- Returnable Views (Caller Asserts Lifetime)
+
+`unsafe_ref()` wraps the expression in an `UnsafeRef` node that overrides
+`stores_references` to `false`, making the result copyable and returnable. The
+caller asserts that the referenced data will outlive all copies.
+
+This is the key ergonomic tool for the common pattern of capturing a
+column/row/slice view with `auto`:
+
+```cpp
+zipper::Matrix<double, 3, 3> M{{1,2,3},{4,5,6},{7,8,9}};
+
+// Without unsafe_ref(): col() returns a NonReturnable view
+// auto c = M.col(j);           // works (prvalue, no copy needed)
+// auto c2 = c;                 // ERROR: copy deleted
+
+// With unsafe_ref(): the view becomes returnable
+auto s = M.col(zipper::index_type(1)).unsafe_ref();
+s(0) = 42.0;                    // writes through to M(0,1)
+M(2, 1) = 99.0;                 // visible through s(2)
+```
+
+`unsafe_ref()` is ref-qualified for safety:
+- **On lvalues** (`&` / `const &`): the `UnsafeRef` stores a reference to the
+  expression (lightweight, zero-copy).
+- **On rvalues** (`&&`): the `UnsafeRef` moves the expression node in by
+  value, so it survives the temporary. The owned node may still hold internal
+  references (e.g., a `Slice` referencing the original matrix's storage).
+
+```cpp
+// Rvalue chaining -- Slice is moved into UnsafeRef, M's data is still live
+auto c = M.col(zipper::index_type(0)).unsafe_ref();
+
+// Lvalue -- UnsafeRef holds a reference to the view in `row_view`
+auto row_view = M.row(std::integral_constant<zipper::index_type, 0>{});
+auto r = row_view.unsafe_ref();
+```
+
+#### Summary
+
+| Method | Result | Ownership | Use When |
+|---|---|---|---|
+| `eval()` | Concrete `Vector`/`Matrix`/etc. | Fully independent | You need a value type |
+| `to_owned()` | Lazy expression tree (deep copy) | Fully independent | You want to snapshot a lazy expression |
+| `unsafe_ref()` | Returnable view wrapper | References original data | You need `auto s = M.col(j)` ergonomics |
+
 ## Dependencies
 
 Zipper depends on [fmt](https://fmt.dev) and [mdspan](https:://github.com/kokkos/mdspan), but both of these dependencies should disappear as c++26 functionality becomes more common in existing libraries.
