@@ -44,8 +44,16 @@ zipper::Vector x2_ = x2;
 
 ### Expressions and Value Categories
 
-Those who are used to Eigen will recognize this structure of building expression templates using CRTP. The main difference here is that the semantics kept separate from the inheritance heirarchy and instead class membership is used. This has the subtle advantage of letting us be careful about value categories - deduction guides can now let us store r-value arguments by value rather than by reference, making complex arguments safer.
-See
+Those who are used to Eigen will recognize this structure of building expression templates using CRTP. The main difference here is that the semantics are kept separate from the inheritance hierarchy and instead class membership is used. This has the subtle advantage of letting us be careful about value categories.
+
+The key mechanism is `expression_storage_t<T>`: when an expression node
+captures a child operand, lvalue references are stored by reference while
+rvalue temporaries are moved in and stored by value. This means intermediate
+results that are temporaries are automatically owned by the expression tree,
+while named variables are cheaply referenced. The choice is made per-operand at
+compile time based on the value category of the argument.
+
+For example:
 
 ```cpp
 zipper::Vector<double,4> x = {0,1,2,3};
@@ -56,23 +64,32 @@ results in `p` being stored as something like
 
 ```
 struct Addition {
-    zipper::Vector<double,4>& lhs; // = x
+    zipper::Vector<double,4>& lhs; // = x (lvalue, stored by reference)
     struct ScalarProduct {
-        double lhs;// = 3
-        zipper::Vector<double,4> rhs; // = {2,3,4,5}
-    } rhs;
+        double lhs;                     // = 3
+        zipper::Vector<double,4> rhs;   // = {2,3,4,5} (rvalue, owned by value)
+    } rhs;                              // (rvalue, owned by value)
 };
 ```
 
-, where every value declared in the same line as `p`'s declaration is stored by value rather than by reference.
-In Eigen, from my experience, the internal ScalarProduct would be stored as a reference, so the temporary object would disappear at the end of the line and the expression would therefore point to invalid memory.
+Every rvalue operand in the expression is stored by value rather than by
+reference, so it survives the end of the full-expression. Named variables like
+`x` are stored by reference (cheap, zero-copy). In Eigen, from my experience,
+the internal ScalarProduct would be stored as a reference, so the temporary
+object would disappear at the end of the line and the expression would
+therefore point to invalid memory.
 
 ### Ownership, Views, and Returning Expressions
 
-Zipper's expression templates are lazy -- they reference their operands rather
-than eagerly computing results. This means views like `col()`, `row()`,
-`diagonal()`, `transpose()`, and `head()`/`tail()` are zero-cost live
-references into the original data:
+Zipper's expression templates are lazy -- as described above, they store
+lvalue operands by reference and rvalue temporaries by value rather than
+eagerly computing results. This is what makes expressions like
+`auto s = a + b` safe: `a` and `b` are lvalues that outlive `s`, so holding
+references to them is correct, while any intermediate rvalue subexpressions
+are owned by value inside the tree.
+
+Views like `col()`, `row()`, `diagonal()`, `transpose()`, and `head()`/`tail()`
+are similarly zero-cost live references into the original data:
 
 ```cpp
 zipper::Matrix<double, 3, 3> M{{1,2,3},{4,5,6},{7,8,9}};
