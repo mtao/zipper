@@ -7,13 +7,13 @@
 #include "expression/concepts/capabilities.hpp"
 #include "expression/unary/Cast.hpp"
 #include "expression/unary/CoefficientWiseOperation.hpp"
-#include "expression/unary/concepts/ScalarOperation.hpp"
-#include "zipper/detail/ExtentsTraits.hpp"
-#include "zipper/expression/detail/ExpressionTraits.hpp"
 #include "expression/unary/Repeat.hpp"
 #include "expression/unary/Slice.hpp"
 #include "expression/unary/Swizzle.hpp"
 #include "expression/unary/UnsafeRef.hpp"
+#include "expression/unary/concepts/ScalarOperation.hpp"
+#include "zipper/detail/ExtentsTraits.hpp"
+#include "zipper/expression/detail/ExpressionTraits.hpp"
 #include "zipper/types.hpp"
 
 #include <utility> // std::in_place_t, std::in_place
@@ -24,12 +24,11 @@ template <template <concepts::QualifiedExpression> typename DerivedT,
           concepts::QualifiedExpression Expression>
 class ZipperBase {
 public:
-
   ZipperBase()
     requires(std::is_default_constructible_v<Expression>)
       : m_expression() {}
   using Derived = DerivedT<Expression>;
-  auto derived(this auto& self) -> auto& {
+  auto derived(this auto &self) -> auto & {
     if constexpr (std::is_const_v<std::remove_reference_t<decltype(self)>>) {
       return static_cast<const Derived &>(self);
     } else {
@@ -37,12 +36,14 @@ public:
     }
   }
 
-  using raw_expression_type = Expression;  // the template parameter, possibly const/ref qualified
+  using raw_expression_type =
+      Expression; // the template parameter, possibly const/ref qualified
   using expression_type = std::decay_t<Expression>;
   using expression_traits =
       expression::detail::ExpressionTraits<expression_type>;
 
-  constexpr static bool stores_references = expression_traits::stores_references || std::is_reference_v<Expression>;
+  constexpr static bool stores_references =
+      expression_traits::stores_references || std::is_reference_v<Expression>;
   constexpr static bool is_const = std::is_const_v<Expression>;
   using value_type = typename expression_traits::value_type;
   using extents_type = typename expression_traits::extents_type;
@@ -50,11 +51,11 @@ public:
 
   auto expression() const & -> const Expression & { return m_expression; }
   auto expression() & -> Expression & { return m_expression; }
-  auto expression() const && -> const Expression && { return std::move(m_expression); }
-  auto expression() && -> Expression && { return std::move(m_expression); }
-  auto extents() const -> extents_type {
-    return expression().extents();
+  auto expression() const && -> const Expression && {
+    return std::move(m_expression);
   }
+  auto expression() && -> Expression && { return std::move(m_expression); }
+  auto extents() const -> extents_type { return expression().extents(); }
   [[nodiscard]] constexpr auto extent(rank_type i) const -> index_type {
     return m_expression.extent(i);
   }
@@ -186,44 +187,55 @@ public:
   /// to_owned() preserves the lazy expression template structure but
   /// recursively deep-copies children so no references remain.
   auto to_owned() const {
-      auto owned_expr = expression().make_owned();
-      return DerivedT<const decltype(owned_expr)>(std::in_place, std::move(owned_expr));
+    auto owned_expr = expression().make_owned();
+    return DerivedT<const decltype(owned_expr)>(std::in_place,
+                                                std::move(owned_expr));
   }
 
   /// Returns a wrapper that is copyable/movable/returnable even when
   /// this expression stores references.  The caller asserts that the
   /// referenced data will outlive all copies — hence "unsafe".
   /// Prefer to_owned() when a safe, owning copy is acceptable.
-  auto unsafe_ref() const {
-      using V = expression::unary::UnsafeRef<const expression_type&>;
-      return DerivedT<V>(std::in_place, expression());
+  ///
+  /// Lvalue overloads store a reference to the expression; rvalue
+  /// overloads move-own the expression node (the node itself may still
+  /// hold internal references, e.g. Slice<MDArray&>).
+  auto unsafe_ref() const & {
+    using V = expression::unary::UnsafeRef<const expression_type &>;
+    return DerivedT<V>(std::in_place, expression());
+  }
+  auto unsafe_ref() & {
+    using V = expression::unary::UnsafeRef<expression_type &>;
+    return DerivedT<V>(std::in_place, expression());
+  }
+  auto unsafe_ref() && {
+    using V = expression::unary::UnsafeRef<expression_type>;
+    return DerivedT<V>(std::in_place, std::move(expression()));
   }
 
   template <typename OpType>
     requires(expression::unary::concepts::ScalarOperation<value_type, OpType>)
   auto unary_expr(const OpType &op) const {
     using V =
-        expression::unary::CoefficientWiseOperation<const expression_type&,
-                                                     OpType>;
+        expression::unary::CoefficientWiseOperation<const expression_type &,
+                                                    OpType>;
     return DerivedT<V>(std::in_place, expression(), op);
   }
 
   template <template <typename> typename BaseType = DerivedT,
             rank_type... ranks>
   auto swizzle() const {
-    using V =
-        expression::unary::Swizzle<const expression_type&, ranks...>;
+    using V = expression::unary::Swizzle<const expression_type &, ranks...>;
     return BaseType<V>(std::in_place, expression());
   }
   template <template <typename> typename BaseType = DerivedT,
             rank_type... ranks>
   auto swizzle() {
-    using V =
-        expression::unary::Swizzle<expression_type&, ranks...>;
+    using V = expression::unary::Swizzle<expression_type &, ranks...>;
     return BaseType<V>(std::in_place, expression());
   }
   template <typename T> auto cast() const {
-    using V = expression::unary::Cast<T, const expression_type&>;
+    using V = expression::unary::Cast<T, const expression_type &>;
     return DerivedT<V>(std::in_place, expression());
   }
 
@@ -246,16 +258,15 @@ public:
   template <rank_type Count = 1,
             template <typename> typename BaseType = DerivedT>
   auto repeat_left() const {
-    using V =
-        expression::unary::Repeat<expression::unary::RepeatMode::Left,
-                                  Count, const expression_type&>;
+    using V = expression::unary::Repeat<expression::unary::RepeatMode::Left,
+                                        Count, const expression_type &>;
     return BaseType<V>(std::in_place, expression());
   }
   template <rank_type Count = 1,
             template <typename> typename BaseType = DerivedT>
   auto repeat_right() const {
-    using V = expression::unary::Repeat<
-        expression::unary::RepeatMode::Right, Count, const expression_type&>;
+    using V = expression::unary::Repeat<expression::unary::RepeatMode::Right,
+                                        Count, const expression_type &>;
     return BaseType<V>(std::in_place, expression());
   }
 
@@ -265,32 +276,31 @@ protected:
   template <typename... Slices>
   auto slice_expression(Slices &&...slices) const {
     using my_expression_type =
-        expression::unary::Slice<const expression_type&,
+        expression::unary::Slice<const expression_type &,
                                  std::decay_t<Slices>...>;
 
-    return my_expression_type(expression(),
-                              filter_args_for_zipperbase(std::forward<Slices>(slices))...);
+    return my_expression_type(
+        expression(),
+        filter_args_for_zipperbase(std::forward<Slices>(slices))...);
   }
 
   template <typename... Slices> auto slice_expression() const {
     using my_expression_type =
-        expression::unary::Slice<const expression_type&,
+        expression::unary::Slice<const expression_type &,
                                  std::decay_t<Slices>...>;
     return my_expression_type(expression(), Slices{}...);
   }
 
-  template <typename... Slices>
-  auto slice_expression(Slices &&...slices) {
+  template <typename... Slices> auto slice_expression(Slices &&...slices) {
     using my_expression_type =
-        expression::unary::Slice<expression_type&,
-                                 std::decay_t<Slices>...>;
-    return my_expression_type(expression(),
-                              filter_args_for_zipperbase(std::forward<Slices>(slices))...);
+        expression::unary::Slice<expression_type &, std::decay_t<Slices>...>;
+    return my_expression_type(
+        expression(),
+        filter_args_for_zipperbase(std::forward<Slices>(slices))...);
   }
   template <typename... Slices> auto slice_expression() {
     using my_expression_type =
-        expression::unary::Slice<expression_type&,
-                                 std::decay_t<Slices>...>;
+        expression::unary::Slice<expression_type &, std::decay_t<Slices>...>;
     return my_expression_type(expression(), Slices{}...);
   }
 
