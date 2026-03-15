@@ -5,7 +5,6 @@
 #include "zipper/concepts/Expression.hpp"
 #include "zipper/concepts/IndexArgument.hpp"
 #include "zipper/detail/ExtentsTraits.hpp"
-#include "zipper/detail/NonReturnable.hpp"
 #include "zipper/types.hpp"
 
 namespace zipper::expression {
@@ -22,15 +21,13 @@ namespace zipper::expression {
  * - operator(Args...) const -> value_type&
  *
  * ## Returnability
- * When ExpressionTraits<Derived>::stores_references is true, this class
- * inherits NonReturnable (deleted copy/move), preventing the expression
- * from escaping scope as an lvalue.  Prvalue returns still work via C++17
- * guaranteed copy elision.
+ * Returnability (copy prevention for expressions storing references) is
+ * enforced at the wrapper level (ZipperBase), not here.  Raw expression
+ * types are always copyable/movable so that internal nodes like UnsafeRef
+ * can store and copy child expressions freely.
  */
 template <typename Derived_>
-class ExpressionBase
-    : public zipper::detail::returnability_mixin_t<
-          detail::ExpressionTraits<Derived_>::stores_references> {
+class ExpressionBase {
 public:
   using Derived = Derived_;
 

@@ -17,7 +17,7 @@ namespace zipper::detail {
 /// escaping (deleting both copy and move) would also prevent the
 /// essential operator-chaining use case.  Use `stores_references` for
 /// compile-time checks in function signatures, `to_owned()` / `eval()`
-/// to create safe copies, or `unsafe_ref()` to explicitly opt out.
+/// to create safe copies, or `unsafe()` to explicitly opt out.
 struct NonReturnable {
   NonReturnable() = default;
   NonReturnable(const NonReturnable &) = delete;

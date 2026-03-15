@@ -40,3 +40,6 @@ test('zipperbase_stl', test_zipperbase_stl)
 
 test_function_boundary = executable('test_function_boundary', 'test_function_boundary.cpp', dependencies: [zipper_test_dep])
 test('function_boundary', test_function_boundary)
+
+test_readme_examples = executable('test_readme_examples', 'readme_examples.cpp', dependencies: [zipper_test_dep])
+test('readme_examples', test_readme_examples)

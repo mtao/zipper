@@ -4,6 +4,7 @@
 #include "concepts/Expression.hpp"
 #include "concepts/IndexArgument.hpp"
 #include "concepts/Zipper.hpp"
+#include "detail/NonReturnable.hpp"
 #include "expression/concepts/capabilities.hpp"
 #include "expression/unary/Cast.hpp"
 #include "expression/unary/CoefficientWiseOperation.hpp"
@@ -22,7 +23,11 @@ namespace zipper {
 
 template <template <concepts::QualifiedExpression> typename DerivedT,
           concepts::QualifiedExpression Expression>
-class ZipperBase {
+class ZipperBase
+    : public detail::returnability_mixin_t<
+          expression::detail::ExpressionTraits<
+              std::decay_t<Expression>>::stores_references ||
+          std::is_reference_v<Expression>> {
 public:
   ZipperBase()
     requires(std::is_default_constructible_v<Expression>)
@@ -200,15 +205,15 @@ public:
   /// Lvalue overloads store a reference to the expression; rvalue
   /// overloads move-own the expression node (the node itself may still
   /// hold internal references, e.g. Slice<MDArray&>).
-  auto unsafe_ref() const & {
+  auto unsafe() const & {
     using V = expression::unary::UnsafeRef<const expression_type &>;
     return DerivedT<V>(std::in_place, expression());
   }
-  auto unsafe_ref() & {
+  auto unsafe() & {
     using V = expression::unary::UnsafeRef<expression_type &>;
     return DerivedT<V>(std::in_place, expression());
   }
-  auto unsafe_ref() && {
+  auto unsafe() && {
     using V = expression::unary::UnsafeRef<expression_type>;
     return DerivedT<V>(std::in_place, std::move(expression()));
   }

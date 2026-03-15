@@ -482,17 +482,17 @@ TEST_CASE("negate_operator_references_lvalue", "[ownership][operator][negate]") 
 // ============================================================
 
 // ============================================================
-// unsafe_ref() — returnable views
+// unsafe() — returnable views
 // ============================================================
 
-TEST_CASE("unsafe_ref_col_read_through", "[ownership][unsafe_ref][col]") {
+TEST_CASE("unsafe_col_read_through", "[ownership][unsafe][col]") {
     zipper::Matrix<double, 3, 3> M{
         {1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}, {7.0, 8.0, 9.0}};
 
-    // The motivating use-case: auto s = M.col(j).unsafe_ref()
-    auto c = M.col(zipper::index_type(1)).unsafe_ref();
+    // The motivating use-case: auto s = M.col(j).unsafe()
+    auto c = M.col(zipper::index_type(1)).unsafe();
 
-    // unsafe_ref should NOT report stores_references
+    // unsafe should NOT report stores_references
     static_assert(!decltype(c)::stores_references);
 
     CHECK(c(0) == 2.0);
@@ -504,11 +504,11 @@ TEST_CASE("unsafe_ref_col_read_through", "[ownership][unsafe_ref][col]") {
     CHECK(c(0) == 42.0);
 }
 
-TEST_CASE("unsafe_ref_col_write_through", "[ownership][unsafe_ref][col]") {
+TEST_CASE("unsafe_col_write_through", "[ownership][unsafe][col]") {
     zipper::Matrix<double, 3, 3> M{
         {1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}, {7.0, 8.0, 9.0}};
 
-    auto c = M.col(zipper::index_type(0)).unsafe_ref();
+    auto c = M.col(zipper::index_type(0)).unsafe();
 
     // Write-through: mutations via the view are visible in M
     c(0) = 100.0;
@@ -523,10 +523,10 @@ TEST_CASE("unsafe_ref_col_write_through", "[ownership][unsafe_ref][col]") {
     CHECK(M(1, 1) == 5.0);
 }
 
-TEST_CASE("unsafe_ref_row_write_through", "[ownership][unsafe_ref][row]") {
+TEST_CASE("unsafe_row_write_through", "[ownership][unsafe][row]") {
     zipper::Matrix<double, 2, 3> M{{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}};
 
-    auto r = M.row(zipper::index_type(0)).unsafe_ref();
+    auto r = M.row(zipper::index_type(0)).unsafe();
     static_assert(!decltype(r)::stores_references);
 
     r(0) = 10.0;
@@ -539,22 +539,22 @@ TEST_CASE("unsafe_ref_row_write_through", "[ownership][unsafe_ref][row]") {
     CHECK(M(1, 0) == 4.0);
 }
 
-TEST_CASE("unsafe_ref_const_col", "[ownership][unsafe_ref][col]") {
+TEST_CASE("unsafe_const_col", "[ownership][unsafe][col]") {
     const zipper::Matrix<double, 2, 2> M{{1.0, 2.0}, {3.0, 4.0}};
 
     // const version — read only
-    auto c = M.col(zipper::index_type(1)).unsafe_ref();
+    auto c = M.col(zipper::index_type(1)).unsafe();
     static_assert(!decltype(c)::stores_references);
     CHECK(c(0) == 2.0);
     CHECK(c(1) == 4.0);
 }
 
-TEST_CASE("unsafe_ref_diagonal_write_through",
-          "[ownership][unsafe_ref][diagonal]") {
+TEST_CASE("unsafe_diagonal_write_through",
+          "[ownership][unsafe][diagonal]") {
     zipper::Matrix<double, 3, 3> M{
         {1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}, {7.0, 8.0, 9.0}};
 
-    auto d = M.diagonal().unsafe_ref();
+    auto d = M.diagonal().unsafe();
     static_assert(!decltype(d)::stores_references);
 
     d(0) = 10.0;
@@ -567,11 +567,11 @@ TEST_CASE("unsafe_ref_diagonal_write_through",
     CHECK(M(0, 1) == 2.0);
 }
 
-TEST_CASE("unsafe_ref_vector_head_write_through",
-          "[ownership][unsafe_ref][slice]") {
+TEST_CASE("unsafe_vector_head_write_through",
+          "[ownership][unsafe][slice]") {
     zipper::Vector<double, 4> x{1.0, 2.0, 3.0, 4.0};
 
-    auto h = x.head<2>().unsafe_ref();
+    auto h = x.head<2>().unsafe();
     static_assert(!decltype(h)::stores_references);
 
     h(0) = 10.0;
@@ -583,13 +583,13 @@ TEST_CASE("unsafe_ref_vector_head_write_through",
     CHECK(x(3) == 4.0);
 }
 
-TEST_CASE("unsafe_ref_assign_vector_to_col",
-          "[ownership][unsafe_ref][assign]") {
+TEST_CASE("unsafe_assign_vector_to_col",
+          "[ownership][unsafe][assign]") {
     zipper::Matrix<double, 3, 3> M{
         {1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}, {7.0, 8.0, 9.0}};
     zipper::Vector<double, 3> v{100.0, 200.0, 300.0};
 
-    auto c = M.col(zipper::index_type(2)).unsafe_ref();
+    auto c = M.col(zipper::index_type(2)).unsafe();
     c = v;
     CHECK(M(0, 2) == 100.0);
     CHECK(M(1, 2) == 200.0);
@@ -599,23 +599,23 @@ TEST_CASE("unsafe_ref_assign_vector_to_col",
     CHECK(M(1, 0) == 4.0);
 }
 
-TEST_CASE("unsafe_ref_transpose_write_through",
-          "[ownership][unsafe_ref][transpose]") {
+TEST_CASE("unsafe_transpose_write_through",
+          "[ownership][unsafe][transpose]") {
     zipper::Matrix<double, 2, 3> M{{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}};
 
-    auto Mt = M.transpose().unsafe_ref();
+    auto Mt = M.transpose().unsafe();
     static_assert(!decltype(Mt)::stores_references);
 
     Mt(0, 1) = 99.0;
     CHECK(M(1, 0) == 99.0);
 }
 
-TEST_CASE("unsafe_ref_lvalue_stores_reference",
-          "[ownership][unsafe_ref]") {
+TEST_CASE("unsafe_lvalue_stores_reference",
+          "[ownership][unsafe]") {
     zipper::Matrix<double, 2, 2> M{{1.0, 2.0}, {3.0, 4.0}};
 
-    // Lvalue unsafe_ref — stores a reference to M's expression
-    auto uref = M.unsafe_ref();
+    // Lvalue unsafe — stores a reference to M's expression
+    auto uref = M.unsafe();
     static_assert(!decltype(uref)::stores_references);
 
     CHECK(uref(0, 0) == 1.0);

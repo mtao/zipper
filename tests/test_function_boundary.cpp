@@ -9,7 +9,7 @@
 /// - Borrowing types that store expressions BY REFERENCE (as_* wrappers)
 ///   ARE technically copyable but still have stores_references == true
 /// - to_owned() makes borrowing types returnable
-/// - unsafe_ref() makes borrowing types returnable (caller asserts lifetime)
+/// - unsafe() makes borrowing types returnable (caller asserts lifetime)
 /// - eval() always produces a returnable owning type
 /// - Packing into structs works for owning types, not for borrowing
 /// - as_* results are reference-wrapping (stores_references == true)
@@ -270,11 +270,11 @@ TEST_CASE("to_owned on as_array produces returnable type",
 }
 
 // ============================================================================
-// Section 5: unsafe_ref() makes borrowing types returnable
+// Section 5: unsafe() makes borrowing types returnable
 // ============================================================================
 
-TEST_CASE("unsafe_ref on binary expression is returnable",
-          "[boundary][unsafe_ref][return]") {
+TEST_CASE("unsafe on binary expression is returnable",
+          "[boundary][unsafe][return]") {
     Vector<double, 3> a({1.0, 2.0, 3.0});
     Vector<double, 3> b({4.0, 5.0, 6.0});
 
@@ -282,7 +282,7 @@ TEST_CASE("unsafe_ref on binary expression is returnable",
     auto sum = a + b;
     STATIC_REQUIRE(decltype(sum)::stores_references);
 
-    auto ur = sum.unsafe_ref();
+    auto ur = sum.unsafe();
     STATIC_REQUIRE_FALSE(decltype(ur)::stores_references);
     STATIC_REQUIRE(std::is_copy_constructible_v<decltype(ur)>);
 
@@ -291,11 +291,11 @@ TEST_CASE("unsafe_ref on binary expression is returnable",
     REQUIRE(ur(2) == 9.0);
 }
 
-TEST_CASE("unsafe_ref can be returned from lambda",
-          "[boundary][unsafe_ref][return]") {
+TEST_CASE("unsafe can be returned from lambda",
+          "[boundary][unsafe][return]") {
     Vector<double, 3> v({1.0, 2.0, 3.0});
 
-    auto make_ref = [&v]() { return v.unsafe_ref(); };
+    auto make_ref = [&v]() { return v.unsafe(); };
     auto ur = make_ref();
 
     REQUIRE(ur(0) == 1.0);

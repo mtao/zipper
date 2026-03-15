@@ -18,7 +18,7 @@ TEST_CASE("test_expression", "[vector][storage][dense][span]") {
     CHECK(div_3(4));
 }
 
-TEST_CASE("unsafe_ref stores_references flag", "[unsafe_ref]") {
+TEST_CASE("unsafe stores_references flag", "[unsafe]") {
     // UnsafeRef should force stores_references to false
     using MDArr = expression::nullary::MDArray<double, extents<3>>;
     using RefChild = const MDArr &;
@@ -33,9 +33,9 @@ TEST_CASE("unsafe_ref stores_references flag", "[unsafe_ref]") {
         expression::detail::ExpressionTraits<UR>::stores_references == false);
 }
 
-TEST_CASE("unsafe_ref value pass-through", "[unsafe_ref]") {
+TEST_CASE("unsafe value pass-through", "[unsafe]") {
     Vector<double, 3> v({1.0, 2.0, 3.0});
-    auto ur = v.unsafe_ref();
+    auto ur = v.unsafe();
 
     // stores_references should be false on the wrapper
     STATIC_REQUIRE(!std::decay_t<decltype(ur)>::stores_references);
@@ -45,9 +45,9 @@ TEST_CASE("unsafe_ref value pass-through", "[unsafe_ref]") {
     REQUIRE(ur(2) == 3.0);
 }
 
-TEST_CASE("unsafe_ref is copyable", "[unsafe_ref]") {
+TEST_CASE("unsafe is copyable", "[unsafe]") {
     Vector<double, 3> v({10.0, 20.0, 30.0});
-    auto ur = v.unsafe_ref();
+    auto ur = v.unsafe();
 
     // Copy should work (NonReturnable would delete copy ctor)
     auto ur2 = ur;
@@ -56,23 +56,23 @@ TEST_CASE("unsafe_ref is copyable", "[unsafe_ref]") {
     REQUIRE(ur2(2) == 30.0);
 }
 
-TEST_CASE("unsafe_ref reflects mutations", "[unsafe_ref]") {
+TEST_CASE("unsafe reflects mutations", "[unsafe]") {
     Vector<double, 3> v({1.0, 2.0, 3.0});
-    auto ur = v.unsafe_ref();
+    auto ur = v.unsafe();
 
     // Mutate the original
     v(0) = 42.0;
 
-    // unsafe_ref sees the change (it's a reference)
+    // unsafe sees the change (it's a reference)
     REQUIRE(ur(0) == 42.0);
 }
 
-TEST_CASE("unsafe_ref can be returned from function", "[unsafe_ref]") {
+TEST_CASE("unsafe can be returned from function", "[unsafe]") {
     Vector<double, 3> v({5.0, 6.0, 7.0});
 
     // Simulate returning from a function
     auto make_ref = [&v]() {
-        return v.unsafe_ref();
+        return v.unsafe();
     };
     auto ur = make_ref();
     REQUIRE(ur(0) == 5.0);
@@ -80,9 +80,9 @@ TEST_CASE("unsafe_ref can be returned from function", "[unsafe_ref]") {
     REQUIRE(ur(2) == 7.0);
 }
 
-TEST_CASE("unsafe_ref make_owned delegates to child", "[unsafe_ref]") {
+TEST_CASE("unsafe make_owned delegates to child", "[unsafe]") {
     Vector<double, 3> v({1.0, 2.0, 3.0});
-    auto ur = v.unsafe_ref();
+    auto ur = v.unsafe();
 
     // to_owned() on the wrapper should produce a fully-owned copy
     auto owned = ur.to_owned();

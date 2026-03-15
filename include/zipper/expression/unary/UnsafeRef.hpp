@@ -16,8 +16,7 @@ namespace unary {
 /// the lifetime guarantee cannot be made.
 ///
 /// Usage:
-///   auto v = some_expr.unsafe_ref();   // v can be returned / stored
-///   auto w = unsafe_ref(some_expr);    // free-function form
+///   auto v = some_expr.unsafe();       // v can be returned / stored
 template <zipper::concepts::QualifiedExpression Child>
 class UnsafeRef;
 

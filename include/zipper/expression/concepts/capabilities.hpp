@@ -104,9 +104,9 @@ concept ConstValuedExpression =
 /// outlive the scope in which they were created — they are "returnable".
 ///
 /// Non-owning expressions (`stores_references == true`) inherit
-/// `NonReturnable`, which deletes copy/move constructors to prevent them
-/// from escaping scope as lvalues.  Prvalue returns still work via C++17
-/// guaranteed copy elision.
+/// `NonReturnable` at the wrapper level (ZipperBase), which deletes copy
+/// constructors to prevent them from escaping scope as lvalues.  Prvalue
+/// returns still work via C++17 guaranteed copy elision.
 template <typename T>
 concept OwningExpression =
     zipper::concepts::QualifiedExpression<T> &&
