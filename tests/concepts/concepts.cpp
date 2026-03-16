@@ -4,11 +4,15 @@
 #include <zipper/Tensor.hpp>
 #include <zipper/Vector.hpp>
 #include <zipper/concepts/DirectSolver.hpp>
+#include <zipper/concepts/Preconditioner.hpp>
 #include <zipper/concepts/Zipper.hpp>
 #include <zipper/expression/unary/TriangularView.hpp>
 #include <zipper/utils/decomposition/ldlt.hpp>
 #include <zipper/utils/decomposition/llt.hpp>
+#include <zipper/utils/decomposition/lu.hpp>
 #include <zipper/utils/decomposition/qr.hpp>
+#include <zipper/utils/solver/preconditioner/jacobi_preconditioner.hpp>
+#include <zipper/utils/solver/preconditioner/ssor_preconditioner.hpp>
 
 #include "../catch_include.hpp"
 
@@ -131,6 +135,30 @@ using UnitLowerTriView =
 static_assert(zipper::concepts::DirectSolver<LowerTriView>);
 static_assert(zipper::concepts::DirectSolver<UpperTriView>);
 static_assert(zipper::concepts::DirectSolver<UnitLowerTriView>);
+
+// PLUResult satisfies DirectSolver.
+using PLU3 = zipper::utils::decomposition::PLUResult<double, 3>;
+using PLUX = zipper::utils::decomposition::PLUResult<double, zipper::dynamic_extent>;
+static_assert(zipper::concepts::DirectSolver<PLU3>);
+static_assert(zipper::concepts::DirectSolver<PLUX>);
+
+// -----------------------------------------------------------------------
+// Preconditioner concept: preconditioner types satisfy it
+// -----------------------------------------------------------------------
+using JacobiP3 = zipper::utils::solver::JacobiPreconditioner<double, 3>;
+using JacobiPX = zipper::utils::solver::JacobiPreconditioner<double, zipper::dynamic_extent>;
+using SSORP3 = zipper::utils::solver::SSORPreconditioner<double, 3>;
+using SSORPX = zipper::utils::solver::SSORPreconditioner<double, zipper::dynamic_extent>;
+
+static_assert(zipper::concepts::Preconditioner<JacobiP3>);
+static_assert(zipper::concepts::Preconditioner<JacobiPX>);
+static_assert(zipper::concepts::Preconditioner<SSORP3>);
+static_assert(zipper::concepts::Preconditioner<SSORPX>);
+
+// Negative: plain types do not satisfy Preconditioner.
+static_assert(!zipper::concepts::Preconditioner<int>);
+static_assert(!zipper::concepts::Preconditioner<double>);
+static_assert(!zipper::concepts::Preconditioner<zipper::Matrix<double, 3, 3>>);
 
 // -----------------------------------------------------------------------
 // Runtime tests (Catch2) — instantiate objects and confirm concepts work

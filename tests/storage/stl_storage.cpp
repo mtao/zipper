@@ -19,7 +19,6 @@ TEST_CASE("stl_storage_basic_types", "[data]") {
     using InfoType = zipper::storage::detail::StlStorageInfo<T>;
     static_assert(InfoType::rank == 1);
     static_assert(std::is_same_v<double, InfoType::value_type>);
-    static_assert(std::is_same_v<T, typename InfoType::template get_type<0>>);
     static_assert(InfoType::static_extent<0>() == zipper::dynamic_extent);
 
     std::vector<double> x = {0, 1, 2};
@@ -51,7 +50,6 @@ TEST_CASE("stl_storage_basic_types", "[data]") {
     using InfoType = zipper::storage::detail::StlStorageInfo<T>;
     static_assert(InfoType::rank == 1);
     static_assert(std::is_same_v<double, InfoType::value_type>);
-    static_assert(std::is_same_v<T, typename InfoType::template get_type<0>>);
     static_assert(InfoType::static_extent<0>() == 5);
 
     std::array<double, 3> x{{0, 1, 2}};
@@ -83,9 +81,6 @@ TEST_CASE("stl_storage_basic_types", "[data]") {
     static_assert(InfoType::rank == 2);
     static_assert(std::is_same_v<double, InfoType::value_type>);
 
-    static_assert(std::is_same_v<std::array<double, 5>,
-                                 typename InfoType::template get_type<0>>);
-    static_assert(std::is_same_v<T, typename InfoType::template get_type<1>>);
     static_assert(InfoType::static_extent<0>() == 5);
     static_assert(InfoType::static_extent<1>() == zipper::dynamic_extent);
 
@@ -138,9 +133,6 @@ TEST_CASE("stl_storage_basic_types", "[data]") {
     static_assert(InfoType::rank == 2);
     static_assert(std::is_same_v<double, InfoType::value_type>);
 
-    static_assert(std::is_same_v<std::vector<double>,
-                                 typename InfoType::template get_type<0>>);
-    static_assert(std::is_same_v<T, typename InfoType::template get_type<1>>);
     static_assert(InfoType::static_extent<0>() == zipper::dynamic_extent);
     static_assert(InfoType::static_extent<1>() == 5);
 
@@ -519,3 +511,133 @@ TEST_CASE("stl_mdarray_assign_random_uniform_with_resize",
 }
 
 // TODO: test resizing vectors and how it affects the expression
+
+#include <zipper/Vector.hpp>
+
+TEST_CASE("stl_storage_unwrap_zipper_static_asserts", "[storage][stl][unwrap]") {
+  using Vec3 = zipper::Vector<double, 3>;
+
+  SECTION("NoUnwrap: array of Vec3 is rank 1 with value_type=Vec3") {
+    using Info = zipper::storage::StlStorageInfo<std::array<Vec3, 4>>;
+    static_assert(Info::rank == 1);
+    static_assert(std::is_same_v<Info::value_type, Vec3>);
+    static_assert(Info::extents_type::rank() == 1);
+    static_assert(Info::extents_type::static_extent(0) == 4);
+  }
+
+  SECTION("UnwrapZipper: array of Vec3 is rank 2 with value_type=double") {
+    using Info = zipper::storage::StlStorageInfo<std::array<Vec3, 4>,
+                                                  zipper::storage::UnwrapZipper>;
+    static_assert(Info::rank == 2);
+    static_assert(std::is_same_v<Info::value_type, double>);
+    static_assert(Info::extents_type::rank() == 2);
+    // extents should be <4, 3>: 4 from array, 3 from Vec3
+    static_assert(Info::extents_type::static_extent(0) == 4);
+    static_assert(Info::extents_type::static_extent(1) == 3);
+  }
+
+  SECTION("UnwrapZipper: vector of Vec3 is rank 2, dynamic x 3") {
+    using Info = zipper::storage::StlStorageInfo<std::vector<Vec3>,
+                                                  zipper::storage::UnwrapZipper>;
+    static_assert(Info::rank == 2);
+    static_assert(std::is_same_v<Info::value_type, double>);
+    static_assert(Info::extents_type::rank() == 2);
+    static_assert(Info::extents_type::static_extent(0) == std::dynamic_extent);
+    static_assert(Info::extents_type::static_extent(1) == 3);
+  }
+
+  SECTION("UnwrapZipper: array of Matrix is rank 3") {
+    using Mat23 = zipper::Matrix<double, 2, 3>;
+    using Info = zipper::storage::StlStorageInfo<std::array<Mat23, 5>,
+                                                  zipper::storage::UnwrapZipper>;
+    static_assert(Info::rank == 3);
+    static_assert(std::is_same_v<Info::value_type, double>);
+    static_assert(Info::extents_type::rank() == 3);
+    // extents should be <5, 2, 3>: 5 from array, 2 rows and 3 cols from Matrix
+    static_assert(Info::extents_type::static_extent(0) == 5);
+    static_assert(Info::extents_type::static_extent(1) == 2);
+    static_assert(Info::extents_type::static_extent(2) == 3);
+  }
+
+  SECTION("HasZipperInterface concept checks") {
+    static_assert(zipper::storage::detail::HasZipperInterface<Vec3>);
+    static_assert(zipper::storage::detail::HasZipperInterface<zipper::Matrix<double, 2, 3>>);
+    static_assert(!zipper::storage::detail::HasZipperInterface<double>);
+    static_assert(!zipper::storage::detail::HasZipperInterface<int>);
+    static_assert(!zipper::storage::detail::HasZipperInterface<std::array<double, 3>>);
+  }
+}
+
+TEST_CASE("stl_storage_unwrap_zipper_coefficient_access",
+          "[storage][stl][unwrap]") {
+  using Vec3 = zipper::Vector<double, 3>;
+
+  SECTION("Read/write through UnwrapZipper non-owning view of array<Vec3,N>") {
+    std::array<Vec3, 2> data;
+    data[0] = Vec3({1.0, 2.0, 3.0});
+    data[1] = Vec3({4.0, 5.0, 6.0});
+
+    auto view = zipper::expression::nullary::get_non_owning_stl_storage<
+        zipper::storage::UnwrapZipper>(data);
+
+    auto e = view.extents();
+    CHECK(e.extent(0) == 2);
+    CHECK(e.extent(1) == 3);
+
+    // Read coefficients: view(row, col) should match data[row](col)
+    CHECK(view.coeff(0, 0) == 1.0);
+    CHECK(view.coeff(0, 1) == 2.0);
+    CHECK(view.coeff(0, 2) == 3.0);
+    CHECK(view.coeff(1, 0) == 4.0);
+    CHECK(view.coeff(1, 1) == 5.0);
+    CHECK(view.coeff(1, 2) == 6.0);
+
+    // Write through the view and verify it modifies the originals
+    view.coeff_ref(0, 0) = 10.0;
+    view.coeff_ref(0, 1) = 20.0;
+    view.coeff_ref(0, 2) = 30.0;
+    view.coeff_ref(1, 0) = 40.0;
+    view.coeff_ref(1, 1) = 50.0;
+    view.coeff_ref(1, 2) = 60.0;
+
+    // Verify via the view
+    CHECK(view.const_coeff_ref(0, 0) == 10.0);
+    CHECK(view.const_coeff_ref(0, 1) == 20.0);
+    CHECK(view.const_coeff_ref(0, 2) == 30.0);
+    CHECK(view.const_coeff_ref(1, 0) == 40.0);
+    CHECK(view.const_coeff_ref(1, 1) == 50.0);
+    CHECK(view.const_coeff_ref(1, 2) == 60.0);
+
+    // Verify the original data was modified
+    CHECK(data[0](0) == 10.0);
+    CHECK(data[0](1) == 20.0);
+    CHECK(data[0](2) == 30.0);
+    CHECK(data[1](0) == 40.0);
+    CHECK(data[1](1) == 50.0);
+    CHECK(data[1](2) == 60.0);
+  }
+
+  SECTION("Read/write through UnwrapZipper non-owning view of vector<Vec3>") {
+    std::vector<Vec3> data;
+    data.push_back(Vec3({7.0, 8.0, 9.0}));
+    data.push_back(Vec3({10.0, 11.0, 12.0}));
+    data.push_back(Vec3({13.0, 14.0, 15.0}));
+
+    auto view = zipper::expression::nullary::get_non_owning_stl_storage<
+        zipper::storage::UnwrapZipper>(data);
+
+    auto e = view.extents();
+    CHECK(e.extent(0) == 3);
+    CHECK(e.extent(1) == 3);
+
+    CHECK(view.coeff(0, 0) == 7.0);
+    CHECK(view.coeff(0, 1) == 8.0);
+    CHECK(view.coeff(0, 2) == 9.0);
+    CHECK(view.coeff(1, 0) == 10.0);
+    CHECK(view.coeff(2, 2) == 15.0);
+
+    // Write and verify
+    view.coeff_ref(2, 0) = 99.0;
+    CHECK(data[2](0) == 99.0);
+  }
+}

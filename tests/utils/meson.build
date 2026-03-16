@@ -31,4 +31,13 @@ test('llt', test_llt)
 test_ldlt = executable('test_ldlt', 'test_ldlt.cpp', dependencies: [zipper_test_dep])
 test('ldlt', test_ldlt)
 
+test_lu = executable('test_lu', 'test_lu.cpp', dependencies: [zipper_test_dep])
+test('lu', test_lu)
+
+test_pcg = executable('test_pcg', 'test_pcg.cpp', dependencies: [zipper_test_dep])
+test('pcg', test_pcg)
+
+test_multigrid = executable('test_multigrid', 'test_multigrid.cpp', dependencies: [zipper_test_dep])
+test('multigrid', test_multigrid)
+
 subdir('extents')

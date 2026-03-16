@@ -4,11 +4,11 @@
 #include "zipper/storage/StlStorageInfo.hpp"
 namespace zipper::expression::nullary {
 
-template <typename S>
-struct StlMDArray : public ExpressionBase<StlMDArray<S>> {
+template <typename S, typename Policy = storage::NoUnwrap>
+struct StlMDArray : public ExpressionBase<StlMDArray<S, Policy>> {
 public:
-  using traits = expression::detail::ExpressionTraits<StlMDArray<S>>;
-  using info_helper = storage::StlStorageInfo<std::decay_t<S>>;
+  using traits = expression::detail::ExpressionTraits<StlMDArray<S, Policy>>;
+  using info_helper = storage::StlStorageInfo<std::decay_t<S>, Policy>;
   using extents_type = typename info_helper::extents_type;
   using value_type = typename info_helper::value_type;
   using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
@@ -66,16 +66,18 @@ public:
     requires(extents_traits::template is_convertable_from<
              typename expression::detail::ExpressionTraits<V>::extents_type>())
   {
-    expression::detail::AssignHelper<V, StlMDArray<S>>::assign(v, *this);
+    expression::detail::AssignHelper<V, StlMDArray<S, Policy>>::assign(v, *this);
   }
 
 private:
   S m_data;
 };
 
+// Deduction guides (default policy)
 template <typename S> StlMDArray(const S &) -> StlMDArray<S>;
 template <typename S> StlMDArray(S &&) -> StlMDArray<S>;
 
+// Non-owning view helpers (default policy — no unwrapping)
 template <typename S> auto get_non_owning_stl_storage(const S &s) {
   return StlMDArray<const S &>(s);
 }
@@ -85,21 +87,35 @@ template <typename S> auto get_const_non_owning_stl_storage(const S &s) {
 template <typename S> auto get_non_owning_stl_storage(S &s) {
   return StlMDArray<S &>(s);
 }
+
+// Non-owning view helpers with explicit policy
+template <typename Policy, typename S> auto get_non_owning_stl_storage(const S &s) {
+  return StlMDArray<const S &, Policy>(s);
+}
+template <typename Policy, typename S> auto get_const_non_owning_stl_storage(const S &s) {
+  return StlMDArray<const S &, Policy>(s);
+}
+template <typename Policy, typename S> auto get_non_owning_stl_storage(S &s) {
+  return StlMDArray<S &, Policy>(s);
+}
+
 } // namespace zipper::expression::nullary
 namespace zipper::expression {
-template <typename S>
-struct detail::ExpressionTraits<zipper::expression::nullary::StlMDArray<S>>
+
+// ExpressionTraits for StlMDArray with policy support
+template <typename S, typename Policy>
+struct detail::ExpressionTraits<zipper::expression::nullary::StlMDArray<S, Policy>>
     : public detail::BasicExpressionTraits<
-          typename zipper::storage::StlStorageInfo<std::decay_t<S>>::value_type,
+          typename zipper::storage::StlStorageInfo<std::decay_t<S>, Policy>::value_type,
           typename zipper::storage::StlStorageInfo<
-              std::decay_t<S>>::extents_type,
+              std::decay_t<S>, Policy>::extents_type,
           zipper::detail::AccessFeatures{
               .is_const = std::is_const_v<std::remove_reference_t<S>>,
               .is_reference = true},
           zipper::detail::ShapeFeatures{
               .is_resizable =
                   (zipper::storage::StlStorageInfo<
-                      std::decay_t<S>>::extents_type::rank_dynamic() > 0)}> {
+                      std::decay_t<S>, Policy>::extents_type::rank_dynamic() > 0)}> {
   constexpr static bool is_coefficient_consistent = true;
   /// StlMDArray stores references when S is a reference type (borrowing mode).
   constexpr static bool stores_references = std::is_reference_v<S>;

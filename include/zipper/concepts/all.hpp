@@ -3,5 +3,6 @@
 
 #include "DirectSolver.hpp"
 #include "Expression.hpp"
+#include "Preconditioner.hpp"
 #include "Zipper.hpp"
 #endif
