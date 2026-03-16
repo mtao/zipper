@@ -14,7 +14,6 @@
 #include "concepts/DirectSolver.hpp"
 #include "expression/nullary/StlMDArray.hpp"
 #include "expression/reductions/Trace.hpp"
-#include "expression/unary/Diagonal.hpp"
 #include "expression/unary/TriangularView.hpp"
 #include "zipper/detail/PartialReductionDispatcher.hpp"
 #include "zipper/detail/constexpr_arithmetic.hpp"
@@ -199,13 +198,6 @@ public:
       return VectorBase<V>(std::in_place, expression(),
           Base::filter_args_for_zipperbase(std::forward<Slices>(slices))...);
     }
-  }
-
-  auto diagonal() const {
-    return VectorBase<expression::unary::Diagonal<const expression_type&>>(std::in_place, expression());
-  }
-  auto diagonal() {
-    return VectorBase<expression::unary::Diagonal<expression_type&>>(std::in_place, expression());
   }
 
   template <rank_type... ranks> auto swizzle() const {

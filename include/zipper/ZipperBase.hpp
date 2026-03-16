@@ -8,6 +8,7 @@
 #include "expression/concepts/capabilities.hpp"
 #include "expression/unary/Cast.hpp"
 #include "expression/unary/CoefficientWiseOperation.hpp"
+#include "expression/unary/Diagonal.hpp"
 #include "expression/unary/Repeat.hpp"
 #include "expression/unary/Slice.hpp"
 #include "expression/unary/Swizzle.hpp"
@@ -20,6 +21,10 @@
 #include <utility> // std::in_place_t, std::in_place
 
 namespace zipper {
+
+template <concepts::Expression Expr>
+  requires(concepts::QualifiedRankedExpression<Expr, 1>)
+class VectorBase;
 
 namespace detail {
 /// Maps Zipper wrapper types to their underlying expression_type so that
@@ -259,6 +264,15 @@ public:
   template <typename T> auto cast() const {
     using V = expression::unary::Cast<T, const expression_type &>;
     return DerivedT<V>(std::in_place, expression());
+  }
+
+  auto diagonal() const {
+    return VectorBase<expression::unary::Diagonal<const expression_type &>>(
+        std::in_place, expression());
+  }
+  auto diagonal() {
+    return VectorBase<expression::unary::Diagonal<expression_type &>>(
+        std::in_place, expression());
   }
 
   template <concepts::IndexArgument... Args>
