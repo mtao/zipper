@@ -40,8 +40,11 @@ struct detail::ExpressionTraits<unary::UnsafeRef<Child>>
   constexpr static bool is_value_based = false;
   constexpr static bool is_coefficient_consistent = false;
 
-  /// Propagate has_known_zeros from child — UnsafeRef is transparent.
-  constexpr static bool has_known_zeros = child_traits::has_known_zeros;
+  /// Propagate has_index_set from child — UnsafeRef is transparent.
+  constexpr static bool has_index_set = child_traits::has_index_set;
+
+  /// Backward-compatible alias for has_index_set.
+  constexpr static bool has_known_zeros = has_index_set;
 };
 
 // ── Class definition ───────────────────────────────────────────────────
@@ -110,33 +113,40 @@ class UnsafeRef
     return expression().make_owned();
   }
 
-  // ── Nonzero range forwarding ──────────────────────────────────────
+  // ── Index set forwarding ────────────────────────────────────────────
 
-  /// Forward nonzero_range queries to the child when it has known zeros.
+  /// Forward index_set queries to the child when it has an index set.
   template <rank_type D, typename... Args>
-    requires(traits::has_known_zeros)
-  auto nonzero_range(Args &&...args) const {
-    return expression().template nonzero_range<D>(
+    requires(traits::has_index_set)
+  auto index_set(Args &&...args) const {
+    return expression().template index_set<D>(
         std::forward<Args>(args)...);
+  }
+
+  /// @deprecated Use index_set instead.
+  template <rank_type D, typename... Args>
+    requires(traits::has_index_set)
+  auto nonzero_range(Args &&...args) const {
+    return index_set<D>(std::forward<Args>(args)...);
   }
 
   /// Forward col_range_for_row to child (rank-2 convenience).
   auto col_range_for_row(index_type row) const
-    requires(traits::has_known_zeros && extents_type::rank() == 2)
+    requires(traits::has_index_set && extents_type::rank() == 2)
   {
     return expression().col_range_for_row(row);
   }
 
   /// Forward row_range_for_col to child (rank-2 convenience).
   auto row_range_for_col(index_type col) const
-    requires(traits::has_known_zeros && extents_type::rank() == 2)
+    requires(traits::has_index_set && extents_type::rank() == 2)
   {
     return expression().row_range_for_col(col);
   }
 
   /// Forward nonzero_segment to child (rank-1 convenience).
   auto nonzero_segment() const
-    requires(traits::has_known_zeros && extents_type::rank() == 1)
+    requires(traits::has_index_set && extents_type::rank() == 1)
   {
     return expression().nonzero_segment();
   }

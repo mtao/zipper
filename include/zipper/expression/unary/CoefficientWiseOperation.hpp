@@ -3,7 +3,7 @@
 
 #include "UnaryExpressionBase.hpp"
 #include "zipper/expression/detail/ExpressionTraits.hpp"
-#include "zipper/expression/detail/NonzeroRange.hpp"
+#include "zipper/expression/detail/IndexSet.hpp"
 
 namespace zipper::expression {
 namespace unary {
@@ -22,10 +22,13 @@ struct expression::detail::ExpressionTraits<
   using value_type = std::decay_t<decltype(std::declval<Op>()(
       std::declval<typename child_traits::value_type>()))>;
 
-  /// Propagate has_known_zeros when the Op preserves zeros.
-  constexpr static bool has_known_zeros =
-      child_traits::has_known_zeros &&
+  /// Propagate has_index_set when the Op preserves zeros.
+  constexpr static bool has_index_set =
+      child_traits::has_index_set &&
       zipper::expression::detail::ZeroPreservingUnaryOp<Op>;
+
+  /// Backward-compatible alias for has_index_set.
+  constexpr static bool has_known_zeros = has_index_set;
 };
 
 // represents a coefficient-wise transformation of an underlyng expression
@@ -64,30 +67,37 @@ public:
           std::move(owned_child), m_op);
   }
 
-  // ── Nonzero range forwarding ──────────────────────────────────────
+  // ── Index set forwarding ────────────────────────────────────────────
   // Zero-preserving ops (e.g. negate) don't change the sparsity pattern.
 
   template <rank_type D, typename... Args>
-    requires(traits::has_known_zeros)
-  auto nonzero_range(Args &&...args) const {
-    return expression().template nonzero_range<D>(
+    requires(traits::has_index_set)
+  auto index_set(Args &&...args) const {
+    return expression().template index_set<D>(
         std::forward<Args>(args)...);
   }
 
+  /// @deprecated Use index_set instead.
+  template <rank_type D, typename... Args>
+    requires(traits::has_index_set)
+  auto nonzero_range(Args &&...args) const {
+    return index_set<D>(std::forward<Args>(args)...);
+  }
+
   auto col_range_for_row(index_type row) const
-    requires(traits::has_known_zeros && extents_type::rank() == 2)
+    requires(traits::has_index_set && extents_type::rank() == 2)
   {
     return expression().col_range_for_row(row);
   }
 
   auto row_range_for_col(index_type col) const
-    requires(traits::has_known_zeros && extents_type::rank() == 2)
+    requires(traits::has_index_set && extents_type::rank() == 2)
   {
     return expression().row_range_for_col(col);
   }
 
   auto nonzero_segment() const
-    requires(traits::has_known_zeros && extents_type::rank() == 1)
+    requires(traits::has_index_set && extents_type::rank() == 1)
   {
     return expression().nonzero_segment();
   }

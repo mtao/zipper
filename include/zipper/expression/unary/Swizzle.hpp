@@ -5,7 +5,7 @@
 #include "zipper/concepts/Expression.hpp"
 #include "zipper/detail/extents/swizzle_extents.hpp"
 #include "zipper/expression/detail/AssignHelper.hpp"
-#include "zipper/expression/detail/NonzeroRange.hpp"
+#include "zipper/expression/detail/IndexSet.hpp"
 #include "zipper/utils/extents/all_extents_indices.hpp"
 
 namespace zipper::expression {
@@ -42,9 +42,12 @@ struct detail::ExpressionTraits<
   constexpr static bool is_coefficient_consistent = false;
   constexpr static bool is_value_based = false;
 
-  /// Propagate has_known_zeros from child — Swizzle permutes dimensions
+  /// Propagate has_index_set from child — Swizzle permutes dimensions
   /// but does not change the sparsity structure.
-  constexpr static bool has_known_zeros = Base::has_known_zeros;
+  constexpr static bool has_index_set = Base::has_index_set;
+
+  /// Backward-compatible alias for has_index_set.
+  constexpr static bool has_known_zeros = has_index_set;
 };
 
 namespace unary {
@@ -85,14 +88,14 @@ public:
           std::move(owned_child));
   }
 
-  // ── Nonzero range propagation ──────────────────────────────────────
-  // For a Swizzle that permutes dimensions, nonzero_range<D>(other_idx)
-  // maps to nonzero_range<child_dim>(other_idx) on the child, where
+  // ── Index set propagation ───────────────────────────────────────────
+  // For a Swizzle that permutes dimensions, index_set<D>(other_idx)
+  // maps to index_set<child_dim>(other_idx) on the child, where
   // child_dim = swizzle_map[D].
 
   template <rank_type D>
-    requires(traits::has_known_zeros && D < sizeof...(Indices))
-  auto nonzero_range(index_type other_idx) const {
+    requires(traits::has_index_set && D < sizeof...(Indices))
+  auto index_set(index_type other_idx) const {
     constexpr std::array<index_type, sizeof...(Indices)> swizzle_map = {{Indices...}};
     constexpr index_type child_dim = swizzle_map[D];
     // Inserted dimensions (dynamic_extent) have no child mapping;
@@ -100,22 +103,29 @@ public:
     if constexpr (child_dim == std::dynamic_extent) {
       return zipper::expression::detail::SingleIndexRange{index_type{0}};
     } else {
-      return expression().template nonzero_range<child_dim>(other_idx);
+      return expression().template index_set<child_dim>(other_idx);
     }
+  }
+
+  /// @deprecated Use index_set instead.
+  template <rank_type D>
+    requires(traits::has_index_set && D < sizeof...(Indices))
+  auto nonzero_range(index_type other_idx) const {
+    return index_set<D>(other_idx);
   }
 
   /// Convenience: col_range_for_row (rank-2 only).
   auto col_range_for_row(index_type row) const
-    requires(traits::has_known_zeros && extents_type::rank() == 2)
+    requires(traits::has_index_set && extents_type::rank() == 2)
   {
-    return nonzero_range<1>(row);
+    return index_set<1>(row);
   }
 
   /// Convenience: row_range_for_col (rank-2 only).
   auto row_range_for_col(index_type col) const
-    requires(traits::has_known_zeros && extents_type::rank() == 2)
+    requires(traits::has_index_set && extents_type::rank() == 2)
   {
-    return nonzero_range<0>(col);
+    return index_set<0>(col);
   }
 
   constexpr auto extent(rank_type i) const -> index_type {

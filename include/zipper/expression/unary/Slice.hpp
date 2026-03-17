@@ -11,7 +11,7 @@
 #include "zipper/detail/is_integral_constant.hpp"
 #include "zipper/detail/pack_index.hpp"
 #include "zipper/expression/detail/AssignHelper.hpp"
-#include "zipper/expression/detail/NonzeroRange.hpp"
+#include "zipper/expression/detail/IndexSet.hpp"
 
 namespace zipper::expression {
 namespace unary {
@@ -397,8 +397,11 @@ struct detail::ExpressionTraits<unary::Slice<ExprType, Slices...>>
             ExprType>::stores_references ||
         (unary::_detail_slice::slice_helper<std::decay_t<Slices>>::stores_references || ...);
 
-    /// Propagate has_known_zeros from child.
-    constexpr static bool has_known_zeros = _Detail::Base::has_known_zeros;
+    /// Propagate has_index_set from child.
+    constexpr static bool has_index_set = _Detail::Base::has_index_set;
+
+    /// Backward-compatible alias for has_index_set.
+    constexpr static bool has_known_zeros = has_index_set;
 };
 
 namespace unary {
@@ -521,12 +524,12 @@ class Slice : public UnaryExpressionBase<Slice<ExprType, Slices...>,
             std::make_integer_sequence<rank_type, sizeof...(Slices)>{});
     }
 
-    // ── Nonzero range propagation ────────────────────────────────────
+    // ── IndexSet propagation ─────────────────────────────────────────
     //
-    // For a Slice on a child with known zeros, we propagate the child's
-    // nonzero range by:
+    // For a Slice on a child with an index set, we propagate the child's
+    // index_set by:
     //   1. Mapping the output "other_idx" to the child's index space
-    //   2. Querying the child's nonzero_range
+    //   2. Querying the child's index_set
     //   3. Remapping the result back to the output index space
     //
     // Supports rank-2 children (the primary use case). Both rank-2 and
@@ -550,7 +553,7 @@ class Slice : public UnaryExpressionBase<Slice<ExprType, Slices...>,
 
     // For each non-collapsed output dim, find the "other" child dim
     // that provides the second coordinate for the child's
-    // nonzero_range query. For rank-2 output from rank-2 child:
+    // index_set query. For rank-2 output from rank-2 child:
     // other_child_dim_for[0] = _out_to_child_map[1], etc.
     // For rank-1 output from rank-2 child: the other child dim is
     // the collapsed one.
@@ -573,35 +576,41 @@ class Slice : public UnaryExpressionBase<Slice<ExprType, Slices...>,
       return result;
     }();
 
-    /// @brief Returns the nonzero range along output dimension D.
+    /// @brief Returns the index set along output dimension D.
     ///
-    /// Maps through the slice to the child's nonzero_range, then
+    /// Maps through the slice to the child's index_set, then
     /// remaps back. Works for both rank-2 and rank-1 output (the
     /// latter from a rank-2 child with one collapsed dimension).
     template <rank_type D>
-      requires(traits::has_known_zeros && D < extents_type::rank())
-    auto nonzero_range(index_type other_idx) const
-        -> zipper::expression::detail::ContiguousIndexRange {
+      requires(traits::has_index_set && D < extents_type::rank())
+    auto index_set(index_type other_idx) const {
       return _nonzero_range_impl<D, _out_to_child_map[D],
                                   _other_child_dim_for[D]>(other_idx);
     }
 
+    /// @brief Backward-compatible wrapper; prefer index_set.
+    template <rank_type D>
+      requires(traits::has_index_set && D < extents_type::rank())
+    auto nonzero_range(index_type other_idx) const {
+      return index_set<D>(other_idx);
+    }
+
     /// Convenience: col_range_for_row (rank-2 output only).
     auto col_range_for_row(index_type row) const
-      requires(traits::has_known_zeros && extents_type::rank() == 2)
+      requires(traits::has_index_set && extents_type::rank() == 2)
     {
-      return nonzero_range<1>(row);
+      return index_set<1>(row);
     }
 
     /// Convenience: row_range_for_col (rank-2 output only).
     auto row_range_for_col(index_type col) const
-      requires(traits::has_known_zeros && extents_type::rank() == 2)
+      requires(traits::has_index_set && extents_type::rank() == 2)
     {
-      return nonzero_range<0>(col);
+      return index_set<0>(col);
     }
 
    private:
-    /// Core nonzero_range implementation.
+    /// Core index_set implementation.
     ///
     /// @tparam D          Output dimension being queried
     /// @tparam ChildDimD  Child dimension corresponding to output dim D
@@ -612,8 +621,7 @@ class Slice : public UnaryExpressionBase<Slice<ExprType, Slices...>,
     /// fixed index is used directly.  Otherwise, other_idx is mapped
     /// through the slice to the child's index space.
     template <rank_type D, rank_type ChildDimD, rank_type ChildDimOther>
-    auto _nonzero_range_impl(index_type other_idx) const
-        -> zipper::expression::detail::ContiguousIndexRange {
+    auto _nonzero_range_impl(index_type other_idx) const {
       // Step 1: Map other_idx to the child's index space.
       index_type child_other_idx;
       if constexpr (actionable_indices[ChildDimOther] == std::dynamic_extent) {
@@ -625,85 +633,99 @@ class Slice : public UnaryExpressionBase<Slice<ExprType, Slices...>,
             std::get<ChildDimOther>(m_slices).get_index(other_idx);
       }
 
-      // Step 2: Query the child's nonzero range along ChildDimD.
+      // Step 2: Query the child's index set along ChildDimD.
       auto child_range =
-          expression().template nonzero_range<ChildDimD>(child_other_idx);
+          expression().template index_set<ChildDimD>(child_other_idx);
 
       // Step 3: Remap the child range back to the output index space.
       return _remap_range<ChildDimD>(child_range);
     }
 
-    /// Remap a child ContiguousIndexRange through the slice for child
-    /// dimension K back to the output index space.
-    template <rank_type K, typename ChildRange>
-    auto _remap_range(const ChildRange &child_range) const
+     /// Inverse-map a child-space ContiguousIndexRange through a
+    /// strided_slice back to output-space.
+    ///
+    /// Given child range [cr.first, cr.last) and a slice with
+    /// {offset, stride}, computes the output range by:
+    ///   out_first = ceil((cr.first - offset) / stride)   (clamped to 0)
+    ///   out_last  = ceil((cr.last  - offset) / stride)   (clamped to out_extent)
+    ///
+    /// Returns empty range if no overlap.
+    static auto _inverse_map_strided(
+        const zipper::expression::detail::ContiguousIndexRange &cr,
+        index_type offset, index_type stride, index_type out_extent)
         -> zipper::expression::detail::ContiguousIndexRange {
+      if (cr.last <= offset || cr.first >= offset + out_extent * stride) {
+        return {index_type{0}, index_type{0}};
+      }
+      index_type out_first =
+          cr.first <= offset ? index_type{0}
+                             : (cr.first - offset + stride - 1) / stride;
+      index_type out_last =
+          cr.last <= offset ? index_type{0}
+                            : std::min((cr.last - offset + stride - 1) / stride,
+                                       out_extent);
+      return {out_first, out_last};
+    }
+
+    /// Remap a child-space index set through the slice for child dimension K
+    /// back to the output index space.
+    ///
+    /// Uses to_contiguous_range() and range_intersection() from the IndexSet
+    /// library, then inverse-maps the result.  DisjointRange inputs are
+    /// handled by remapping each segment recursively.
+    template <rank_type K, typename ChildRange>
+    auto _remap_range(const ChildRange &child_range) const {
       using slice_t =
           typename std::tuple_element_t<K, slice_storage_type>::type;
 
-      if constexpr (std::is_same_v<slice_t, full_extent_t>) {
-        // Identity mapping — child range maps directly.
-        // But we need to extract first/last from the child_range.
-        return _extract_contiguous(child_range);
+      if constexpr (zipper::expression::detail::IsDisjointRange<ChildRange>) {
+        // DisjointRange: remap each segment independently and reassemble.
+        return _remap_disjoint<K>(
+            child_range,
+            std::make_index_sequence<
+                std::remove_cvref_t<ChildRange>::num_segments>{});
+      } else if constexpr (std::is_same_v<slice_t, full_extent_t>) {
+        // Identity mapping — child range IS the output range.
+        return zipper::expression::detail::to_contiguous_range(child_range);
       } else if constexpr (requires {
                              std::declval<slice_t>().offset;
                              std::declval<slice_t>().stride;
                            }) {
-        // strided_slice — remap via offset and stride.
+        // strided_slice — intersect child range with slice's footprint,
+        // then inverse-map to output space.
         const auto &s = std::get<K>(m_slices).slice();
         index_type offset = static_cast<index_type>(s.offset);
         index_type stride = static_cast<index_type>(s.stride);
-        auto cr = _extract_contiguous(child_range);
-
-        // Child range [cr.first, cr.last) -> output [(cr.first -
-        // offset)/stride, ceil((cr.last - offset)/stride)]
-        // Clamped to [0, this->extent(output_dim))
         constexpr rank_type out_dim = actionable_indices[K];
-        index_type out_extent = extent(out_dim);
+        index_type out_ext = extent(out_dim);
 
-        if (cr.last <= offset || cr.first >= offset + out_extent * stride) {
-          return {index_type{0}, index_type{0}};  // empty
-        }
-
-        index_type out_first =
-            cr.first <= offset ? index_type{0} : (cr.first - offset + stride - 1) / stride;
-        index_type out_last =
-            cr.last <= offset ? index_type{0} : std::min((cr.last - offset + stride - 1) / stride, out_extent);
-
-        return {out_first, out_last};
+        // Get the child-space footprint of this slice.
+        auto slice_set = zipper::expression::detail::to_index_set(
+            s, expression().extent(K));
+        // Intersect with the child's index set (as contiguous bounding box).
+        auto isect = zipper::expression::detail::range_intersection(
+            zipper::expression::detail::to_contiguous_range(child_range),
+            zipper::expression::detail::to_contiguous_range(slice_set));
+        // Inverse-map the intersection back to output space.
+        return _inverse_map_strided(isect, offset, stride, out_ext);
       } else {
         // Complex slice (array, vector, expression) — fall back to full range.
         constexpr rank_type out_dim = actionable_indices[K];
-        return {index_type{0}, extent(out_dim)};
+        return zipper::expression::detail::ContiguousIndexRange{
+            index_type{0}, extent(out_dim)};
       }
     }
 
-    /// Extract first/last from any NonzeroRange into a ContiguousIndexRange.
-    /// For ContiguousIndexRange, this is identity. For SingleIndexRange,
-    /// it's [value, value+1). For others, use the bounding interval.
-    template <typename R>
-    static auto _extract_contiguous(const R &r)
-        -> zipper::expression::detail::ContiguousIndexRange {
-      if constexpr (std::is_same_v<R,
-                                    zipper::expression::detail::ContiguousIndexRange>) {
-        return r;
-      } else if constexpr (std::is_same_v<R,
-                                           zipper::expression::detail::SingleIndexRange>) {
-        return {r.value, r.value + 1};
-      } else if constexpr (std::is_same_v<R,
-                                           zipper::expression::detail::FullRange>) {
-        return {index_type{0}, r.extent};
-      } else {
-        // SparseIndexRange or other — use bounding interval.
-        if (r.empty()) return zipper::expression::detail::ContiguousIndexRange{0, 0};
-        index_type first = *r.begin();
-        index_type last = first;
-        for (auto it = r.begin(); it != r.end(); ++it) {
-          if (*it < first) first = *it;
-          if (*it >= last) last = *it + 1;
-        }
-        return {first, last};
-      }
+    /// Remap each segment of a DisjointRange independently through the
+    /// slice, reassembling the results into a new DisjointRange.
+    template <rank_type K, typename DR, std::size_t... Is>
+    auto _remap_disjoint(const DR &dr, std::index_sequence<Is...>) const {
+      // Remap each segment via _remap_range (handles all slice types).
+      auto remapped = std::tuple{
+          _remap_range<K>(std::get<Is>(dr.segments))...};
+      // Build a DisjointRange from the remapped segments.
+      return zipper::expression::detail::DisjointRange<
+          std::remove_cvref_t<decltype(std::get<Is>(remapped))>...>{remapped};
     }
     template <rank_type... Is>
     auto _make_owned_impl(std::integer_sequence<rank_type, Is...>) const {

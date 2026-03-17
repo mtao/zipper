@@ -23,21 +23,21 @@
 ///   auto I_dyn = Identity<double, dynamic_extent, dynamic_extent>(n, n);
 /// @endcode
 ///
-/// **Zero-aware sparsity:**  Identity has `has_known_zeros = true` in its
-/// ExpressionTraits.  Its `nonzero_range<D>(other_idx)` returns a
+/// **Zero-aware sparsity:**  Identity has `has_index_set = true` in its
+/// ExpressionTraits.  Its `index_set<D>(other_idx)` returns a
 /// `SingleIndexRange{other_idx}`, meaning each row/column has exactly one
 /// non-zero entry.  This enables zero-aware matrix products to skip the
 /// entire off-diagonal.
 ///
 /// @see zipper::expression::detail::SingleIndexRange — the range type returned
-///      by Identity::nonzero_range (exactly one non-zero per row/column).
-/// @see zipper::expression::detail::NonzeroRange — concept satisfied by all
+///      by Identity::index_set (exactly one non-zero per row/column).
+/// @see zipper::expression::detail::IndexSet — concept satisfied by all
 ///      range types in the sparsity protocol.
 /// @see zipper::expression::unary::TriangularView — another expression with
 ///      known structural zeros (triangular region).
 /// @see zipper::expression::nullary::Unit — unit vector expression (single
 ///      non-zero in a rank-1 expression).
-/// @see zipper::expression::binary::MatrixProduct — uses nonzero_range for
+/// @see zipper::expression::binary::MatrixProduct — uses index_set for
 ///      zero-aware dot products when an operand is Identity.
 
 #include <utility>
@@ -46,7 +46,7 @@
 #include "zipper/detail/make_integer_range_sequence.hpp"
 #include "zipper/detail/merge_integer_sequence.hpp"
 #include "zipper/detail/pack_index.hpp"
-#include "zipper/expression/detail/NonzeroRange.hpp"
+#include "zipper/expression/detail/IndexSet.hpp"
 
 namespace zipper::expression {
 namespace nullary {
@@ -112,27 +112,35 @@ public:
   /// Identity already owns its data — make_owned() returns a copy.
   auto make_owned() const -> Identity { return *this; }
 
-  // ── Non-zero range queries ───────────────────────────────────────
+  // ── Index set queries ─────────────────────────────────────────
   // Identity has exactly one non-zero per "row" along any dimension:
   // coeff(i0, i1, ..., iN) == 1 iff i0 == i1 == ... == iN.
   //
-  // For rank-2: nonzero_range<1>(row) = SingleIndexRange{row}
-  //             nonzero_range<0>(col) = SingleIndexRange{col}
+  // For rank-2: index_set<1>(row) = SingleIndexRange{row}
+  //             index_set<0>(col) = SingleIndexRange{col}
   //
-  // For general rank: nonzero_range<D>(other_idx) = SingleIndexRange{other_idx}
+  // For general rank: index_set<D>(other_idx) = SingleIndexRange{other_idx}
   // (the only index along dimension D that can be non-zero is the one
   // equal to the index shared by all other dimensions).
 
-  /// @brief Returns the non-zero index range along dimension @p D.
+  /// @brief Returns the index set along dimension @p D.
   ///
   /// Since Identity is 1 only when all indices are equal, for any
   /// dimension D and a given index in the other dimensions, the only
   /// non-zero position is where the D-th index equals the others.
   template <rank_type D>
       requires(D < extents_type::rank())
-  auto nonzero_range(index_type other_idx) const
+  auto index_set(index_type other_idx) const
       -> zipper::expression::detail::SingleIndexRange {
       return {other_idx};
+  }
+
+  /// @brief Backward-compatible alias for index_set.
+  template <rank_type D>
+      requires(D < extents_type::rank())
+  auto nonzero_range(index_type other_idx) const
+      -> zipper::expression::detail::SingleIndexRange {
+      return index_set<D>(other_idx);
   }
 
   /// @brief Returns the non-zero column range for a given row (rank-2).
@@ -140,7 +148,7 @@ public:
       -> zipper::expression::detail::SingleIndexRange
       requires(extents_type::rank() == 2)
   {
-      return nonzero_range<1>(row);
+      return index_set<1>(row);
   }
 
   /// @brief Returns the non-zero row range for a given column (rank-2).
@@ -148,7 +156,7 @@ public:
       -> zipper::expression::detail::SingleIndexRange
       requires(extents_type::rank() == 2)
   {
-      return nonzero_range<0>(col);
+      return index_set<0>(col);
   }
 
 private:
@@ -185,7 +193,10 @@ struct detail::ExpressionTraits<nullary::Identity<T, Indices...>>
           expression::detail::ShapeFeatures{.is_resizable = true}> {
 
   /// Identity has structurally known zero regions (off-diagonal is zero).
-  constexpr static bool has_known_zeros = true;
+  constexpr static bool has_index_set = true;
+
+  /// Backward-compatible alias for has_index_set.
+  constexpr static bool has_known_zeros = has_index_set;
 };
 } // namespace zipper::expression
 

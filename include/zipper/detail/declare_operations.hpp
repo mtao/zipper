@@ -97,7 +97,7 @@ using forwarded_expression_t = std::conditional_t<
 // ── Zero-aware binary: zipper OP zipper ──────────────────────────────
 //
 // Like BINARY_DECLARATION, but uses `if constexpr` in the function body
-// to select `ZeroAware##NAME` when at least one operand has known zeros,
+// to select `ZeroAware##NAME` when at least one operand has an index set,
 // falling back to `NAME` otherwise.  This avoids C++20 constraint
 // subsumption issues that would arise from having two competing overloads.
 
@@ -113,8 +113,8 @@ using forwarded_expression_t = std::conditional_t<
         using rhs_expr_t = std::decay_t<                                   \
             decltype(std::forward<ExprType2>(b).expression())>;            \
         if constexpr (                                                     \
-            expression::detail::HasKnownZeros<lhs_expr_t> ||               \
-            expression::detail::HasKnownZeros<rhs_expr_t>) {              \
+            expression::detail::HasIndexSet<lhs_expr_t> ||                 \
+            expression::detail::HasIndexSet<rhs_expr_t>) {                \
             return expression::binary::detail::operation_implementation<   \
                 expression::binary::ZeroAware##NAME, zipper::BASETYPE>(   \
                 std::forward<ExprType>(a).expression(),                    \

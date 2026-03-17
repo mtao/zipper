@@ -93,10 +93,7 @@ auto gauss_seidel(const ADerived &A, const BDerived &b, const XDerived &x0,
         })};
       }
 
-      T dot = T{0};
-      for (index_type j = 0; j < n; ++j) {
-        dot += A(i, j) * x(j);
-      }
+      T dot = dot = A.row(i).dot(x);
       x(i) += (b(i) - dot) / diag;
     }
 
@@ -105,8 +102,8 @@ auto gauss_seidel(const ADerived &A, const BDerived &b, const XDerived &x0,
     T rnorm = r.norm();
 
     if (rnorm <= tol) {
-      return std::expected<Result, SolverError>{
-          Result{.x = std::move(x), .residual_norm = rnorm, .iterations = iter + 1}};
+      return std::expected<Result, SolverError>{Result{
+          .x = std::move(x), .residual_norm = rnorm, .iterations = iter + 1}};
     }
 
     if (rnorm > T{1e30}) {

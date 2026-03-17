@@ -13,8 +13,8 @@ test('expressions', test_expressions)
 test_ownership = executable('test_ownership', 'ownership.cpp', dependencies: [zipper_test_dep])
 test('ownership', test_ownership)
 
-test_nonzero_range = executable('test_nonzero_range', 'test_nonzero_range.cpp', dependencies: [zipper_test_dep])
-test('nonzero_range', test_nonzero_range)
+test_index_set = executable('test_index_set', 'test_index_set.cpp', dependencies: [zipper_test_dep])
+test('index_set', test_index_set)
 
 test_zero_aware_operation = executable('test_zero_aware_operation', 'test_zero_aware_operation.cpp', dependencies: [zipper_test_dep])
 test('zero_aware_operation', test_zero_aware_operation)

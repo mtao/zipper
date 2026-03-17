@@ -9,14 +9,14 @@
 /// and x is n-dimensional, producing an m-dimensional result.
 ///
 /// The `coeff(i)` method computes the dot product of row i of A with x.
-/// When either operand satisfies `HasKnownZeros`, the dot product loop is
-/// restricted to the intersection of the non-zero ranges (same strategy as
+/// When either operand satisfies `HasIndexSet`, the dot product loop is
+/// restricted to the intersection of the non-zero index sets (same strategy as
 /// MatrixProduct):
 ///
-///   - Both have known zeros: iterate over the smaller range, checking
+///   - Both have index sets: iterate over the smaller set, checking
 ///     membership in the larger.
-///   - Only LHS (matrix) has known zeros: iterate LHS's `nonzero_range<1>(row)`.
-///   - Only RHS (vector) has known zeros: iterate RHS's `nonzero_range<0>()`.
+///   - Only LHS (matrix) has an index set: iterate LHS's `index_set<1>(row)`.
+///   - Only RHS (vector) has an index set: iterate RHS's `index_set<0>()`.
 ///   - Neither: standard full-range loop.
 ///
 /// This is particularly effective for triangular matrices multiplied by
@@ -36,10 +36,10 @@
 ///   // Only accesses A(i, 1) for each row — O(1) per dot product.
 /// @endcode
 ///
-/// @see zipper::expression::detail::HasKnownZeros — compile-time trait that
+/// @see zipper::expression::detail::HasIndexSet — compile-time trait that
 ///      enables zero-aware dot product loops.
-/// @see zipper::expression::detail::NonzeroRange — concept for range types
-///      used in nonzero_range queries.
+/// @see zipper::expression::detail::IndexSet — concept for range types
+///      used in index_set queries.
 /// @see zipper::expression::binary::MatrixProduct — analogous product for
 ///      matrix * matrix (rank-2 x rank-2 -> rank-2).
 /// @see zipper::expression::binary::ZeroAwareOperation — uses union semantics
@@ -47,13 +47,14 @@
 /// @see zipper::expression::nullary::Unit — a rank-1 expression with a single
 ///      non-zero, ideal for zero-aware matvec.
 /// @see zipper::expression::unary::TriangularView — triangular matrix view
-///      whose nonzero_range restricts the dot product loop.
+///      whose index_set restricts the dot product loop.
 
 #include "BinaryExpressionBase.hpp"
 #include <cassert>
 #include "zipper/concepts/Expression.hpp"
 #include "zipper/detail/assert.hpp"
 #include "zipper/expression/detail/ExpressionTraits.hpp"
+#include "zipper/expression/detail/IndexSet.hpp"
 
 namespace zipper::expression {
 namespace binary {
@@ -121,33 +122,56 @@ class MatrixVectorProduct
     }
     value_type coeff(index_type a) const {
         value_type v = 0;
-        using zipper::expression::detail::HasKnownZeros;
-        constexpr bool lhs_has_zeros = HasKnownZeros<std::decay_t<A>>;
-        constexpr bool rhs_has_zeros = HasKnownZeros<std::decay_t<B>>;
+        using zipper::expression::detail::HasIndexSet;
+        using zipper::expression::detail::HasForEach;
+        constexpr bool lhs_has_zeros = HasIndexSet<std::decay_t<A>>;
+        constexpr bool rhs_has_zeros = HasIndexSet<std::decay_t<B>>;
 
         if constexpr (lhs_has_zeros && rhs_has_zeros) {
-            auto lr = lhs().template nonzero_range<1>(a);
-            auto rr = rhs().template nonzero_range<0>();
+            auto lr = lhs().template index_set<1>(a);
+            auto rr = rhs().template index_set<0>();
             if (lr.size() <= rr.size()) {
-                for (auto j : lr) {
+                auto body = [&](index_type j) {
                     if (rr.contains(j)) {
                         v += lhs()(a, j) * rhs()(j);
                     }
+                };
+                if constexpr (HasForEach<decltype(lr)>) {
+                    lr.for_each(body);
+                } else {
+                    for (auto j : lr) { body(j); }
                 }
             } else {
-                for (auto j : rr) {
+                auto body = [&](index_type j) {
                     if (lr.contains(j)) {
                         v += lhs()(a, j) * rhs()(j);
                     }
+                };
+                if constexpr (HasForEach<decltype(rr)>) {
+                    rr.for_each(body);
+                } else {
+                    for (auto j : rr) { body(j); }
                 }
             }
         } else if constexpr (lhs_has_zeros) {
-            for (auto j : lhs().template nonzero_range<1>(a)) {
+            auto lr = lhs().template index_set<1>(a);
+            auto body = [&](index_type j) {
                 v += lhs()(a, j) * rhs()(j);
+            };
+            if constexpr (HasForEach<decltype(lr)>) {
+                lr.for_each(body);
+            } else {
+                for (auto j : lr) { body(j); }
             }
         } else if constexpr (rhs_has_zeros) {
-            for (auto j : rhs().template nonzero_range<0>()) {
+            auto rr = rhs().template index_set<0>();
+            auto body = [&](index_type j) {
                 v += lhs()(a, j) * rhs()(j);
+            };
+            if constexpr (HasForEach<decltype(rr)>) {
+                rr.for_each(body);
+            } else {
+                for (auto j : rr) { body(j); }
             }
         } else {
             for (index_type j = 0; j < lhs().extent(1); ++j) {

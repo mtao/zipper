@@ -24,10 +24,10 @@
 /// @see zipper::expression::unary::TriangularView::solve — forward/back
 ///      substitution solver method on TriangularView.
 /// @see zipper::expression::detail::ContiguousIndexRange — the range type
-///      returned by TriangularView::nonzero_range.
-/// @see zipper::expression::detail::NonzeroRange — concept satisfied by the
+///      returned by TriangularView::index_set.
+/// @see zipper::expression::detail::IndexSet — concept satisfied by the
 ///      range types used in the zero-aware sparsity protocol.
-/// @see zipper::expression::binary::MatrixProduct — uses nonzero_range for
+/// @see zipper::expression::binary::MatrixProduct — uses index_set for
 ///      zero-aware dot products when multiplying triangular matrices.
 /// @see zipper::expression::nullary::Identity — another expression with
 ///      known structural zeros (diagonal-only).
@@ -38,7 +38,7 @@
 #include "zipper/concepts/Expression.hpp"
 #include "zipper/concepts/Vector.hpp"
 #include "zipper/expression/TriangularMode.hpp"
-#include "zipper/expression/detail/NonzeroRange.hpp"
+#include "zipper/expression/detail/IndexSet.hpp"
 #include "zipper/utils/solver/detail/triangular_substitute.hpp"
 
 namespace zipper::expression {
@@ -96,7 +96,10 @@ struct detail::ExpressionTraits<unary::TriangularView<Mode, ExpressionType>>
     constexpr static bool is_coefficient_consistent = false;
 
     /// TriangularView has structurally known zero regions.
-    constexpr static bool has_known_zeros = true;
+    constexpr static bool has_index_set = true;
+
+    /// Backward-compatible alias.
+    constexpr static bool has_known_zeros = has_index_set;
 };
 
 namespace unary {
@@ -200,7 +203,12 @@ public:
         }
 
         // ── Inside the triangle ─────────────────────────────────────
-        if constexpr (has_flag(Mode, TriangularMode::Lower)) {
+        if constexpr (has_flag(Mode, TriangularMode::Lower) &&
+                      has_flag(Mode, TriangularMode::Upper)) {
+            // OffDiagonal: everything except diagonal (already handled above).
+            return expression().coeff(
+                std::forward<RowIdx>(row), std::forward<ColIdx>(col));
+        } else if constexpr (has_flag(Mode, TriangularMode::Lower)) {
             // Lower triangle: row > col
             if (r > c) {
                 return expression().coeff(
@@ -218,13 +226,13 @@ public:
         return value_type{0};
     }
 
-    // ── Non-zero range queries ───────────────────────────────────────
+    // ── Index set queries ─────────────────────────────────────────────
     // These methods report the structurally non-zero index range along
     // dimension D, given the index in the other dimension.
     //
     // For rank-2 expressions:
-    //   nonzero_range<1>(row) = column range with non-zeros in that row
-    //   nonzero_range<0>(col) = row range with non-zeros in that column
+    //   index_set<1>(row) = column range with non-zeros in that row
+    //   index_set<0>(col) = row range with non-zeros in that column
 
     /// @brief Returns the non-zero index range along dimension @p D.
     ///
@@ -235,6 +243,7 @@ public:
     ///   Upper:          [row, ncols)
     ///   StrictlyUpper:  [row+1, ncols)
     ///   UnitUpper:      [row, ncols)
+    ///   OffDiagonal:    [0, row) ∪ [row+1, ncols)
     ///
     /// For D==0 (row range given a column):
     ///   Lower:          [col, nrows)
@@ -243,73 +252,90 @@ public:
     ///   Upper:          [0, col+1)
     ///   StrictlyUpper:  [0, col)
     ///   UnitUpper:      [0, col+1)
+    ///   OffDiagonal:    [0, col) ∪ [col+1, nrows)
     template <rank_type D>
         requires(D < 2)
-    auto nonzero_range(index_type other_idx) const
-        -> zipper::expression::detail::ContiguousIndexRange {
+    auto index_set(index_type other_idx) const {
+        using CR = zipper::expression::detail::ContiguousIndexRange;
+
         if constexpr (D == 1) {
             // Column range for a given row
-            const auto nrows = Base::extent(0);
             const auto ncols = Base::extent(1);
-            (void)nrows;
 
-            if constexpr (has_flag(Mode, TriangularMode::Lower)) {
+            if constexpr (has_flag(Mode, TriangularMode::Lower) &&
+                          has_flag(Mode, TriangularMode::Upper)) {
+                // OffDiagonal: [0, row) ∪ [row+1, ncols)
+                return zipper::expression::detail::DisjointRange<CR, CR>{
+                    std::tuple{
+                        CR{index_type{0}, other_idx},
+                        CR{std::min(other_idx + 1, ncols), ncols}}};
+            } else if constexpr (has_flag(Mode, TriangularMode::Lower)) {
                 if constexpr (has_flag(Mode, TriangularMode::ZeroDiag)) {
                     // StrictlyLower: cols [0, row)
-                    return {index_type{0}, other_idx};
+                    return CR{index_type{0}, other_idx};
                 } else {
                     // Lower or UnitLower: cols [0, row+1)
-                    return {index_type{0},
-                            std::min(other_idx + 1, ncols)};
+                    return CR{index_type{0},
+                              std::min(other_idx + 1, ncols)};
                 }
             } else {
                 if constexpr (has_flag(Mode, TriangularMode::ZeroDiag)) {
                     // StrictlyUpper: cols [row+1, ncols)
-                    return {std::min(other_idx + 1, ncols), ncols};
+                    return CR{std::min(other_idx + 1, ncols), ncols};
                 } else {
                     // Upper or UnitUpper: cols [row, ncols)
-                    return {other_idx, ncols};
+                    return CR{other_idx, ncols};
                 }
             }
         } else {
             // Row range for a given column
             const auto nrows = Base::extent(0);
-            const auto ncols = Base::extent(1);
-            (void)ncols;
 
-            if constexpr (has_flag(Mode, TriangularMode::Lower)) {
+            if constexpr (has_flag(Mode, TriangularMode::Lower) &&
+                          has_flag(Mode, TriangularMode::Upper)) {
+                // OffDiagonal: [0, col) ∪ [col+1, nrows)
+                return zipper::expression::detail::DisjointRange<CR, CR>{
+                    std::tuple{
+                        CR{index_type{0}, other_idx},
+                        CR{std::min(other_idx + 1, nrows), nrows}}};
+            } else if constexpr (has_flag(Mode, TriangularMode::Lower)) {
                 if constexpr (has_flag(Mode, TriangularMode::ZeroDiag)) {
                     // StrictlyLower: rows [col+1, nrows)
-                    return {std::min(other_idx + 1, nrows), nrows};
+                    return CR{std::min(other_idx + 1, nrows), nrows};
                 } else {
                     // Lower or UnitLower: rows [col, nrows)
-                    return {other_idx, nrows};
+                    return CR{other_idx, nrows};
                 }
             } else {
                 if constexpr (has_flag(Mode, TriangularMode::ZeroDiag)) {
                     // StrictlyUpper: rows [0, col)
-                    return {index_type{0}, other_idx};
+                    return CR{index_type{0}, other_idx};
                 } else {
                     // Upper or UnitUpper: rows [0, col+1)
-                    return {index_type{0},
-                            std::min(other_idx + 1, nrows)};
+                    return CR{index_type{0},
+                              std::min(other_idx + 1, nrows)};
                 }
             }
         }
     }
 
+    /// @brief Backward-compatible wrapper; delegates to index_set.
+    template <rank_type D>
+        requires(D < 2)
+    auto nonzero_range(index_type other_idx) const {
+        return index_set<D>(other_idx);
+    }
+
     // ── Convenience aliases (rank-2) ─────────────────────────────────
 
     /// @brief Returns the non-zero column range for a given row.
-    auto col_range_for_row(index_type row) const
-        -> zipper::expression::detail::ContiguousIndexRange {
-        return nonzero_range<1>(row);
+    auto col_range_for_row(index_type row) const {
+        return index_set<1>(row);
     }
 
     /// @brief Returns the non-zero row range for a given column.
-    auto row_range_for_col(index_type col) const
-        -> zipper::expression::detail::ContiguousIndexRange {
-        return nonzero_range<0>(col);
+    auto row_range_for_col(index_type col) const {
+        return index_set<0>(col);
     }
 
     // ── Solve ────────────────────────────────────────────────────────────
@@ -322,6 +348,8 @@ public:
     /// @return `std::expected<Vector<T, Dim>, SolverError>` — the solution
     ///         on success, or a breakdown error on zero pivot.
     template <zipper::concepts::Vector BDerived>
+        requires(!(has_flag(Mode, TriangularMode::Lower) &&
+                   has_flag(Mode, TriangularMode::Upper)))
     auto solve(const BDerived &b) const {
         using T = typename BDerived::value_type;
         constexpr auto Dim = BDerived::extents_type::static_extent(0);

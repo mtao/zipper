@@ -55,7 +55,7 @@
 /// values from a pattern (`Identity`, `Unit`, `Constant`, `Iota`).
 ///
 /// Several nullary expressions participate in the sparsity protocol via
-/// `HasKnownZeros`, enabling zero-aware optimizations in downstream
+/// `HasIndexSet`, enabling zero-aware optimizations in downstream
 /// operations like `MatrixProduct`.
 ///
 /// @see MDArray, Identity, Unit, Constant, Iota, MDSpan
@@ -111,8 +111,8 @@
 /// to skip zero contributions.
 ///
 /// The protocol has three layers:
-/// 1. **`HasKnownZeros` concept** -- opt-in trait that expression types
-///    satisfy by providing a `nonzero_range()` method
+/// 1. **`HasIndexSet` concept** -- opt-in trait that expression types
+///    satisfy by providing an `index_set()` method
 /// 2. **Range types** -- lightweight objects describing nonzero patterns:
 ///    `ContiguousIndexRange`, `SingleIndexRange`, `SparseIndexRange`, `FullRange`
 /// 3. **Consumers** -- `ZeroAwareOperation`, `MatrixProduct`, and
@@ -123,7 +123,7 @@
 /// - `Identity` -- single-index ranges (one nonzero per row/column)
 /// - `Unit` -- single-index range (one nonzero element)
 ///
-/// @see NonzeroRange, HasKnownZeros, ContiguousIndexRange, SingleIndexRange,
+/// @see IndexSet, HasIndexSet, ContiguousIndexRange, SingleIndexRange,
 ///      SparseIndexRange, FullRange, TriangularView, Identity, Unit
 
 // ============================================================================

@@ -56,12 +56,15 @@ struct BasicExpressionTraits {
   constexpr static bool stores_references = false;
 
   /// Whether this expression has structurally known zero regions.
-  /// When true, the expression provides `nonzero_range<D>(other_indices...)`
-  /// returning a `NonzeroRange`-satisfying type, plus convenience aliases
+  /// When true, the expression provides `index_set<D>(other_indices...)`
+  /// returning an `IndexSet`-satisfying type, plus convenience aliases
   /// (`col_range_for_row`, `row_range_for_col`, `nonzero_segment`).
   /// This enables zero-aware optimizations in addition, subtraction, and
   /// matrix products.
-  constexpr static bool has_known_zeros = false;
+  constexpr static bool has_index_set = false;
+
+  /// Backward-compatible alias for has_index_set.
+  constexpr static bool has_known_zeros = has_index_set;
 };
 
 template <typename T> struct ExpressionTraits;
@@ -129,10 +132,14 @@ consteval auto get_is_coefficient_consistent() -> bool {
 }
 
 /// Detects whether an expression type has structurally known zero regions.
-/// Uses the ExpressionTraits<T>::has_known_zeros flag.
+/// Uses the ExpressionTraits<T>::has_index_set flag.
 template <typename T>
-concept HasKnownZeros =
-    ExpressionTraits<std::remove_cvref_t<T>>::has_known_zeros;
+concept HasIndexSet =
+    ExpressionTraits<std::remove_cvref_t<T>>::has_index_set;
+
+/// Backward-compatible alias for the old concept name.
+template <typename T>
+concept HasKnownZeros = HasIndexSet<T>;
 
 } // namespace zipper::expression::detail
 #endif

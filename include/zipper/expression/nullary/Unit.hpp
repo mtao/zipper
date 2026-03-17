@@ -29,25 +29,25 @@
 ///   auto e_j = nullary::unit_vector<double>(n, j);
 /// @endcode
 ///
-/// **Zero-aware sparsity:**  Unit has `has_known_zeros = true` in its
-/// ExpressionTraits.  Its `nonzero_range<0>()` returns a
+/// **Zero-aware sparsity:**  Unit has `has_index_set = true` in its
+/// ExpressionTraits.  Its `index_set<0>()` returns a
 /// `SingleIndexRange{m_index}`, enabling zero-aware matrix-vector products
 /// to skip all but one element.
 ///
 /// @see zipper::expression::detail::SingleIndexRange — the range type returned
-///      by Unit::nonzero_range (exactly one non-zero).
-/// @see zipper::expression::detail::NonzeroRange — concept satisfied by all
+///      by Unit::index_set (exactly one non-zero).
+/// @see zipper::expression::detail::IndexSet — concept satisfied by all
 ///      range types in the sparsity protocol.
 /// @see zipper::expression::nullary::Identity — the rank-2 analogue (identity
 ///      matrix with one non-zero per row/column).
-/// @see zipper::expression::binary::MatrixVectorProduct — uses nonzero_range
+/// @see zipper::expression::binary::MatrixVectorProduct — uses index_set
 ///      for zero-aware dot products when the vector is a Unit.
 
 #include <utility>
 
 #include "zipper/expression/ExpressionBase.hpp"
 #include "zipper/expression/detail/ExpressionTraits.hpp"
-#include "zipper/expression/detail/NonzeroRange.hpp"
+#include "zipper/expression/detail/IndexSet.hpp"
 
 namespace zipper::expression {
 namespace nullary {
@@ -113,26 +113,34 @@ public:
     return std::array<index_type, 1>{{static_cast<index_type>(m_index)}};
   }
 
-  // ── Non-zero range queries ───────────────────────────────────────
+  // ── Index set queries ─────────────────────────────────────────
   // Unit has exactly one non-zero at m_index.
-  // For rank-1: nonzero_range<0>() returns SingleIndexRange{m_index}.
+  // For rank-1: index_set<0>() returns SingleIndexRange{m_index}.
   // The overload takes no arguments (rank-1 has only one dimension,
   // and there's no "other" index to condition on).
 
-  /// @brief Returns the non-zero index range along dimension @p D.
+  /// @brief Returns the index set along dimension @p D.
   ///
   /// For a unit vector, there is exactly one non-zero element.
   template <rank_type D>
       requires(D == 0)
-  auto nonzero_range() const
+  auto index_set() const
       -> zipper::expression::detail::SingleIndexRange {
       return {static_cast<index_type>(m_index)};
+  }
+
+  /// @brief Backward-compatible wrapper for index_set.
+  template <rank_type D>
+      requires(D == 0)
+  auto nonzero_range() const
+      -> zipper::expression::detail::SingleIndexRange {
+      return index_set<D>();
   }
 
   /// @brief Convenience alias: returns the non-zero segment (rank-1).
   auto nonzero_segment() const
       -> zipper::expression::detail::SingleIndexRange {
-      return nonzero_range<0>();
+      return index_set<0>();
   }
 
   /// Unit already owns its data — make_owned() returns a copy.
@@ -175,7 +183,10 @@ struct detail::ExpressionTraits<nullary::Unit<T, Extent, IndexType>>
   constexpr static bool is_value_based = false;
 
   /// Unit has structurally known zero regions (all but one index is zero).
-  constexpr static bool has_known_zeros = true;
+  constexpr static bool has_index_set = true;
+
+  /// Backward-compatible alias for has_index_set.
+  constexpr static bool has_known_zeros = has_index_set;
 };
 
 } // namespace zipper::expression
