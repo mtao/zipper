@@ -386,6 +386,102 @@ TEST_CASE("Zero-aware matmul: result assigns to owning Matrix",
     }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// MatrixVectorProduct: OffDiagonal * Vector
+// ═══════════════════════════════════════════════════════════════════════════════
+
+TEST_CASE("Zero-aware matvec: OffDiagonal * vector",
+          "[zero_aware_multiply][matvec][off_diagonal]") {
+    Matrix<double, 4, 4> A;
+    A = {{2, 1, 4, 3}, {5, 3, 2, 1}, {4, 2, 1, 2}, {3, 1, 2, 5}};
+
+    Vector<double, 4> x;
+    x = {1.0, 2.0, 3.0, 4.0};
+
+    auto OD = MatrixBase(triangular_view<TriangularMode::OffDiagonal>(A));
+
+    auto result = OD * x;
+
+    // For each row i, result(i) = sum_{j!=i} A(i,j) * x(j)
+    for (index_type i = 0; i < 4; ++i) {
+        double expected = 0;
+        for (index_type j = 0; j < 4; ++j) {
+            if (j != i) {
+                expected += A(i, j) * x(j);
+            }
+        }
+        CHECK(result(i) == Catch::Approx(expected));
+    }
+}
+
+TEST_CASE("Zero-aware matvec: OffDiagonal * vector vs full minus diagonal",
+          "[zero_aware_multiply][matvec][off_diagonal]") {
+    // This is the core use case: verify that OffDiagonal matvec gives
+    // the same result as full matvec minus diagonal contribution,
+    // but computes it without the subtraction.
+    Matrix<double, 4, 4> A;
+    A = {{2, 1, 4, 3}, {5, 3, 2, 1}, {4, 2, 1, 2}, {3, 1, 2, 5}};
+
+    Vector<double, 4> x;
+    x = {1.0, 2.0, 3.0, 4.0};
+
+    auto OD = MatrixBase(triangular_view<TriangularMode::OffDiagonal>(A));
+
+    auto result = OD * x;
+
+    // Compare with full A*x - diag(A)*x
+    for (index_type i = 0; i < 4; ++i) {
+        double full_row = dense_matvec(A, x, i);
+        double diag_contrib = A(i, i) * x(i);
+        double expected = full_row - diag_contrib;
+        CHECK(result(i) == Catch::Approx(expected));
+    }
+}
+
+TEST_CASE("Zero-aware matvec: OffDiagonal result assigns to owning Vector",
+          "[zero_aware_multiply][matvec][off_diagonal][assignment]") {
+    Matrix<double, 3, 3> A;
+    A = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
+
+    Vector<double, 3> x;
+    x = {1.0, 1.0, 1.0};
+
+    auto OD = MatrixBase(triangular_view<TriangularMode::OffDiagonal>(A));
+
+    Vector<double, 3> result;
+    result = OD * x;
+
+    // Row 0: 0 + 2 + 3 = 5
+    CHECK(result(0) == Catch::Approx(5.0));
+    // Row 1: 4 + 0 + 6 = 10
+    CHECK(result(1) == Catch::Approx(10.0));
+    // Row 2: 7 + 8 + 0 = 15
+    CHECK(result(2) == Catch::Approx(15.0));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MatrixProduct: OffDiagonal * Matrix
+// ═══════════════════════════════════════════════════════════════════════════════
+
+TEST_CASE("Zero-aware matmul: OffDiagonal * Dense",
+          "[zero_aware_multiply][matrix_product][off_diagonal]") {
+    Matrix<double, 3, 3> A;
+    A = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
+
+    Matrix<double, 3, 3> B;
+    B = {{9, 8, 7}, {6, 5, 4}, {3, 2, 1}};
+
+    auto OD = MatrixBase(triangular_view<TriangularMode::OffDiagonal>(A));
+
+    auto result = OD * B;
+
+    for (index_type i = 0; i < 3; ++i) {
+        for (index_type j = 0; j < 3; ++j) {
+            CHECK(result(i, j) == Catch::Approx(dense_matmul(OD, B, i, j)));
+        }
+    }
+}
+
 TEST_CASE("Zero-aware matvec: result assigns to owning Vector",
           "[zero_aware_multiply][assignment]") {
     Matrix<double, 3, 3> A;

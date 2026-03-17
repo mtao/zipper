@@ -36,6 +36,10 @@ enum class TriangularMode : unsigned {
     UnitUpper     = Upper | UnitDiag,
     StrictlyLower = Lower | ZeroDiag,
     StrictlyUpper = Upper | ZeroDiag,
+
+    /// Off-diagonal: everything except the diagonal.
+    /// Equivalent to StrictlyLower + StrictlyUpper.
+    OffDiagonal   = Lower | Upper | ZeroDiag,
 };
 
 /// @brief Bitwise OR for TriangularMode flags.
@@ -56,14 +60,21 @@ constexpr auto has_flag(TriangularMode mode, TriangularMode flag) -> bool {
 }
 
 /// @brief Checks that a TriangularMode value is well-formed:
-///   - Exactly one of Lower or Upper is set.
+///   - At least one of Lower or Upper is set.
+///   - Both Lower and Upper together requires ZeroDiag (OffDiagonal mode).
 ///   - UnitDiag and ZeroDiag are not both set.
 template <TriangularMode Mode>
 consteval auto is_valid_triangular_mode() -> bool {
-    return (has_flag(Mode, TriangularMode::Lower) !=
-            has_flag(Mode, TriangularMode::Upper)) &&
-           !(has_flag(Mode, TriangularMode::UnitDiag) &&
-             has_flag(Mode, TriangularMode::ZeroDiag));
+    bool has_lower = has_flag(Mode, TriangularMode::Lower);
+    bool has_upper = has_flag(Mode, TriangularMode::Upper);
+    bool has_both  = has_lower && has_upper;
+    bool has_either = has_lower || has_upper;
+    bool has_zero_diag = has_flag(Mode, TriangularMode::ZeroDiag);
+    bool has_unit_diag = has_flag(Mode, TriangularMode::UnitDiag);
+
+    return has_either &&
+           (!has_both || has_zero_diag) &&
+           !(has_unit_diag && has_zero_diag);
 }
 
 } // namespace zipper::expression

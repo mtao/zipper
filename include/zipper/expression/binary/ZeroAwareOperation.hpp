@@ -5,22 +5,22 @@
 ///
 /// `ZeroAwareOperation<A, B, Op>` is functionally identical to `Operation<A,
 /// B, Op>` for coefficient evaluation.  The difference is that it:
-///   1. Sets `has_known_zeros = true` in its ExpressionTraits.
-///   2. Provides `nonzero_range<D>(other_indices...)` methods that return
-///      the **union** of both children's non-zero ranges.
+///   1. Sets `has_index_set = true` in its ExpressionTraits.
+///   2. Provides `index_set<D>(other_indices...)` methods that return
+///      the **union** of both children's non-zero index sets.
 ///
 /// This enables downstream consumers (especially matrix products) to skip
 /// computations in known-zero regions.
 ///
 /// @note  The constrained `operator+`/`operator-` overloads in each
 ///        `*Base.hxx` file select `ZeroAwareOperation` over `Operation` when
-///        at least one operand satisfies `HasKnownZeros`.
+///        at least one operand satisfies `HasIndexSet`.
 ///
-/// @see zipper::expression::detail::NonzeroRange — concept satisfied by the
-///      range types returned by nonzero_range queries.
+/// @see zipper::expression::detail::IndexSet — concept satisfied by the
+///      range types returned by index_set queries.
 /// @see zipper::expression::detail::ContiguousIndexRange — the range type
-///      returned by ZeroAwareOperation::nonzero_range (conservative union).
-/// @see zipper::expression::detail::HasKnownZeros — compile-time trait that
+///      returned by ZeroAwareOperation::index_set (conservative union).
+/// @see zipper::expression::detail::HasIndexSet — compile-time trait that
 ///      triggers selection of ZeroAwareOperation over plain Operation.
 /// @see zipper::expression::binary::Operation — the non-zero-aware
 ///      coefficient-wise binary expression (used when neither operand has
@@ -29,7 +29,7 @@
 ///      zeros whose addition/subtraction produces a ZeroAwareOperation.
 /// @see zipper::expression::nullary::Identity — another expression with known
 ///      zeros.
-/// @see zipper::expression::binary::MatrixProduct — uses nonzero_range for
+/// @see zipper::expression::binary::MatrixProduct — uses index_set for
 ///      intersection semantics (multiplication), complementing the union
 ///      semantics used here for addition/subtraction.
 
@@ -39,7 +39,7 @@
 #include "detail/CoeffWiseTraits.hpp"
 #include "zipper/concepts/Expression.hpp"
 #include "zipper/expression/detail/ExpressionTraits.hpp"
-#include "zipper/expression/detail/NonzeroRange.hpp"
+#include "zipper/expression/detail/IndexSet.hpp"
 
 #include <format>
 #include "zipper/utils/extents/extents_formatter.hpp"
@@ -82,7 +82,10 @@ struct detail::ExpressionTraits<binary::ZeroAwareOperation<A, B, Op>>
         std::declval<typename _Detail::BTraits::value_type>()));
 
     /// The result expression always tracks structural zeros.
-    constexpr static bool has_known_zeros = true;
+    constexpr static bool has_index_set = true;
+
+    /// Backward-compatible alias for has_index_set.
+    constexpr static bool has_known_zeros = has_index_set;
 };
 
 // ─── ZeroAwareOperation class ────────────────────────────────────────────────
@@ -125,10 +128,10 @@ class ZeroAwareOperation
     using rhs_expression_type = std::remove_reference_t<B>;
 
     /// Whether each child has known structural zeros.
-    constexpr static bool lhs_has_known_zeros =
-        _za_nz::HasKnownZeros<lhs_expression_type>;
-    constexpr static bool rhs_has_known_zeros =
-        _za_nz::HasKnownZeros<rhs_expression_type>;
+    constexpr static bool lhs_has_index_set =
+        _za_nz::HasIndexSet<lhs_expression_type>;
+    constexpr static bool rhs_has_index_set =
+        _za_nz::HasIndexSet<rhs_expression_type>;
 
     using Base::lhs;
     using Base::rhs;
@@ -167,13 +170,13 @@ class ZeroAwareOperation
         return extents_traits::make_extents_from(*this);
     }
 
-    // ── Nonzero range interface ──────────────────────────────────────────
+    // ── Index set interface ────────────────────────────────────────────
     //
     // For addition/subtraction, the result can be nonzero wherever EITHER
-    // child is nonzero → the nonzero range is the UNION of both ranges.
+    // child is nonzero → the index set is the UNION of both sets.
     //
-    // We provide per-dimension queries.  If a child doesn't have known
-    // zeros, we assume its entire extent is nonzero (FullRange).
+    // We provide per-dimension queries.  If a child doesn't have an
+    // index set, we assume its entire extent is nonzero (FullRange).
     //
     // The union of two ranges is returned as:
     //   - If both are contiguous: a ContiguousIndexRange spanning the union
@@ -184,55 +187,69 @@ class ZeroAwareOperation
     // that is cheap to compute.  A tighter union (SparseIndexRange) would
     // be more precise but requires allocation.
 
-    /// @brief Conservative nonzero range for dimension D.
+    /// @brief Type-preserving index set for dimension D.
     ///
-    /// Returns the tightest contiguous range that covers the union of both
-    /// children's nonzero ranges for the given dimension.
+    /// Returns the union of both children's index sets for the given
+    /// dimension, preserving the exact range type (including DisjointRange)
+    /// through `range_union()`.
     ///
     /// Rank-2 (matrices): D=0 → row range for a given column,
     ///                    D=1 → column range for a given row.
     template <rank_type D>
-    auto nonzero_range(index_type other_idx) const
-        -> _za_nz::ContiguousIndexRange
+    auto index_set(index_type other_idx) const
         requires(extents_type::rank() == 2)
     {
         auto lhs_range = get_child_range<D>(lhs(), other_idx);
         auto rhs_range = get_child_range<D>(rhs(), other_idx);
-        return contiguous_union(lhs_range, rhs_range);
+        return _za_nz::range_union(lhs_range, rhs_range);
     }
 
     /// Rank-1 (vectors): nonzero segment (no arguments).
     template <rank_type D>
-    auto nonzero_range() const -> _za_nz::ContiguousIndexRange
+    auto index_set() const
         requires(D == 0 && extents_type::rank() == 1)
     {
         auto lhs_range = get_child_range_r1(lhs());
         auto rhs_range = get_child_range_r1(rhs());
-        return contiguous_union(lhs_range, rhs_range);
+        return _za_nz::range_union(lhs_range, rhs_range);
+    }
+
+    /// @deprecated Use index_set instead.
+    template <rank_type D>
+    auto nonzero_range(index_type other_idx) const
+        requires(extents_type::rank() == 2)
+    {
+        return index_set<D>(other_idx);
+    }
+
+    /// @deprecated Use index_set instead.
+    template <rank_type D>
+    auto nonzero_range() const
+        requires(D == 0 && extents_type::rank() == 1)
+    {
+        return index_set<D>();
     }
 
     // ── Convenience aliases (rank-2) ─────────────────────────────────────
 
     auto col_range_for_row(index_type row) const
-        -> _za_nz::ContiguousIndexRange
         requires(extents_type::rank() == 2)
     {
-        return nonzero_range<1>(row);
+        return index_set<1>(row);
     }
 
     auto row_range_for_col(index_type col) const
-        -> _za_nz::ContiguousIndexRange
         requires(extents_type::rank() == 2)
     {
-        return nonzero_range<0>(col);
+        return index_set<0>(col);
     }
 
     // ── Convenience alias (rank-1) ───────────────────────────────────────
 
-    auto nonzero_segment() const -> _za_nz::ContiguousIndexRange
+    auto nonzero_segment() const
         requires(extents_type::rank() == 1)
     {
-        return nonzero_range<0>();
+        return index_set<0>();
     }
 
     /// Deep copy.
@@ -270,16 +287,14 @@ class ZeroAwareOperation
 
     // ── Helpers for extracting child ranges ──────────────────────────────
 
-    /// Get the nonzero range for dimension D from a rank-2 child.
-    /// If the child doesn't have known zeros, returns FullRange.
+    /// Get the index set for dimension D from a rank-2 child.
+    /// If the child doesn't have an index set, returns a FullRange covering
+    /// the child's extent along dimension D.  Otherwise, returns the
+    /// child's native range type (preserving DisjointRange, etc.).
     template <rank_type D, typename Child>
-    auto get_child_range(const Child &child, index_type other_idx) const
-        -> _za_nz::ContiguousIndexRange {
-        if constexpr (_za_nz::HasKnownZeros<Child>) {
-            auto r = child.template nonzero_range<D>(other_idx);
-            // Convert any NonzeroRange type to ContiguousIndexRange
-            // by taking its bounding box [min, max+1).
-            return to_contiguous(r, child.extent(D));
+    static auto get_child_range(const Child &child, index_type other_idx) {
+        if constexpr (_za_nz::HasIndexSet<Child>) {
+            return child.template index_set<D>(other_idx);
         } else {
             // Dense child: assume all indices are nonzero.
             return _za_nz::ContiguousIndexRange{
@@ -287,59 +302,15 @@ class ZeroAwareOperation
         }
     }
 
-    /// Get the nonzero range from a rank-1 child (no arguments).
+    /// Get the index set from a rank-1 child (no arguments).
     template <typename Child>
-    auto get_child_range_r1(const Child &child) const
-        -> _za_nz::ContiguousIndexRange {
-        if constexpr (_za_nz::HasKnownZeros<Child>) {
-            auto r = child.template nonzero_range<0>();
-            return to_contiguous(r, child.extent(0));
+    static auto get_child_range_r1(const Child &child) {
+        if constexpr (_za_nz::HasIndexSet<Child>) {
+            return child.template index_set<0>();
         } else {
             return _za_nz::ContiguousIndexRange{
                 .first = 0, .last = child.extent(0)};
         }
-    }
-
-    /// Convert any NonzeroRange to a ContiguousIndexRange by computing
-    /// its bounding box.  This is conservative (superset) but O(1) for
-    /// ContiguousIndexRange and SingleIndexRange.
-    template <_za_nz::NonzeroRange R>
-    static auto to_contiguous(const R &r, [[maybe_unused]] index_type extent)
-        -> _za_nz::ContiguousIndexRange {
-        if constexpr (std::is_same_v<R, _za_nz::ContiguousIndexRange>) {
-            return r;
-        } else if constexpr (std::is_same_v<R, _za_nz::SingleIndexRange>) {
-            return _za_nz::ContiguousIndexRange{.first = r.value,
-                                                .last = r.value + 1};
-        } else if constexpr (std::is_same_v<R, _za_nz::FullRange>) {
-            return _za_nz::ContiguousIndexRange{.first = 0,
-                                                .last = r.extent};
-        } else {
-            // SparseIndexRange or other: bounding box.
-            if (r.empty()) {
-                return _za_nz::ContiguousIndexRange{.first = 0, .last = 0};
-            }
-            index_type lo = *r.begin();
-            index_type hi = lo;
-            for (auto it = r.begin(); it != r.end(); ++it) {
-                auto idx = static_cast<index_type>(*it);
-                if (idx < lo) lo = idx;
-                if (idx > hi) hi = idx;
-            }
-            return _za_nz::ContiguousIndexRange{.first = lo,
-                                                .last = hi + 1};
-        }
-    }
-
-    /// Union of two ContiguousIndexRange: [min(first), max(last)).
-    static auto contiguous_union(const _za_nz::ContiguousIndexRange &a,
-                                 const _za_nz::ContiguousIndexRange &b)
-        -> _za_nz::ContiguousIndexRange {
-        if (a.empty()) return b;
-        if (b.empty()) return a;
-        return _za_nz::ContiguousIndexRange{
-            .first = std::min(a.first, b.first),
-            .last = std::max(a.last, b.last)};
     }
 };
 

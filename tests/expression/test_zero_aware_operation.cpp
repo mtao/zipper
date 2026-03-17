@@ -1,7 +1,7 @@
 // Tests for zero-aware addition/subtraction (Phase 3):
 // - Type dispatch: dense + dense → Operation, sparse + dense → ZeroAwareOperation
 // - Coefficient correctness for ZeroAwareOperation (+ and -)
-// - nonzero_range propagation (union semantics) for rank-2 and rank-1
+// - index_set propagation (union semantics) for rank-2 and rank-1
 // - All semantic wrapper types: Vector, Matrix, Form, Array, Tensor
 
 #include <type_traits>
@@ -14,7 +14,7 @@
 #include <zipper/expression/binary/ArithmeticExpressions.hpp>
 #include <zipper/expression/binary/ZeroAwareOperation.hpp>
 #include <zipper/expression/detail/ExpressionTraits.hpp>
-#include <zipper/expression/detail/NonzeroRange.hpp>
+#include <zipper/expression/detail/IndexSet.hpp>
 #include <zipper/expression/nullary/Identity.hpp>
 #include <zipper/expression/nullary/Unit.hpp>
 #include <zipper/expression/unary/TriangularView.hpp>
@@ -67,7 +67,7 @@ TEST_CASE("Zero-aware dispatch: dense + dense stays regular Operation",
 
     // Both A and B are dense → should NOT produce ZeroAwareOperation
     CHECK_FALSE(is_zero_aware_operation_v<result_expr_t>);
-    CHECK_FALSE(HasKnownZeros<result_expr_t>);
+    CHECK_FALSE(HasIndexSet<result_expr_t>);
 }
 
 TEST_CASE("Zero-aware dispatch: identity + dense → ZeroAwareOperation",
@@ -83,7 +83,7 @@ TEST_CASE("Zero-aware dispatch: identity + dense → ZeroAwareOperation",
 
     // Identity has known zeros → result should be ZeroAwareOperation
     CHECK(is_zero_aware_operation_v<result_expr_t>);
-    CHECK(HasKnownZeros<result_expr_t>);
+    CHECK(HasIndexSet<result_expr_t>);
 }
 
 TEST_CASE("Zero-aware dispatch: triangular + triangular → ZeroAwareOperation",
@@ -99,7 +99,7 @@ TEST_CASE("Zero-aware dispatch: triangular + triangular → ZeroAwareOperation",
         std::decay_t<decltype(result.expression())>;
 
     CHECK(is_zero_aware_operation_v<result_expr_t>);
-    CHECK(HasKnownZeros<result_expr_t>);
+    CHECK(HasIndexSet<result_expr_t>);
 }
 
 TEST_CASE("Zero-aware dispatch: subtraction also dispatches",
@@ -114,7 +114,7 @@ TEST_CASE("Zero-aware dispatch: subtraction also dispatches",
         std::decay_t<decltype(result.expression())>;
 
     CHECK(is_zero_aware_operation_v<result_expr_t>);
-    CHECK(HasKnownZeros<result_expr_t>);
+    CHECK(HasIndexSet<result_expr_t>);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -203,11 +203,11 @@ TEST_CASE("Zero-aware addition: triangular views",
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Nonzero range propagation tests (union semantics)
+// Index set propagation tests (union semantics)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-TEST_CASE("Zero-aware: nonzero_range is union of children (Lower + Upper)",
-          "[zero_aware][nonzero_range]") {
+TEST_CASE("Zero-aware: index_set is union of children (Lower + Upper)",
+          "[zero_aware][index_set]") {
     Matrix<double, 4, 4> A;
     A = {{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10, 11, 12}, {13, 14, 15, 16}};
 
@@ -220,7 +220,7 @@ TEST_CASE("Zero-aware: nonzero_range is union of children (Lower + Upper)",
     // L col_range_for_row(0) = [0, 1), U col_range_for_row(0) = [0, 4)
     // union = [0, 4)
     SECTION("col range for row 0") {
-        auto r = expr.col_range_for_row(0);
+        auto r = to_contiguous_range(expr.col_range_for_row(0));
         CHECK(r.first == 0);
         CHECK(r.last == 4);
     }
@@ -228,7 +228,7 @@ TEST_CASE("Zero-aware: nonzero_range is union of children (Lower + Upper)",
     // L col_range_for_row(3) = [0, 4), U col_range_for_row(3) = [3, 4)
     // union = [0, 4)
     SECTION("col range for row 3") {
-        auto r = expr.col_range_for_row(3);
+        auto r = to_contiguous_range(expr.col_range_for_row(3));
         CHECK(r.first == 0);
         CHECK(r.last == 4);
     }
@@ -236,14 +236,14 @@ TEST_CASE("Zero-aware: nonzero_range is union of children (Lower + Upper)",
     // L row_range_for_col(0) = [0, 4), U row_range_for_col(0) = [0, 1)
     // union = [0, 4)
     SECTION("row range for col 0") {
-        auto r = expr.row_range_for_col(0);
+        auto r = to_contiguous_range(expr.row_range_for_col(0));
         CHECK(r.first == 0);
         CHECK(r.last == 4);
     }
 }
 
-TEST_CASE("Zero-aware: nonzero_range with identity",
-          "[zero_aware][nonzero_range]") {
+TEST_CASE("Zero-aware: index_set with identity",
+          "[zero_aware][index_set]") {
     Matrix<double, 4, 4> A;
     A = {{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10, 11, 12}, {13, 14, 15, 16}};
 
@@ -256,20 +256,20 @@ TEST_CASE("Zero-aware: nonzero_range with identity",
     // A is dense → FullRange [0, 4)
     // union = [0, 4) (A dominates)
     SECTION("col range for row 0") {
-        auto r = expr.col_range_for_row(0);
+        auto r = to_contiguous_range(expr.col_range_for_row(0));
         CHECK(r.first == 0);
         CHECK(r.last == 4);
     }
 
     SECTION("col range for row 2") {
-        auto r = expr.col_range_for_row(2);
+        auto r = to_contiguous_range(expr.col_range_for_row(2));
         CHECK(r.first == 0);
         CHECK(r.last == 4);
     }
 }
 
-TEST_CASE("Zero-aware: nonzero_range strictly-triangular sum",
-          "[zero_aware][nonzero_range]") {
+TEST_CASE("Zero-aware: index_set strictly-triangular sum",
+          "[zero_aware][index_set]") {
     Matrix<double, 4, 4> A;
     A = {{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10, 11, 12}, {13, 14, 15, 16}};
 
@@ -283,7 +283,7 @@ TEST_CASE("Zero-aware: nonzero_range strictly-triangular sum",
     // SU col_range_for_row(0) = [1, 4)
     // union = [1, 4)
     SECTION("col range for row 0") {
-        auto r = expr.col_range_for_row(0);
+        auto r = to_contiguous_range(expr.col_range_for_row(0));
         CHECK(r.first == 1);
         CHECK(r.last == 4);
     }
@@ -292,7 +292,7 @@ TEST_CASE("Zero-aware: nonzero_range strictly-triangular sum",
     // SU col_range_for_row(1) = [2, 4)
     // union = [0, 4)
     SECTION("col range for row 1") {
-        auto r = expr.col_range_for_row(1);
+        auto r = to_contiguous_range(expr.col_range_for_row(1));
         CHECK(r.first == 0);
         CHECK(r.last == 4);
     }
@@ -301,7 +301,7 @@ TEST_CASE("Zero-aware: nonzero_range strictly-triangular sum",
     // SU col_range_for_row(3) = [4, 4) (empty)
     // union = [0, 3)
     SECTION("col range for row 3") {
-        auto r = expr.col_range_for_row(3);
+        auto r = to_contiguous_range(expr.col_range_for_row(3));
         CHECK(r.first == 0);
         CHECK(r.last == 3);
     }
@@ -311,7 +311,7 @@ TEST_CASE("Zero-aware: nonzero_range strictly-triangular sum",
     // SU row_range_for_col(0) = [0, 0) (empty)
     // union = [1, 4)
     SECTION("row range for col 0") {
-        auto r = expr.row_range_for_col(0);
+        auto r = to_contiguous_range(expr.row_range_for_col(0));
         CHECK(r.first == 1);
         CHECK(r.last == 4);
     }
@@ -334,7 +334,7 @@ TEST_CASE("Zero-aware dispatch: unit vector + dense vector",
 
     // Unit has known zeros
     CHECK(is_zero_aware_operation_v<result_expr_t>);
-    CHECK(HasKnownZeros<result_expr_t>);
+    CHECK(HasIndexSet<result_expr_t>);
 
     // Coefficients
     CHECK(result(0) == Catch::Approx(1.0));
@@ -344,7 +344,7 @@ TEST_CASE("Zero-aware dispatch: unit vector + dense vector",
 }
 
 TEST_CASE("Zero-aware: unit + unit nonzero_segment",
-          "[zero_aware][vector][nonzero_range]") {
+          "[zero_aware][vector][index_set]") {
     auto e1 = VectorBase(nullary::Unit<double, 6, index_type>(1));
     auto e4 = VectorBase(nullary::Unit<double, 6, index_type>(4));
 
@@ -353,7 +353,7 @@ TEST_CASE("Zero-aware: unit + unit nonzero_segment",
 
     // e1 nonzero_segment = [1, 2), e4 = [4, 5)
     // union = [1, 5)
-    auto r = expr.nonzero_segment();
+    auto r = to_contiguous_range(expr.nonzero_segment());
     CHECK(r.first == 1);
     CHECK(r.last == 5);
 
@@ -427,7 +427,7 @@ TEST_CASE("Zero-aware chaining: (I + A) + L is still zero-aware",
     MatrixBase I = nullary::Identity<double, 3, 3>{};
     auto L = MatrixBase(triangular_view<TriangularMode::Lower>(A));
 
-    // I + A → ZeroAwareOperation (has_known_zeros = true)
+    // I + A → ZeroAwareOperation (has_index_set = true)
     auto step1 = I + A;
     // (I + A) + L → both have known zeros → ZeroAwareOperation
     auto step2 = step1 + L;
@@ -435,7 +435,7 @@ TEST_CASE("Zero-aware chaining: (I + A) + L is still zero-aware",
         std::decay_t<decltype(step2.expression())>;
 
     CHECK(is_zero_aware_operation_v<step2_expr_t>);
-    CHECK(HasKnownZeros<step2_expr_t>);
+    CHECK(HasIndexSet<step2_expr_t>);
 
     // Value check: I + A + L at (0,0) = 1 + 1 + 1 = 3
     CHECK(step2(0, 0) == Catch::Approx(3.0));
@@ -484,9 +484,134 @@ TEST_CASE("Dense vector + dense vector stays regular Operation",
         std::decay_t<decltype(result.expression())>;
 
     CHECK_FALSE(is_zero_aware_operation_v<result_expr_t>);
-    CHECK_FALSE(HasKnownZeros<result_expr_t>);
+    CHECK_FALSE(HasIndexSet<result_expr_t>);
 
     CHECK(result(0) == Catch::Approx(5.0));
     CHECK(result(1) == Catch::Approx(7.0));
     CHECK(result(2) == Catch::Approx(9.0));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ZeroAware + DisjointRange tests (OffDiagonal operand)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+TEST_CASE("Zero-aware dispatch: OffDiagonal + dense → ZeroAwareOperation",
+          "[zero_aware][dispatch][off_diagonal]") {
+    Matrix<double, 3, 3> A;
+    A = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
+
+    auto OD = MatrixBase(triangular_view<TriangularMode::OffDiagonal>(A));
+
+    Matrix<double, 3, 3> B;
+    B = {{9, 8, 7}, {6, 5, 4}, {3, 2, 1}};
+
+    auto result = OD + B;
+    using result_expr_t = std::decay_t<decltype(result.expression())>;
+
+    CHECK(is_zero_aware_operation_v<result_expr_t>);
+    CHECK(HasIndexSet<result_expr_t>);
+}
+
+TEST_CASE("Zero-aware: OffDiagonal + dense coefficients correct",
+          "[zero_aware][coefficients][off_diagonal]") {
+    Matrix<double, 3, 3> A;
+    A = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
+
+    auto OD = MatrixBase(triangular_view<TriangularMode::OffDiagonal>(A));
+
+    Matrix<double, 3, 3> B;
+    B = {{9, 8, 7}, {6, 5, 4}, {3, 2, 1}};
+
+    auto result = OD + B;
+
+    // OD has zero on diagonal, child values elsewhere
+    // result = OD + B = (A with diag zeroed) + B
+    for (index_type i = 0; i < 3; ++i) {
+        for (index_type j = 0; j < 3; ++j) {
+            double od_val = (i == j) ? 0.0 : A(i, j);
+            double expected = od_val + B(i, j);
+            CHECK(result(i, j) == Catch::Approx(expected));
+        }
+    }
+}
+
+TEST_CASE("Zero-aware: OffDiagonal + Identity index_set is union",
+          "[zero_aware][index_set][off_diagonal]") {
+    Matrix<double, 4, 4> A;
+    A = {{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10, 11, 12}, {13, 14, 15, 16}};
+
+    auto OD = MatrixBase(triangular_view<TriangularMode::OffDiagonal>(A));
+    MatrixBase I = nullary::Identity<double, 4, 4>{};
+
+    auto sum = OD + I;
+    auto& expr = sum.expression();
+
+    // OffDiagonal col_range_for_row(r) = [0,r) ∪ [r+1,4) (DisjointRange)
+    // Identity col_range_for_row(r) = SingleIndexRange{r} → [r, r+1)
+    // Union should cover [0, 4) for all rows
+    for (index_type row = 0; row < 4; ++row) {
+        auto r = to_contiguous_range(expr.col_range_for_row(row));
+        CHECK(r.first == 0);
+        CHECK(r.last == 4);
+    }
+
+    // Coefficient check: OD(i,j) + I(i,j)
+    for (index_type i = 0; i < 4; ++i) {
+        for (index_type j = 0; j < 4; ++j) {
+            double od_val = (i == j) ? 0.0 : A(i, j);
+            double id_val = (i == j) ? 1.0 : 0.0;
+            CHECK(sum(i, j) == Catch::Approx(od_val + id_val));
+        }
+    }
+}
+
+TEST_CASE("Zero-aware: OffDiagonal + OffDiagonal",
+          "[zero_aware][index_set][off_diagonal]") {
+    Matrix<double, 3, 3> A;
+    A = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
+
+    Matrix<double, 3, 3> B;
+    B = {{9, 8, 7}, {6, 5, 4}, {3, 2, 1}};
+
+    auto OD_A = MatrixBase(triangular_view<TriangularMode::OffDiagonal>(A));
+    auto OD_B = MatrixBase(triangular_view<TriangularMode::OffDiagonal>(B));
+
+    auto sum = OD_A + OD_B;
+    auto& expr = sum.expression();
+
+    CHECK(is_zero_aware_operation_v<std::decay_t<decltype(expr)>>);
+
+    // Both have DisjointRange col ranges; union should still be disjoint
+    // (same pattern for both)
+    for (index_type i = 0; i < 3; ++i) {
+        for (index_type j = 0; j < 3; ++j) {
+            double a_val = (i == j) ? 0.0 : A(i, j);
+            double b_val = (i == j) ? 0.0 : B(i, j);
+            CHECK(sum(i, j) == Catch::Approx(a_val + b_val));
+        }
+    }
+
+    // On diagonal, both are zero → sum is zero
+    for (index_type i = 0; i < 3; ++i) {
+        CHECK(sum(i, i) == Catch::Approx(0.0));
+    }
+}
+
+TEST_CASE("Zero-aware: OffDiagonal - Lower coefficients correct",
+          "[zero_aware][coefficients][off_diagonal]") {
+    Matrix<double, 3, 3> A;
+    A = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
+
+    auto OD = MatrixBase(triangular_view<TriangularMode::OffDiagonal>(A));
+    auto L  = MatrixBase(triangular_view<TriangularMode::Lower>(A));
+
+    auto diff = OD - L;
+
+    for (index_type i = 0; i < 3; ++i) {
+        for (index_type j = 0; j < 3; ++j) {
+            double od_val = (i == j) ? 0.0 : A(i, j);
+            double l_val = (j <= i) ? A(i, j) : 0.0;
+            CHECK(diff(i, j) == Catch::Approx(od_val - l_val));
+        }
+    }
 }
