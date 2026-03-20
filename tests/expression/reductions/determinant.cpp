@@ -5,7 +5,6 @@
 #include <zipper/expression/reductions/Determinant.hpp>
 
 #include "../../catch_include.hpp"
-#include "../../fmt_include.hpp"
 
 namespace {
 
@@ -36,7 +35,6 @@ TEST_CASE("test_determinant", "[matrix][storage][dense]") {
         Matrix<double, std::dynamic_extent, std::dynamic_extent> A =
             expression::nullary::Identity<double, std::dynamic_extent,
                                          std::dynamic_extent>(j, j);
-        //fmt::print("{} {}\n", A.extent(0), A.extent(1));
         CHECK(expression::reductions::Determinant(A.expression())() == 1);
     }
 }

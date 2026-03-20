@@ -41,10 +41,7 @@
 #include "zipper/expression/detail/ExpressionTraits.hpp"
 #include "zipper/expression/detail/NonzeroRange.hpp"
 
-#include "zipper/detail/fmt.hpp"
-#if defined(ZIPPER_FMT_OVERRIDES_DISABLED)
-#include "zipper/utils/extents/as_array.hpp"
-#endif
+#include <format>
 #include "zipper/utils/extents/extents_formatter.hpp"
 
 namespace zipper::expression {
@@ -146,14 +143,9 @@ class ZeroAwareOperation
     ZeroAwareOperation(U &&a, V &&b, const Op &op = {})
         : Base(std::forward<U>(a), std::forward<V>(b)), m_op(op) {
         if (!valid_input_extents(lhs().extents(), rhs().extents())) {
-            throw std::runtime_error(fmt::format(
+            throw std::runtime_error(std::format(
                 "ZeroAwareOperation between {} and {} is invalid",
-#if defined(ZIPPER_FMT_OVERRIDES_DISABLED)
-                zipper::utils::extents::as_array(lhs().extents()),
-                zipper::utils::extents::as_array(rhs().extents())));
-#else
                 lhs().extents(), rhs().extents()));
-#endif
         }
     }
 

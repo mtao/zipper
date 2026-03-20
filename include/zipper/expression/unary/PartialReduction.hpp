@@ -7,7 +7,6 @@
 #include "zipper/concepts/Expression.hpp"
 #include "zipper/detail/extents/static_extents_to_array.hpp"
 #include "zipper/detail/pack_index.hpp"
-#include "zipper/utils/extents/extents_formatter.hpp"
 #include "zipper/expression/reductions/CoefficientSum.hpp"
 
 namespace zipper::expression {

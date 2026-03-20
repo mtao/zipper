@@ -1,7 +1,6 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-overflow"
 #include "../catch_include.hpp"
-#include "../fmt_include.hpp"
 
 #include <zipper/concepts/Matrix.hpp>
 #include <zipper/expression/nullary/MDArray.hpp>
@@ -34,10 +33,7 @@ TEST_CASE("test_storage", "[storage][dense]") {
         for (auto& v : bs) {
             v = j++;
         }
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-overflow"
-        fmt::print("{}\n", bs);
-#pragma GCC diagnostic pop
+        std::println("{}", bs);
     }
 
     for (zipper::index_type j = 0; j < a.extent(0); ++j) {
@@ -47,10 +43,7 @@ TEST_CASE("test_storage", "[storage][dense]") {
             a(j, k) = b(j, k);
         }
     }
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-overflow"
-    fmt::print("{}\n", as);
-#pragma GCC diagnostic pop
+    std::println("{}", as);
 
     // ScalarMultiplies: 2.0 * a
     unary::ScalarMultiplies<double, decltype(a), false> spv(2.0, a);

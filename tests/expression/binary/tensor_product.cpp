@@ -63,7 +63,6 @@ TEST_CASE("test_tensor_product", "[storage][dense]") {
 
     zipper::Tensor<double, 3, 3, 3> J =
         zipper::expression::nullary::Constant<double>{6};
-    //fmt::print("Constant tensor from infinite view\n");
     print(J);
 
     M = zipper::expression::nullary::normal_random_infinite<double>(0, 1);
@@ -76,9 +75,7 @@ TEST_CASE("test_tensor_product", "[storage][dense]") {
     x(1) = 5;
     x(2) = 9;
 
-    //fmt::print("Prod of matrix vector\n");
     print(M * x);
-    //fmt::print("Prod of matrix Matrix identity\n");
     print(I * M);
     auto IM = I * M;
     static_assert(decltype(I)::extents_type::rank() == 2);

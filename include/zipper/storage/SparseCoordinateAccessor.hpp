@@ -3,7 +3,7 @@
 #define ZIPPER_STORAGE_SPARSECOORDINATEACCESSOR_HPP
 
 #include "zipper/detail/assert.hpp"
-#include "zipper/detail/fmt.hpp"
+#include <format>
 
 #include <ranges>
 #include <vector>
@@ -287,9 +287,9 @@ public:
     if (idx != data_size()) {
       return m_data.at(idx);
     } else {
-      throw std::invalid_argument(fmt::format(
+      throw std::invalid_argument(std::format(
           "Index {} did not have a value in SparseCoordinateStorage",
-          fmt::join(std::tie(indices...), ",")));
+          std::tie(indices...)));
     }
   }
 
@@ -299,7 +299,7 @@ public:
     if (idx != data_size()) {
       return m_data.at(idx);
     } else {
-      throw std::invalid_argument(fmt::format(
+      throw std::invalid_argument(std::format(
           "Index {} did not have a value in SparseCoordinateStorage",
           std::tie(indices...)));
     }

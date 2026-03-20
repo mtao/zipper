@@ -110,14 +110,12 @@ TEST_CASE("test_identity2", "[matrix][vector][lift]") {
   x(2) = 9;
   auto colMat = x.swizzle<zipper::MatrixBase, 0, std::dynamic_extent>();
   auto rowMat = x.swizzle<zipper::MatrixBase, std::dynamic_extent, 0>();
-  // fmt::print("Vector x is: {}\n");
   REQUIRE(x.extents().rank() == 1);
   REQUIRE(x.extent(0) == 3);
   CHECK(x(0) == 2);
   CHECK(x(1) == 5);
   CHECK(x(2) == 9);
   print(x);
-  // fmt::print("Vector x as colmat:\n");
   REQUIRE(colMat.extents().rank() == 2);
   REQUIRE(colMat.extent(0) == 3);
   REQUIRE(colMat.extent(1) == 1);
@@ -126,7 +124,6 @@ TEST_CASE("test_identity2", "[matrix][vector][lift]") {
   CHECK(colMat(1, 0) == 5);
   CHECK(colMat(2, 0) == 9);
   print(colMat);
-  // fmt::print("Vector x as rowmat:\n");
   REQUIRE(rowMat.extents().rank() == 2);
   REQUIRE(rowMat.extent(0) == 1);
   REQUIRE(rowMat.extent(1) == 3);

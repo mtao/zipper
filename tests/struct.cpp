@@ -1,7 +1,6 @@
 
 
 #include "catch_include.hpp"
-#include "fmt_include.hpp"
 #include <iostream>
 #include <zipper/Array.hpp>
 #include <zipper/Form.hpp>

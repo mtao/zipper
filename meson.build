@@ -11,20 +11,13 @@ cpp_compiler = meson.get_compiler('cpp')
 
 compile_args = []
 
-if not cpp_compiler.has_define('__cpp_lib_format_ranges')
-  message('current version of std::format is insufficient, fetching dependency')
-  fmt_dep = dependency('fmt')
-  required_deps += fmt_dep
-endif
-
-# Waiting for fmt to work properly on compilers. don't trust the macro
+# std::format with ranges support is required (C++26, __cpp_lib_format_ranges)
 fmt_code = '''#include <format>
-std::string func(int a, int b) { std::format("{}",std::tuple(a,b); }
+std::string func(int a, int b) { return std::format("{}",std::tuple(a,b)); }
 '''
-
 fmt_compiles = cpp_compiler.compiles(fmt_code, name: 'std::format(ranges)')
 if not fmt_compiles
-  compile_args += '-DZIPPER_FMT_OVERRIDES_DISABLED'
+  error('Compiler must support std::format with ranges (C++26 __cpp_lib_format_ranges)')
 endif
 
 alias_ctad_code = '''template <typename A> struct B {B(A) {}};

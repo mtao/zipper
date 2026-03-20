@@ -1,6 +1,5 @@
 
 #include "../../catch_include.hpp"
-#include "../../fmt_include.hpp"
 
 #include <zipper/concepts/Matrix.hpp>
 #include <zipper/expression/nullary/MDArray.hpp>
