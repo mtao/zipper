@@ -3,6 +3,7 @@
 
 #include "VectorBase.hpp"
 #include "ArrayBase.hxx"
+#include "FormBase.hxx"
 #include "expression/nullary/MDSpan.hpp"
 #include "zipper/detail/declare_operations.hpp"
 #include "zipper/expression/binary/ArithmeticExpressions.hpp"

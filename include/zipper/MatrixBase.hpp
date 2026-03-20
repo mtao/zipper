@@ -91,38 +91,27 @@ public:
     return expression::reductions::Trace(expression())();
   }
 
-  template <typename... Args>
-  auto operator()(Args &&...idxs) const -> decltype(auto)
-
+  template <typename... Args, typename Self>
+  auto operator()(this Self&& self, Args &&...idxs) -> decltype(auto)
   {
     if constexpr (concepts::IndexPack<std::decay_t<Args>...>) {
-      return Base::operator()(std::forward<Args>(idxs)...);
-    } else {
-      using R = expression::unary::Slice<const expression_type&,
-                    detail::slice_type_for_t<std::decay_t<Args>>...>;
-      if constexpr (R::extents_type::rank() == 1) {
-        return VectorBase<R>(std::in_place, expression(),
+      if constexpr (std::is_const_v<std::remove_reference_t<Self>> ||
+                    !expression::concepts::WritableExpression<expression_type>) {
+        return std::as_const(self).expression()(
             Base::filter_args_for_zipperbase(std::forward<Args>(idxs))...);
-      } else if constexpr (R::extents_type::rank() == 2) {
-        return MatrixBase<R>(std::in_place, expression(),
+      } else {
+        return self.expression()(
             Base::filter_args_for_zipperbase(std::forward<Args>(idxs))...);
       }
-    }
-  }
-  template <typename... Args>
-  auto operator()(Args &&...idxs) -> decltype(auto)
-
-  {
-    if constexpr (concepts::IndexPack<std::decay_t<Args>...>) {
-      return Base::operator()(std::forward<Args>(idxs)...);
     } else {
-      using R = expression::unary::Slice<expression_type&,
+      using child_t = detail::member_child_storage_t<Self, expression_type>;
+      using R = expression::unary::Slice<child_t,
                     detail::slice_type_for_t<std::decay_t<Args>>...>;
       if constexpr (R::extents_type::rank() == 1) {
-        return VectorBase<R>(std::in_place, expression(),
+        return VectorBase<R>(std::in_place, std::forward<Self>(self).expression(),
             Base::filter_args_for_zipperbase(std::forward<Args>(idxs))...);
       } else if constexpr (R::extents_type::rank() == 2) {
-        return MatrixBase<R>(std::in_place, expression(),
+        return MatrixBase<R>(std::in_place, std::forward<Self>(self).expression(),
             Base::filter_args_for_zipperbase(std::forward<Args>(idxs))...);
       }
     }
@@ -132,93 +121,69 @@ public:
   [[nodiscard]] constexpr auto rows() const -> index_type { return extent(0); }
   [[nodiscard]] constexpr auto cols() const -> index_type { return extent(1); }
 
-  template <typename Slice> auto row() { return slice<Slice, full_extent_t>(); }
-  template <typename Slice> auto col() { return slice<full_extent_t, Slice>(); }
+  template <typename Slice, typename Self>
+  auto row(this Self&& self) { return std::forward<Self>(self).template slice<Slice, full_extent_t>(); }
+  template <typename Slice, typename Self>
+  auto col(this Self&& self) { return std::forward<Self>(self).template slice<full_extent_t, Slice>(); }
 
-  template <typename Slice> auto row() const {
-    return slice<Slice, full_extent_t>();
+  template <typename Slice, typename Self>
+  auto row(this Self&& self, Slice &&s) {
+    return std::forward<Self>(self).template slice<Slice, full_extent_t>(std::forward<Slice>(s), full_extent_t{});
   }
-  template <typename Slice> auto col() const {
-    return slice<full_extent_t, Slice>();
+  template <typename Slice, typename Self>
+  auto col(this Self&& self, Slice &&s) {
+    return std::forward<Self>(self).template slice<full_extent_t, Slice>(full_extent_t{}, std::forward<Slice>(s));
   }
-
-  template <typename Slice> auto row(Slice &&s) {
-    return slice<Slice, full_extent_t>(std::forward<Slice>(s), full_extent_t{});
-  }
-  template <typename Slice> auto col(Slice &&s) {
-    return slice<full_extent_t, Slice>(full_extent_t{}, std::forward<Slice>(s));
-  }
-
-  template <typename Slice> auto row(Slice &&s) const {
-    return slice<Slice, full_extent_t>(std::forward<Slice>(s), full_extent_t{});
-  }
-  template <typename Slice> auto col(Slice &&s) const {
-    return slice<full_extent_t, Slice>(full_extent_t{}, std::forward<Slice>(s));
-  }
-  template <typename... Slices> auto slice() {
-    using V = expression::unary::Slice<expression_type&, std::decay_t<Slices>...>;
+  template <typename... Slices, typename Self>
+  auto slice(this Self&& self) {
+    using child_t = detail::member_child_storage_t<Self, expression_type>;
+    using V = expression::unary::Slice<child_t, std::decay_t<Slices>...>;
     if constexpr (V::extents_type::rank() == 2) {
-      return MatrixBase<V>(std::in_place, expression(), Slices{}...);
+      return MatrixBase<V>(std::in_place, std::forward<Self>(self).expression(), Slices{}...);
     } else {
       static_assert(V::extents_type::rank() == 1);
-      return VectorBase<V>(std::in_place, expression(), Slices{}...);
+      return VectorBase<V>(std::in_place, std::forward<Self>(self).expression(), Slices{}...);
     }
   }
 
-  template <typename... Slices> auto slice(Slices &&...slices) const {
-    using V = expression::unary::Slice<const expression_type&,
+  template <typename... Slices, typename Self>
+  auto slice(this Self&& self, Slices &&...slices) {
+    using child_t = detail::member_child_storage_t<Self, expression_type>;
+    using V = expression::unary::Slice<child_t,
                   detail::slice_type_for_t<std::decay_t<Slices>>...>;
     if constexpr (V::extents_type::rank() == 2) {
-      return MatrixBase<V>(std::in_place, expression(),
+      return MatrixBase<V>(std::in_place, std::forward<Self>(self).expression(),
           Base::filter_args_for_zipperbase(std::forward<Slices>(slices))...);
     } else {
       static_assert(V::extents_type::rank() == 1);
-      return VectorBase<V>(std::in_place, expression(),
-          Base::filter_args_for_zipperbase(std::forward<Slices>(slices))...);
-    }
-  }
-  template <typename... Slices> auto slice() const {
-    using V = expression::unary::Slice<const expression_type&, std::decay_t<Slices>...>;
-    if constexpr (V::extents_type::rank() == 2) {
-      return MatrixBase<V>(std::in_place, expression(), Slices{}...);
-    } else {
-      static_assert(V::extents_type::rank() == 1);
-      return VectorBase<V>(std::in_place, expression(), Slices{}...);
-    }
-  }
-
-  template <typename... Slices> auto slice(Slices &&...slices) {
-    using V = expression::unary::Slice<expression_type&,
-                  detail::slice_type_for_t<std::decay_t<Slices>>...>;
-    if constexpr (V::extents_type::rank() == 2) {
-      return MatrixBase<V>(std::in_place, expression(),
-          Base::filter_args_for_zipperbase(std::forward<Slices>(slices))...);
-    } else {
-      static_assert(V::extents_type::rank() == 1);
-      return VectorBase<V>(std::in_place, expression(),
+      return VectorBase<V>(std::in_place, std::forward<Self>(self).expression(),
           Base::filter_args_for_zipperbase(std::forward<Slices>(slices))...);
     }
   }
 
-  template <rank_type... ranks> auto swizzle() const {
-    return Base::template swizzle<MatrixBase, ranks...>();
+  template <rank_type... ranks, typename Self>
+  auto swizzle(this Self&& self) {
+    using child_t = detail::member_child_storage_t<Self, expression_type>;
+    using V = expression::unary::Swizzle<child_t, ranks...>;
+    return MatrixBase<V>(std::in_place, std::forward<Self>(self).expression());
   }
-  template <rank_type... ranks> auto swizzle() {
-    return Base::template swizzle<MatrixBase, ranks...>();
+  template <typename Self>
+  auto transpose(this Self&& self) {
+    using child_t = detail::member_child_storage_t<Self, expression_type>;
+    using V = expression::unary::Swizzle<child_t, 1, 0>;
+    return MatrixBase<V>(std::in_place, std::forward<Self>(self).expression());
   }
-  auto transpose() const { return Base::template swizzle<MatrixBase, 1, 0>(); }
-  auto transpose() { return Base::template swizzle<MatrixBase, 1, 0>(); }
 
   /// @brief Returns a read-only triangular view of this matrix.
   ///
   /// @tparam Mode  Compile-time TriangularMode flag (e.g. Lower, Upper,
   ///               UnitLower, UnitUpper, StrictlyLower, StrictlyUpper).
   /// @return A MatrixBase wrapping a TriangularView expression.
-  template <expression::TriangularMode Mode>
-  auto as_triangular() const {
-      using ViewType =
-          expression::unary::TriangularView<Mode, const expression_type &>;
-      return MatrixBase<ViewType>(std::in_place, expression());
+  template <expression::TriangularMode Mode, typename Self>
+  auto as_triangular(this Self&& self) {
+      using child_t = detail::member_child_storage_t<Self, expression_type>;
+      using ViewType = expression::unary::TriangularView<Mode, child_t>;
+      return MatrixBase<ViewType>(std::in_place, std::forward<Self>(self).expression());
   }
 
   /// @brief Solve A * x = b, forwarding to the underlying expression's
@@ -233,106 +198,72 @@ public:
       return expression().solve(b);
   }
 
-  template <concepts::IndexSlice Slice> auto row_slice(const Slice &s = {}) {
-    return slice(s, full_extent_t{});
+  template <concepts::IndexSlice Slice, typename Self>
+  auto row_slice(this Self&& self, const Slice &s = {}) {
+    return std::forward<Self>(self).slice(s, full_extent_t{});
   }
-  template <concepts::IndexSlice Slice>
-  auto row_slice(const Slice &s = {}) const {
-    return slice(s, full_extent_t{});
-  }
-  template <concepts::IndexSlice Slice> auto col_slice(const Slice &s = {}) {
-    return slice(full_extent_t{}, s);
-  }
-  template <concepts::IndexSlice Slice>
-  auto col_slice(const Slice &s = {}) const {
-    return slice(full_extent_t{}, s);
+  template <concepts::IndexSlice Slice, typename Self>
+  auto col_slice(this Self&& self, const Slice &s = {}) {
+    return std::forward<Self>(self).slice(full_extent_t{}, s);
   }
 
   // meh names for alignment with eigen
-  template <concepts::Index Index> auto topRows(const Index &s) {
-    return row_slice(zipper::slice({}, s));
+  template <concepts::Index Index, typename Self>
+  auto topRows(this Self&& self, const Index &s) {
+    return std::forward<Self>(self).row_slice(zipper::slice({}, s));
   }
-  template <concepts::Index Index> auto topRows(const Index &s) const {
-    return row_slice(zipper::slice({}, s));
-  }
-  template <concepts::Index Index> auto leftCols(const Index &s) {
-    return col_slice(zipper::slice({}, s));
-  }
-  template <concepts::Index Index> auto leftCols(const Index &s) const {
-    return col_slice(zipper::slice({}, s));
+  template <concepts::Index Index, typename Self>
+  auto leftCols(this Self&& self, const Index &s) {
+    return std::forward<Self>(self).col_slice(zipper::slice({}, s));
   }
 
-  template <concepts::Index Index> auto bottomRows(const Index &s) {
-    auto end = detail::extents::get_extent<0>(extents());
+  template <concepts::Index Index, typename Self>
+  auto bottomRows(this Self&& self, const Index &s) {
+    auto end = detail::extents::get_extent<0>(self.extents());
     detail::ConstexprArithmetic size(s);
-    return row_slice(zipper::slice((end - size).value(), s));
+    return std::forward<Self>(self).row_slice(zipper::slice((end - size).value(), s));
   }
-  template <concepts::Index Index> auto bottomRows(const Index &s) const {
-    auto end = detail::extents::get_extent<0>(extents());
+  template <concepts::Index Index, typename Self>
+  auto rightCols(this Self&& self, const Index &s) {
+    auto end = detail::extents::get_extent<1>(self.extents());
     detail::ConstexprArithmetic size(s);
-    return row_slice(zipper::slice((end - size).value(), s));
+    return std::forward<Self>(self).col_slice(zipper::slice((end - size).value(), s));
   }
-  template <concepts::Index Index> auto rightCols(const Index &s) {
-    auto end = detail::extents::get_extent<1>(extents());
-    detail::ConstexprArithmetic size(s);
-    return col_slice(zipper::slice((end - size).value(), s));
+  template <index_type Size, typename Self>
+  auto topRows(this Self&& self) {
+    return std::forward<Self>(self).row_slice(zipper::slice({}, static_index_t<Size>{}));
   }
-  template <concepts::Index Index> auto rightCols(const Index &s) const {
-    auto end = detail::extents::get_extent<1>(extents());
-    detail::ConstexprArithmetic size(s);
-    return col_slice(zipper::slice((end - size).value(), s));
-  }
-  template <index_type Size> auto topRows() {
-    return row_slice(zipper::slice({}, static_index_t<Size>{}));
-  }
-  template <index_type Size> auto topRows() const {
-    return row_slice(zipper::slice({}, static_index_t<Size>{}));
-  }
-  template <index_type Size> auto leftCols() {
-    return col_slice(zipper::slice({}, static_index_t<Size>{}));
-  }
-  template <index_type Size> auto leftCols() const {
-    return col_slice(zipper::slice({}, static_index_t<Size>{}));
+  template <index_type Size, typename Self>
+  auto leftCols(this Self&& self) {
+    return std::forward<Self>(self).col_slice(zipper::slice({}, static_index_t<Size>{}));
   }
 
-  template <index_type Size> auto bottomRows() {
+  template <index_type Size, typename Self>
+  auto bottomRows(this Self&& self) {
     detail::ConstexprArithmetic size(static_index_t<Size>{});
-    auto t = size - detail::extents::get_extent<0>(extents());
-    return row_slice(zipper::slice(t.value(), size.value()));
+    auto t = size - detail::extents::get_extent<0>(self.extents());
+    return std::forward<Self>(self).row_slice(zipper::slice(t.value(), size.value()));
   }
-  template <index_type Size> auto bottomRows() const {
+  template <index_type Size, typename Self>
+  auto rightCols(this Self&& self) {
     detail::ConstexprArithmetic size(static_index_t<Size>{});
-    auto t = size - detail::extents::get_extent<0>(extents());
-    return row_slice(zipper::slice(t.value(), size.value()));
-  }
-  template <index_type Size> auto rightCols() {
-    detail::ConstexprArithmetic size(static_index_t<Size>{});
-    auto t = size - detail::extents::get_extent<1>(extents());
-    return col_slice(zipper::slice(t.value(), size.value()));
-  }
-  template <index_type Size> auto rightCols() const {
-    detail::ConstexprArithmetic size(static_index_t<Size>{});
-    auto t = size - detail::extents::get_extent<1>(extents());
-    return col_slice(zipper::slice(t.value(), size.value()));
+    auto t = size - detail::extents::get_extent<1>(self.extents());
+    return std::forward<Self>(self).col_slice(zipper::slice(t.value(), size.value()));
   }
 
-  auto rowwise() {
+  template <typename Self>
+  auto rowwise(this Self&& self) {
+    using child_t = detail::member_child_storage_t<Self, expression_type>;
     // we're reducing the first cols
-    return detail::PartialReductionDispatcher<VectorBase, expression_type&, 1>(expression());
+    return detail::PartialReductionDispatcher<VectorBase, child_t, 1>(
+        std::forward<Self>(self).expression());
   }
-  auto colwise() {
+  template <typename Self>
+  auto colwise(this Self&& self) {
+    using child_t = detail::member_child_storage_t<Self, expression_type>;
     // we're reducing the first rows
-    return detail::PartialReductionDispatcher<VectorBase, expression_type&, 0>(expression());
-  }
-  auto rowwise() const {
-    // we're reducing the first cols
-    return detail::PartialReductionDispatcher<VectorBase, const expression_type&, 1>(
-        expression());
-  }
-  auto colwise() const {
-    // we're reducing the first rows
-    return detail::PartialReductionDispatcher<VectorBase, const expression_type&, 0>(
-        expression());
+    return detail::PartialReductionDispatcher<VectorBase, child_t, 0>(
+        std::forward<Self>(self).expression());
   }
 };
 

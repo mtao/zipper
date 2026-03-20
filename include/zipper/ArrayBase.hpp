@@ -108,15 +108,19 @@ public:
   //--------------------------------------------------------------
   //
 
-  auto pow(value_type const &exp) const {
+  template <typename Self>
+  auto pow(this Self&& self, value_type const &exp) {
+    using child_t = detail::member_child_storage_t<Self, expression_type>;
     return ArrayBase<
-        expression::unary::ScalarPower<const expression_type&, value_type>>(
-        std::in_place, expression(), exp);
+        expression::unary::ScalarPower<child_t, value_type>>(
+        std::in_place, std::forward<Self>(self).expression(), exp);
   }
 
-  auto abs() const {
-    return ArrayBase<expression::unary::Abs<const expression_type&>>(
-        std::in_place, expression());
+  template <typename Self>
+  auto abs(this Self&& self) {
+    using child_t = detail::member_child_storage_t<Self, expression_type>;
+    return ArrayBase<expression::unary::Abs<child_t>>(
+        std::in_place, std::forward<Self>(self).expression());
   }
 
   auto sum() const -> value_type {
@@ -163,25 +167,17 @@ public:
   }
 
   // Slice methods - construct wrapper in-place to avoid moving non-movable expressions
-  template <typename... Slices> auto slice() {
-    using V = expression::unary::Slice<expression_type&, std::decay_t<Slices>...>;
-    return ArrayBase<V>(std::in_place, expression(), Slices{}...);
-  }
-  template <typename... Slices> auto slice(Slices &&...slices) const {
-    using V = expression::unary::Slice<const expression_type&,
+  template <typename... Slices, typename Self> auto slice(this Self&& self, Slices &&...slices) {
+    using child_t = detail::member_child_storage_t<Self, expression_type>;
+    using V = expression::unary::Slice<child_t,
                   detail::slice_type_for_t<std::decay_t<Slices>>...>;
-    return ArrayBase<V>(std::in_place, expression(),
+    return ArrayBase<V>(std::in_place, std::forward<Self>(self).expression(),
         Base::filter_args_for_zipperbase(std::forward<Slices>(slices))...);
   }
-  template <typename... Slices> auto slice() const {
-    using V = expression::unary::Slice<const expression_type&, std::decay_t<Slices>...>;
-    return ArrayBase<V>(std::in_place, expression(), Slices{}...);
-  }
-  template <typename... Slices> auto slice(Slices &&...slices) {
-    using V = expression::unary::Slice<expression_type&,
-                  detail::slice_type_for_t<std::decay_t<Slices>>...>;
-    return ArrayBase<V>(std::in_place, expression(),
-        Base::filter_args_for_zipperbase(std::forward<Slices>(slices))...);
+  template <typename... Slices, typename Self> auto slice(this Self&& self) {
+    using child_t = detail::member_child_storage_t<Self, expression_type>;
+    using V = expression::unary::Slice<child_t, std::decay_t<Slices>...>;
+    return ArrayBase<V>(std::in_place, std::forward<Self>(self).expression(), Slices{}...);
   }
 };
 

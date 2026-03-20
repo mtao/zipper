@@ -1,6 +1,7 @@
 sources = [
   'partial_reduction.cpp',
   'repeat.cpp',
+  'lift.cpp',
   'cast.cpp',
   'scalar_arithmetic.cpp',
   'reshape.cpp',
