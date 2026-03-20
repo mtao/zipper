@@ -9,6 +9,7 @@
 #include "detail/assert.hpp"
 //
 #include "ArrayBase.hpp"
+#include "FormBase.hpp"
 #include "MatrixBase.hpp"
 #include "detail/constexpr_arithmetic.hpp"
 #include "detail/extents/constexpr_extent.hpp"
@@ -121,80 +122,50 @@ public:
   auto dot(concepts::Vector auto const &o) const -> value_type {
     return as_form() * o;
   }
-  template <concepts::Vector O> auto cross(O const &o) const {
-    using V = expression::binary::CrossProduct<const expression_type,
-                                               const typename O::expression_type>;
-    return VectorBase<V>(std::in_place, expression(), o.expression());
+  template <concepts::Vector O, typename Self> auto cross(this Self&& self, O const &o) {
+    using child_t = detail::member_child_storage_t<Self, expression_type>;
+    using V = expression::binary::CrossProduct<child_t,
+                                               const typename O::expression_type&>;
+    return VectorBase<V>(std::in_place, std::forward<Self>(self).expression(), o.expression());
   }
 
-  template <index_type Start, index_type Size>
-  auto segment()
-    requires(expression::concepts::WritableExpression<expression_type>)
-  {
+  template <index_type Start, index_type Size, typename Self>
+  auto segment(this Self&& self) {
     auto S = slice(std::integral_constant<index_type, Start>{},
                    std::integral_constant<index_type, Size>{});
-    using V = expression::unary::Slice<expression_type&, std::decay_t<decltype(S)>>;
-    return VectorBase<V>(std::in_place, expression(), S);
+    using child_t = detail::member_child_storage_t<Self, expression_type>;
+    using V = expression::unary::Slice<child_t, std::decay_t<decltype(S)>>;
+    return VectorBase<V>(std::in_place, std::forward<Self>(self).expression(), S);
   }
-  template <index_type Start, index_type Size> auto segment() const {
-    auto S = slice(std::integral_constant<index_type, Start>{},
-                   std::integral_constant<index_type, Size>{});
-    using V = expression::unary::Slice<const expression_type&, std::decay_t<decltype(S)>>;
-    return VectorBase<V>(std::in_place, expression(), S);
-  }
-  template <index_type Size>
-  auto segment(index_type start)
-    requires(expression::concepts::WritableExpression<expression_type>)
-  {
+  template <index_type Size, typename Self>
+  auto segment(this Self&& self, index_type start) {
     auto S = slice(start, std::integral_constant<index_type, Size>{});
-    using V = expression::unary::Slice<expression_type&, std::decay_t<decltype(S)>>;
-    return VectorBase<V>(std::in_place, expression(), S);
+    using child_t = detail::member_child_storage_t<Self, expression_type>;
+    using V = expression::unary::Slice<child_t, std::decay_t<decltype(S)>>;
+    return VectorBase<V>(std::in_place, std::forward<Self>(self).expression(), S);
   }
-  template <index_type Size> auto segment(index_type start) const {
-    auto S = slice(start, Size);
-    using V = expression::unary::Slice<const expression_type&, std::decay_t<decltype(S)>>;
-    return VectorBase<V>(std::in_place, expression(), S);
-  }
-  auto segment(index_type start, index_type size)
-    requires(expression::concepts::WritableExpression<expression_type>)
-  {
+  template <typename Self>
+  auto segment(this Self&& self, index_type start, index_type size) {
     auto S = slice(start, size);
-    using V = expression::unary::Slice<expression_type&, std::decay_t<decltype(S)>>;
-    return VectorBase<V>(std::in_place, expression(), S);
-  }
-  auto segment(index_type start, index_type size) const {
-    auto S = slice(start, size);
-    using V = expression::unary::Slice<const expression_type&, std::decay_t<decltype(S)>>;
-    return VectorBase<V>(std::in_place, expression(), S);
+    using child_t = detail::member_child_storage_t<Self, expression_type>;
+    using V = expression::unary::Slice<child_t, std::decay_t<decltype(S)>>;
+    return VectorBase<V>(std::in_place, std::forward<Self>(self).expression(), S);
   }
 
-  template <index_type I>
-  auto head()
-    requires(expression::concepts::WritableExpression<expression_type>)
-  {
+  template <index_type I, typename Self>
+  auto head(this Self&& self) {
     auto S = slice(std::integral_constant<index_type, 0>{},
                    std::integral_constant<index_type, I>{});
-    using V = expression::unary::Slice<expression_type&, std::decay_t<decltype(S)>>;
-    return VectorBase<V>(std::in_place, expression(), S);
+    using child_t = detail::member_child_storage_t<Self, expression_type>;
+    using V = expression::unary::Slice<child_t, std::decay_t<decltype(S)>>;
+    return VectorBase<V>(std::in_place, std::forward<Self>(self).expression(), S);
   }
-  template <index_type I> auto head() const {
-    auto S = slice(std::integral_constant<index_type, 0>{},
-                   std::integral_constant<index_type, I>{});
-    using V = expression::unary::Slice<const expression_type&, std::decay_t<decltype(S)>>;
-    return VectorBase<V>(std::in_place, expression(), S);
-  }
-  auto head(index_type N)
-    requires(expression::concepts::WritableExpression<expression_type>)
-  {
-    auto S = slice<std::integral_constant<index_type, 0>, index_type>(
-        std::integral_constant<index_type, 0>{}, N);
-    using V = expression::unary::Slice<expression_type&, std::decay_t<decltype(S)>>;
-    return VectorBase<V>(std::in_place, expression(), S);
-  }
-  auto head(index_type N) const {
+  template <typename Self>
+  auto head(this Self&& self, index_type N) {
     auto S = slice(std::integral_constant<index_type, 0>{}, N);
-    using V = expression::unary::Slice<const expression_type&, std::decay_t<decltype(S)>>;
-    return VectorBase<V>(std::in_place, expression(), S);
+    using child_t = detail::member_child_storage_t<Self, expression_type>;
+    using V = expression::unary::Slice<child_t, std::decay_t<decltype(S)>>;
+    return VectorBase<V>(std::in_place, std::forward<Self>(self).expression(), S);
   }
 
   auto get_tail_slice(index_type I) const {
@@ -203,42 +174,48 @@ public:
   }
   template <index_type I> auto get_tail_slice() const {
     return slice(detail::minus(detail::extents::constexpr_extent<0>(extents()),
-                               std::integral_constant<index_type, I>{}),
+                                std::integral_constant<index_type, I>{}),
                  std::integral_constant<index_type, I>{});
   }
-  template <index_type I>
-  auto tail()
-    requires(expression::concepts::WritableExpression<expression_type>)
-  {
-    auto S = get_tail_slice<I>();
-    using V = expression::unary::Slice<expression_type&, std::decay_t<decltype(S)>>;
-    return VectorBase<V>(std::in_place, expression(), S);
+  template <index_type I, typename Self>
+  auto tail(this Self&& self) {
+    auto S = self.template get_tail_slice<I>();
+    using child_t = detail::member_child_storage_t<Self, expression_type>;
+    using V = expression::unary::Slice<child_t, std::decay_t<decltype(S)>>;
+    return VectorBase<V>(std::in_place, std::forward<Self>(self).expression(), S);
   }
-  template <index_type I> auto tail() const {
-    auto S = get_tail_slice<I>();
-    using V = expression::unary::Slice<const expression_type&, std::decay_t<decltype(S)>>;
-    return VectorBase<V>(std::in_place, expression(), S);
-  }
-  auto tail(index_type N)
-    requires(expression::concepts::WritableExpression<expression_type>)
-  {
-    auto S = get_tail_slice(N);
-    using V = expression::unary::Slice<expression_type&, std::decay_t<decltype(S)>>;
-    return VectorBase<V>(std::in_place, expression(), S);
-  }
-  auto tail(index_type N) const {
-    auto S = get_tail_slice(N);
-    using V = expression::unary::Slice<const expression_type&, std::decay_t<decltype(S)>>;
-    return VectorBase<V>(std::in_place, expression(), S);
+  template <typename Self>
+  auto tail(this Self&& self, index_type N) {
+    auto S = self.get_tail_slice(N);
+    using child_t = detail::member_child_storage_t<Self, expression_type>;
+    using V = expression::unary::Slice<child_t, std::decay_t<decltype(S)>>;
+    return VectorBase<V>(std::in_place, std::forward<Self>(self).expression(), S);
   }
 
-  // implements ones * this.transpose()
-  auto repeat_left() const {
-    return Base::template repeat_left<1, MatrixBase>();
+  // lifts vector to matrix by appending one dimension: v(i) -> M(i,j) = v(i)
+  // equivalent to: this * ones.transpose()
+  template <typename Self>
+  auto lift(this Self&& self) {
+    using child_t = detail::member_child_storage_t<Self, expression_type>;
+    using V = expression::unary::Lift<1, child_t>;
+    return MatrixBase<V>(std::in_place, std::forward<Self>(self).expression());
   }
-  // implements  this * ones.transpose()
-  auto repeat_right() const {
-    return Base::template repeat_right<1, MatrixBase>();
+
+  // deprecated: use lift().transpose() instead
+  template <typename Self>
+  auto repeat_left(this Self&& self) {
+    using child_t = detail::member_child_storage_t<Self, expression_type>;
+    using V = expression::unary::Repeat<expression::unary::RepeatMode::Left,
+                                        1, child_t>;
+    return MatrixBase<V>(std::in_place, std::forward<Self>(self).expression());
+  }
+  // deprecated: use lift() instead
+  template <typename Self>
+  auto repeat_right(this Self&& self) {
+    using child_t = detail::member_child_storage_t<Self, expression_type>;
+    using V = expression::unary::Repeat<expression::unary::RepeatMode::Right,
+                                        1, child_t>;
+    return MatrixBase<V>(std::in_place, std::forward<Self>(self).expression());
   }
 
   template <index_type T = 2> auto norm() const -> value_type {
@@ -257,9 +234,11 @@ public:
   void normalize(value_type T) { *this /= norm(T); }
 
   template <expression::unary::HomogeneousMode Mode =
-                expression::unary::HomogeneousMode::Position>
-  auto homogeneous() const {
-    return VectorBase<expression::unary::Homogeneous<Mode, const expression_type&>>(std::in_place, expression());
+                expression::unary::HomogeneousMode::Position, typename Self>
+  auto homogeneous(this Self&& self) {
+    using child_t = detail::member_child_storage_t<Self, expression_type>;
+    using H = expression::unary::Homogeneous<Mode, child_t>;
+    return VectorBase<H>(std::in_place, std::forward<Self>(self).expression());
   }
 };
 

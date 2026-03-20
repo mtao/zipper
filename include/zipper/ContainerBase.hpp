@@ -34,27 +34,19 @@ public:
   using Base::expression;
   using Base::extent;
   using Base::extents;
+  using Base::lift;
   using Base::repeat_left;
   using Base::repeat_right;
   using Base::swizzle;
 
   // Slice methods - delegate to ZipperBase::slice_expression
-  template <typename... Slices> auto slice() {
-    auto v = Base::template slice_expression<Slices...>();
-    return ContainerBase<std::decay_t<decltype(v)>>(std::move(v));
-  }
-  template <typename... Slices> auto slice(Slices &&...slices) const {
-    auto v = Base::template slice_expression<Slices...>(
+  template <typename... Slices, typename Self> auto slice(this Self&& self, Slices &&...slices) {
+    auto v = std::forward<Self>(self).template slice_expression<Slices...>(
         std::forward<Slices>(slices)...);
     return ContainerBase<std::decay_t<decltype(v)>>(std::move(v));
   }
-  template <typename... Slices> auto slice() const {
-    auto v = Base::template slice_expression<Slices...>();
-    return ContainerBase<std::decay_t<decltype(v)>>(std::move(v));
-  }
-  template <typename... Slices> auto slice(Slices &&...slices) {
-    auto v = Base::template slice_expression<Slices...>(
-        std::forward<Slices>(slices)...);
+  template <typename... Slices, typename Self> auto slice(this Self&& self) {
+    auto v = std::forward<Self>(self).template slice_expression<Slices...>();
     return ContainerBase<std::decay_t<decltype(v)>>(std::move(v));
   }
 

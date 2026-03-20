@@ -9,12 +9,14 @@
 #include "expression/unary/Cast.hpp"
 #include "expression/unary/CoefficientWiseOperation.hpp"
 #include "expression/unary/Diagonal.hpp"
+#include "expression/unary/Lift.hpp"
 #include "expression/unary/Repeat.hpp"
 #include "expression/unary/Slice.hpp"
 #include "expression/unary/Swizzle.hpp"
 #include "expression/unary/UnsafeRef.hpp"
 #include "expression/unary/concepts/ScalarOperation.hpp"
 #include "zipper/detail/ExtentsTraits.hpp"
+#include "zipper/detail/member_child_storage.hpp"
 #include "zipper/expression/detail/ExpressionTraits.hpp"
 #include "zipper/types.hpp"
 
@@ -240,39 +242,32 @@ public:
     return DerivedT<V>(std::in_place, std::move(expression()));
   }
 
-  template <typename OpType>
+  template <typename OpType, typename Self>
     requires(expression::unary::concepts::ScalarOperation<value_type, OpType>)
-  auto unary_expr(const OpType &op) const {
-    using V =
-        expression::unary::CoefficientWiseOperation<const expression_type &,
-                                                    OpType>;
-    return DerivedT<V>(std::in_place, expression(), op);
+  auto unary_expr(this Self&& self, const OpType &op) {
+    using child_t = detail::member_child_storage_t<Self, expression_type>;
+    using V = expression::unary::CoefficientWiseOperation<child_t, OpType>;
+    return DerivedT<V>(std::in_place, std::forward<Self>(self).expression(), op);
   }
 
   template <template <typename> typename BaseType = DerivedT,
-            rank_type... ranks>
-  auto swizzle() const {
-    using V = expression::unary::Swizzle<const expression_type &, ranks...>;
-    return BaseType<V>(std::in_place, expression());
+            rank_type... ranks, typename Self>
+  auto swizzle(this Self&& self) {
+    using child_t = detail::member_child_storage_t<Self, expression_type>;
+    using V = expression::unary::Swizzle<child_t, ranks...>;
+    return BaseType<V>(std::in_place, std::forward<Self>(self).expression());
   }
-  template <template <typename> typename BaseType = DerivedT,
-            rank_type... ranks>
-  auto swizzle() {
-    using V = expression::unary::Swizzle<expression_type &, ranks...>;
-    return BaseType<V>(std::in_place, expression());
-  }
-  template <typename T> auto cast() const {
-    using V = expression::unary::Cast<T, const expression_type &>;
-    return DerivedT<V>(std::in_place, expression());
+  template <typename T, typename Self> auto cast(this Self&& self) {
+    using child_t = detail::member_child_storage_t<Self, expression_type>;
+    using V = expression::unary::Cast<T, child_t>;
+    return DerivedT<V>(std::in_place, std::forward<Self>(self).expression());
   }
 
-  auto diagonal() const {
-    return VectorBase<expression::unary::Diagonal<const expression_type &>>(
-        std::in_place, expression());
-  }
-  auto diagonal() {
-    return VectorBase<expression::unary::Diagonal<expression_type &>>(
-        std::in_place, expression());
+  template <typename Self>
+  auto diagonal(this Self&& self) {
+    using child_t = detail::member_child_storage_t<Self, expression_type>;
+    return VectorBase<expression::unary::Diagonal<child_t>>(
+        std::in_place, std::forward<Self>(self).expression());
   }
 
   template <concepts::IndexArgument... Args>
@@ -290,56 +285,56 @@ public:
         filter_args_for_zipperbase(std::forward<Args>(idxs))...);
   }
 
-  // pads left with dummy dimensions
+  // appends Count dummy dimensions after the existing extents
   template <rank_type Count = 1,
-            template <typename> typename BaseType = DerivedT>
-  auto repeat_left() const {
-    using V = expression::unary::Repeat<expression::unary::RepeatMode::Left,
-                                        Count, const expression_type &>;
-    return BaseType<V>(std::in_place, expression());
+            template <typename> typename BaseType = DerivedT, typename Self>
+  auto lift(this Self&& self) {
+    using child_t = detail::member_child_storage_t<Self, expression_type>;
+    using V = expression::unary::Lift<Count, child_t>;
+    return BaseType<V>(std::in_place, std::forward<Self>(self).expression());
   }
+
+  // deprecated: use lift() instead
   template <rank_type Count = 1,
-            template <typename> typename BaseType = DerivedT>
-  auto repeat_right() const {
+            template <typename> typename BaseType = DerivedT, typename Self>
+  auto repeat_left(this Self&& self) {
+    using child_t = detail::member_child_storage_t<Self, expression_type>;
+    using V = expression::unary::Repeat<expression::unary::RepeatMode::Left,
+                                        Count, child_t>;
+    return BaseType<V>(std::in_place, std::forward<Self>(self).expression());
+  }
+  // deprecated: use lift() instead
+  template <rank_type Count = 1,
+            template <typename> typename BaseType = DerivedT, typename Self>
+  auto repeat_right(this Self&& self) {
+    using child_t = detail::member_child_storage_t<Self, expression_type>;
     using V = expression::unary::Repeat<expression::unary::RepeatMode::Right,
-                                        Count, const expression_type &>;
-    return BaseType<V>(std::in_place, expression());
+                                        Count, child_t>;
+    return BaseType<V>(std::in_place, std::forward<Self>(self).expression());
   }
 
 protected:
   // slicing has fairly dimension specific effects for most derived types,
   // so we will just return the expression and let base class return things
-  template <typename... Slices>
-  auto slice_expression(Slices &&...slices) const {
+  template <typename... Slices, typename Self>
+  auto slice_expression(this Self&& self, Slices &&...slices) {
+    using child_t = detail::member_child_storage_t<Self, expression_type>;
     using my_expression_type =
-        expression::unary::Slice<const expression_type &,
+        expression::unary::Slice<child_t,
                                  detail::slice_type_for_t<std::decay_t<Slices>>...>;
 
     return my_expression_type(
-        expression(),
+        std::forward<Self>(self).expression(),
         filter_args_for_zipperbase(std::forward<Slices>(slices))...);
   }
 
-  template <typename... Slices> auto slice_expression() const {
+  template <typename... Slices, typename Self>
+  auto slice_expression(this Self&& self) {
+    using child_t = detail::member_child_storage_t<Self, expression_type>;
     using my_expression_type =
-        expression::unary::Slice<const expression_type &,
+        expression::unary::Slice<child_t,
                                  detail::slice_type_for_t<std::decay_t<Slices>>...>;
-    return my_expression_type(expression(), Slices{}...);
-  }
-
-  template <typename... Slices> auto slice_expression(Slices &&...slices) {
-    using my_expression_type =
-        expression::unary::Slice<expression_type &,
-                                 detail::slice_type_for_t<std::decay_t<Slices>>...>;
-    return my_expression_type(
-        expression(),
-        filter_args_for_zipperbase(std::forward<Slices>(slices))...);
-  }
-  template <typename... Slices> auto slice_expression() {
-    using my_expression_type =
-        expression::unary::Slice<expression_type &,
-                                 detail::slice_type_for_t<std::decay_t<Slices>>...>;
-    return my_expression_type(expression(), Slices{}...);
+    return my_expression_type(std::forward<Self>(self).expression(), Slices{}...);
   }
 
 public:
