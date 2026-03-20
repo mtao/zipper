@@ -2,7 +2,6 @@
 #include <print>
 
 #include "../../catch_include.hpp"
-#include "../../fmt_include.hpp"
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
 #include <zipper/expression/nullary/Identity.hpp>
@@ -37,7 +36,7 @@ template <typename T>
 void print(T const &M)
   requires(std::decay_t<T>::rank() == 2)
 {
-  fmt::print("{}\n", M);
+  std::println("{}", M);
   for (zipper::index_type j = 0; j < M.extent(0); ++j) {
     for (zipper::index_type k = 0; k < M.extent(1); ++k) {
       std::print("{} ", M(j, k));
@@ -50,7 +49,7 @@ template <typename T>
 void print(T const &M)
   requires(std::decay_t<T>::rank() == 1)
 {
-  fmt::print("{}\n", M);
+  std::println("{}", M);
   for (zipper::index_type j = 0; j < M.extent(0); ++j) {
     std::print("{} ", M(j));
   }

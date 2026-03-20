@@ -1,6 +1,5 @@
 
 #include "catch_include.hpp"
-#include "fmt_include.hpp"
 #include <mdspan/mdspan.hpp>
 #include <zipper/expression/nullary/Constant.hpp>
 #include <zipper/expression/nullary/Identity.hpp>

@@ -1,7 +1,6 @@
 #include <iostream>
 
 #include "../../catch_include.hpp"
-#include "../../fmt_include.hpp"
 #include <zipper/expression/nullary/Constant.hpp>
 #include <zipper/expression/nullary/Identity.hpp>
 #include <zipper/expression/unary/Cast.hpp>

@@ -91,8 +91,6 @@ constexpr void throw_if_not_cubic(const Ext& ext) {
     } else {
         if (!is_cubic(ext)) {
             throw std::invalid_argument("invalid extents, expected cubic");
-            //    "Invalid extents {}, expected {}", ext,
-            //    fmt::join(std::make_tuple(Indices...), ","));
         }
     }
 }

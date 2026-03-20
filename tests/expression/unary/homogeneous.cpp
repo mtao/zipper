@@ -1,5 +1,4 @@
 
-#include "../../fmt_include.hpp"
 #include "../../catch_include.hpp"
 #include <iostream>
 #include <zipper/Vector.hpp>

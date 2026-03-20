@@ -57,7 +57,6 @@ TEST_CASE("test_partial_trace_matrix", "[matrix][storage][dense]") {
   zipper::Matrix<double, 3, 3> N;
   N = zipper::expression::nullary::uniform_random<double>(
       zipper::extents<3, 3>{}, -1, 1);
-  // fmt::print("Random matrix n:\n");
   print(N);
 
   N.diagonal() = zipper::expression::nullary::Constant<double, 3>(0.0);

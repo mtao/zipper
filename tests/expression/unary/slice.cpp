@@ -11,7 +11,6 @@
 #include <zipper/expression/nullary/Random.hpp>
 
 #include "../../catch_include.hpp"
-#include "../../fmt_include.hpp"
 
 namespace {
 void print(zipper::concepts::Matrix auto const& M) {
@@ -41,7 +40,6 @@ void print(zipper::concepts::Vector auto const& M) {
 // === From expression/test_slicing.cpp ===
 
 TEST_CASE("test_matrix_slice_shapes", "[extents][matrix][slice]") {
-    //fmt::print("Manipulating MN: \n");
     zipper::MatrixBase RN(zipper::expression::nullary::normal_random<double>(
         zipper::extents<4, 5>{}, 0, 20));
     zipper::Matrix MN = RN;
@@ -122,7 +120,6 @@ TEST_CASE("test_matrix_slice_shapes", "[extents][matrix][slice]") {
 }
 
 TEST_CASE("test_matrix_slicing", "[extents][matrix][slice]") {
-    //fmt::print("Manipulating MN: \n");
     zipper::MatrixBase RN(zipper::expression::nullary::normal_random<double>(
         zipper::extents<4, 4>{}, 0, 20));
 
@@ -134,13 +131,9 @@ TEST_CASE("test_matrix_slicing", "[extents][matrix][slice]") {
 
     REQUIRE(MN.extents() == full_slice.extents());
     REQUIRE(full_sliceD.extents() == full_slice.extents());
-    //fmt::print("MN\n");
     print(MN);
-    //fmt::print("full slice\n");
     print(MN.slice<zipper::full_extent_t, zipper::full_extent_t>());
-    //fmt::print("full slice\n");
     print(MN.slice<zipper::full_extent_t, zipper::full_extent_t>());
-    //fmt::print("are same\n");
     print(
         (MN.slice<zipper::full_extent_t, zipper::full_extent_t>().as_array() ==
          MN.as_array()));
@@ -300,7 +293,6 @@ TEST_CASE("test_vector_slice_assignment", "[extents][vector][slice]") {
 }
 
 TEST_CASE("test_partial_slice", "[extents][tensor][slice]") {
-    //fmt::print("Manipulating MN: \n");
 }
 
 // test_span_array_access uses std::array/std::vector which already satisfy IndexSlice.

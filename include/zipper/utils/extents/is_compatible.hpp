@@ -85,8 +85,6 @@ constexpr void throw_if_not_compatible(const Ext& ext) {
     } else {
         if (!is_compatible<Indices...>(ext)) {
             throw std::invalid_argument("invalid extents");
-            //    "Invalid extents {}, expected {}", ext,
-            //    fmt::join(std::make_tuple(Indices...), ","));
         }
     }
 }

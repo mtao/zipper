@@ -2,7 +2,6 @@
 
 #include <zipper/expression/unary/PartialTrace.hpp>
 
-#include "../../fmt_include.hpp"
 #include "../../catch_include.hpp"
 #include <zipper/expression/nullary/Unit.hpp>
 #include <print>
@@ -67,7 +66,6 @@ TEST_CASE("test_form_tensor_product_basic", "[storage][dense]") {
 
     zipper::Tensor<double, 3, 3, 3> J =
         zipper::expression::nullary::Constant<double>{6};
-    //fmt::print("Constant tensor from infinite view\n");
     print(J);
 
     M = zipper::expression::nullary::normal_random_infinite<double>(0, 1);
@@ -80,9 +78,7 @@ TEST_CASE("test_form_tensor_product_basic", "[storage][dense]") {
     x(1) = 5;
     x(2) = 9;
 
-    //fmt::print("Prod of matrix vector\n");
     print(M * x);
-    //fmt::print("Prod of matrix Matrix identity\n");
     print(I * M);
     auto IM = I * M;
     static_assert(decltype(I)::extents_type::rank() == 2);

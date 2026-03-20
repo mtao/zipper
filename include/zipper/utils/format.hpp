@@ -1,6 +1,7 @@
 #if !defined(ZIPPER_UTILS_FORMATTER_HPP)
 #define ZIPPER_UTILS_FORMATTER_HPP
-#include "zipper/detail/fmt.hpp"
+#include <format>
+#include <string>
 #include <vector>
 
 #include "extents/extents_formatter.hpp"
@@ -10,8 +11,6 @@
 namespace zipper {
 
 // Internal helper — formats any Zipper object as a string.
-// Not named format_as to avoid fmt's ADL format_as protocol
-// (which only supports arithmetic return types in fmt 11).
 template <zipper::concepts::Zipper ZType>
 auto zipper_format_string(ZType const &M) -> std::string {
   using expression_type = typename ZType::expression_type;
@@ -19,7 +18,7 @@ auto zipper_format_string(ZType const &M) -> std::string {
       expression_type::extents_type::rank();
 
   if constexpr (rank == 0) {
-    return fmt::format("{}", M());
+    return std::format("{}", M());
   } else if constexpr (rank == 1) {
     // Collect into std::vector to avoid infinite recursion:
     // formatting a Vector would re-enter this function because
@@ -30,7 +29,7 @@ auto zipper_format_string(ZType const &M) -> std::string {
     for (zipper::index_type i = 0; i < M.extent(0); ++i) {
       vals.push_back(M(i));
     }
-    return fmt::format("{}", vals);
+    return std::format("{}", vals);
   } else if constexpr (rank > 1) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wtautological-compare"
@@ -45,34 +44,31 @@ auto zipper_format_string(ZType const &M) -> std::string {
       return partial_trace_(
           V, j, std::make_integer_sequence<zipper::rank_type, rank - 1>{});
     };
-    std::vector<std::string> fmts;
+    std::string result = "[";
     for (zipper::index_type j = 0; j < M.extent(0); ++j) {
-      fmts.emplace_back(zipper_format_string(partial_trace(M, j)));
+      if (j > 0) result += ';';
+      result += zipper_format_string(partial_trace(M, j));
     }
-    return fmt::format("[{}]", fmt::join(fmts, ";"));
+    result += ']';
+    return result;
   }
 }
 
 } // namespace zipper
 
-// Disable fmt's range formatting for all Zipper types so that
+// Disable std's range formatting for all Zipper types so that
 // Vector and Container (which have begin/end) don't get picked up
-// by fmt/ranges.h before our formatter specialization.
-template <typename T, typename Char>
-struct fmt::range_format_kind<
-    T, Char,
-    std::enable_if_t<zipper::concepts::Zipper<T>>>
-    : std::integral_constant<fmt::range_format, fmt::range_format::disabled> {};
+// by the range formatter before our formatter specialization.
+template <typename T>
+  requires zipper::concepts::Zipper<T>
+constexpr auto std::format_kind<T> = std::range_format::disabled;
 
-// Provide fmt::formatter for all Zipper types.
-template <typename T, typename Char>
-struct fmt::formatter<
-    T, Char,
-    std::enable_if_t<zipper::concepts::Zipper<T>>>
-    : fmt::formatter<std::string, Char> {
-  template <typename FormatContext>
-  auto format(const T &value, FormatContext &ctx) const -> decltype(ctx.out()) {
-    return fmt::formatter<std::string, Char>::format(
+// Provide std::formatter for all Zipper types.
+template <zipper::concepts::Zipper T>
+struct std::formatter<T> : std::formatter<std::string> {
+  auto format(const T &value, std::format_context &ctx) const
+      -> std::format_context::iterator {
+    return std::formatter<std::string>::format(
         zipper::zipper_format_string(value), ctx);
   }
 };
