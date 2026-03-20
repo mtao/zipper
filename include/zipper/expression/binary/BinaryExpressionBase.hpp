@@ -71,6 +71,11 @@ struct DefaultBinaryExpressionTraits
   constexpr static bool stores_references =
       std::is_reference_v<ChildA> || std::is_reference_v<ChildB> ||
       _Detail::ATraits::stores_references || _Detail::BTraits::stores_references;
+
+  /// Propagate view-propagating from children.  Only true when BOTH
+  /// children have lifetime guarantees (&&, not ||).
+  constexpr static bool is_view_propagating =
+      _Detail::ATraits::is_view_propagating && _Detail::BTraits::is_view_propagating;
 };
 } // namespace detail
 

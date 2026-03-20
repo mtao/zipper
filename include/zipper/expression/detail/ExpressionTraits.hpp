@@ -65,6 +65,15 @@ struct BasicExpressionTraits {
 
   /// Backward-compatible alias for has_index_set.
   constexpr static bool has_known_zeros = has_index_set;
+
+  /// Whether copying this expression propagates view semantics.
+  /// When true, `member_child_storage_t` and `expression_storage_t` store
+  /// this expression by value even from lvalue context, so that derived
+  /// views (head, tail, row, transpose, etc.) are also Returnable.
+  ///
+  /// Only UnsafeRef<Child, /*ViewPropagating=*/true> sets this to true.
+  /// Unary and binary expressions propagate it from their children.
+  constexpr static bool is_view_propagating = false;
 };
 
 template <typename T> struct ExpressionTraits;

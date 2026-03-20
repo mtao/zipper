@@ -80,6 +80,11 @@ struct DefaultUnaryExpressionTraits
   /// in by value but still holds references to a and b.
   constexpr static bool stores_references =
       std::is_reference_v<Child> || _Detail::child_traits::stores_references;
+
+  /// Propagate view-propagating from child.  If the child is view-
+  /// propagating, so is any unary expression wrapping it.
+  constexpr static bool is_view_propagating =
+      _Detail::child_traits::is_view_propagating;
 };
 } // namespace detail
 
