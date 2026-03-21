@@ -1,7 +1,7 @@
 #if !defined(ZIPPER_EXPRESSION_UNARY_PARTIALTRACE_HPP)
 #define ZIPPER_EXPRESSION_UNARY_PARTIALTRACE_HPP
 
-#include "Diagonal.hpp"
+#include "DiagonalExtract.hpp"
 #include "Slice.hpp"
 #include "UnaryExpressionBase.hpp"
 #include "detail/invert_integer_sequence.hpp"
@@ -115,7 +115,7 @@ class PartialTrace
             slice_type(expression(), get_index(std::integral_constant<rank_type, N>{},
                                          std::forward<Args>(idxs)...)...);
 
-        Diagonal<const slice_type&> diag(slice);
+        DiagonalExtract<const slice_type&> diag(slice);
         return reductions::CoefficientSum(diag)();
     }
 

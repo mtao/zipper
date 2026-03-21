@@ -15,16 +15,20 @@ TEST_CASE("translate creates translation transform", "[transform][model]") {
     Vector<float, 3> v({1.0f, 2.0f, 3.0f});
     auto T = translation(v);
 
-    // Translation column should be the translation vector
-    CHECK(T(0, 3) == Catch::Approx(1.0f));
-    CHECK(T(1, 3) == Catch::Approx(2.0f));
-    CHECK(T(2, 3) == Catch::Approx(3.0f));
-    CHECK(T(3, 3) == Catch::Approx(1.0f));
+    // Translation vector should match input
+    CHECK(T(0) == Catch::Approx(1.0f));
+    CHECK(T(1) == Catch::Approx(2.0f));
+    CHECK(T(2) == Catch::Approx(3.0f));
 
-    // Diagonal should be 1 (identity linear block)
-    CHECK(T(0, 0) == Catch::Approx(1.0f));
-    CHECK(T(1, 1) == Catch::Approx(1.0f));
-    CHECK(T(2, 2) == Catch::Approx(1.0f));
+    // Verify via to_matrix(): diagonal is 1 and translation column is correct
+    auto M = T.to_matrix();
+    CHECK(M(0, 0) == Catch::Approx(1.0f));
+    CHECK(M(1, 1) == Catch::Approx(1.0f));
+    CHECK(M(2, 2) == Catch::Approx(1.0f));
+    CHECK(M(3, 3) == Catch::Approx(1.0f));
+    CHECK(M(0, 3) == Catch::Approx(1.0f));
+    CHECK(M(1, 3) == Catch::Approx(2.0f));
+    CHECK(M(2, 3) == Catch::Approx(3.0f));
 }
 
 TEST_CASE("translate applied to point via composition", "[transform][model]") {
@@ -57,8 +61,9 @@ TEST_CASE("rotate 360 degrees is identity", "[transform][model]") {
     Vector<float, 3> axis({0.0f, 1.0f, 0.0f});
     auto R = rotation(radians(360.0f), axis);
 
-    for (index_type r = 0; r < 4; ++r) {
-        for (index_type c = 0; c < 4; ++c) {
+    // Rotation stores a 3x3 matrix; check it's identity
+    for (index_type r = 0; r < 3; ++r) {
+        for (index_type c = 0; c < 3; ++c) {
             float expected = (r == c) ? 1.0f : 0.0f;
             CHECK(R(r, c) == Catch::Approx(expected).margin(1e-5f));
         }
@@ -81,10 +86,17 @@ TEST_CASE("scale non-uniform", "[transform][model]") {
     Vector<float, 3> s({1.0f, 2.0f, 3.0f});
     auto S = scaling(s);
 
-    CHECK(S(0, 0) == Catch::Approx(1.0f));
-    CHECK(S(1, 1) == Catch::Approx(2.0f));
-    CHECK(S(2, 2) == Catch::Approx(3.0f));
-    CHECK(S(3, 3) == Catch::Approx(1.0f));
+    // Scaling stores individual factors via operator()(i)
+    CHECK(S(0) == Catch::Approx(1.0f));
+    CHECK(S(1) == Catch::Approx(2.0f));
+    CHECK(S(2) == Catch::Approx(3.0f));
+
+    // Verify the full matrix via to_matrix()
+    auto M = S.to_matrix();
+    CHECK(M(0, 0) == Catch::Approx(1.0f));
+    CHECK(M(1, 1) == Catch::Approx(2.0f));
+    CHECK(M(2, 2) == Catch::Approx(3.0f));
+    CHECK(M(3, 3) == Catch::Approx(1.0f));
 }
 
 TEST_CASE("translate then rotate via composition", "[transform][model]") {

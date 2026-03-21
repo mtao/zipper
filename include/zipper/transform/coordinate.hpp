@@ -31,11 +31,11 @@ namespace zipper::transform {
 /// @param proj     Projection transform (any TransformMode, D=3).
 /// @param viewport Viewport parameters as (x, y, width, height) (rank-1, extent 4).
 /// @return         Window-space coordinate (x, y, depth).
-template <zipper::concepts::Vector VObj, concepts::Transform TMod, concepts::Transform TProj,
+template <zipper::concepts::Vector VObj, concepts::MatrixTransform TMod, concepts::MatrixTransform TProj,
           zipper::concepts::Vector VVp>
     requires(VObj::extents_type::static_extent(0) == 3 &&
-             std::decay_t<TMod>::D == 3 &&
-             std::decay_t<TProj>::D == 3 &&
+             std::decay_t<TMod>::dim == 3 &&
+             std::decay_t<TProj>::dim == 3 &&
              VVp::extents_type::static_extent(0) == 4)
 auto project(const VObj& obj, const TMod& model, const TProj& proj,
              const VVp& viewport)
@@ -75,11 +75,11 @@ auto project(const VObj& obj, const TMod& model, const TProj& proj,
 /// @param proj     Projection transform (any TransformMode, D=3).
 /// @param viewport Viewport parameters as (x, y, width, height) (rank-1, extent 4).
 /// @return         Object-space 3D coordinate.
-template <zipper::concepts::Vector VWin, concepts::Transform TMod, concepts::Transform TProj,
+template <zipper::concepts::Vector VWin, concepts::MatrixTransform TMod, concepts::MatrixTransform TProj,
           zipper::concepts::Vector VVp>
     requires(VWin::extents_type::static_extent(0) == 3 &&
-             std::decay_t<TMod>::D == 3 &&
-             std::decay_t<TProj>::D == 3 &&
+             std::decay_t<TMod>::dim == 3 &&
+             std::decay_t<TProj>::dim == 3 &&
              VVp::extents_type::static_extent(0) == 4)
 auto unproject(const VWin& win, const TMod& model, const TProj& proj,
                const VVp& viewport)

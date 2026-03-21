@@ -181,18 +181,21 @@ auto to_quaternion(const M& m) -> Quaternion<typename M::value_type> {
 
 /// @brief Convert an affine transform to a quaternion.
 ///
-/// Extracts the upper-left 3x3 rotation block and delegates to the 3x3
-/// overload.
+/// Extracts the linear (rotation) part via `.linear()` and delegates to
+/// the 3x3 matrix overload.  Works for both matrix-backed transforms and
+/// specialized types (Rotation, AxisAngleRotation, etc.).
 ///
-/// @param m Transform (only the upper-left 3x3 is used).
+/// @param m Transform satisfying AffineTransform with dim == 3.
 /// @return  Unit quaternion representing the rotation.
-template <concepts::Transform A>
+template <concepts::AffineTransform A>
+    requires(std::decay_t<A>::dim == 3)
 auto to_quaternion(const A& m) -> Quaternion<typename A::value_type> {
     using T = typename A::value_type;
+    auto lin = m.linear();
     Matrix<T, 3, 3> m3;
     for (index_type r = 0; r < 3; ++r) {
         for (index_type c = 0; c < 3; ++c) {
-            m3(r, c) = m(r, c);
+            m3(r, c) = lin(r, c);
         }
     }
     return to_quaternion(m3);

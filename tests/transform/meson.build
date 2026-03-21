@@ -27,3 +27,6 @@ test('affine_transform', test_affine_transform)
 
 test_transform = executable('test_transform', 'test_transform.cpp', dependencies: [zipper_test_dep])
 test('transform', test_transform)
+
+test_specialized = executable('test_specialized_transforms', 'test_specialized_transforms.cpp', dependencies: [zipper_test_dep])
+test('specialized_transforms', test_specialized)

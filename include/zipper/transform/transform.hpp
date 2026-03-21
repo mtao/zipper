@@ -15,6 +15,11 @@
 #define ZIPPER_TRANSFORM_UMBRELLA_HPP
 
 #include "Transform.hpp"
+#include "Translation.hpp"
+#include "Scaling.hpp"
+#include "Rotation.hpp"
+#include "AxisAngleRotation.hpp"
+#include "transform_compose.hpp"
 #include "common.hpp"
 #include "coordinate.hpp"
 #include "geometric.hpp"

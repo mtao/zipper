@@ -2,10 +2,15 @@
 /// @brief Owning transform type ((D+1)x(D+1) matrix with mode-aware semantics).
 /// @ingroup transform
 ///
-/// `Transform<T, D, Mode>` is the primary user-facing transform type.
-/// It owns its data via an `MDArray` storage backend and inherits the full
-/// `TransformBase` interface (transform-specific accessors, composition,
-/// and all `MatrixBase` operations).
+/// `Transform<T, D, Mode>` is the primary user-facing matrix-backed transform
+/// type.  It owns its data via an `MDArray` storage backend and inherits
+/// `MatrixBase` for all standard matrix operations.
+///
+/// Transform-specific accessors:
+///   - `linear()`      — mutable/const view of the upper-left DxD block
+///   - `translation()` — mutable/const view of the upper-right Dx1 column
+///   - `matrix()`      — the full (D+1)x(D+1) matrix (as MatrixBase)
+///   - `inverse()`     — mode-aware inverse
 ///
 /// Template parameters:
 ///   - `T`: scalar type (e.g. `float`, `double`).
@@ -50,22 +55,28 @@ namespace zipper::transform {
 template <typename T, index_type D, TransformMode Mode,
           typename LayoutPolicy, typename AccessorPolicy>
 class Transform
-    : public detail::TransformBase<
+    : public zipper::MatrixBase<
           zipper::expression::nullary::MDArray<
               T, zipper::extents<D + 1, D + 1>,
               LayoutPolicy,
-              AccessorPolicy>,
-          Mode> {
+              AccessorPolicy>> {
   public:
     using expression_type = zipper::expression::nullary::MDArray<
         T, zipper::extents<D + 1, D + 1>,
         LayoutPolicy,
         AccessorPolicy>;
-    using Base = detail::TransformBase<expression_type, Mode>;
+    using Base = zipper::MatrixBase<expression_type>;
     using value_type = T;
     using layout_type = LayoutPolicy;
     using accessor_type = AccessorPolicy;
     using extents_type = typename Base::extents_type;
+
+    /// @brief The spatial dimension (the matrix is (D+1)x(D+1)).
+    static constexpr index_type dim = D;
+    /// @brief Homogeneous size = D + 1.
+    static constexpr index_type H = D + 1;
+    /// @brief The transform mode.
+    static constexpr TransformMode mode = Mode;
 
     using Base::expression;
     using Base::extent;
@@ -94,17 +105,6 @@ class Transform
     ///        scalar type, mode, layout, or accessor policy).
     template <typename U, TransformMode M2, typename LP, typename AP>
     Transform(const Transform<U, D, M2, LP, AP>& other) : Base() {
-        for (zipper::index_type r = 0; r <= D; ++r) {
-            for (zipper::index_type c = 0; c <= D; ++c) {
-                (*this)(r, c) = static_cast<T>(other(r, c));
-            }
-        }
-    }
-
-    /// @brief Construct from a TransformBase (expression).
-    template <zipper::concepts::Expression Expr, TransformMode M2>
-        requires(std::decay_t<Expr>::extents_type::static_extent(0) == D + 1)
-    Transform(const detail::TransformBase<Expr, M2>& other) : Base() {
         for (zipper::index_type r = 0; r <= D; ++r) {
             for (zipper::index_type c = 0; c <= D; ++c) {
                 (*this)(r, c) = static_cast<T>(other(r, c));
@@ -156,6 +156,31 @@ class Transform
         return *this;
     }
 
+    // ========================================================================
+    // Transform-specific accessors
+    // ========================================================================
+
+    /// @brief Evaluate to a copy of this transform.
+    auto eval() const { return Transform(*this); }
+
+    /// @brief Access the full (D+1)x(D+1) matrix as a MatrixBase.
+    auto matrix() const -> const Base& { return *this; }
+    auto matrix() -> Base& { return *this; }
+
+    /// @brief View of the upper-left DxD (rotation + scale) block.
+    auto linear(this auto&& self) {
+        return std::forward<decltype(self)>(self)
+            .template slice<zipper::static_slice_t<0, D>,
+                            zipper::static_slice_t<0, D>>();
+    }
+
+    /// @brief View of the translation column (top D entries of column D).
+    auto translation(this auto&& self) {
+        return std::forward<decltype(self)>(self)
+            .slice(zipper::static_slice_t<0, D>{},
+                   zipper::static_index_t<D>{});
+    }
+
     /// @brief Convert to an owning Matrix<T, D+1, D+1>.
     auto to_matrix() const -> zipper::Matrix<T, D + 1, D + 1> {
         zipper::Matrix<T, D + 1, D + 1> result;
@@ -166,12 +191,115 @@ class Transform
         }
         return result;
     }
+
+    // ========================================================================
+    // Inverse
+    // ========================================================================
+
+    /// @brief Mode-aware inverse.
+    ///
+    /// Dispatches based on the TransformMode:
+    ///   - Projective: full (D+1)x(D+1) matrix inverse
+    ///   - Affine: exploits affine structure [L^-1, -L^-1*t; 0 1]
+    ///   - Isometry: exploits orthogonality [R^T, -R^T*t; 0 1]
+    auto inverse() const -> Transform {
+        if constexpr (Mode == TransformMode::Isometry) {
+            return rotation_inverse_();
+        } else if constexpr (Mode == TransformMode::Affine) {
+            return affine_inverse_();
+        } else {
+            return projective_inverse_();
+        }
+    }
+
+  private:
+    /// @brief Full (D+1)x(D+1) matrix inverse.
+    auto projective_inverse_() const -> Transform {
+        zipper::Matrix<T, H, H> mat;
+        for (zipper::index_type r = 0; r < H; ++r) {
+            for (zipper::index_type c = 0; c < H; ++c) {
+                mat(r, c) = (*this)(r, c);
+            }
+        }
+        zipper::Matrix<T, H, H> inv_mat = zipper::utils::inverse(mat);
+
+        Transform result;
+        for (zipper::index_type r = 0; r < H; ++r) {
+            for (zipper::index_type c = 0; c < H; ++c) {
+                result(r, c) = inv_mat(r, c);
+            }
+        }
+        return result;
+    }
+
+    /// @brief Affine inverse: [L^-1  -L^-1*t; 0 1].
+    auto affine_inverse_() const -> Transform {
+        zipper::Matrix<T, D, D> lin;
+        for (zipper::index_type r = 0; r < D; ++r) {
+            for (zipper::index_type c = 0; c < D; ++c) {
+                lin(r, c) = (*this)(r, c);
+            }
+        }
+        zipper::Matrix<T, D, D> lin_inv = zipper::utils::inverse(lin);
+
+        zipper::Vector<T, D> t;
+        for (zipper::index_type i = 0; i < D; ++i) {
+            t(i) = (*this)(i, D);
+        }
+
+        Transform result;
+        for (zipper::index_type r = 0; r < D; ++r) {
+            for (zipper::index_type c = 0; c < D; ++c) {
+                result(r, c) = lin_inv(r, c);
+            }
+            T sum = T(0);
+            for (zipper::index_type k = 0; k < D; ++k) {
+                sum += lin_inv(r, k) * t(k);
+            }
+            result(r, D) = -sum;
+        }
+        for (zipper::index_type c = 0; c < D; ++c) {
+            result(D, c) = T(0);
+        }
+        result(D, D) = T(1);
+
+        return result;
+    }
+
+    /// @brief Isometry inverse: [R^T  -R^T*t; 0 1].
+    auto rotation_inverse_() const -> Transform {
+        zipper::Vector<T, D> t;
+        for (zipper::index_type i = 0; i < D; ++i) {
+            t(i) = (*this)(i, D);
+        }
+
+        Transform result;
+        for (zipper::index_type r = 0; r < D; ++r) {
+            for (zipper::index_type c = 0; c < D; ++c) {
+                result(r, c) = (*this)(c, r);
+            }
+            T sum = T(0);
+            for (zipper::index_type k = 0; k < D; ++k) {
+                sum += result(r, k) * t(k);
+            }
+            result(r, D) = -sum;
+        }
+        for (zipper::index_type c = 0; c < D; ++c) {
+            result(D, c) = T(0);
+        }
+        result(D, D) = T(1);
+
+        return result;
+    }
 };
 
-// Register all Transform instantiations as satisfying IsTransform.
+// Register all Transform instantiations as satisfying IsTransform and IsMatrixTransform.
 namespace detail {
 template <typename T, index_type D, TransformMode Mode, typename LP, typename AP>
 struct IsTransform<Transform<T, D, Mode, LP, AP>> : std::true_type {};
+
+template <typename T, index_type D, TransformMode Mode, typename LP, typename AP>
+struct IsMatrixTransform<Transform<T, D, Mode, LP, AP>> : std::true_type {};
 
 /// @brief Specialize TransformTraits for owning Transform so that
 ///        methods like inverse() preserve the layout/accessor policies.

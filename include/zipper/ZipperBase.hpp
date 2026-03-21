@@ -8,7 +8,7 @@
 #include "expression/concepts/capabilities.hpp"
 #include "expression/unary/Cast.hpp"
 #include "expression/unary/CoefficientWiseOperation.hpp"
-#include "expression/unary/Diagonal.hpp"
+#include "expression/unary/DiagonalExtract.hpp"
 #include "expression/unary/Lift.hpp"
 #include "expression/unary/Repeat.hpp"
 #include "expression/unary/Slice.hpp"
@@ -281,7 +281,7 @@ public:
   template <typename Self>
   auto diagonal(this Self&& self) {
     using child_t = detail::member_child_storage_t<Self, expression_type>;
-    return VectorBase<expression::unary::Diagonal<child_t>>(
+    return VectorBase<expression::unary::DiagonalExtract<child_t>>(
         std::in_place, std::forward<Self>(self).expression());
   }
 

@@ -137,7 +137,7 @@ TEST_CASE("AffineTransform affine_inverse", "[transform][affine]") {
     xform(1, 3) = 4.0f;
     xform(2, 3) = 5.0f;
 
-    auto inv = xform.affine_inverse();
+    auto inv = xform.inverse();
 
     // Inverse of translation (3,4,5) is translation (-3,-4,-5)
     CHECK(inv(0, 3) == Catch::Approx(-3.0f));
@@ -154,16 +154,16 @@ TEST_CASE("AffineTransform affine_inverse", "[transform][affine]") {
     }
 }
 
-TEST_CASE("AffineTransform rotation_inverse", "[transform][affine]") {
-    // Build a 90-degree rotation about Z + translation
-    AffineTransform<float> xform;
+TEST_CASE("Isometry inverse (rotation + translation)", "[transform][affine]") {
+    // Build a 90-degree rotation about Z + translation as an Isometry
+    Isometry<float> xform;
     xform(0, 0) = 0.0f;  xform(0, 1) = -1.0f;  // R = [0 -1; 1 0; 0 0 1]
     xform(1, 0) = 1.0f;  xform(1, 1) = 0.0f;
     xform(0, 3) = 3.0f;
     xform(1, 3) = 4.0f;
     xform(2, 3) = 5.0f;
 
-    auto inv = xform.rotation_inverse();
+    auto inv = xform.inverse();
 
     // R^T * R should be I, and translation should be -R^T * t
     auto identity = xform * inv;
@@ -184,22 +184,30 @@ TEST_CASE("AffineTransform rotation_inverse", "[transform][affine]") {
     }
 }
 
-TEST_CASE("AffineTransform rotation_inverse matches affine_inverse for rigid body", "[transform][affine]") {
-    // For a pure rotation + translation, both inverses should agree
-    AffineTransform<float> xform;
+TEST_CASE("Isometry inverse matches AffineTransform inverse for rigid body", "[transform][affine]") {
+    // For a pure rotation + translation, Isometry and Affine inverses should agree
+    AffineTransform<float> affine_xform;
     // 90-degree rotation about Y
-    xform(0, 0) = 0.0f;   xform(0, 2) = 1.0f;
-    xform(2, 0) = -1.0f;  xform(2, 2) = 0.0f;
-    xform(0, 3) = 7.0f;
-    xform(1, 3) = -3.0f;
-    xform(2, 3) = 11.0f;
+    affine_xform(0, 0) = 0.0f;   affine_xform(0, 2) = 1.0f;
+    affine_xform(2, 0) = -1.0f;  affine_xform(2, 2) = 0.0f;
+    affine_xform(0, 3) = 7.0f;
+    affine_xform(1, 3) = -3.0f;
+    affine_xform(2, 3) = 11.0f;
 
-    auto inv_general = xform.affine_inverse();
-    auto inv_fast = xform.rotation_inverse();
+    // Same transform as Isometry
+    Isometry<float> iso_xform;
+    iso_xform(0, 0) = 0.0f;   iso_xform(0, 2) = 1.0f;
+    iso_xform(2, 0) = -1.0f;  iso_xform(2, 2) = 0.0f;
+    iso_xform(0, 3) = 7.0f;
+    iso_xform(1, 3) = -3.0f;
+    iso_xform(2, 3) = 11.0f;
+
+    auto inv_affine = affine_xform.inverse();
+    auto inv_iso = iso_xform.inverse();
 
     for (index_type r = 0; r < 4; ++r) {
         for (index_type c = 0; c < 4; ++c) {
-            CHECK(inv_fast(r, c) == Catch::Approx(inv_general(r, c)).margin(1e-5f));
+            CHECK(inv_iso(r, c) == Catch::Approx(inv_affine(r, c)).margin(1e-5f));
         }
     }
 }
@@ -325,12 +333,12 @@ TEST_CASE("AffineTransform2D affine action with rotation", "[transform][affine][
     CHECK(result(1) == Catch::Approx(3.0f));
 }
 
-TEST_CASE("AffineTransform2D affine_inverse", "[transform][affine][2d]") {
+TEST_CASE("AffineTransform2D inverse", "[transform][affine][2d]") {
     AffineTransform<float, 2> xform;
     xform(0, 2) = 3.0f;
     xform(1, 2) = 4.0f;
 
-    auto inv = xform.affine_inverse();
+    auto inv = xform.inverse();
 
     CHECK(inv(0, 2) == Catch::Approx(-3.0f));
     CHECK(inv(1, 2) == Catch::Approx(-4.0f));
@@ -345,15 +353,15 @@ TEST_CASE("AffineTransform2D affine_inverse", "[transform][affine][2d]") {
     }
 }
 
-TEST_CASE("AffineTransform2D rotation_inverse", "[transform][affine][2d]") {
+TEST_CASE("Isometry2D inverse (rotation + translation)", "[transform][affine][2d]") {
     // 90-degree rotation + translation in 2D
-    AffineTransform<float, 2> xform;
+    Isometry<float, 2> xform;
     xform(0, 0) = 0.0f;  xform(0, 1) = -1.0f;
     xform(1, 0) = 1.0f;  xform(1, 1) = 0.0f;
     xform(0, 2) = 3.0f;
     xform(1, 2) = 4.0f;
 
-    auto inv = xform.rotation_inverse();
+    auto inv = xform.inverse();
 
     auto identity = xform * inv;
     for (index_type r = 0; r < 3; ++r) {
@@ -372,7 +380,7 @@ TEST_CASE("AffineTransform2D rotation_inverse", "[transform][affine][2d]") {
     }
 }
 
-TEST_CASE("AffineTransform2D with scale affine_inverse", "[transform][affine][2d]") {
+TEST_CASE("AffineTransform2D with scale inverse", "[transform][affine][2d]") {
     // Non-uniform scale + translation in 2D
     AffineTransform<float, 2> xform;
     xform(0, 0) = 2.0f;
@@ -380,7 +388,7 @@ TEST_CASE("AffineTransform2D with scale affine_inverse", "[transform][affine][2d
     xform(0, 2) = 5.0f;
     xform(1, 2) = 7.0f;
 
-    auto inv = xform.affine_inverse();
+    auto inv = xform.inverse();
     auto identity = xform * inv;
 
     for (index_type r = 0; r < 3; ++r) {
@@ -419,7 +427,7 @@ TEST_CASE("AffineTransform1D translation and inverse", "[transform][affine][1d]"
     AffineTransform<float, 1> xform;
     xform(0, 1) = 5.0f;  // translate by 5
 
-    auto inv = xform.affine_inverse();
+    auto inv = xform.inverse();
     CHECK(inv(0, 1) == Catch::Approx(-5.0f));
 
     auto identity = xform * inv;
@@ -436,7 +444,7 @@ TEST_CASE("AffineTransform1D scale and inverse", "[transform][affine][1d]") {
     xform(0, 0) = 3.0f;   // scale by 3
     xform(0, 1) = 2.0f;   // translate by 2
 
-    auto inv = xform.affine_inverse();
+    auto inv = xform.inverse();
     auto identity = xform * inv;
 
     for (index_type r = 0; r < 2; ++r) {
