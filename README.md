@@ -1,44 +1,47 @@
 
 # Zipper
 
-A zippy C++26 tensor processing library. Heavily inspired from [Eigen](https://eigen.tuxfamily.org/) and [mdpsan](https://cppreference.com/utility/mdspan), this library-in-development intends to provide a light-weight clean syntax for linear algebra and tensor algebra while also providing convenient backends to transform between different data representations.
+A zippy C++26 tensor processing library. Heavily inspired by [Eigen](https://eigen.tuxfamily.org/) and [mdspan](https://en.cppreference.com/w/cpp/container/mdspan), this library-in-development intends to provide a light-weight clean syntax for linear algebra and tensor algebra while also providing convenient backends to transform between different data representations.
 
 ## Principles
 
-The underlying concept in Zipper is a _view_, which merely represents an underlying map $$\mathbb{Z}^r \rightarrow T$$ for some rank $$r$$. When a view represents a (multi-dimensional) array of objects. The semantics of vectors (r=1), matrices (r=2), tensors, or forms are induced by wrapping that view in a container for which those semantics are induced.
+The underlying concept in Zipper is an _expression_, which represents an underlying map from integer indices to values. When an expression represents a (multi-dimensional) array of objects, the semantics of vectors (rank-1), matrices (rank-2), tensors, or forms are induced by wrapping that expression in a typed container.
 
 More concretely, we can take unit vectors as
 
 ```cpp
-#include <zipper/views/nullary/UnitView.hpp>
+#include <zipper/expression/nullary/Unit.hpp>
 
-// vector {0,1,0}
-auto e1 = zipper::views::nullary::unit_view<double,3>(1);
+// unit vector e_1 = {0,1,0}
+auto e1 = zipper::expression::nullary::unit_vector<double, 3>(1);
 ```
 
-This view can be used by multiple types of semantics, like the semantics of a vector or form. Note that below deduction guides are used to maintain proper ownership of the view (e1 is a non-const ref so the `*Base` classes do not own any data, but instead hold a reference to `e1` internally).
+This expression can be used with different semantic wrappers:
 
 ```cpp
 #include <zipper/VectorBase.hpp>
 #include <zipper/FormBase.hpp>
 
-// a vector whose data is the view e1
-zipper::VectorBase x = e1;
+// a vector wrapping the unit expression
+zipper::VectorBase x(e1);
 
-// a 1-form, equivalently a row-vector whose data is the view e1
-zipper::FormBase u = e1;
+// a 1-form (row-vector) wrapping the same expression
+zipper::FormBase u(e1);
 ```
 
-With these semantic wrappers we can now do semantic-specific operations
+With these semantic wrappers we can do semantic-specific operations:
 
 ```cpp
-// form * vector is like a dot product, resulting in a scalar
+// form * vector contracts to a scalar (dot product)
 double res = u * x;
 
-// a vector holding a view that holds the expression for (2 * x)
+// vector * form produces a rank-2 outer product
+auto outer = x * u;
+
+// a vector holding a lazy expression for (2 * x)
 zipper::VectorBase x2 = 2 * x;
 
-// a vector that owns its own data
+// materialise into an owning vector
 zipper::Vector x2_ = x2;
 ```
 
@@ -227,12 +230,76 @@ auto r = row_view.unsafe();
 | `to_owned()` | Lazy expression tree (deep copy) | Fully independent | You want to snapshot a lazy expression |
 | `unsafe()` | Returnable view wrapper | References original data | You need to copy or return a view |
 
+## DataArray
+
+`DataArray<T, N...>` is the plain-data storage type in Zipper. It owns a
+dense multidimensional array with no arithmetic semantics — to do math, wrap
+it in an algebraic type (`.as_vector()`, `.as_matrix()`, etc.) or use
+`as_array()` for coefficient-wise operations.
+
+```cpp
+#include <zipper/DataArray.hpp>
+
+// Static-extent 1D array
+zipper::DataArray<double, 4> a;
+a(0) = 1.0; a(1) = 2.0; a(2) = 3.0; a(3) = 4.0;
+
+// 2D array
+zipper::DataArray<int, 2, 3> grid;
+grid(0, 0) = 1; grid(1, 2) = 6;
+
+// Dynamic-extent array
+zipper::detail::DataArray_<double, zipper::dextents<1>> dyn(5);
+```
+
+### DataArray utilities
+
+```cpp
+// fill() -- set all elements to a value
+a.fill(42.0);
+
+// zero() -- static factory returning a zero-initialised array
+auto z = zipper::DataArray<double, 3>::zero();
+
+// reshape() -- reinterpret as different extents (copies data)
+auto mat = a.reshape(zipper::extents<2, 2>{});  // 4-vector -> 2x2
+```
+
+DataArray also provides `data()`, `begin()`/`end()`, `as_span()`, `eval()`,
+slicing, swizzling (transpose), `cast<U>()`, and lexicographic comparison
+(`operator==`, `operator<=>`).
+
+## Tensor Contraction
+
+Zipper provides free functions for tensor product and contraction operations:
+
+```cpp
+#include <zipper/Tensor.hpp>
+
+zipper::Tensor<double, 2, 3> A;
+zipper::Tensor<double, 3, 4> B;
+
+// Outer (tensor) product: produces a rank-4 tensor (2,3,3,4)
+auto tp = zipper::tensor_product(A, B);
+
+// Contract a pair of indices: contract<I,J>(tensor) traces over
+// indices I and J, reducing rank by 2
+auto c = zipper::contract<1, 2>(tp);  // (2,3,3,4) -> (2,4)
+
+// Full contraction: fold-in-half sugar that contracts
+// index 0 with N/2, 1 with N/2+1, etc., reducing to a scalar
+zipper::Tensor<double, 3, 3> M;
+double tr = zipper::full_contract(M);  // equivalent to trace
+```
+
 ## Dependencies
 
-Zipper depends on [fmt](https://fmt.dev) and [mdspan](https:://github.com/kokkos/mdspan), but both of these dependencies should disappear as c++26 functionality becomes more common in existing libraries.
+Zipper depends on [mdspan](https://github.com/kokkos/mdspan). This
+dependency should disappear as C++26 `std::mdspan` becomes available in
+standard libraries.
 
-For buliding and testing zipper currently depends on [meson](https://mesonbuild.com)
-and [Catch2](https://catch2.org), and is ready for use with [conan](https://conan.io).
+For building and testing, Zipper depends on [Meson](https://mesonbuild.com)
+and [Catch2](https://catch2.org), and is ready for use with [Conan](https://conan.io).
 
 ## Testing
 
@@ -253,3 +320,87 @@ pushd build
 meson setup --native-file conan/conan_meson_native.ini .. . -Dtesting=true 
 ninja # build
 ```
+
+## Type Hierarchy
+
+```
+Expression nodes (lazy evaluation tree)
+  NullaryExpression    MDArray, MDSpan, Constant, Identity, Unit, Random
+  UnaryExpression      Slice, Swizzle, Reshape, Cast, Abs, UnsafeRef, ...
+  BinaryExpression     Addition, MatrixProduct, TensorProduct, ...
+  Reduction            Sum, Trace, Determinant, Norm, Contraction, ...
+
+User-facing wrappers (CRTP, semantic layer)
+  DataArrayBase        plain storage, no arithmetic
+    TensorBase         generic rank-N tensors
+      ArrayBase        coefficient-wise operations (+, *, abs, ...)
+      MatrixBase       matrix algebra (product, inverse, decomposition)
+      VectorBase       column vectors (dot, cross, norm)
+      FormBase         row vectors / covectors (contraction with vectors)
+```
+
+**Concrete owning types** (static extents):
+`DataArray<T, N...>`, `Tensor<T, N...>`, `Array<T, N...>`,
+`Vector<T, N>`, `Matrix<T, R, C>`, `Form<T, N>`.
+
+## Comparison with Eigen and Blaze
+
+Zipper's expression template architecture addresses several lifetime-safety
+problems that arise in Eigen (and, to a lesser extent, Blaze).
+
+### Dangling references from temporaries
+
+In Eigen, capturing an expression that references a temporary is silently
+unsafe:
+
+```cpp
+// Eigen -- UNDEFINED BEHAVIOUR (temporary dies at end of statement)
+Eigen::Vector3d a(1, 2, 3);
+auto expr = a + Eigen::Vector3d(4, 5, 6);  // temporary is destroyed
+std::cout << expr;                          // reads dead memory
+```
+
+In Zipper, rvalue operands are automatically moved into the expression tree:
+
+```cpp
+// Zipper -- safe (temporary is owned by the expression)
+zipper::Vector<double, 3> a{1, 2, 3};
+auto expr = a + zipper::Vector<double, 3>{4, 5, 6};
+// expr(0) == 5.0 -- the temporary lives inside expr
+```
+
+### Views that escape their scope
+
+Eigen's `.col()` / `.row()` / `.block()` return lightweight views that hold
+a raw pointer. Nothing prevents you from returning them:
+
+```cpp
+// Eigen -- compiles, but the view dangles if the matrix goes out of scope
+auto get_col(Eigen::Matrix3d& M) { return M.col(0); }
+```
+
+In Zipper, views inherit `NonReturnable` (deleted copy constructor) so this
+is a compile error. You must explicitly opt in with `.unsafe()`:
+
+```cpp
+// Zipper -- compile error: copy constructor deleted
+auto get_col(zipper::Matrix<double, 3, 3>& M) {
+    auto c = M.col(zipper::index_type(0));
+    return c;  // ERROR
+}
+
+// Explicit opt-in: caller asserts M outlives the view
+auto get_col_unsafe(zipper::Matrix<double, 3, 3>& M) {
+    return M.col(zipper::index_type(0)).unsafe();  // OK
+}
+```
+
+### Summary of safety model
+
+| Scenario | Eigen | Zipper |
+|---|---|---|
+| `auto e = a + temp()` | UB (dangling) | Safe (temp moved in) |
+| `auto v = M.col(j); auto v2 = v;` | Compiles (shallow copy) | Compile error (copy deleted) |
+| Return a view from a function | Compiles (dangling) | Compile error; use `.unsafe()` |
+| Materialise to owned data | `.eval()` | `.eval()` |
+| Deep-copy lazy tree | N/A | `.to_owned()` |
