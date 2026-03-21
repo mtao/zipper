@@ -1,8 +1,8 @@
 #if !defined(ZIPPER_EXPRESSION_NULLARY_LINEARLAYOUTEXPRESSION_HPP)
 #define ZIPPER_EXPRESSION_NULLARY_LINEARLAYOUTEXPRESSION_HPP
 
-#include "zipper/expression/ExpressionBase.hpp"
 #include "zipper/detail/assert.hpp"
+#include "zipper/expression/ExpressionBase.hpp"
 #include "zipper/expression/detail/ExpressionTraits.hpp"
 #include "zipper/storage/LinearAccessorTraits.hpp"
 #include "zipper/storage/layout_types.hpp"
@@ -14,14 +14,15 @@ namespace _detail_lle {
 /// Helper to resolve the CRTP derived type: if FinalDerived is void,
 /// the class uses itself; otherwise it forwards FinalDerived to ExpressionBase.
 template <typename FinalDerived, typename Self>
-using resolved_derived_t = std::conditional_t<std::is_void_v<FinalDerived>, Self, FinalDerived>;
+using resolved_derived_t =
+    std::conditional_t<std::is_void_v<FinalDerived>, Self, FinalDerived>;
 } // namespace _detail_lle
 
 /// Expression whose values are held in a linear span with its mapping type.
 ///
 /// @tparam FinalDerived  The outermost CRTP derived type (e.g. MDArray).
-///                       Pass `void` (the default) to use LinearLayoutExpression
-///                       itself as the CRTP leaf.
+///                       Pass `void` (the default) to use
+///                       LinearLayoutExpression itself as the CRTP leaf.
 template <typename LinearAccessorType, typename Extents,
           typename LayoutPolicy = default_layout_policy,
           typename AccessorPolicy = default_accessor_policy<
@@ -33,9 +34,9 @@ class LinearLayoutExpression
           LinearLayoutExpression<LinearAccessorType, Extents, LayoutPolicy,
                                  AccessorPolicy, FinalDerived>>> {
 public:
-  using self_type = LinearLayoutExpression<LinearAccessorType, Extents,
-                                           LayoutPolicy, AccessorPolicy,
-                                           FinalDerived>;
+  using self_type =
+      LinearLayoutExpression<LinearAccessorType, Extents, LayoutPolicy,
+                             AccessorPolicy, FinalDerived>;
   using traits = expression::detail::ExpressionTraits<self_type>;
   using value_type = typename traits::value_type;
   using element_type = typename traits::element_type;
@@ -57,9 +58,7 @@ public:
                                            layout_policy, accessor_policy>;
 
   constexpr auto mapping() const -> const mapping_type & { return m_mapping; }
-  constexpr auto extents() const -> extents_type {
-    return mapping().extents();
-  }
+  constexpr auto extents() const -> extents_type { return mapping().extents(); }
   [[nodiscard]] static constexpr auto rank() -> rank_type {
     return extents_type::rank();
   }
@@ -78,7 +77,8 @@ public:
     requires(std::is_default_constructible_v<linear_accessor_type>)
       : m_linear_accessor(), m_mapping(extents_type{}) {
     if constexpr (!extents_traits::is_static) {
-      m_linear_accessor = linear_accessor_type(extents_traits::size(extents_type{}));
+      m_linear_accessor =
+          linear_accessor_type(extents_traits::size(extents_type{}));
     }
   }
 
@@ -103,9 +103,10 @@ public:
     requires(extents_traits::is_static)
       : LinearLayoutExpression(linear_access, extents_type{}) {}
 
-  /// Converting constructor: allows e.g. LinearLayoutExpression<SpanData<T,...>,...>
-  /// → LinearLayoutExpression<SpanData<const T,...>,...> when the linear
-  /// accessor is convertible.
+  /// Converting constructor: allows e.g.
+  /// LinearLayoutExpression<SpanData<T,...>,...> →
+  /// LinearLayoutExpression<SpanData<const T,...>,...> when the linear accessor
+  /// is convertible.
   template <typename OtherLinearAccessor, typename OtherFinalDerived>
   LinearLayoutExpression(
       const LinearLayoutExpression<OtherLinearAccessor, Extents, LayoutPolicy,
@@ -113,7 +114,8 @@ public:
     requires(std::is_constructible_v<LinearAccessorType,
                                      const OtherLinearAccessor &> &&
              !std::is_same_v<LinearAccessorType, OtherLinearAccessor>)
-      : m_linear_accessor(other.linear_accessor()), m_mapping(other.mapping()) {}
+      : m_linear_accessor(other.linear_accessor()), m_mapping(other.mapping()) {
+  }
 
   template <zipper::concepts::Extents E2>
   void resize_extents(const E2 &e)
@@ -151,7 +153,8 @@ protected:
       return 0;
     } else {
       static_assert((std::is_integral_v<std::decay_t<Indices>> && ...));
-      ZIPPER_ASSERT(zipper::utils::extents::indices_in_range(extents(), indices...));
+      ZIPPER_ASSERT(
+          zipper::utils::extents::indices_in_range(extents(), indices...));
       return mapping()(std::forward<Indices>(indices)...);
     }
   }
@@ -180,13 +183,14 @@ public:
 
 private:
   LinearAccessorType m_linear_accessor;
-  mapping_type m_mapping;
+  [[no_unique_address]] mapping_type m_mapping;
 };
 
 template <typename LinearAccessorType, typename Extents, typename LayoutPolicy,
           typename AccessorPolicy, typename FinalDerived>
 auto LinearLayoutExpression<LinearAccessorType, Extents, LayoutPolicy,
-                            AccessorPolicy, FinalDerived>::as_mdspan() -> mdspan_type
+                            AccessorPolicy, FinalDerived>::as_mdspan()
+    -> mdspan_type
   requires(!traits::is_const_valued())
 {
   return mdspan_type(data(), extents());
