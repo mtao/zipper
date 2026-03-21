@@ -2,6 +2,7 @@
 #define ZIPPER_EXPRESSION_NULLARY_LINEARLAYOUTEXPRESSION_HPP
 
 #include "zipper/detail/assert.hpp"
+#include "zipper/detail/no_unique_address.hpp"
 #include "zipper/expression/ExpressionBase.hpp"
 #include "zipper/expression/detail/ExpressionTraits.hpp"
 #include "zipper/storage/LinearAccessorTraits.hpp"
@@ -183,7 +184,7 @@ public:
 
 private:
   LinearAccessorType m_linear_accessor;
-  [[no_unique_address]] mapping_type m_mapping;
+  ZIPPER_NO_UNIQUE_ADDRESS mapping_type m_mapping;
 };
 
 template <typename LinearAccessorType, typename Extents, typename LayoutPolicy,

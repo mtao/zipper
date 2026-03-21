@@ -45,6 +45,7 @@
 
 #include <utility>
 
+#include "zipper/detail/no_unique_address.hpp"
 #include "zipper/expression/ExpressionBase.hpp"
 #include "zipper/expression/detail/ExpressionTraits.hpp"
 #include "zipper/expression/detail/IndexSet.hpp"
@@ -147,7 +148,7 @@ public:
   auto make_owned() const -> Unit { return *this; }
 
 private:
-  IndexType m_index;
+  ZIPPER_NO_UNIQUE_ADDRESS IndexType m_index;
 };
 
 /// Static extent + static index

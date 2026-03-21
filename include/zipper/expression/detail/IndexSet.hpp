@@ -40,6 +40,7 @@
 #include <span>
 #include <vector>
 
+#include "zipper/detail/no_unique_address.hpp"
 #include "zipper/types.hpp"
 
 namespace zipper::expression::detail {
@@ -49,7 +50,7 @@ namespace zipper::expression::detail {
 //
 // Each field can be either `index_type` (runtime) or
 // `std::integral_constant<index_type, N>` (compile-time).  With
-// `[[no_unique_address]]`, compile-time fields occupy zero storage.
+// `ZIPPER_NO_UNIQUE_ADDRESS`, compile-time fields occupy zero storage.
 // CTAD guides map integral arguments to `index_type` and preserve
 // `integral_constant` types, mirroring `strided_slice`.
 // ═════════════════════════════════════════════════════════════════════════════
@@ -59,7 +60,7 @@ namespace zipper::expression::detail {
 ///        semantics.
 ///
 /// Represents indices {first, first+stride, first+2*stride, ...} where each
-/// index is strictly less than `last`.  Fields use `[[no_unique_address]]` so
+/// index is strictly less than `last`.  Fields use `ZIPPER_NO_UNIQUE_ADDRESS` so
 /// compile-time `std::integral_constant` parameters occupy zero storage.
 ///
 /// When StrideType is `std::integral_constant<index_type, 1>` the set is
@@ -77,9 +78,9 @@ namespace zipper::expression::detail {
 template <typename FirstType = index_type, typename LastType = index_type,
           typename StrideType = index_type>
 struct StridedIndexSet {
-    [[no_unique_address]] FirstType first;   ///< Inclusive lower bound.
-    [[no_unique_address]] LastType last;     ///< Exclusive upper bound.
-    [[no_unique_address]] StrideType stride; ///< Step between consecutive elements.
+    ZIPPER_NO_UNIQUE_ADDRESS FirstType first;   ///< Inclusive lower bound.
+    ZIPPER_NO_UNIQUE_ADDRESS LastType last;     ///< Exclusive upper bound.
+    ZIPPER_NO_UNIQUE_ADDRESS StrideType stride; ///< Step between consecutive elements.
 
     /// @brief Test whether @p idx belongs to this strided set.
     ///
@@ -192,7 +193,7 @@ using StridedIndexRange = StridedIndexSet<>;
 // ─────────────────────────────────────────────────────────────────────────────
 template <typename ValueType = index_type>
 struct SingleIndexSet {
-    [[no_unique_address]] ValueType value;  ///< The single non-zero index.
+    ZIPPER_NO_UNIQUE_ADDRESS ValueType value;  ///< The single non-zero index.
 
     /// @brief Test whether @p idx equals the stored value.
     constexpr auto contains(index_type idx) const -> bool {
@@ -327,7 +328,7 @@ using SparseIndexRange = DynamicSparseIndexSet;
 // ─────────────────────────────────────────────────────────────────────────────
 template <typename ExtentType = index_type>
 struct FullIndexSet {
-    [[no_unique_address]] ExtentType extent;  ///< Range is [0, extent).
+    ZIPPER_NO_UNIQUE_ADDRESS ExtentType extent;  ///< Range is [0, extent).
 
     /// @brief Always returns true (no known zeros).
     constexpr auto contains([[maybe_unused]] index_type idx) const -> bool {

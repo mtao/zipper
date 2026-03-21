@@ -12,3 +12,10 @@ test_storage = executable(
   dependencies: [zipper_test_dep],
 )
 test('test_storage', test_storage)
+
+test_sizeof = executable(
+  'test_sizeof',
+  ['sizeof.cpp'],
+  dependencies: [zipper_test_dep],
+)
+test('test_sizeof', test_sizeof)
