@@ -7,9 +7,16 @@
 /// `AffineTransformBase` interface (affine-specific accessors, composition,
 /// and all `MatrixBase` operations).
 ///
+/// Template parameters:
+///   - `T`: scalar type (e.g. `float`, `double`).
+///   - `LayoutPolicy`: storage layout; defaults to column-major (OpenGL
+///     convention).  Pass `zipper::storage::row_major` for row-major.
+///   - `AccessorPolicy`: accessor policy; defaults to
+///     `zipper::default_accessor_policy<T>`.
+///
 /// @code
 ///   using namespace zipper::transform;
-///   AffineTransform<float> xform;  // default = identity
+///   AffineTransform<float> xform;  // default = identity, col-major
 ///   auto lin = xform.linear();     // 3x3 view
 ///   auto t = xform.translation();  // 3-vector view
 ///   auto inv = xform.affine_inverse();
@@ -27,21 +34,24 @@ namespace zipper::transform {
 
 /// @brief Owning affine transform backed by a 4x4 MDArray.
 ///
-/// Default-constructs to the identity matrix.
-template <typename T>
+/// Default-constructs to the identity matrix.  Storage is column-major
+/// by default, matching the OpenGL convention.
+template <typename T, typename LayoutPolicy, typename AccessorPolicy>
 class AffineTransform
     : public detail::AffineTransformBase<
           zipper::expression::nullary::MDArray<
               T, zipper::extents<4, 4>,
-              zipper::storage::matrix_layout<true>,
-              zipper::default_accessor_policy<T>>> {
+              LayoutPolicy,
+              AccessorPolicy>> {
   public:
     using expression_type = zipper::expression::nullary::MDArray<
         T, zipper::extents<4, 4>,
-        zipper::storage::matrix_layout<true>,
-        zipper::default_accessor_policy<T>>;
+        LayoutPolicy,
+        AccessorPolicy>;
     using Base = detail::AffineTransformBase<expression_type>;
     using value_type = T;
+    using layout_type = LayoutPolicy;
+    using accessor_type = AccessorPolicy;
     using extents_type = typename Base::extents_type;
 
     using Base::expression;
@@ -68,9 +78,10 @@ class AffineTransform
         }
     }
 
-    /// @brief Construct from another AffineTransform.
-    template <typename U>
-    AffineTransform(const AffineTransform<U>& other) : Base() {
+    /// @brief Construct from another AffineTransform (possibly different
+    ///        scalar type, layout, or accessor policy).
+    template <typename U, typename LP, typename AP>
+    AffineTransform(const AffineTransform<U, LP, AP>& other) : Base() {
         for (zipper::index_type r = 0; r < 4; ++r) {
             for (zipper::index_type c = 0; c < 4; ++c) {
                 (*this)(r, c) = static_cast<T>(other(r, c));
@@ -108,6 +119,18 @@ class AffineTransform
         return *this;
     }
 
+    /// @brief Assign from another AffineTransform (possibly different
+    ///        scalar type, layout, or accessor policy).
+    template <typename U, typename LP, typename AP>
+    auto operator=(const AffineTransform<U, LP, AP>& other) -> AffineTransform& {
+        for (zipper::index_type r = 0; r < 4; ++r) {
+            for (zipper::index_type c = 0; c < 4; ++c) {
+                (*this)(r, c) = static_cast<T>(other(r, c));
+            }
+        }
+        return *this;
+    }
+
     /// @brief Assign from any matrix expression.
     template <zipper::concepts::Matrix M>
         requires(M::extents_type::static_extent(0) == 4 &&
@@ -133,10 +156,20 @@ class AffineTransform
     }
 };
 
-// Register AffineTransform as satisfying IsAffineTransform.
+// Register all AffineTransform instantiations as satisfying IsAffineTransform.
 namespace detail {
-template <typename T>
-struct IsAffineTransform<AffineTransform<T>> : std::true_type {};
+template <typename T, typename LP, typename AP>
+struct IsAffineTransform<AffineTransform<T, LP, AP>> : std::true_type {};
+
+/// @brief Specialize AffineTransformTraits for owning AffineTransform
+///        so that methods like affine_inverse() preserve the
+///        layout/accessor policies.
+template <typename T, typename LP, typename AP>
+struct AffineTransformTraits<AffineTransform<T, LP, AP>> {
+    using value_type = T;
+    using owning_type = AffineTransform<T, LP, AP>;
+};
+
 } // namespace detail
 
 } // namespace zipper::transform

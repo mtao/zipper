@@ -6,6 +6,9 @@
 /// post-multiplying the appropriate transformation matrix: result = m * T,
 /// matching GLM's convention.
 ///
+/// The returned AffineTransform preserves the layout and accessor
+/// policies of the input transform.
+///
 /// @code
 ///   using namespace zipper::transform;
 ///   AffineTransform<float> xform;
@@ -36,10 +39,10 @@ namespace zipper::transform {
 /// @param v  Translation vector (rank-1, extent 3).
 template <concepts::AffineTransform M, zipper::concepts::Vector V>
     requires(V::extents_type::static_extent(0) == 3)
-auto translate(const M& m, const V& v)
-    -> AffineTransform<typename M::value_type> {
-    using T = typename M::value_type;
-    AffineTransform<T> result(m);
+auto translate(const M& m, const V& v) {
+    using traits = detail::AffineTransformTraits<M>;
+    using result_type = typename traits::owning_type;
+    result_type result(m);
     // result[3] = m[0] * v[0] + m[1] * v[1] + m[2] * v[2] + m[3]
     // In row-major (row, col) notation, column 3 of result =
     //   col(0)*v(0) + col(1)*v(1) + col(2)*v(2) + col(3)
@@ -59,8 +62,9 @@ auto translate(const M& m, const V& v)
 /// @param axis  Rotation axis (rank-1, extent 3; need not be normalized).
 template <concepts::AffineTransform M, zipper::concepts::Vector V>
     requires(V::extents_type::static_extent(0) == 3)
-auto rotate(const M& m, typename M::value_type angle, const V& axis)
-    -> AffineTransform<typename M::value_type> {
+auto rotate(const M& m, typename M::value_type angle, const V& axis) {
+    using traits = detail::AffineTransformTraits<M>;
+    using result_type = typename traits::owning_type;
     using T = typename M::value_type;
     T const c = std::cos(angle);
     T const s = std::sin(angle);
@@ -82,7 +86,7 @@ auto rotate(const M& m, typename M::value_type angle, const V& axis)
     T rot22 = c + t(2) * a(2);
 
     // result = m * Rot (only the first 3 columns are affected)
-    AffineTransform<T> result;
+    result_type result;
     for (index_type r = 0; r < 4; ++r) {
         result(r, 0) = m(r, 0) * rot00 + m(r, 1) * rot10 + m(r, 2) * rot20;
         result(r, 1) = m(r, 0) * rot01 + m(r, 1) * rot11 + m(r, 2) * rot21;
@@ -100,10 +104,10 @@ auto rotate(const M& m, typename M::value_type angle, const V& axis)
 /// @param v  Scale factors (rank-1, extent 3).
 template <concepts::AffineTransform M, zipper::concepts::Vector V>
     requires(V::extents_type::static_extent(0) == 3)
-auto scale(const M& m, const V& v)
-    -> AffineTransform<typename M::value_type> {
-    using T = typename M::value_type;
-    AffineTransform<T> result;
+auto scale(const M& m, const V& v) {
+    using traits = detail::AffineTransformTraits<M>;
+    using result_type = typename traits::owning_type;
+    result_type result;
     for (index_type r = 0; r < 4; ++r) {
         result(r, 0) = m(r, 0) * v(0);
         result(r, 1) = m(r, 1) * v(1);

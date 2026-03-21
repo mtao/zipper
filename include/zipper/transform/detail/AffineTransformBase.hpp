@@ -10,6 +10,7 @@
 ///   - `translation()` — mutable/const view of the upper-right 3x1 column
 ///   - `matrix()`      — the full 4x4 matrix (as MatrixBase)
 ///   - `affine_inverse()` — efficient inverse exploiting affine structure
+///   - `rotation_inverse()` — fast inverse for rigid-body transforms
 ///
 /// This type lives in `zipper::transform::detail` and is not registered as a
 /// core zipper type (no IsZipperBase/IsMatrix specialization beyond what
@@ -24,17 +25,31 @@
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
 #include <zipper/MatrixBase.hxx>
+#include <zipper/storage/layout_types.hpp>
 #include <zipper/utils/inverse.hpp>
 
 namespace zipper::transform {
 
 // Forward declaration of owning type.
-template <typename T> class AffineTransform;
+template <typename T,
+          typename LayoutPolicy = zipper::storage::matrix_layout<false>,
+          typename AccessorPolicy = zipper::default_accessor_policy<T>>
+class AffineTransform;
 
 namespace detail {
 
 /// @brief Trait to identify AffineTransform types.
 template <typename> struct IsAffineTransform : std::false_type {};
+
+/// @brief Trait to extract the owning AffineTransform type from a concrete
+///        AffineTransform or AffineTransformBase.  Defaults to
+///        `AffineTransform<T>` (default layout/accessor) when the
+///        expression does not carry policy information.
+template <typename Derived>
+struct AffineTransformTraits {
+    using value_type = typename std::decay_t<Derived>::value_type;
+    using owning_type = transform::AffineTransform<value_type>;
+};
 
 } // namespace detail
 
@@ -122,26 +137,31 @@ class AffineTransformBase : public zipper::MatrixBase<Expr> {
     /// block, so it is correct even when the transform includes
     /// non-uniform scaling.
     ///
+    /// The returned AffineTransform preserves the layout and accessor
+    /// policies of the derived type when available.
+    ///
     /// @see rotation_inverse — faster path when the linear block is
     ///      known to be orthogonal (pure rotation, no scale/shear).
-    auto affine_inverse() const -> transform::AffineTransform<value_type> {
-        using T = value_type;
+    auto affine_inverse(this auto const& self) {
+        using Derived = std::decay_t<decltype(self)>;
+        using result_type = typename AffineTransformTraits<Derived>::owning_type;
+        using T = typename Derived::value_type;
 
         // Extract the 3x3 linear part and invert it
         zipper::Matrix<T, 3, 3> lin;
         for (zipper::index_type r = 0; r < 3; ++r) {
             for (zipper::index_type c = 0; c < 3; ++c) {
-                lin(r, c) = (*this)(r, c);
+                lin(r, c) = self(r, c);
             }
         }
         zipper::Matrix<T, 3, 3> lin_inv = zipper::utils::inverse(lin);
 
         // Compute -L^-1 * t
-        T tx = (*this)(0, 3);
-        T ty = (*this)(1, 3);
-        T tz = (*this)(2, 3);
+        T tx = self(0, 3);
+        T ty = self(1, 3);
+        T tz = self(2, 3);
 
-        transform::AffineTransform<T> result;
+        result_type result;
         for (zipper::index_type r = 0; r < 3; ++r) {
             for (zipper::index_type c = 0; c < 3; ++c) {
                 result(r, c) = lin_inv(r, c);
@@ -168,18 +188,23 @@ class AffineTransformBase : public zipper::MatrixBase<Expr> {
     /// inverse — just a transpose and a matrix-vector multiply), but
     /// produces incorrect results if the linear block contains
     /// non-uniform scale or shear.
-    auto rotation_inverse() const -> transform::AffineTransform<value_type> {
-        using T = value_type;
+    ///
+    /// The returned AffineTransform preserves the layout and accessor
+    /// policies of the derived type when available.
+    auto rotation_inverse(this auto const& self) {
+        using Derived = std::decay_t<decltype(self)>;
+        using result_type = typename AffineTransformTraits<Derived>::owning_type;
+        using T = typename Derived::value_type;
 
-        T tx = (*this)(0, 3);
-        T ty = (*this)(1, 3);
-        T tz = (*this)(2, 3);
+        T tx = self(0, 3);
+        T ty = self(1, 3);
+        T tz = self(2, 3);
 
-        transform::AffineTransform<T> result;
+        result_type result;
         // R^T: swap rows and columns of the upper-left 3x3
         for (zipper::index_type r = 0; r < 3; ++r) {
             for (zipper::index_type c = 0; c < 3; ++c) {
-                result(r, c) = (*this)(c, r);
+                result(r, c) = self(c, r);
             }
             // -R^T * t
             result(r, 3) = -(result(r, 0) * tx +
@@ -205,12 +230,15 @@ struct IsAffineTransform<AffineTransformBase<T>> : std::true_type {};
 ///
 /// Exploits affine structure: for [R1 t1; 0 1] * [R2 t2; 0 1],
 /// the result is [R1*R2  R1*t2+t1; 0 1].
+///
+/// The returned AffineTransform preserves the layout/accessor of the LHS.
 template <concepts::AffineTransform A, concepts::AffineTransform B>
-auto operator*(const A& lhs, const B& rhs)
-    -> AffineTransform<typename A::value_type> {
+auto operator*(const A& lhs, const B& rhs) {
+    using traits = detail::AffineTransformTraits<A>;
+    using result_type = typename traits::owning_type;
     using T = typename A::value_type;
 
-    AffineTransform<T> result;
+    result_type result;
 
     // R = R1 * R2  (3x3 block)
     for (zipper::index_type r = 0; r < 3; ++r) {
