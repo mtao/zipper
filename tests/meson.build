@@ -13,6 +13,7 @@ subdir('integration')
 subdir('storage')
 subdir('utils')
 subdir('detail')
+subdir('transform')
 
 test_struct = executable('test_struct', 'struct.cpp', dependencies: [zipper_test_dep])
 test('struct', test_struct)

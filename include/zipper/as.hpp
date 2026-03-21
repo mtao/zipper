@@ -18,6 +18,9 @@ template <concepts::Expression T>
 class MatrixBase;
 template <concepts::Expression T> class FormBase;
 template <concepts::Expression T> class TensorBase;
+template <concepts::Expression T>
+  requires(concepts::QualifiedRankedExpression<T, 1>)
+class QuaternionBase;
 
 // ---- Squeeze helpers --------------------------------------------------------
 //
@@ -203,6 +206,63 @@ auto as_matrix(const ZipperDerived &v) {
       using SliceT = expression::unary::Slice<
           const Expr &, detail::squeeze_specifier_t<extents_type, Ds>...>;
       return MatrixBase<SliceT>(
+          std::in_place, v.expression(),
+          detail::squeeze_specifier_t<extents_type, Ds>{}...);
+    }(std::make_integer_sequence<rank_type, extents_type::rank()>{});
+  }
+}
+
+/// @brief Convert a Zipper wrapper to QuaternionBase (rank 1).
+///
+/// If the source expression has rank 1, wraps it directly.  If the rank is
+/// higher but every extra dimension has static extent 1, implicitly squeezes
+/// them by slicing at index 0, producing a rank-1 view.
+///
+/// Writability is preserved: if the source expression is writable and the
+/// Zipper reference is non-const, the resulting QuaternionBase is also writable.
+template <concepts::Zipper ZipperDerived>
+  requires(
+      ZipperDerived::expression_traits::extents_type::rank() == 1 ||
+      detail::squeeze_rank<
+          typename ZipperDerived::expression_traits::extents_type>() == 1)
+auto as_quaternion(ZipperDerived &v) {
+  using Expr = typename ZipperDerived::expression_type;
+  constexpr static bool make_const =
+      !ZipperDerived::expression_traits::is_writable ||
+      std::is_const_v<ZipperDerived>;
+  using ExprC = std::conditional_t<make_const, const Expr, Expr>;
+  using extents_type = typename ZipperDerived::expression_traits::extents_type;
+
+  if constexpr (extents_type::rank() == 1) {
+    return QuaternionBase<ExprC &>(std::in_place, v.expression());
+  } else {
+    return [&]<rank_type... Ds>(std::integer_sequence<rank_type, Ds...>) {
+      using SliceT = expression::unary::Slice<
+          ExprC &, detail::squeeze_specifier_t<extents_type, Ds>...>;
+      return QuaternionBase<SliceT>(
+          std::in_place, v.expression(),
+          detail::squeeze_specifier_t<extents_type, Ds>{}...);
+    }(std::make_integer_sequence<rank_type, extents_type::rank()>{});
+  }
+}
+
+/// @brief Const overload of as_quaternion.
+template <concepts::Zipper ZipperDerived>
+  requires(
+      ZipperDerived::expression_traits::extents_type::rank() == 1 ||
+      detail::squeeze_rank<
+          typename ZipperDerived::expression_traits::extents_type>() == 1)
+auto as_quaternion(const ZipperDerived &v) {
+  using Expr = typename ZipperDerived::expression_type;
+  using extents_type = typename ZipperDerived::expression_traits::extents_type;
+
+  if constexpr (extents_type::rank() == 1) {
+    return QuaternionBase<const Expr &>(std::in_place, v.expression());
+  } else {
+    return [&]<rank_type... Ds>(std::integer_sequence<rank_type, Ds...>) {
+      using SliceT = expression::unary::Slice<
+          const Expr &, detail::squeeze_specifier_t<extents_type, Ds>...>;
+      return QuaternionBase<SliceT>(
           std::in_place, v.expression(),
           detail::squeeze_specifier_t<extents_type, Ds>{}...);
     }(std::make_integer_sequence<rank_type, extents_type::rank()>{});

@@ -11,6 +11,7 @@
 #include "DataArray.hpp"
 #include "Form.hpp"
 #include "Matrix.hpp"
+#include "Quaternion.hpp"
 #include "Tensor.hpp"
 #include "Vector.hpp"
 
