@@ -117,8 +117,13 @@ class AffineTransformBase : public zipper::MatrixBase<Expr> {
 
     /// @brief Compute the affine inverse efficiently.
     ///
-    /// For an affine matrix [R t; 0 1], the inverse is [R^-1 -R^-1*t; 0 1].
-    /// Uses the 3x3 inverse instead of a full 4x4 inverse.
+    /// For an affine matrix `[L t; 0 1]`, the inverse is
+    /// `[L^-1  -L^-1*t; 0 1]`.  Uses a full 3x3 inverse of the linear
+    /// block, so it is correct even when the transform includes
+    /// non-uniform scaling.
+    ///
+    /// @see rotation_inverse — faster path when the linear block is
+    ///      known to be orthogonal (pure rotation, no scale/shear).
     auto affine_inverse() const -> transform::AffineTransform<value_type> {
         using T = value_type;
 
@@ -131,7 +136,7 @@ class AffineTransformBase : public zipper::MatrixBase<Expr> {
         }
         zipper::Matrix<T, 3, 3> lin_inv = zipper::utils::inverse(lin);
 
-        // Compute -R^-1 * t
+        // Compute -L^-1 * t
         T tx = (*this)(0, 3);
         T ty = (*this)(1, 3);
         T tz = (*this)(2, 3);
@@ -144,6 +149,42 @@ class AffineTransformBase : public zipper::MatrixBase<Expr> {
             result(r, 3) = -(lin_inv(r, 0) * tx +
                              lin_inv(r, 1) * ty +
                              lin_inv(r, 2) * tz);
+        }
+        result(3, 0) = T(0);
+        result(3, 1) = T(0);
+        result(3, 2) = T(0);
+        result(3, 3) = T(1);
+
+        return result;
+    }
+
+    /// @brief Compute the inverse assuming the linear block is orthogonal.
+    ///
+    /// For a rigid-body transform `[R t; 0 1]` where `R` is an orthogonal
+    /// rotation matrix, `R^-1 = R^T`.  The inverse is then
+    /// `[R^T  -R^T*t; 0 1]`.
+    ///
+    /// This is significantly cheaper than `affine_inverse()` (no matrix
+    /// inverse — just a transpose and a matrix-vector multiply), but
+    /// produces incorrect results if the linear block contains
+    /// non-uniform scale or shear.
+    auto rotation_inverse() const -> transform::AffineTransform<value_type> {
+        using T = value_type;
+
+        T tx = (*this)(0, 3);
+        T ty = (*this)(1, 3);
+        T tz = (*this)(2, 3);
+
+        transform::AffineTransform<T> result;
+        // R^T: swap rows and columns of the upper-left 3x3
+        for (zipper::index_type r = 0; r < 3; ++r) {
+            for (zipper::index_type c = 0; c < 3; ++c) {
+                result(r, c) = (*this)(c, r);
+            }
+            // -R^T * t
+            result(r, 3) = -(result(r, 0) * tx +
+                              result(r, 1) * ty +
+                              result(r, 2) * tz);
         }
         result(3, 0) = T(0);
         result(3, 1) = T(0);

@@ -121,6 +121,56 @@ TEST_CASE("AffineTransform affine_inverse", "[transform][affine]") {
     }
 }
 
+TEST_CASE("AffineTransform rotation_inverse", "[transform][affine]") {
+    // Build a 90-degree rotation about Z + translation
+    AffineTransform<float> xform;
+    xform(0, 0) = 0.0f;  xform(0, 1) = -1.0f;  // R = [0 -1; 1 0; 0 0 1]
+    xform(1, 0) = 1.0f;  xform(1, 1) = 0.0f;
+    xform(0, 3) = 3.0f;
+    xform(1, 3) = 4.0f;
+    xform(2, 3) = 5.0f;
+
+    auto inv = xform.rotation_inverse();
+
+    // R^T * R should be I, and translation should be -R^T * t
+    auto identity = xform * inv;
+    for (index_type r = 0; r < 4; ++r) {
+        for (index_type c = 0; c < 4; ++c) {
+            float expected = (r == c) ? 1.0f : 0.0f;
+            CHECK(identity(r, c) == Catch::Approx(expected).margin(1e-5f));
+        }
+    }
+
+    // Also verify inv * xform = I
+    auto identity2 = inv * xform;
+    for (index_type r = 0; r < 4; ++r) {
+        for (index_type c = 0; c < 4; ++c) {
+            float expected = (r == c) ? 1.0f : 0.0f;
+            CHECK(identity2(r, c) == Catch::Approx(expected).margin(1e-5f));
+        }
+    }
+}
+
+TEST_CASE("AffineTransform rotation_inverse matches affine_inverse for rigid body", "[transform][affine]") {
+    // For a pure rotation + translation, both inverses should agree
+    AffineTransform<float> xform;
+    // 90-degree rotation about Y
+    xform(0, 0) = 0.0f;   xform(0, 2) = 1.0f;
+    xform(2, 0) = -1.0f;  xform(2, 2) = 0.0f;
+    xform(0, 3) = 7.0f;
+    xform(1, 3) = -3.0f;
+    xform(2, 3) = 11.0f;
+
+    auto inv_general = xform.affine_inverse();
+    auto inv_fast = xform.rotation_inverse();
+
+    for (index_type r = 0; r < 4; ++r) {
+        for (index_type c = 0; c < 4; ++c) {
+            CHECK(inv_fast(r, c) == Catch::Approx(inv_general(r, c)).margin(1e-5f));
+        }
+    }
+}
+
 TEST_CASE("AffineTransform to_matrix", "[transform][affine]") {
     AffineTransform<float> xform;
     xform(0, 3) = 1.0f;
