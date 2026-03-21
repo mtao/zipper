@@ -225,6 +225,29 @@ SingleIndexSet(VT) -> SingleIndexSet<
 using SingleIndexRange = SingleIndexSet<>;
 
 // ─────────────────────────────────────────────────────────────────────────────
+/// @brief An index set that is always empty — contains no indices.
+///
+/// Used by expressions that are structurally zero everywhere (e.g.
+/// StaticConstant<T, 0, ...>).  Satisfies IndexSet with zero storage.
+// ─────────────────────────────────────────────────────────────────────────────
+struct EmptyIndexRange {
+    constexpr auto contains([[maybe_unused]] index_type idx) const -> bool {
+        return false;
+    }
+
+    constexpr auto empty() const -> bool { return true; }
+    constexpr auto size() const -> index_type { return 0; }
+
+    /// begin() == end() (empty range).
+    auto begin() const {
+        return std::ranges::iota_view(index_type{0}, index_type{0}).begin();
+    }
+    auto end() const {
+        return std::ranges::iota_view(index_type{0}, index_type{0}).end();
+    }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Sparse index set types
 //
 // Three ownership levels for sorted sparse index sets, mirroring the
@@ -361,6 +384,15 @@ using FullRange = FullIndexSet<>;
 // Detection traits for templated index set types
 // ═════════════════════════════════════════════════════════════════════════════
 
+/// @brief Trait to detect EmptyIndexRange.
+template <typename T>
+struct is_empty_index_range : std::false_type {};
+template <>
+struct is_empty_index_range<EmptyIndexRange> : std::true_type {};
+template <typename T>
+concept IsEmptyIndexRange =
+    is_empty_index_range<std::remove_cvref_t<T>>::value;
+
 /// @brief Trait to detect any ContiguousIndexSet specialization (stride = static_index_t<1>).
 template <typename T>
 struct is_contiguous_index_set : std::false_type {};
@@ -451,6 +483,7 @@ template <typename R>
 concept NonzeroRange = IndexSet<R>;
 
 // Static assertions to verify all range types satisfy the concept.
+static_assert(IndexSet<EmptyIndexRange>);
 static_assert(IndexSet<ContiguousIndexRange>);
 static_assert(IndexSet<SingleIndexRange>);
 static_assert(IndexSet<SparseIndexRange>);
@@ -501,6 +534,11 @@ concept IsDisjointRange = is_disjoint_range<std::remove_cvref_t<T>>::value;
 constexpr auto to_contiguous_range(const ContiguousIndexRange &r)
     -> ContiguousIndexRange {
     return r;
+}
+
+constexpr auto to_contiguous_range([[maybe_unused]] const EmptyIndexRange &)
+    -> ContiguousIndexRange {
+    return {index_type{0}, index_type{0}};
 }
 
 constexpr auto to_contiguous_range(const SingleIndexRange &r)
@@ -844,6 +882,31 @@ constexpr auto range_union(const ContiguousIndexRange &a,
     return make_disjoint_from_array(segs);
 }
 
+// ── EmptyIndexRange is the identity element for union ────────────────────────
+
+/// @brief Empty ∪ Empty → Empty.
+constexpr auto range_union([[maybe_unused]] const EmptyIndexRange &,
+                           [[maybe_unused]] const EmptyIndexRange &)
+    -> EmptyIndexRange {
+    return {};
+}
+
+/// @brief Empty ∪ R → R.
+template <IndexSet R>
+    requires(!IsEmptyIndexRange<R>)
+constexpr auto range_union([[maybe_unused]] const EmptyIndexRange &,
+                           const R &r) {
+    return r;
+}
+
+/// @brief R ∪ Empty → R.
+template <IndexSet R>
+    requires(!IsEmptyIndexRange<R>)
+constexpr auto range_union(const R &r,
+                           [[maybe_unused]] const EmptyIndexRange &) {
+    return r;
+}
+
 /// @brief Union of a DisjointRange with a ContiguousIndexRange.
 template <IndexSet... As>
 constexpr auto range_union(const DisjointRange<As...> &dr,
@@ -983,6 +1046,7 @@ constexpr auto to_index_set(
 // range_intersection() — compute set intersection of two IndexSet values
 //
 // Overloads are ordered by specificity to avoid ambiguity:
+//   0. EmptyIndexRange ∩ R  → EmptyIndexRange  (absorbing element)
 //   1. FullIndexSet ∩ R  → R  (identity element)
 //   2. SingleIndexSet ∩ R → 0-or-1-element ContiguousIndexRange
 //   3. ContiguousIndexSet ∩ ContiguousIndexSet → ContiguousIndexRange
@@ -990,6 +1054,33 @@ constexpr auto to_index_set(
 //   5. DisjointRange ∩ R → (recursive per-segment intersection)
 //   6. Generic fallback → DynamicSparseIndexSet (iterate + filter)
 // ═════════════════════════════════════════════════════════════════════════════
+
+// ── 0. EmptyIndexRange is the absorbing element for intersection ─────────────
+
+/// @brief Empty ∩ Empty → Empty.
+constexpr auto range_intersection([[maybe_unused]] const EmptyIndexRange &,
+                                  [[maybe_unused]] const EmptyIndexRange &)
+    -> EmptyIndexRange {
+    return {};
+}
+
+/// @brief Empty ∩ R → Empty.
+template <IndexSet R>
+    requires(!IsEmptyIndexRange<R>)
+constexpr auto range_intersection([[maybe_unused]] const EmptyIndexRange &,
+                                  [[maybe_unused]] const R &)
+    -> EmptyIndexRange {
+    return {};
+}
+
+/// @brief R ∩ Empty → Empty.
+template <IndexSet R>
+    requires(!IsEmptyIndexRange<R>)
+constexpr auto range_intersection([[maybe_unused]] const R &,
+                                  [[maybe_unused]] const EmptyIndexRange &)
+    -> EmptyIndexRange {
+    return {};
+}
 
 // ── 1. FullIndexSet is the identity for intersection ─────────────────────────
 
