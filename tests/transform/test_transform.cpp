@@ -234,25 +234,25 @@ TEST_CASE("AffineTransform from Isometry", "[transform][conversion]") {
 // Model factory functions return correct modes
 // ============================================================================
 
-TEST_CASE("translate returns Isometry", "[transform][model][mode]") {
-    auto T = translate(Vector<float, 3>({1.0f, 2.0f, 3.0f}));
+TEST_CASE("translation returns Isometry", "[transform][model][mode]") {
+    auto T = translation(Vector<float, 3>({1.0f, 2.0f, 3.0f}));
     static_assert(std::decay_t<decltype(T)>::mode == TransformMode::Isometry);
 }
 
-TEST_CASE("rotate returns Isometry", "[transform][model][mode]") {
-    auto R = rotate(radians(45.0f), Vector<float, 3>({0.0f, 1.0f, 0.0f}));
+TEST_CASE("rotation returns Isometry", "[transform][model][mode]") {
+    auto R = rotation(radians(45.0f), Vector<float, 3>({0.0f, 1.0f, 0.0f}));
     static_assert(std::decay_t<decltype(R)>::mode == TransformMode::Isometry);
 }
 
-TEST_CASE("scale returns Affine", "[transform][model][mode]") {
-    auto S = scale(Vector<float, 3>({2.0f, 2.0f, 2.0f}));
+TEST_CASE("scaling returns Affine", "[transform][model][mode]") {
+    auto S = scaling(Vector<float, 3>({2.0f, 2.0f, 2.0f}));
     static_assert(std::decay_t<decltype(S)>::mode == TransformMode::Affine);
 }
 
-TEST_CASE("translate * rotate * scale -> Affine", "[transform][model][mode]") {
-    auto T = translate(Vector<float, 3>({1.0f, 0.0f, 0.0f}));
-    auto R = rotate(radians(90.0f), Vector<float, 3>({0.0f, 0.0f, 1.0f}));
-    auto S = scale(Vector<float, 3>({2.0f, 2.0f, 2.0f}));
+TEST_CASE("translation * rotation * scaling -> Affine", "[transform][model][mode]") {
+    auto T = translation(Vector<float, 3>({1.0f, 0.0f, 0.0f}));
+    auto R = rotation(radians(90.0f), Vector<float, 3>({0.0f, 0.0f, 1.0f}));
+    auto S = scaling(Vector<float, 3>({2.0f, 2.0f, 2.0f}));
 
     auto model = T * R * S;
     static_assert(std::decay_t<decltype(model)>::mode == TransformMode::Affine);

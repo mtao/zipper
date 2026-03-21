@@ -1,5 +1,5 @@
 /// @file model.hpp
-/// @brief Model transformation factories: translate, rotate, scale.
+/// @brief Model transformation factories: translation, rotation, scaling.
 /// @ingroup transform
 ///
 /// These functions produce standalone Transform objects representing
@@ -8,17 +8,17 @@
 /// @code
 ///   using namespace zipper::transform;
 ///   Vector<float, 3> v({1, 2, 3});
-///   auto T = translate(v);                             // Isometry<float, 3>
-///   auto R = rotate(radians(45.0f), Vector<float,3>({0,1,0})); // Isometry<float, 3>
-///   auto S = scale(Vector<float, 3>({2, 2, 2}));       // AffineTransform<float, 3>
+///   auto T = translation(v);                             // Isometry<float, 3>
+///   auto R = rotation(radians(45.0f), Vector<float,3>({0,1,0})); // Isometry<float, 3>
+///   auto S = scaling(Vector<float, 3>({2, 2, 2}));       // AffineTransform<float, 3>
 ///   auto model = T * R * S;                            // AffineTransform (mode promotion)
 ///
 ///   // 2D:
-///   auto T2 = translate(Vector<float, 2>({1, 2}));     // Isometry<float, 2>
-///   auto S2 = scale(Vector<float, 2>({2, 3}));         // AffineTransform<float, 2>
+///   auto T2 = translation(Vector<float, 2>({1, 2}));     // Isometry<float, 2>
+///   auto S2 = scaling(Vector<float, 2>({2, 3}));         // AffineTransform<float, 2>
 /// @endcode
 ///
-/// `translate` and `scale` are dimension-agnostic.  `rotate` (axis-angle)
+/// `translation` and `scaling` are dimension-agnostic.  `rotation` (axis-angle)
 /// is inherently 3D.
 
 #if !defined(ZIPPER_TRANSFORM_MODEL_HPP)
@@ -40,7 +40,7 @@ namespace zipper::transform {
 /// @param v  Translation vector (rank-1, extent D).
 /// @return   Isometry<T, D> with translation set to v.
 template <zipper::concepts::Vector V>
-auto translate(const V& v) {
+auto translation(const V& v) {
     using T = typename std::decay_t<V>::value_type;
     constexpr index_type D = std::decay_t<V>::extents_type::static_extent(0);
 
@@ -60,7 +60,7 @@ auto translate(const V& v) {
 /// @return      Isometry<T, 3> representing the rotation.
 template <std::floating_point T, zipper::concepts::Vector V>
     requires(std::decay_t<V>::extents_type::static_extent(0) == 3)
-auto rotate(T angle, const V& axis) {
+auto rotation(T angle, const V& axis) {
     T const c = std::cos(angle);
     T const s = std::sin(angle);
     Vector<T, 3> a = Vector<T, 3>(axis).normalized();
@@ -93,7 +93,7 @@ auto rotate(T angle, const V& axis) {
 /// @param v  Scale factors (rank-1, extent D).
 /// @return   AffineTransform<T, D> with diagonal set to v.
 template <zipper::concepts::Vector V>
-auto scale(const V& v) {
+auto scaling(const V& v) {
     using T = typename std::decay_t<V>::value_type;
     constexpr index_type D = std::decay_t<V>::extents_type::static_extent(0);
 

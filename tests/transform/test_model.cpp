@@ -13,7 +13,7 @@ using namespace zipper::transform;
 
 TEST_CASE("translate creates translation transform", "[transform][model]") {
     Vector<float, 3> v({1.0f, 2.0f, 3.0f});
-    auto T = translate(v);
+    auto T = translation(v);
 
     // Translation column should be the translation vector
     CHECK(T(0, 3) == Catch::Approx(1.0f));
@@ -29,7 +29,7 @@ TEST_CASE("translate creates translation transform", "[transform][model]") {
 
 TEST_CASE("translate applied to point via composition", "[transform][model]") {
     Vector<float, 3> v({5.0f, 10.0f, 15.0f});
-    auto T = translate(v);
+    auto T = translation(v);
 
     // Apply to a point (D-dimensional affine action)
     Vector<float, 3> point({1.0f, 2.0f, 3.0f});
@@ -42,7 +42,7 @@ TEST_CASE("translate applied to point via composition", "[transform][model]") {
 
 TEST_CASE("rotate 90 degrees around Z", "[transform][model]") {
     Vector<float, 3> zAxis({0.0f, 0.0f, 1.0f});
-    auto R = rotate(radians(90.0f), zAxis);
+    auto R = rotation(radians(90.0f), zAxis);
 
     // Rotating (1, 0, 0) by 90 around Z should give (0, 1, 0)
     Vector<float, 3> point({1.0f, 0.0f, 0.0f});
@@ -55,7 +55,7 @@ TEST_CASE("rotate 90 degrees around Z", "[transform][model]") {
 
 TEST_CASE("rotate 360 degrees is identity", "[transform][model]") {
     Vector<float, 3> axis({0.0f, 1.0f, 0.0f});
-    auto R = rotate(radians(360.0f), axis);
+    auto R = rotation(radians(360.0f), axis);
 
     for (index_type r = 0; r < 4; ++r) {
         for (index_type c = 0; c < 4; ++c) {
@@ -67,7 +67,7 @@ TEST_CASE("rotate 360 degrees is identity", "[transform][model]") {
 
 TEST_CASE("scale uniform", "[transform][model]") {
     Vector<float, 3> s({2.0f, 2.0f, 2.0f});
-    auto S = scale(s);
+    auto S = scaling(s);
 
     Vector<float, 3> point({1.0f, 1.0f, 1.0f});
     Vector<float, 3> result = S * point;
@@ -79,7 +79,7 @@ TEST_CASE("scale uniform", "[transform][model]") {
 
 TEST_CASE("scale non-uniform", "[transform][model]") {
     Vector<float, 3> s({1.0f, 2.0f, 3.0f});
-    auto S = scale(s);
+    auto S = scaling(s);
 
     CHECK(S(0, 0) == Catch::Approx(1.0f));
     CHECK(S(1, 1) == Catch::Approx(2.0f));
@@ -91,8 +91,8 @@ TEST_CASE("translate then rotate via composition", "[transform][model]") {
     Vector<float, 3> v({1.0f, 0.0f, 0.0f});
     Vector<float, 3> zAxis({0.0f, 0.0f, 1.0f});
 
-    auto T = translate(v);
-    auto R = rotate(radians(90.0f), zAxis);
+    auto T = translation(v);
+    auto R = rotation(radians(90.0f), zAxis);
 
     // R * T: first translate, then rotate
     auto RT = R * T;
@@ -108,7 +108,7 @@ TEST_CASE("translate then rotate via composition", "[transform][model]") {
 
 TEST_CASE("translate 2D", "[transform][model][2d]") {
     Vector<float, 2> v({3.0f, 4.0f});
-    auto T = translate(v);
+    auto T = translation(v);
 
     Vector<float, 2> point({1.0f, 2.0f});
     Vector<float, 2> result = T * point;
@@ -119,7 +119,7 @@ TEST_CASE("translate 2D", "[transform][model][2d]") {
 
 TEST_CASE("scale 2D", "[transform][model][2d]") {
     Vector<float, 2> s({2.0f, 3.0f});
-    auto S = scale(s);
+    auto S = scaling(s);
 
     Vector<float, 2> point({1.0f, 1.0f});
     Vector<float, 2> result = S * point;
