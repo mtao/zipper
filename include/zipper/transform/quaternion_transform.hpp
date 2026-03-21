@@ -32,7 +32,7 @@
 #include <zipper/Matrix.hpp>
 #include <zipper/Quaternion.hpp>
 #include <zipper/Vector.hpp>
-#include "AffineTransform.hpp"
+#include "Transform.hpp"
 
 namespace zipper::transform {
 
@@ -114,18 +114,18 @@ auto to_rotation_matrix(const Q& q) -> Matrix<typename Q::value_type, 3, 3> {
     return result;
 }
 
-/// @brief Convert a quaternion to an affine transform (4x4 rotation matrix).
+/// @brief Convert a quaternion to an isometry transform (4x4 rotation matrix).
 ///
 /// The upper-left 3x3 block contains the rotation; the rest is identity.
 ///
 /// @param q Unit quaternion.
-/// @return  AffineTransform representing the rotation.
+/// @return  Isometry representing the rotation.
 template <zipper::concepts::Quaternion Q>
-auto to_affine(const Q& q) -> AffineTransform<typename Q::value_type> {
+auto to_affine(const Q& q) -> Isometry<typename Q::value_type, 3> {
     using T = typename Q::value_type;
     auto m3 = to_rotation_matrix(q);
 
-    AffineTransform<T> result;
+    Isometry<T, 3> result;
     for (index_type r = 0; r < 3; ++r) {
         for (index_type c = 0; c < 3; ++c) {
             result(r, c) = m3(r, c);
@@ -184,9 +184,9 @@ auto to_quaternion(const M& m) -> Quaternion<typename M::value_type> {
 /// Extracts the upper-left 3x3 rotation block and delegates to the 3x3
 /// overload.
 ///
-/// @param m AffineTransform (only the upper-left 3x3 is used).
+/// @param m Transform (only the upper-left 3x3 is used).
 /// @return  Unit quaternion representing the rotation.
-template <concepts::AffineTransform A>
+template <concepts::Transform A>
 auto to_quaternion(const A& m) -> Quaternion<typename A::value_type> {
     using T = typename A::value_type;
     Matrix<T, 3, 3> m3;

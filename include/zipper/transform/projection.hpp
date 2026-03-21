@@ -18,6 +18,7 @@
 #include <concepts>
 
 #include <zipper/Matrix.hpp>
+#include "Transform.hpp"
 
 namespace zipper::transform {
 
@@ -26,8 +27,8 @@ namespace zipper::transform {
 /// Maps the rectangle [left, right] x [bottom, top] to [-1, 1] x [-1, 1].
 /// The Z coordinate is left unchanged (identity in Z).
 template <std::floating_point T>
-auto ortho(T left, T right, T bottom, T top) -> Matrix<T, 4, 4> {
-    Matrix<T, 4, 4> result;
+auto ortho(T left, T right, T bottom, T top) -> ProjectiveTransform<T, 3> {
+    ProjectiveTransform<T, 3> result;
     result(0, 0) = T(2) / (right - left);
     result(1, 1) = T(2) / (top - bottom);
     result(2, 2) = -T(1);
@@ -43,8 +44,8 @@ auto ortho(T left, T right, T bottom, T top) -> Matrix<T, 4, 4> {
 /// to the clip cube [-1,1]^3.
 template <std::floating_point T>
 auto ortho(T left, T right, T bottom, T top, T zNear, T zFar)
-    -> Matrix<T, 4, 4> {
-    Matrix<T, 4, 4> result;
+    -> ProjectiveTransform<T, 3> {
+    ProjectiveTransform<T, 3> result;
     result(0, 0) = T(2) / (right - left);
     result(1, 1) = T(2) / (top - bottom);
     result(2, 2) = -T(2) / (zFar - zNear);
@@ -61,8 +62,8 @@ auto ortho(T left, T right, T bottom, T top, T zNear, T zFar)
 /// `perspective()` function is implemented in terms of this.
 template <std::floating_point T>
 auto frustum(T left, T right, T bottom, T top, T zNear, T zFar)
-    -> Matrix<T, 4, 4> {
-    Matrix<T, 4, 4> result;
+    -> ProjectiveTransform<T, 3> {
+    ProjectiveTransform<T, 3> result;
     result(0, 0) = (T(2) * zNear) / (right - left);
     result(1, 1) = (T(2) * zNear) / (top - bottom);
     result(0, 2) = (right + left) / (right - left);
@@ -70,6 +71,7 @@ auto frustum(T left, T right, T bottom, T top, T zNear, T zFar)
     result(2, 2) = -(zFar + zNear) / (zFar - zNear);
     result(2, 3) = -(T(2) * zFar * zNear) / (zFar - zNear);
     result(3, 2) = -T(1);
+    result(3, 3) = T(0);  // not identity — projective matrix
     return result;
 }
 
@@ -80,15 +82,16 @@ auto frustum(T left, T right, T bottom, T top, T zNear, T zFar)
 /// @param zNear  Distance to the near clipping plane (must be positive).
 /// @param zFar   Distance to the far clipping plane (must be positive).
 template <std::floating_point T>
-auto perspective(T fovy, T aspect, T zNear, T zFar) -> Matrix<T, 4, 4> {
+auto perspective(T fovy, T aspect, T zNear, T zFar) -> ProjectiveTransform<T, 3> {
     T const tanHalfFovy = std::tan(fovy / T(2));
 
-    Matrix<T, 4, 4> result;
+    ProjectiveTransform<T, 3> result;
     result(0, 0) = T(1) / (aspect * tanHalfFovy);
     result(1, 1) = T(1) / tanHalfFovy;
     result(2, 2) = -(zFar + zNear) / (zFar - zNear);
     result(2, 3) = -(T(2) * zFar * zNear) / (zFar - zNear);
     result(3, 2) = -T(1);
+    result(3, 3) = T(0);  // not identity — projective matrix
     return result;
 }
 
@@ -101,15 +104,16 @@ auto perspective(T fovy, T aspect, T zNear, T zFar) -> Matrix<T, 4, 4> {
 /// @param aspect Aspect ratio (width / height).
 /// @param zNear  Distance to the near clipping plane (must be positive).
 template <std::floating_point T>
-auto infinite_perspective(T fovy, T aspect, T zNear) -> Matrix<T, 4, 4> {
+auto infinite_perspective(T fovy, T aspect, T zNear) -> ProjectiveTransform<T, 3> {
     T const tanHalfFovy = std::tan(fovy / T(2));
 
-    Matrix<T, 4, 4> result;
+    ProjectiveTransform<T, 3> result;
     result(0, 0) = T(1) / (aspect * tanHalfFovy);
     result(1, 1) = T(1) / tanHalfFovy;
     result(2, 2) = -T(1);
     result(2, 3) = -T(2) * zNear;
     result(3, 2) = -T(1);
+    result(3, 3) = T(0);  // not identity — projective matrix
     return result;
 }
 

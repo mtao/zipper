@@ -17,6 +17,7 @@
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
 #include <zipper/utils/inverse.hpp>
+#include "Transform.hpp"
 
 namespace zipper::transform {
 
@@ -26,19 +27,17 @@ namespace zipper::transform {
 /// performs perspective division, then maps to the viewport.
 ///
 /// @param obj      Object-space 3D coordinate (rank-1, extent 3).
-/// @param model    Model-view matrix (rank-2, 4x4).
-/// @param proj     Projection matrix (rank-2, 4x4).
+/// @param model    Model-view transform (any TransformMode, D=3).
+/// @param proj     Projection transform (any TransformMode, D=3).
 /// @param viewport Viewport parameters as (x, y, width, height) (rank-1, extent 4).
 /// @return         Window-space coordinate (x, y, depth).
-template <concepts::Vector VObj, concepts::Matrix MMod, concepts::Matrix MProj,
-          concepts::Vector VVp>
+template <zipper::concepts::Vector VObj, concepts::Transform TMod, concepts::Transform TProj,
+          zipper::concepts::Vector VVp>
     requires(VObj::extents_type::static_extent(0) == 3 &&
-             MMod::extents_type::static_extent(0) == 4 &&
-             MMod::extents_type::static_extent(1) == 4 &&
-             MProj::extents_type::static_extent(0) == 4 &&
-             MProj::extents_type::static_extent(1) == 4 &&
+             std::decay_t<TMod>::D == 3 &&
+             std::decay_t<TProj>::D == 3 &&
              VVp::extents_type::static_extent(0) == 4)
-auto project(const VObj& obj, const MMod& model, const MProj& proj,
+auto project(const VObj& obj, const TMod& model, const TProj& proj,
              const VVp& viewport)
     -> Vector<typename VObj::value_type, 3> {
     using T = typename VObj::value_type;
@@ -50,8 +49,9 @@ auto project(const VObj& obj, const MMod& model, const MProj& proj,
     tmp(2) = obj(2);
     tmp(3) = T(1);
 
-    tmp = Vector<T, 4>(Matrix<T, 4, 4>(model) * tmp);
-    tmp = Vector<T, 4>(Matrix<T, 4, 4>(proj) * tmp);
+    // Multiply by model then by proj using homogeneous vector multiply
+    tmp = Vector<T, 4>(model * tmp);
+    tmp = Vector<T, 4>(proj * tmp);
 
     // Perspective division: NDC in [-1, 1]
     tmp = tmp / tmp(3);
@@ -71,25 +71,24 @@ auto project(const VObj& obj, const MMod& model, const MProj& proj,
 /// the object-space coordinate from window coordinates.
 ///
 /// @param win      Window-space coordinate (x, y, depth) (rank-1, extent 3).
-/// @param model    Model-view matrix (rank-2, 4x4).
-/// @param proj     Projection matrix (rank-2, 4x4).
+/// @param model    Model-view transform (any TransformMode, D=3).
+/// @param proj     Projection transform (any TransformMode, D=3).
 /// @param viewport Viewport parameters as (x, y, width, height) (rank-1, extent 4).
 /// @return         Object-space 3D coordinate.
-template <concepts::Vector VWin, concepts::Matrix MMod, concepts::Matrix MProj,
-          concepts::Vector VVp>
+template <zipper::concepts::Vector VWin, concepts::Transform TMod, concepts::Transform TProj,
+          zipper::concepts::Vector VVp>
     requires(VWin::extents_type::static_extent(0) == 3 &&
-             MMod::extents_type::static_extent(0) == 4 &&
-             MMod::extents_type::static_extent(1) == 4 &&
-             MProj::extents_type::static_extent(0) == 4 &&
-             MProj::extents_type::static_extent(1) == 4 &&
+             std::decay_t<TMod>::D == 3 &&
+             std::decay_t<TProj>::D == 3 &&
              VVp::extents_type::static_extent(0) == 4)
-auto unproject(const VWin& win, const MMod& model, const MProj& proj,
+auto unproject(const VWin& win, const TMod& model, const TProj& proj,
                const VVp& viewport)
     -> Vector<typename VWin::value_type, 3> {
     using T = typename VWin::value_type;
 
-    Matrix<T, 4, 4> inv = zipper::utils::inverse(
-        Matrix<T, 4, 4>(Matrix<T, 4, 4>(proj) * Matrix<T, 4, 4>(model)));
+    // Compute inverse of the combined proj * model matrix
+    Matrix<T, 4, 4> combined = (proj * model).to_matrix();
+    Matrix<T, 4, 4> inv = zipper::utils::inverse(combined);
 
     // Map window coordinates to NDC [-1, 1]
     Vector<T, 4> tmp;

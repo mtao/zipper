@@ -24,3 +24,6 @@ test('quaternion_transform', test_quaternion_transform)
 
 test_affine_transform = executable('test_affine_transform', 'test_affine_transform.cpp', dependencies: [zipper_test_dep])
 test('affine_transform', test_affine_transform)
+
+test_transform = executable('test_transform', 'test_transform.cpp', dependencies: [zipper_test_dep])
+test('transform', test_transform)

@@ -18,7 +18,7 @@
 #define ZIPPER_TRANSFORM_VIEW_HPP
 
 #include <zipper/Vector.hpp>
-#include "AffineTransform.hpp"
+#include "Transform.hpp"
 
 namespace zipper::transform {
 
@@ -36,7 +36,7 @@ template <zipper::concepts::Vector VEye, zipper::concepts::Vector VCenter,
              VCenter::extents_type::static_extent(0) == 3 &&
              VUp::extents_type::static_extent(0) == 3)
 auto look_at(const VEye& eye, const VCenter& center,
-             const VUp& up) -> AffineTransform<typename VEye::value_type> {
+             const VUp& up) -> Isometry<typename VEye::value_type, 3> {
     using T = typename VEye::value_type;
 
     // f = normalize(center - eye)   — forward (into the screen)
@@ -46,7 +46,7 @@ auto look_at(const VEye& eye, const VCenter& center,
     // u = s x f                     — true up
     Vector<T, 3> u = s.cross(f);
 
-    AffineTransform<T> result;
+    Isometry<T, 3> result;
     result(0, 0) = s(0);
     result(0, 1) = s(1);
     result(0, 2) = s(2);

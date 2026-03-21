@@ -2,7 +2,6 @@
 
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
-#include <zipper/expression/nullary/Identity.hpp>
 #include <zipper/transform/coordinate.hpp>
 #include <zipper/transform/projection.hpp>
 #include <zipper/transform/common.hpp>
@@ -15,7 +14,7 @@ using namespace zipper::transform;
 TEST_CASE("project/unproject roundtrip", "[transform][coordinate]") {
     float fovy = radians(45.0f);
     auto proj = perspective(fovy, 1.0f, 0.1f, 100.0f);
-    Matrix<float, 4, 4> model = expression::nullary::Identity<float, 4, 4>{};
+    Isometry<float, 3> model;  // identity
     Vector<float, 4> viewport({0.0f, 0.0f, 800.0f, 600.0f});
 
     Vector<float, 3> obj({1.0f, 2.0f, -5.0f});
@@ -29,7 +28,7 @@ TEST_CASE("project/unproject roundtrip", "[transform][coordinate]") {
 
 TEST_CASE("project origin at center", "[transform][coordinate]") {
     auto proj = perspective(radians(90.0f), 1.0f, 1.0f, 100.0f);
-    Matrix<float, 4, 4> model = expression::nullary::Identity<float, 4, 4>{};
+    Isometry<float, 3> model;  // identity
     Vector<float, 4> viewport({0.0f, 0.0f, 100.0f, 100.0f});
 
     // A point on the -Z axis should map to the center of the viewport
