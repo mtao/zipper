@@ -9,7 +9,7 @@ namespace zipper {
 
 // Forward declarations of Base types used by the as_* functions.
 template <concepts::Expression T> class ArrayBase;
-template <concepts::Expression T> class ContainerBase;
+template <concepts::Expression T> class DataArrayBase;
 template <concepts::Expression T>
   requires(concepts::QualifiedRankedExpression<T, 1>)
 class VectorBase;
@@ -79,7 +79,7 @@ using squeeze_specifier_t = std::conditional_t<Extents::static_extent(D) == 1,
   }
 
 ZIPPER_AS_IMPL_(array, Array)
-ZIPPER_AS_IMPL_(container, Container)
+ZIPPER_AS_IMPL_(data_array, DataArray)
 ZIPPER_AS_IMPL_(form, Form)
 ZIPPER_AS_IMPL_(tensor, Tensor)
 

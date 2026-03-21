@@ -1,6 +1,6 @@
 
 #include "catch_include.hpp"
-#include <zipper/Container.hpp>
+#include <zipper/DataArray.hpp>
 #include <zipper/Vector.hpp>
 #include <zipper/types.hpp>
 
@@ -8,8 +8,8 @@ using namespace zipper;
 
 // ===== Basic construction and element access =====
 
-TEST_CASE("container_basic_construction", "[container]") {
-  Container<double, 3> c;
+TEST_CASE("data_array_basic_construction", "[data_array]") {
+  DataArray<double, 3> c;
   c(0) = 1.0;
   c(1) = 2.0;
   c(2) = 3.0;
@@ -20,8 +20,8 @@ TEST_CASE("container_basic_construction", "[container]") {
   REQUIRE(c.extent(0) == 3);
 }
 
-TEST_CASE("container_2d_construction", "[container]") {
-  Container<int, 2, 3> c;
+TEST_CASE("data_array_2d_construction", "[data_array]") {
+  DataArray<int, 2, 3> c;
   for (index_type i = 0; i < 2; ++i) {
     for (index_type j = 0; j < 3; ++j) {
       c(i, j) = static_cast<int>(i * 3 + j);
@@ -36,10 +36,10 @@ TEST_CASE("container_2d_construction", "[container]") {
   CHECK(c(1, 2) == 5);
 }
 
-// ===== Owning Container: data(), begin()/end(), as_span() =====
+// ===== Owning DataArray: data(), begin()/end(), as_span() =====
 
-TEST_CASE("container_data_access", "[container]") {
-  Container<double, 4> c;
+TEST_CASE("data_array_data_access", "[data_array]") {
+  DataArray<double, 4> c;
   c(0) = 10.0;
   c(1) = 20.0;
   c(2) = 30.0;
@@ -55,8 +55,8 @@ TEST_CASE("container_data_access", "[container]") {
   CHECK(ptr[3] == 40.0);
 }
 
-TEST_CASE("container_begin_end", "[container]") {
-  Container<int, 3> c;
+TEST_CASE("data_array_begin_end", "[data_array]") {
+  DataArray<int, 3> c;
   c(0) = 5;
   c(1) = 10;
   c(2) = 15;
@@ -68,8 +68,8 @@ TEST_CASE("container_begin_end", "[container]") {
   CHECK(vals[2] == 15);
 }
 
-TEST_CASE("container_as_span", "[container]") {
-  Container<double, 3> c;
+TEST_CASE("data_array_as_span", "[data_array]") {
+  DataArray<double, 3> c;
   c(0) = 1.0;
   c(1) = 2.0;
   c(2) = 3.0;
@@ -87,13 +87,13 @@ TEST_CASE("container_as_span", "[container]") {
 
 // ===== operator<=> and operator== =====
 
-TEST_CASE("container_comparison_equal", "[container][comparison]") {
-  Container<int, 3> a;
+TEST_CASE("data_array_comparison_equal", "[data_array][comparison]") {
+  DataArray<int, 3> a;
   a(0) = 1;
   a(1) = 2;
   a(2) = 3;
 
-  Container<int, 3> b;
+  DataArray<int, 3> b;
   b(0) = 1;
   b(1) = 2;
   b(2) = 3;
@@ -102,13 +102,13 @@ TEST_CASE("container_comparison_equal", "[container][comparison]") {
   CHECK((a <=> b) == std::weak_ordering::equivalent);
 }
 
-TEST_CASE("container_comparison_less", "[container][comparison]") {
-  Container<int, 3> a;
+TEST_CASE("data_array_comparison_less", "[data_array][comparison]") {
+  DataArray<int, 3> a;
   a(0) = 1;
   a(1) = 2;
   a(2) = 3;
 
-  Container<int, 3> b;
+  DataArray<int, 3> b;
   b(0) = 1;
   b(1) = 2;
   b(2) = 4;
@@ -117,14 +117,14 @@ TEST_CASE("container_comparison_less", "[container][comparison]") {
   CHECK((b <=> a) == std::weak_ordering::greater);
 }
 
-TEST_CASE("container_comparison_different_extents", "[container][comparison]") {
+TEST_CASE("data_array_comparison_different_extents", "[data_array][comparison]") {
   // Dynamic extents: different sizes
-  detail::Container_<int, dextents<1>> a(3);
+  detail::DataArray_<int, dextents<1>> a(3);
   a(0) = 1;
   a(1) = 2;
   a(2) = 3;
 
-  detail::Container_<int, dextents<1>> b(4);
+  detail::DataArray_<int, dextents<1>> b(4);
   b(0) = 1;
   b(1) = 2;
   b(2) = 3;
@@ -135,14 +135,14 @@ TEST_CASE("container_comparison_different_extents", "[container][comparison]") {
   CHECK((b <=> a) == std::weak_ordering::greater);
 }
 
-TEST_CASE("container_comparison_2d", "[container][comparison]") {
-  Container<int, 2, 2> a;
+TEST_CASE("data_array_comparison_2d", "[data_array][comparison]") {
+  DataArray<int, 2, 2> a;
   a(0, 0) = 1;
   a(0, 1) = 2;
   a(1, 0) = 3;
   a(1, 1) = 4;
 
-  Container<int, 2, 2> b;
+  DataArray<int, 2, 2> b;
   b(0, 0) = 1;
   b(0, 1) = 2;
   b(1, 0) = 3;
@@ -156,8 +156,8 @@ TEST_CASE("container_comparison_2d", "[container][comparison]") {
 
 // ===== Slicing =====
 
-TEST_CASE("container_slice_full_extent", "[container][slice]") {
-  Container<double, 4> c;
+TEST_CASE("data_array_slice_full_extent", "[data_array][slice]") {
+  DataArray<double, 4> c;
   c(0) = 10.0;
   c(1) = 20.0;
   c(2) = 30.0;
@@ -171,8 +171,8 @@ TEST_CASE("container_slice_full_extent", "[container][slice]") {
   CHECK(s(3) == 40.0);
 }
 
-TEST_CASE("container_slice_subrange", "[container][slice]") {
-  Container<double, 5> c;
+TEST_CASE("data_array_slice_subrange", "[data_array][slice]") {
+  DataArray<double, 5> c;
   for (index_type i = 0; i < 5; ++i) {
     c(i) = static_cast<double>(i * 10);
   }
@@ -185,8 +185,8 @@ TEST_CASE("container_slice_subrange", "[container][slice]") {
   CHECK(s(2) == 30.0);
 }
 
-TEST_CASE("container_slice_static", "[container][slice]") {
-  Container<double, 5> c;
+TEST_CASE("data_array_slice_static", "[data_array][slice]") {
+  DataArray<double, 5> c;
   for (index_type i = 0; i < 5; ++i) {
     c(i) = static_cast<double>(i);
   }
@@ -200,8 +200,8 @@ TEST_CASE("container_slice_static", "[container][slice]") {
   CHECK(s(2) == 3.0);
 }
 
-TEST_CASE("container_slice_2d", "[container][slice]") {
-  Container<int, 3, 4> c;
+TEST_CASE("data_array_slice_2d", "[data_array][slice]") {
+  DataArray<int, 3, 4> c;
   for (index_type i = 0; i < 3; ++i) {
     for (index_type j = 0; j < 4; ++j) {
       c(i, j) = static_cast<int>(i * 4 + j);
@@ -220,8 +220,8 @@ TEST_CASE("container_slice_2d", "[container][slice]") {
   CHECK(s(2, 1) == 10);
 }
 
-TEST_CASE("container_slice_mutable", "[container][slice]") {
-  Container<double, 4> c;
+TEST_CASE("data_array_slice_mutable", "[data_array][slice]") {
+  DataArray<double, 4> c;
   for (index_type i = 0; i < 4; ++i) {
     c(i) = static_cast<double>(i);
   }
@@ -239,8 +239,8 @@ TEST_CASE("container_slice_mutable", "[container][slice]") {
 
 // ===== Swizzle =====
 
-TEST_CASE("container_swizzle_transpose_2d", "[container][swizzle]") {
-  Container<int, 2, 3> c;
+TEST_CASE("data_array_swizzle_transpose_2d", "[data_array][swizzle]") {
+  DataArray<int, 2, 3> c;
   for (index_type i = 0; i < 2; ++i) {
     for (index_type j = 0; j < 3; ++j) {
       c(i, j) = static_cast<int>(i * 3 + j);
@@ -248,7 +248,7 @@ TEST_CASE("container_swizzle_transpose_2d", "[container][swizzle]") {
   }
 
   // Swizzle<1,0> is a transpose
-  auto t = c.swizzle<ContainerBase, 1, 0>();
+  auto t = c.swizzle<DataArrayBase, 1, 0>();
   REQUIRE(t.extent(0) == 3);
   REQUIRE(t.extent(1) == 2);
   for (index_type i = 0; i < 2; ++i) {
@@ -260,8 +260,8 @@ TEST_CASE("container_swizzle_transpose_2d", "[container][swizzle]") {
 
 // ===== Cast =====
 
-TEST_CASE("container_cast", "[container][cast]") {
-  Container<int, 3> c;
+TEST_CASE("data_array_cast", "[data_array][cast]") {
+  DataArray<int, 3> c;
   c(0) = 1;
   c(1) = 2;
   c(2) = 3;
@@ -276,8 +276,8 @@ TEST_CASE("container_cast", "[container][cast]") {
 
 // ===== eval() =====
 
-TEST_CASE("container_eval", "[container]") {
-  Container<double, 3> c;
+TEST_CASE("data_array_eval", "[data_array]") {
+  DataArray<double, 3> c;
   c(0) = 1.0;
   c(1) = 2.0;
   c(2) = 3.0;
@@ -295,8 +295,8 @@ TEST_CASE("container_eval", "[container]") {
 
 // ===== as_array() bridge =====
 
-TEST_CASE("container_as_array", "[container]") {
-  Container<double, 3> c;
+TEST_CASE("data_array_as_array", "[data_array]") {
+  DataArray<double, 3> c;
   c(0) = 1.0;
   c(1) = 2.0;
   c(2) = 3.0;
@@ -307,12 +307,12 @@ TEST_CASE("container_as_array", "[container]") {
   CHECK(a(2) == 3.0);
 }
 
-// ===== ContainerBase wrapping MDSpan (non-owning) =====
+// ===== DataArrayBase wrapping MDSpan (non-owning) =====
 
-TEST_CASE("containerbase_from_span", "[container][mdspan]") {
+TEST_CASE("data_array_base_from_span", "[data_array][mdspan]") {
   std::array<double, 4> data = {10.0, 20.0, 30.0, 40.0};
   std::span<double, 4> sp(data);
-  ContainerBase cb(sp);
+  DataArrayBase cb(sp);
 
   REQUIRE(cb.extent(0) == 4);
   CHECK(cb(0) == 10.0);
@@ -325,9 +325,9 @@ TEST_CASE("containerbase_from_span", "[container][mdspan]") {
   CHECK(cb(2) == 999.0);
 }
 
-TEST_CASE("containerbase_from_vector", "[container][mdspan]") {
+TEST_CASE("data_array_base_from_vector", "[data_array][mdspan]") {
   std::vector<int> data = {5, 10, 15};
-  ContainerBase cb(data);
+  DataArrayBase cb(data);
 
   REQUIRE(cb.extent(0) == 3);
   CHECK(cb(0) == 5);
@@ -335,9 +335,9 @@ TEST_CASE("containerbase_from_vector", "[container][mdspan]") {
   CHECK(cb(2) == 15);
 }
 
-TEST_CASE("containerbase_from_array", "[container][mdspan]") {
+TEST_CASE("data_array_base_from_array", "[data_array][mdspan]") {
   std::array<int, 3> data = {1, 2, 3};
-  ContainerBase cb(data);
+  DataArrayBase cb(data);
 
   REQUIRE(cb.extent(0) == 3);
   CHECK(cb(0) == 1);
@@ -345,12 +345,12 @@ TEST_CASE("containerbase_from_array", "[container][mdspan]") {
   CHECK(cb(2) == 3);
 }
 
-// ===== ContainerBase slice on non-owning view =====
+// ===== DataArrayBase slice on non-owning view =====
 
-TEST_CASE("containerbase_slice_nonowning", "[container][slice][mdspan]") {
+TEST_CASE("data_array_base_slice_nonowning", "[data_array][slice][mdspan]") {
   std::array<double, 5> data = {0.0, 1.0, 2.0, 3.0, 4.0};
   std::span<double, 5> sp(data);
-  ContainerBase cb(sp);
+  DataArrayBase cb(sp);
 
   auto s = cb.slice(zipper::slice(1, 3));
   REQUIRE(s.extent(0) == 3);
@@ -359,10 +359,51 @@ TEST_CASE("containerbase_slice_nonowning", "[container][slice][mdspan]") {
   CHECK(s(2) == 3.0);
 }
 
-// ===== Dynamic extent Container =====
+// ===== fill() =====
 
-TEST_CASE("container_dynamic", "[container]") {
-  detail::Container_<double, dextents<1>> c(5);
+TEST_CASE("data_array_fill_1d", "[data_array][fill]") {
+  DataArray<double, 4> c;
+  c(0) = 1.0;
+  c(1) = 2.0;
+  c(2) = 3.0;
+  c(3) = 4.0;
+
+  c.fill(42.0);
+
+  CHECK(c(0) == 42.0);
+  CHECK(c(1) == 42.0);
+  CHECK(c(2) == 42.0);
+  CHECK(c(3) == 42.0);
+}
+
+TEST_CASE("data_array_fill_2d", "[data_array][fill]") {
+  DataArray<int, 2, 3> c;
+  c.fill(7);
+
+  for (index_type i = 0; i < 2; ++i) {
+    for (index_type j = 0; j < 3; ++j) {
+      CHECK(c(i, j) == 7);
+    }
+  }
+}
+
+TEST_CASE("data_array_fill_zero", "[data_array][fill]") {
+  DataArray<double, 3> c;
+  c(0) = 1.0;
+  c(1) = 2.0;
+  c(2) = 3.0;
+
+  c.fill(0.0);
+
+  CHECK(c(0) == 0.0);
+  CHECK(c(1) == 0.0);
+  CHECK(c(2) == 0.0);
+}
+
+// ===== Dynamic extent DataArray =====
+
+TEST_CASE("data_array_dynamic", "[data_array]") {
+  detail::DataArray_<double, dextents<1>> c(5);
   for (index_type i = 0; i < 5; ++i) {
     c(i) = static_cast<double>(i * 2);
   }
@@ -377,4 +418,101 @@ TEST_CASE("container_dynamic", "[container]") {
   REQUIRE(s.extent(0) == 2);
   CHECK(s(0) == 4.0);
   CHECK(s(1) == 6.0);
+}
+
+// ===== zero() static factory =====
+
+TEST_CASE("data_array_zero_static_1d", "[data_array][zero]") {
+  auto z = DataArray<double, 4>::zero();
+  REQUIRE(z.extent(0) == 4);
+  CHECK(z(0) == 0.0);
+  CHECK(z(1) == 0.0);
+  CHECK(z(2) == 0.0);
+  CHECK(z(3) == 0.0);
+}
+
+TEST_CASE("data_array_zero_static_2d", "[data_array][zero]") {
+  auto z = DataArray<int, 2, 3>::zero();
+  REQUIRE(z.extent(0) == 2);
+  REQUIRE(z.extent(1) == 3);
+  for (index_type i = 0; i < 2; ++i) {
+    for (index_type j = 0; j < 3; ++j) {
+      CHECK(z(i, j) == 0);
+    }
+  }
+}
+
+TEST_CASE("data_array_zero_dynamic", "[data_array][zero]") {
+  auto z = detail::DataArray_<double, dextents<1>>::zero(5);
+  REQUIRE(z.extent(0) == 5);
+  for (index_type i = 0; i < 5; ++i) {
+    CHECK(z(i) == 0.0);
+  }
+}
+
+// ===== reshape() =====
+
+TEST_CASE("data_array_reshape_1d_to_2d", "[data_array][reshape]") {
+  DataArray<int, 6> c;
+  for (index_type i = 0; i < 6; ++i) {
+    c(i) = static_cast<int>(i);
+  }
+
+  // Reshape 6-element vector into 2x3 matrix
+  auto r = c.reshape(zipper::extents<2, 3>{});
+  REQUIRE(r.extent(0) == 2);
+  REQUIRE(r.extent(1) == 3);
+
+  // Data is copied in linear order
+  int idx = 0;
+  for (index_type i = 0; i < 2; ++i) {
+    for (index_type j = 0; j < 3; ++j) {
+      CHECK(r(i, j) == c.data()[idx]);
+      ++idx;
+    }
+  }
+}
+
+TEST_CASE("data_array_reshape_2d_to_1d", "[data_array][reshape]") {
+  DataArray<double, 2, 3> c;
+  for (index_type i = 0; i < 2; ++i) {
+    for (index_type j = 0; j < 3; ++j) {
+      c(i, j) = static_cast<double>(i * 3 + j);
+    }
+  }
+
+  auto r = c.reshape(zipper::extents<6>{});
+  REQUIRE(r.extent(0) == 6);
+
+  // Linear data should match
+  for (index_type i = 0; i < 6; ++i) {
+    CHECK(r(i) == c.data()[i]);
+  }
+}
+
+TEST_CASE("data_array_reshape_preserves_data", "[data_array][reshape]") {
+  DataArray<int, 4> c;
+  c(0) = 10;
+  c(1) = 20;
+  c(2) = 30;
+  c(3) = 40;
+
+  // Reshape into 2x2
+  auto r = c.reshape(zipper::extents<2, 2>{});
+
+  // Modify original — reshape is a copy, so r should be unaffected
+  c(0) = 999;
+  CHECK(r.data()[0] == 10);
+}
+
+TEST_CASE("data_array_reshape_same_shape", "[data_array][reshape]") {
+  DataArray<double, 3> c;
+  c(0) = 1.0;
+  c(1) = 2.0;
+  c(2) = 3.0;
+
+  auto r = c.reshape(zipper::extents<3>{});
+  CHECK(r(0) == 1.0);
+  CHECK(r(1) == 2.0);
+  CHECK(r(2) == 3.0);
 }

@@ -2,7 +2,7 @@
 #include <zipper/utils/format.hpp>
 
 #include <zipper/Array.hpp>
-#include <zipper/Container.hpp>
+#include <zipper/DataArray.hpp>
 #include <zipper/Form.hpp>
 #include <zipper/Matrix.hpp>
 #include <zipper/Tensor.hpp>
@@ -56,9 +56,9 @@ TEST_CASE("format_array_2d", "[format]") {
     CHECK(std::format("{}", a) == "[[1, 2, 3];[4, 5, 6]]");
 }
 
-// ---- Container (rank 1, has begin/end) ----
-TEST_CASE("format_container", "[format]") {
-    zipper::Container<double, 3> c;
+// ---- DataArray (rank 1, has begin/end) ----
+TEST_CASE("format_data_array", "[format]") {
+    zipper::DataArray<double, 3> c;
     c(0) = 7; c(1) = 8; c(2) = 9;
     CHECK(std::format("{}", c) == "[7, 8, 9]");
 }

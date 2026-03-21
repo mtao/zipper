@@ -93,7 +93,7 @@ auto gauss_seidel(const ADerived &A, const BDerived &b, const XDerived &x0,
         })};
       }
 
-      T dot = dot = A.row(i).dot(x);
+      T dot = A.row(i).dot(x);
       x(i) += (b(i) - dot) / diag;
     }
 

@@ -57,7 +57,7 @@ auto zipper_format_string(ZType const &M) -> std::string {
 } // namespace zipper
 
 // Disable std's range formatting for all Zipper types so that
-// Vector and Container (which have begin/end) don't get picked up
+// Vector and DataArray (which have begin/end) don't get picked up
 // by the range formatter before our formatter specialization.
 template <typename T>
   requires zipper::concepts::Zipper<T>

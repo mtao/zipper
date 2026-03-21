@@ -177,6 +177,21 @@ public:
     return derived();
   }
 
+  /// Assigns from a Zipper-wrapped expression by unwrapping to the
+  /// expression layer.  This enables compound assignment operators
+  /// (`+=`, `-=`, etc.) whose RHS is a Zipper wrapper rather than a
+  /// raw Expression.
+  template <concepts::Zipper Other>
+  auto operator=(const Other &other) -> Derived &
+    requires(expression::concepts::WritableExpression<expression_type> &&
+             !is_const &&
+             zipper::utils::extents::assignable_extents_v<
+                 typename std::decay_t<Other>::extents_type, extents_type>)
+  {
+    m_expression.assign(other.expression());
+    return derived();
+  }
+
   template <concepts::Zipper Other>
   auto operator+=(const Other &other) -> Derived &
     requires(expression::concepts::WritableExpression<expression_type> &&
