@@ -22,6 +22,7 @@
 #include "transform_compose.hpp"
 #include "common.hpp"
 #include "coordinate.hpp"
+#include "decompose.hpp"
 #include "geometric.hpp"
 #include "model.hpp"
 #include "projection.hpp"

@@ -30,3 +30,6 @@ test('transform', test_transform)
 
 test_specialized = executable('test_specialized_transforms', 'test_specialized_transforms.cpp', dependencies: [zipper_test_dep])
 test('specialized_transforms', test_specialized)
+
+test_decompose = executable('test_transform_decompose', 'test_decompose.cpp', dependencies: [zipper_test_dep])
+test('transform_decompose', test_decompose)
