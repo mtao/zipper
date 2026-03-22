@@ -72,8 +72,8 @@ TEST_CASE("sparse_compressed_data_from_coordinate_data", "[sparse]") {
     CHECK(BC.coeff(4, 4) == 7);
     CHECK(BC.coeff(0, 3) == 9);
 
-    // try reversing indices
-    auto CC = storage::detail::to_sparse_compressed_data<true>(A);
+    // try reversing indices (CSC layout)
+    auto CC = storage::detail::to_sparse_compressed_data<storage::layout_left>(A);
     CHECK(CC.coeff(0, 0) == 0);
     CHECK(CC.coeff(3, 3) == 2);
     CHECK(CC.coeff(3, 4) == 3);

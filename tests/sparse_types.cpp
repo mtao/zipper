@@ -5,6 +5,8 @@
 #include <zipper/COOVector.hpp>
 #include <zipper/CSRMatrix.hpp>
 #include <zipper/CSRVector.hpp>
+#include <zipper/CSMatrix.hpp>
+#include <zipper/CSVector.hpp>
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
 #include <zipper/VectorBase.hxx>
@@ -615,4 +617,307 @@ TEST_CASE("coo_matrix_reassignment_replaces_old", "[sparse][coo][assign]") {
     CHECK(A(0, 1) == 1.0);
     CHECK(A(1, 0) == 0.0);
     CHECK(A(1, 1) == 0.0);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  CSMatrix — unified compressed sparse matrix with layout parameter
+// ═══════════════════════════════════════════════════════════════════════════
+
+TEST_CASE("csmatrix_csr_from_coo", "[sparse][csmatrix]") {
+    zipper::COOMatrix<double, 3, 3> coo;
+    coo.emplace(0, 0) = 1.0;
+    coo.emplace(0, 2) = 2.0;
+    coo.emplace(1, 1) = 3.0;
+    coo.emplace(2, 0) = 4.0;
+    coo.emplace(2, 2) = 5.0;
+    coo.compress();
+
+    // CSMatrix with default layout = CSR
+    zipper::CSMatrix<double, 3, 3> A(coo);
+
+    CHECK(A(0, 0) == 1.0);
+    CHECK(A(0, 2) == 2.0);
+    CHECK(A(1, 1) == 3.0);
+    CHECK(A(2, 0) == 4.0);
+    CHECK(A(2, 2) == 5.0);
+    CHECK(A(0, 1) == 0.0);
+    CHECK(A(1, 0) == 0.0);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  CSC (CSMatrix with layout_left) — construction and access
+// ═══════════════════════════════════════════════════════════════════════════
+
+TEST_CASE("csc_matrix_from_coo", "[sparse][csc][matrix]") {
+    zipper::COOMatrix<double, 3, 3> coo;
+    coo.emplace(0, 0) = 1.0;
+    coo.emplace(0, 2) = 2.0;
+    coo.emplace(1, 1) = 3.0;
+    coo.emplace(2, 0) = 4.0;
+    coo.emplace(2, 2) = 5.0;
+    coo.compress();
+
+    zipper::CSMatrix<double, 3, 3, zipper::storage::layout_left> csc(coo);
+
+    // Access should use (row, col) as normal
+    CHECK(csc(0, 0) == 1.0);
+    CHECK(csc(0, 2) == 2.0);
+    CHECK(csc(1, 1) == 3.0);
+    CHECK(csc(2, 0) == 4.0);
+    CHECK(csc(2, 2) == 5.0);
+    CHECK(csc(0, 1) == 0.0);
+    CHECK(csc(1, 0) == 0.0);
+}
+
+TEST_CASE("csc_matrix_from_entries", "[sparse][csc][matrix]") {
+    std::vector<zipper::SparseEntry<double, 2>> entries = {
+        {{0, 0}, 1.0}, {{1, 1}, 2.0}, {{2, 2}, 3.0}};
+    zipper::CSMatrix<double, 3, 3, zipper::storage::layout_left> csc(entries);
+
+    CHECK(csc(0, 0) == 1.0);
+    CHECK(csc(1, 1) == 2.0);
+    CHECK(csc(2, 2) == 3.0);
+    CHECK(csc(0, 1) == 0.0);
+}
+
+TEST_CASE("csc_matrix_to_csc_via_method", "[sparse][csc][matrix]") {
+    zipper::COOMatrix<double, 3, 3> coo;
+    coo.emplace(0, 1) = 7.0;
+    coo.emplace(1, 0) = 8.0;
+    coo.compress();
+
+    auto csc = coo.to_csc();
+    CHECK(csc(0, 1) == 7.0);
+    CHECK(csc(1, 0) == 8.0);
+    CHECK(csc(0, 0) == 0.0);
+}
+
+TEST_CASE("csc_matrix_coeff_ref", "[sparse][csc][matrix]") {
+    std::vector<zipper::SparseEntry<double, 2>> entries = {
+        {{0, 0}, 1.0}, {{1, 1}, 2.0}};
+    zipper::CSMatrix<double, 3, 3, zipper::storage::layout_left> csc(entries);
+
+    csc.coeff_ref(1, 1) = 99.0;
+    CHECK(csc(1, 1) == 99.0);
+
+    CHECK_THROWS(csc.coeff_ref(2, 2)); // missing entry
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  CSC index_set: fast for D==0 (rows for a column), slow for D==1
+// ═══════════════════════════════════════════════════════════════════════════
+
+TEST_CASE("csc_matrix_index_set", "[sparse][csc][index_set]") {
+    zipper::COOMatrix<double, 4, 5> coo;
+    coo.emplace(0, 1) = 1.0;
+    coo.emplace(0, 3) = 2.0;
+    coo.emplace(1, 2) = 3.0;
+    coo.emplace(2, 0) = 4.0;
+    coo.emplace(2, 3) = 5.0;
+    coo.compress();
+
+    zipper::CSMatrix<double, 4, 5, zipper::storage::layout_left> csc(coo);
+
+    SECTION("row indices for col 0 = {2} (fast path for CSC)") {
+        auto rows = csc.expression().index_set<0>(0);
+        REQUIRE(rows.size() == 1);
+        CHECK(*rows.begin() == 2);
+    }
+
+    SECTION("row indices for col 1 = {0} (fast path for CSC)") {
+        auto rows = csc.expression().index_set<0>(1);
+        REQUIRE(rows.size() == 1);
+        CHECK(*rows.begin() == 0);
+    }
+
+    SECTION("row indices for col 3 = {0, 2} (fast path for CSC)") {
+        auto rows = csc.expression().index_set<0>(3);
+        REQUIRE(rows.size() == 2);
+        auto it = rows.begin();
+        CHECK(*it++ == 0);
+        CHECK(*it++ == 2);
+    }
+
+    SECTION("row indices for empty col 4 = {} (fast path for CSC)") {
+        auto rows = csc.expression().index_set<0>(4);
+        CHECK(rows.empty());
+    }
+
+    SECTION("col indices for row 0 = {1, 3} (slow path for CSC)") {
+        auto cols = csc.expression().index_set<1>(0);
+        REQUIRE(cols.size() == 2);
+        auto it = cols.begin();
+        CHECK(*it++ == 1);
+        CHECK(*it++ == 3);
+    }
+
+    SECTION("col indices for empty row 3 = {} (slow path for CSC)") {
+        auto cols = csc.expression().index_set<1>(3);
+        CHECK(cols.empty());
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Roundtrip: COO → CSC → COO
+// ═══════════════════════════════════════════════════════════════════════════
+
+TEST_CASE("roundtrip_matrix_coo_csc_coo", "[sparse][csc][roundtrip]") {
+    std::vector<zipper::SparseEntry<double, 2>> entries = {
+        {{0, 0}, 1.0}, {{0, 2}, 2.0}, {{1, 1}, 3.0}, {{2, 0}, 4.0}};
+    zipper::COOMatrix<double, 3, 3> coo(entries);
+    auto csc = coo.to_csc();
+    auto coo2 = csc.to_coo();
+
+    for (const auto &e : entries) {
+        CHECK(coo2(e.indices[0], e.indices[1]) == e.value);
+    }
+    CHECK(coo2(0, 1) == 0.0);
+    CHECK(coo2(1, 0) == 0.0);
+    CHECK(coo2(2, 2) == 0.0);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Layout conversion: as_csr() / as_csc()
+// ═══════════════════════════════════════════════════════════════════════════
+
+TEST_CASE("csmatrix_as_csr_as_csc", "[sparse][csmatrix][conversion]") {
+    std::vector<zipper::SparseEntry<double, 2>> entries = {
+        {{0, 0}, 1.0}, {{0, 2}, 2.0},
+        {{1, 1}, 3.0},
+        {{2, 0}, 4.0}, {{2, 2}, 5.0}};
+
+    // Start with CSR
+    zipper::CSMatrix<double, 3, 3, zipper::storage::layout_right> csr(entries);
+
+    SECTION("as_csc converts CSR to CSC") {
+        auto csc = csr.as_csc();
+        static_assert(std::is_same_v<decltype(csc)::layout_policy,
+                                     zipper::storage::layout_left>);
+        CHECK(csc(0, 0) == 1.0);
+        CHECK(csc(0, 2) == 2.0);
+        CHECK(csc(1, 1) == 3.0);
+        CHECK(csc(2, 0) == 4.0);
+        CHECK(csc(2, 2) == 5.0);
+        CHECK(csc(0, 1) == 0.0);
+    }
+
+    SECTION("as_csr on CSR is identity") {
+        auto csr2 = csr.as_csr();
+        static_assert(std::is_same_v<decltype(csr2)::layout_policy,
+                                     zipper::storage::layout_right>);
+        CHECK(csr2(0, 0) == 1.0);
+        CHECK(csr2(2, 2) == 5.0);
+    }
+
+    SECTION("CSC → as_csr roundtrip") {
+        auto csc = csr.as_csc();
+        auto csr_back = csc.as_csr();
+        static_assert(std::is_same_v<decltype(csr_back)::layout_policy,
+                                     zipper::storage::layout_right>);
+        for (const auto &e : entries) {
+            CHECK(csr_back(e.indices[0], e.indices[1]) == e.value);
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  CSC SpMV: sparse CSC matrix * dense vector
+// ═══════════════════════════════════════════════════════════════════════════
+
+TEST_CASE("csc_matrix_times_dense_vector", "[sparse][csc][spmv]") {
+    // | 1  0  2 |   | 1 |   | 7  |
+    // | 0  3  0 | * | 2 | = | 6  |
+    // | 4  0  5 |   | 3 |   | 19 |
+    std::vector<zipper::SparseEntry<double, 2>> entries = {
+        {{0, 0}, 1.0}, {{0, 2}, 2.0},
+        {{1, 1}, 3.0},
+        {{2, 0}, 4.0}, {{2, 2}, 5.0}};
+    zipper::CSMatrix<double, 3, 3, zipper::storage::layout_left> csc(entries);
+    zipper::Vector<double, 3> x({1.0, 2.0, 3.0});
+
+    zipper::Vector<double, 3> y(csc * x);
+    CHECK(y(0) == 7.0);
+    CHECK(y(1) == 6.0);
+    CHECK(y(2) == 19.0);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  CSVector (unified sparse vector, no layout param)
+// ═══════════════════════════════════════════════════════════════════════════
+
+TEST_CASE("csvector_from_coo", "[sparse][csvector]") {
+    zipper::COOVector<double, 5> coo;
+    coo.emplace(1) = 3.0;
+    coo.emplace(3) = 7.0;
+    coo.compress();
+
+    zipper::CSVector<double, 5> sv(coo);
+    CHECK(sv(1) == 3.0);
+    CHECK(sv(3) == 7.0);
+    CHECK(sv(0) == 0.0);
+}
+
+TEST_CASE("csvector_from_entries", "[sparse][csvector]") {
+    std::vector<zipper::SparseEntry<double, 1>> entries = {
+        {{0}, 1.0}, {{4}, 5.0}};
+    zipper::CSVector<double, 10> sv(entries);
+
+    CHECK(sv(0) == 1.0);
+    CHECK(sv(4) == 5.0);
+    CHECK(sv(2) == 0.0);
+}
+
+TEST_CASE("csvector_construct_from_dense", "[sparse][csvector]") {
+    zipper::Vector<double, 4> v({0.0, 2.0, 0.0, 4.0});
+
+    zipper::CSVector<double, 4> sv(v);
+
+    CHECK(sv(0) == 0.0);
+    CHECK(sv(1) == 2.0);
+    CHECK(sv(2) == 0.0);
+    CHECK(sv(3) == 4.0);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Concept checks for new types
+// ═══════════════════════════════════════════════════════════════════════════
+
+TEST_CASE("csmatrix_csvector_concepts", "[sparse][csmatrix][csvector][concepts]") {
+    using namespace zipper;
+
+    // CSMatrix with CSR layout
+    static_assert(concepts::Matrix<CSMatrix<double, 3, 3>>);
+    static_assert(concepts::Matrix<CSMatrix<double, 3, 3, storage::layout_right>>);
+
+    // CSMatrix with CSC layout
+    static_assert(concepts::Matrix<CSMatrix<double, 3, 3, storage::layout_left>>);
+
+    // CSVector
+    static_assert(concepts::Vector<CSVector<double, 5>>);
+
+    // Dynamic extents
+    constexpr auto dyn = dynamic_extent;
+    static_assert(concepts::Matrix<CSMatrix<double, dyn, dyn>>);
+    static_assert(concepts::Matrix<CSMatrix<double, dyn, dyn, storage::layout_left>>);
+    static_assert(concepts::Vector<CSVector<double, dyn>>);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  CSC Assignment from dense
+// ═══════════════════════════════════════════════════════════════════════════
+
+TEST_CASE("csc_matrix_assign_from_dense", "[sparse][csc][assign]") {
+    zipper::Matrix<double, 3, 3> M;
+    M(0, 0) = 1.0; M(0, 1) = 0.0; M(0, 2) = 0.0;
+    M(1, 0) = 0.0; M(1, 1) = 2.0; M(1, 2) = 0.0;
+    M(2, 0) = 0.0; M(2, 1) = 0.0; M(2, 2) = 3.0;
+
+    zipper::CSMatrix<double, 3, 3, zipper::storage::layout_left> csc;
+    csc = M;
+
+    CHECK(csc(0, 0) == 1.0);
+    CHECK(csc(1, 1) == 2.0);
+    CHECK(csc(2, 2) == 3.0);
+    CHECK(csc(0, 1) == 0.0);
+    CHECK(csc(1, 0) == 0.0);
 }

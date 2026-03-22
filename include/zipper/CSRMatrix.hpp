@@ -31,10 +31,12 @@ namespace zipper {
 template <typename ValueType, index_type Rows, index_type Cols>
 class CSRMatrix
     : public MatrixBase<
-          storage::SparseCompressedAccessor<ValueType, zipper::extents<Rows, Cols>>> {
+          storage::SparseCompressedAccessor<ValueType, zipper::extents<Rows, Cols>,
+                                           storage::layout_right>> {
 public:
   using expression_type =
-      storage::SparseCompressedAccessor<ValueType, zipper::extents<Rows, Cols>>;
+      storage::SparseCompressedAccessor<ValueType, zipper::extents<Rows, Cols>,
+                                       storage::layout_right>;
   using coo_expression_type =
       storage::SparseCoordinateAccessor<ValueType, zipper::extents<Rows, Cols>>;
   using Base = MatrixBase<expression_type>;
@@ -161,8 +163,8 @@ public:
 };
 
 // CTAD
-template <typename VT, typename E>
-CSRMatrix(storage::SparseCompressedAccessor<VT, E>)
+template <typename VT, typename E, typename LP>
+CSRMatrix(storage::SparseCompressedAccessor<VT, E, LP>)
     -> CSRMatrix<VT, E::static_extent(0), E::static_extent(1)>;
 
 template <typename VT, index_type R, index_type C>

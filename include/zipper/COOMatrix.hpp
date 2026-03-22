@@ -30,7 +30,10 @@
 namespace zipper {
 
 template <typename T, index_type Rows, index_type Cols>
-class CSRMatrix; // forward
+class CSRMatrix; // forward (backward compat)
+
+template <typename T, index_type Rows, index_type Cols, typename LayoutPolicy>
+class CSMatrix; // forward
 
 template <typename ValueType, index_type Rows, index_type Cols>
 class COOMatrix
@@ -171,6 +174,10 @@ public:
 
   // ── Conversion ────────────────────────────────────────────────────────
   auto to_csr() const -> CSRMatrix<ValueType, Rows, Cols>;
+
+  /// Convert to CSC (compressed sparse column) format.
+  auto to_csc() const
+      -> CSMatrix<ValueType, Rows, Cols, storage::layout_left>;
 
   // ── Iterator access ───────────────────────────────────────────────────
   auto begin() { return expression().begin(); }

@@ -1,16 +1,17 @@
-#if !defined(ZIPPER_CSRVECTOR_HPP)
-#define ZIPPER_CSRVECTOR_HPP
+#if !defined(ZIPPER_CSVECTOR_HPP)
+#define ZIPPER_CSVECTOR_HPP
 
-/// @file CSRVector.hpp
+/// @file CSVector.hpp
 /// @brief Sparse vector in compressed format.
 /// @ingroup user_types
 ///
-/// `CSRVector<T, N>` is a user-facing sparse vector that stores non-zeros
-/// in compressed format via `SparseCompressedAccessor`.
+/// `CSVector<T, N>` is the user-facing sparse vector type. Since vectors
+/// are rank-1, there is no layout distinction (no CSR vs CSC) — the
+/// single dimension is always the compressed dimension.
 ///
 /// Construction:
-///   - From a `COOVector`: `CSRVector v(coo);` or `auto v = coo.to_csr();`
-///   - From entries: `CSRVector<double, 100> v(entries);`
+///   - From a `COOVector`: `CSVector v(coo);` or `auto v = coo.to_csr();`
+///   - From entries: `CSVector<double, 100> v(entries);`
 ///   - From a `SparseCompressedAccessor`: move existing data.
 ///
 /// Mutation:
@@ -29,14 +30,12 @@
 namespace zipper {
 
 template <typename ValueType, index_type N>
-class CSRVector
+class CSVector
     : public VectorBase<
-          storage::SparseCompressedAccessor<ValueType, zipper::extents<N>,
-                                           storage::layout_right>> {
+          storage::SparseCompressedAccessor<ValueType, zipper::extents<N>>> {
 public:
   using expression_type =
-      storage::SparseCompressedAccessor<ValueType, zipper::extents<N>,
-                                       storage::layout_right>;
+      storage::SparseCompressedAccessor<ValueType, zipper::extents<N>>;
   using coo_expression_type =
       storage::SparseCoordinateAccessor<ValueType, zipper::extents<N>>;
   using Base = VectorBase<expression_type>;
@@ -48,15 +47,15 @@ public:
   using Base::extents;
   constexpr static bool is_static = extents_traits::is_static;
 
-  CSRVector() = default;
-  CSRVector(const CSRVector &) = default;
-  CSRVector(CSRVector &&) = default;
-  auto operator=(const CSRVector &) -> CSRVector & = default;
-  auto operator=(CSRVector &&) -> CSRVector & = default;
+  CSVector() = default;
+  CSVector(const CSVector &) = default;
+  CSVector(CSVector &&) = default;
+  auto operator=(const CSVector &) -> CSVector & = default;
+  auto operator=(CSVector &&) -> CSVector & = default;
 
   /// Assign from any expression with compatible extents.
   template <concepts::Expression Other>
-  auto operator=(const Other &other) -> CSRVector &
+  auto operator=(const Other &other) -> CSVector &
     requires(zipper::utils::extents::assignable_extents_v<
                  typename Other::extents_type, extents_type>)
   {
@@ -66,7 +65,7 @@ public:
 
   /// Assign from a Zipper-wrapped expression.
   template <concepts::Zipper Other>
-  auto operator=(const Other &other) -> CSRVector &
+  auto operator=(const Other &other) -> CSVector &
     requires(zipper::utils::extents::assignable_extents_v<
                  typename std::decay_t<Other>::extents_type, extents_type>)
   {
@@ -76,12 +75,12 @@ public:
 
   /// Construct from any expression with compatible extents.
   template <concepts::Expression Other>
-  CSRVector(const Other &other)
+  CSVector(const Other &other)
     requires(zipper::utils::extents::assignable_extents_v<
                  typename Other::extents_type, extents_type>)
   {
     if constexpr (!is_static) {
-      static_cast<extents_type&>(expression()) =
+      static_cast<extents_type &>(expression()) =
           extents_traits::convert_from(other.extents());
     }
     expression().assign(other);
@@ -89,44 +88,48 @@ public:
 
   /// Construct from a Zipper-wrapped expression.
   template <concepts::Zipper Other>
-  CSRVector(const Other &other)
-    requires(!std::same_as<std::decay_t<Other>, CSRVector> &&
+  CSVector(const Other &other)
+    requires(!std::same_as<std::decay_t<Other>, CSVector> &&
              zipper::utils::extents::assignable_extents_v<
                  typename std::decay_t<Other>::extents_type, extents_type>)
   {
     if constexpr (!is_static) {
-      static_cast<extents_type&>(expression()) =
+      static_cast<extents_type &>(expression()) =
           extents_traits::convert_from(other.extents());
     }
     expression().assign(other.expression());
   }
 
-  // From compressed accessor
-  CSRVector(expression_type &&expr) : Base(std::move(expr)) {}
-  CSRVector(const expression_type &expr) : Base(expr) {}
+  // From compressed accessor (any layout — rank-1 is layout-agnostic)
+  template <typename LP>
+  CSVector(storage::SparseCompressedAccessor<ValueType, zipper::extents<N>, LP> &&expr)
+      : Base(expression_type(std::move(expr.compressed_data()),
+                             expr.extents())) {}
+  CSVector(expression_type &&expr) : Base(std::move(expr)) {}
+  CSVector(const expression_type &expr) : Base(expr) {}
 
   // From COOVector (compresses internally)
-  CSRVector(const COOVector<ValueType, N> &coo)
+  CSVector(const COOVector<ValueType, N> &coo)
       : Base(expression_type(coo.expression())) {}
 
   // From COO expression
-  CSRVector(const coo_expression_type &coo)
+  CSVector(const coo_expression_type &coo)
       : Base(expression_type(coo)) {}
 
   // Construct from range of SparseEntry<T, 1> (via COO intermediary)
   template <std::ranges::input_range R>
     requires std::same_as<std::ranges::range_value_t<R>,
                           SparseEntry<value_type, 1>>
-  CSRVector(const R &entries)
+  CSVector(const R &entries)
     requires(is_static)
-      : CSRVector(COOVector<ValueType, N>(entries)) {}
+      : CSVector(COOVector<ValueType, N>(entries)) {}
 
   template <std::ranges::input_range R>
     requires std::same_as<std::ranges::range_value_t<R>,
                           SparseEntry<value_type, 1>>
-  CSRVector(const R &entries, const extents_type &e)
+  CSVector(const R &entries, const extents_type &e)
     requires(!is_static)
-      : CSRVector(COOVector<ValueType, N>(entries, e)) {}
+      : CSVector(COOVector<ValueType, N>(entries, e)) {}
 
   // ── Element access ────────────────────────────────────────────────────
   auto coeff_ref(index_type idx) -> value_type & {
@@ -158,24 +161,18 @@ public:
 
 // CTAD
 template <typename VT, typename E, typename LP>
-CSRVector(storage::SparseCompressedAccessor<VT, E, LP>)
-    -> CSRVector<VT, E::static_extent(0)>;
+CSVector(storage::SparseCompressedAccessor<VT, E, LP>)
+    -> CSVector<VT, E::static_extent(0)>;
 
 template <typename VT, index_type N>
-CSRVector(const COOVector<VT, N> &) -> CSRVector<VT, N>;
+CSVector(const COOVector<VT, N> &) -> CSVector<VT, N>;
 
 namespace concepts::detail {
 template <typename T, index_type N>
-struct IsVector<zipper::CSRVector<T, N>> : std::true_type {};
+struct IsVector<zipper::CSVector<T, N>> : std::true_type {};
 template <typename T, index_type N>
-struct IsZipperBase<zipper::CSRVector<T, N>> : std::true_type {};
+struct IsZipperBase<zipper::CSVector<T, N>> : std::true_type {};
 } // namespace concepts::detail
-
-// ── COOVector::to_csr() definition (needs CSRVector to be complete) ────
-template <typename ValueType, index_type N>
-auto COOVector<ValueType, N>::to_csr() const -> CSRVector<ValueType, N> {
-  return CSRVector<ValueType, N>(*this);
-}
 
 } // namespace zipper
 
