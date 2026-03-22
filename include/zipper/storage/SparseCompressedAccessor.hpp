@@ -144,7 +144,6 @@ public:
   /// Const reference to an *existing* entry. Throws for missing.
   template <typename... Indices>
   auto const_coeff_ref(Indices &&...indices) const -> const element_type &
-    requires(!std::is_const_v<ValueType>)
   {
     if constexpr (rank() == 1 || is_csr) {
       return m_data.const_coeff_ref(static_cast<index_type>(indices)...);
@@ -165,14 +164,46 @@ public:
     return m_data;
   }
 
+  /// Clear all stored entries, resetting to an empty compressed container.
+  void clear()
+    requires(!std::is_const_v<ValueType>)
+  {
+    m_data = {};
+  }
+
   /// Assign from an arbitrary expression.  Builds an intermediate COO
   /// representation and converts to compressed format.
+  ///
+  /// Fast path: if the source is a SparseCompressedAccessor with the same
+  /// layout, directly copy the compressed data (O(nnz), no allocation).
   template <zipper::concepts::Expression V>
   void assign(const V &v)
     requires(!std::is_const_v<ValueType> &&
              zipper::utils::extents::assignable_extents_v<
                  typename V::extents_type, extents_type>)
   {
+    // Fast path: same-layout compressed → compressed copy
+    if constexpr (std::is_same_v<std::decay_t<V>,
+                                 SparseCompressedAccessor<element_type,
+                                                          extents_type,
+                                                          LayoutPolicy>>) {
+      if constexpr (!IsStatic) {
+        static_cast<extents_type&>(*this) = v.extents();
+      }
+      m_data = v.compressed_data();
+      return;
+    }
+    // Also handle const-qualified source of same layout
+    if constexpr (std::is_same_v<std::decay_t<V>,
+                                 SparseCompressedAccessor<const element_type,
+                                                          extents_type,
+                                                          LayoutPolicy>>) {
+      if constexpr (!IsStatic) {
+        static_cast<extents_type&>(*this) = v.extents();
+      }
+      m_data = v.compressed_data();
+      return;
+    }
     SparseCoordinateAccessor<element_type, extents_type> coo;
     if constexpr (!IsStatic) {
       static_cast<extents_type&>(coo) = this->extents();
@@ -311,6 +342,10 @@ struct detail::ExpressionTraits<
           zipper::detail::ShapeFeatures{.is_resizable = false}> {
   constexpr static bool has_index_set = true;
   constexpr static bool has_known_zeros = has_index_set;
+
+  /// Sparse compressed leaf → prefer the compressed layout it uses.
+  using preferred_layout =
+      zipper::detail::SparseLayoutPreference<LayoutPolicy>;
 };
 } // namespace zipper::expression
 

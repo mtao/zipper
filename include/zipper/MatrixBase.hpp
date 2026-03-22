@@ -24,6 +24,9 @@ template<concepts::Expression Expr>
 class ArrayBase;
 template<typename ValueType, index_type Rows, index_type Cols, bool RowMajor = true>
 class Matrix;
+template <typename ValueType, index_type Rows, index_type Cols,
+          typename LayoutPolicy>
+class CSMatrix;
 
 template<concepts::Expression Expr>
     requires(concepts::QualifiedRankedExpression<Expr, 2>)
@@ -51,7 +54,21 @@ class MatrixBase : public ZipperBase<MatrixBase, Expr> {
     MatrixBase(Args &&...args)
       : Base(std::in_place, std::forward<Args>(args)...) {}
 
-    auto eval() const { return Matrix(*this); }
+  auto eval() const {
+    using pref = typename expression_traits::preferred_layout;
+    constexpr auto R = extents_type::static_extent(0);
+    constexpr auto C = extents_type::static_extent(1);
+    if constexpr (detail::is_sparse_layout_preference_v<pref>) {
+      return CSMatrix<std::remove_const_t<value_type>, R, C,
+                      typename pref::layout_policy>(*this);
+    } else if constexpr (detail::is_dense_layout_preference_v<pref>) {
+      constexpr bool RowMajor =
+          std::is_same_v<typename pref::layout_policy, storage::layout_right>;
+      return Matrix<std::remove_const_t<value_type>, R, C, RowMajor>(*this);
+    } else {
+      return Matrix(*this);
+    }
+  }
 
     template<concepts::Matrix Other>
     MatrixBase(const Other &other) : MatrixBase(other.expression()) {}

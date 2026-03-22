@@ -179,6 +179,10 @@ public:
   auto to_csc() const
       -> CSMatrix<ValueType, Rows, Cols, storage::layout_left>;
 
+  /// Convert to compressed sparse format with the given layout.
+  template <typename LayoutPolicy>
+  auto to_cs() const -> CSMatrix<ValueType, Rows, Cols, LayoutPolicy>;
+
   // ── Iterator access ───────────────────────────────────────────────────
   auto begin() { return expression().begin(); }
   auto end() { return expression().end(); }

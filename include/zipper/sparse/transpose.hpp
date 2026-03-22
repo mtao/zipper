@@ -27,7 +27,10 @@ namespace zipper::sparse {
 ///
 /// @param A  An m x n COO sparse matrix.
 /// @return   An n x m COO sparse matrix equal to A^T.
+///
+/// @deprecated Use `coo_matrix.transpose().eval()` instead.
 template <typename T, index_type Rows, index_type Cols>
+[[deprecated("Use .transpose().eval() instead of sparse_transpose()")]]
 auto sparse_transpose(const COOMatrix<T, Rows, Cols> &A)
     -> COOMatrix<T, Cols, Rows> {
   COOMatrix<T, Cols, Rows> At;
@@ -47,7 +50,10 @@ auto sparse_transpose(const COOMatrix<T, Rows, Cols> &A)
 ///
 /// @param A  An m x n CSR sparse matrix.
 /// @return   An n x m COO sparse matrix equal to A^T.
+///
+/// @deprecated Use `csr_matrix.transpose().eval()` instead.
 template <typename T, index_type Rows, index_type Cols>
+[[deprecated("Use .transpose().eval() instead of sparse_transpose_to_coo()")]]
 auto sparse_transpose_to_coo(const CSRMatrix<T, Rows, Cols> &A)
     -> COOMatrix<T, Cols, Rows> {
   COOMatrix<T, Cols, Rows> At;
@@ -73,10 +79,29 @@ auto sparse_transpose_to_coo(const CSRMatrix<T, Rows, Cols> &A)
 ///
 /// @param A  An m x n CSR sparse matrix.
 /// @return   An n x m CSR sparse matrix equal to A^T.
+///
+/// @deprecated Use `csr_matrix.transpose().eval()` instead.
 template <typename T, index_type Rows, index_type Cols>
+[[deprecated("Use .transpose().eval() instead of sparse_transpose()")]]
 auto sparse_transpose(const CSRMatrix<T, Rows, Cols> &A)
     -> CSRMatrix<T, Cols, Rows> {
-  return CSRMatrix<T, Cols, Rows>(sparse_transpose_to_coo(A));
+  // Inline the transpose-to-coo logic to avoid triggering our own
+  // deprecation warning on sparse_transpose_to_coo.
+  COOMatrix<T, Cols, Rows> At;
+  if constexpr (!COOMatrix<T, Cols, Rows>::is_static) {
+    At = COOMatrix<T, Cols, Rows>(A.extent(1), A.extent(0));
+  }
+  const auto &cd = A.compressed_data();
+  using Base0 =
+      storage::detail::SparseCompressedData<std::remove_const_t<T>, 0>;
+  const auto &base = static_cast<const Base0 &>(cd);
+  for (const auto &[row, start, sz] : cd.m_spans) {
+    for (size_t i = start; i < start + sz; ++i) {
+      At.emplace(base.m_data[i].first, row) = base.m_data[i].second;
+    }
+  }
+  At.compress();
+  return CSRMatrix<T, Cols, Rows>(At);
 }
 
 } // namespace zipper::sparse

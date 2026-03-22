@@ -23,6 +23,9 @@ namespace zipper {
 template <typename T, index_type N>
 class CSRVector; // forward
 
+template <typename T, index_type N>
+class CSVector; // forward
+
 template <typename ValueType, index_type N>
 class COOVector
     : public VectorBase<
@@ -159,6 +162,9 @@ public:
 
   // ── Conversion ────────────────────────────────────────────────────────
   auto to_csr() const -> CSRVector<ValueType, N>;
+
+  /// Convert to compressed sparse vector format.
+  auto to_cs() const -> CSVector<ValueType, N>;
 
   // ── Iterator access ───────────────────────────────────────────────────
   auto begin() { return expression().begin(); }

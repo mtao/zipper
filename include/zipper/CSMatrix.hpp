@@ -230,7 +230,15 @@ struct IsZipperBase<zipper::CSMatrix<T, R, C, LP>> : std::true_type {};
 template <typename ValueType, index_type Rows, index_type Cols>
 auto COOMatrix<ValueType, Rows, Cols>::to_csc() const
     -> CSMatrix<ValueType, Rows, Cols, storage::layout_left> {
-  return CSMatrix<ValueType, Rows, Cols, storage::layout_left>(*this);
+  return to_cs<storage::layout_left>();
+}
+
+// ── COOMatrix::to_cs<LP>() definition (needs CSMatrix to be complete) ──
+template <typename ValueType, index_type Rows, index_type Cols>
+template <typename LayoutPolicy>
+auto COOMatrix<ValueType, Rows, Cols>::to_cs() const
+    -> CSMatrix<ValueType, Rows, Cols, LayoutPolicy> {
+  return CSMatrix<ValueType, Rows, Cols, LayoutPolicy>(*this);
 }
 
 } // namespace zipper

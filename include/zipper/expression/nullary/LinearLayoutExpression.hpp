@@ -213,6 +213,10 @@ struct detail::ExpressionTraits<nullary::LinearLayoutExpression<
           typename LinearAccessorType::value_type, Extents,
           storage::template LinearAccessorTraits<
               LinearAccessorType>::access_features,
-          storage::LinearAccessorTraits<LinearAccessorType>::shape_features> {};
+          storage::LinearAccessorTraits<LinearAccessorType>::shape_features> {
+  /// Dense leaf → prefer the layout it was created with.
+  using preferred_layout =
+      zipper::detail::DenseLayoutPreference<LayoutPolicy>;
+};
 } // namespace zipper::expression
 #endif

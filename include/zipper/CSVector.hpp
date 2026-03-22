@@ -10,7 +10,7 @@
 /// single dimension is always the compressed dimension.
 ///
 /// Construction:
-///   - From a `COOVector`: `CSVector v(coo);` or `auto v = coo.to_csr();`
+///   - From a `COOVector`: `CSVector v(coo);` or `auto v = coo.to_cs();`
 ///   - From entries: `CSVector<double, 100> v(entries);`
 ///   - From a `SparseCompressedAccessor`: move existing data.
 ///
@@ -173,6 +173,12 @@ struct IsVector<zipper::CSVector<T, N>> : std::true_type {};
 template <typename T, index_type N>
 struct IsZipperBase<zipper::CSVector<T, N>> : std::true_type {};
 } // namespace concepts::detail
+
+// ── COOVector::to_cs() definition (needs CSVector to be complete) ──────
+template <typename ValueType, index_type N>
+auto COOVector<ValueType, N>::to_cs() const -> CSVector<ValueType, N> {
+  return CSVector<ValueType, N>(*this);
+}
 
 } // namespace zipper
 

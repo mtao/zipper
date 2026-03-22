@@ -11,6 +11,8 @@
 #include <zipper/Vector.hpp>
 #include <zipper/VectorBase.hxx>
 #include <zipper/MatrixBase.hxx>
+#include <zipper/detail/LayoutPreference.hpp>
+#include <zipper/expression/detail/ExpressionTraits.hpp>
 
 #include "catch_include.hpp"
 
@@ -920,4 +922,556 @@ TEST_CASE("csc_matrix_assign_from_dense", "[sparse][csc][assign]") {
     CHECK(csc(2, 2) == 3.0);
     CHECK(csc(0, 1) == 0.0);
     CHECK(csc(1, 0) == 0.0);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Compile-time: preferred_layout propagation
+// ═══════════════════════════════════════════════════════════════════════════
+
+namespace {
+namespace lp = zipper::detail;
+template <typename T>
+using pref = typename zipper::expression::detail::ExpressionTraits<
+    std::decay_t<T>>::preferred_layout;
+
+// Underlying expression type of a ZipperBase wrapper
+template <typename Wrapper>
+using expr_of = typename Wrapper::expression_type;
+
+// ── Leaf preferences ─────────────────────────────────────────────────────
+
+// Dense row-major Matrix → DenseLayoutPreference<layout_right>
+static_assert(lp::is_dense_layout_preference_v<
+    pref<expr_of<zipper::Matrix<double, 3, 3>>>>);
+static_assert(std::is_same_v<
+    pref<expr_of<zipper::Matrix<double, 3, 3>>>,
+    lp::PreferRowMajor>);
+
+// Dense col-major Matrix → DenseLayoutPreference<layout_left>
+static_assert(std::is_same_v<
+    pref<expr_of<zipper::Matrix<double, 3, 3, false>>>,
+    lp::PreferColMajor>);
+
+// CSR matrix → SparseLayoutPreference<layout_right>
+static_assert(lp::is_sparse_layout_preference_v<
+    pref<expr_of<zipper::CSRMatrix<double, 3, 3>>>>);
+static_assert(std::is_same_v<
+    pref<expr_of<zipper::CSRMatrix<double, 3, 3>>>,
+    lp::PreferCSR>);
+
+// CSC matrix → SparseLayoutPreference<layout_left>
+static_assert(std::is_same_v<
+    pref<expr_of<zipper::CSMatrix<double, 3, 3, zipper::storage::layout_left>>>,
+    lp::PreferCSC>);
+
+// COO matrix → NoLayoutPreference
+static_assert(lp::is_no_layout_preference_v<
+    pref<expr_of<zipper::COOMatrix<double, 3, 3>>>>);
+
+// ── Transpose flipping ──────────────────────────────────────────────────
+
+// CSR.transpose() → PreferCSC
+using CSR33Expr = expr_of<zipper::CSRMatrix<double, 3, 3>>;
+using TransposedCSR = zipper::expression::unary::Swizzle<const CSR33Expr &, 1, 0>;
+static_assert(std::is_same_v<pref<TransposedCSR>, lp::PreferCSC>);
+
+// CSC.transpose() → PreferCSR
+using CSC33Expr = expr_of<zipper::CSMatrix<double, 3, 3, zipper::storage::layout_left>>;
+using TransposedCSC = zipper::expression::unary::Swizzle<const CSC33Expr &, 1, 0>;
+static_assert(std::is_same_v<pref<TransposedCSC>, lp::PreferCSR>);
+
+// Dense row-major.transpose() → PreferColMajor
+using DenseRMExpr = expr_of<zipper::Matrix<double, 3, 3>>;
+using TransposedDenseRM = zipper::expression::unary::Swizzle<const DenseRMExpr &, 1, 0>;
+static_assert(std::is_same_v<pref<TransposedDenseRM>, lp::PreferColMajor>);
+
+// Dense col-major.transpose() → PreferRowMajor
+using DenseCMExpr = expr_of<zipper::Matrix<double, 3, 3, false>>;
+using TransposedDenseCM = zipper::expression::unary::Swizzle<const DenseCMExpr &, 1, 0>;
+static_assert(std::is_same_v<pref<TransposedDenseCM>, lp::PreferRowMajor>);
+
+} // anonymous namespace
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Runtime: smart eval() dispatch
+// ═══════════════════════════════════════════════════════════════════════════
+
+TEST_CASE("eval_csr_produces_csmatrix_csr", "[sparse][eval]") {
+    // Build a CSR matrix
+    zipper::COOMatrix<double, 3, 3> coo;
+    coo.emplace(0, 0) = 1.0;
+    coo.emplace(1, 1) = 2.0;
+    coo.emplace(2, 2) = 3.0;
+    zipper::CSRMatrix<double, 3, 3> csr(coo);
+
+    // eval() on a CSR expression should produce a CSMatrix<..., layout_right>
+    auto result = csr.transpose().transpose().eval();
+    using result_type = decltype(result);
+    static_assert(std::is_same_v<result_type,
+        zipper::CSMatrix<double, 3, 3, zipper::storage::layout_right>>);
+    CHECK(result(0, 0) == 1.0);
+    CHECK(result(1, 1) == 2.0);
+    CHECK(result(2, 2) == 3.0);
+}
+
+TEST_CASE("eval_csr_transpose_produces_csc", "[sparse][eval]") {
+    zipper::COOMatrix<double, 2, 3> coo;
+    coo.emplace(0, 0) = 1.0;
+    coo.emplace(0, 2) = 2.0;
+    coo.emplace(1, 1) = 3.0;
+    zipper::CSMatrix<double, 2, 3, zipper::storage::layout_right> csr(coo);
+
+    // transpose of CSR → eval() should produce CSC
+    auto result = csr.transpose().eval();
+    using result_type = decltype(result);
+    static_assert(std::is_same_v<result_type,
+        zipper::CSMatrix<double, 3, 2, zipper::storage::layout_left>>);
+    // Transposed values: result(col, row) = original(row, col)
+    CHECK(result(0, 0) == 1.0);
+    CHECK(result(2, 0) == 2.0);
+    CHECK(result(1, 1) == 3.0);
+    CHECK(result(0, 1) == 0.0);
+}
+
+TEST_CASE("eval_csc_transpose_produces_csr", "[sparse][eval]") {
+    zipper::COOMatrix<double, 3, 2> coo;
+    coo.emplace(0, 0) = 5.0;
+    coo.emplace(2, 1) = 7.0;
+    zipper::CSMatrix<double, 3, 2, zipper::storage::layout_left> csc(coo);
+
+    // transpose of CSC → eval() should produce CSR
+    auto result = csc.transpose().eval();
+    using result_type = decltype(result);
+    static_assert(std::is_same_v<result_type,
+        zipper::CSMatrix<double, 2, 3, zipper::storage::layout_right>>);
+    CHECK(result(0, 0) == 5.0);
+    CHECK(result(1, 2) == 7.0);
+    CHECK(result(0, 1) == 0.0);
+}
+
+TEST_CASE("eval_dense_still_produces_matrix", "[sparse][eval]") {
+    zipper::Matrix<double, 2, 2> A({{1.0, 2.0}, {3.0, 4.0}});
+
+    auto result = A.transpose().transpose().eval();
+    using result_type = decltype(result);
+    // Dense row-major → transpose → transpose → still row-major dense
+    static_assert(std::is_same_v<result_type, zipper::Matrix<double, 2, 2>>);
+    CHECK(result(0, 0) == 1.0);
+    CHECK(result(1, 1) == 4.0);
+}
+
+TEST_CASE("eval_dense_transpose_produces_col_major", "[sparse][eval]") {
+    zipper::Matrix<double, 2, 3> A({{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}});
+
+    auto result = A.transpose().eval();
+    using result_type = decltype(result);
+    // Dense row-major transposed → should be col-major dense
+    static_assert(std::is_same_v<result_type,
+        zipper::Matrix<double, 3, 2, false>>);
+    CHECK(result(0, 0) == 1.0);
+    CHECK(result(0, 1) == 4.0);
+    CHECK(result(2, 0) == 3.0);
+    CHECK(result(2, 1) == 6.0);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Audit fix #2: Uncompressed find() works without assertion failure
+// ═══════════════════════════════════════════════════════════════════════════
+
+TEST_CASE("coo_uncompressed_find", "[sparse][coo][audit][bug2]") {
+    // Before the fix, calling operator() on an uncompressed COO would hit
+    // an assertion in iterator operator<=> that unconditionally required
+    // m_compressed. Now find() falls back to a linear scan.
+    zipper::COOMatrix<double, 3, 3> A;
+    A.emplace(0, 0) = 1.0;
+    A.emplace(1, 1) = 2.0;
+    // Deliberately do NOT call compress()
+
+    // These should work via the uncompressed linear-scan path
+    CHECK(A(0, 0) == 1.0);
+    CHECK(A(1, 1) == 2.0);
+    CHECK(A(2, 2) == 0.0);  // missing entry in uncompressed state
+}
+
+TEST_CASE("coo_vector_uncompressed_find", "[sparse][coo][vector][audit][bug2]") {
+    zipper::COOVector<double, 5> v;
+    v.emplace(1) = 10.0;
+    v.emplace(3) = 30.0;
+    // Do NOT compress
+
+    CHECK(v(1) == 10.0);
+    CHECK(v(3) == 30.0);
+    CHECK(v(0) == 0.0);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Audit fix #3: coeff_ref/const_coeff_ref error message says
+//  "SparseCoordinateAccessor" (not "SparseCoordinateStorage")
+// ═══════════════════════════════════════════════════════════════════════════
+
+TEST_CASE("coo_coeff_ref_error_message", "[sparse][coo][audit][bug3]") {
+    zipper::COOMatrix<double, 3, 3> A;
+    A.emplace(0, 0) = 1.0;
+    A.compress();
+
+    try {
+        A.coeff_ref(2, 2);  // missing entry
+        FAIL("Should have thrown");
+    } catch (const std::invalid_argument &e) {
+        std::string msg = e.what();
+        CHECK(msg.find("SparseCoordinateAccessor") != std::string::npos);
+        // Ensure old incorrect name is NOT present
+        CHECK(msg.find("SparseCoordinateStorage") == std::string::npos);
+    }
+}
+
+TEST_CASE("coo_const_coeff_ref_error_message", "[sparse][coo][audit][bug3]") {
+    zipper::COOMatrix<double, 3, 3> A;
+    A.emplace(0, 0) = 1.0;
+    A.compress();
+
+    const auto &cA = A;
+    try {
+        cA.const_coeff_ref(2, 2);  // missing entry
+        FAIL("Should have thrown");
+    } catch (const std::invalid_argument &e) {
+        std::string msg = e.what();
+        CHECK(msg.find("SparseCoordinateAccessor") != std::string::npos);
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Audit fixes #5-8: Constraint checks and element_type alias
+// ═══════════════════════════════════════════════════════════════════════════
+
+TEST_CASE("coo_element_type_alias", "[sparse][coo][audit][fix8]") {
+    // Fix #8: COO should have element_type = remove_const_t<ValueType>
+    using COO = zipper::storage::SparseCoordinateAccessor<double, zipper::extents<3, 3>>;
+    static_assert(std::is_same_v<COO::element_type, double>);
+    static_assert(std::is_same_v<COO::value_type, double>);
+
+    // Also verify on compressed accessor (supports const ValueType)
+    using ConstCS = zipper::storage::SparseCompressedAccessor<const double, zipper::extents<3, 3>>;
+    static_assert(std::is_same_v<ConstCS::element_type, double>);
+    static_assert(std::is_same_v<ConstCS::value_type, const double>);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Audit fix #9: VectorBase::eval() sparse-aware dispatch
+// ═══════════════════════════════════════════════════════════════════════════
+
+TEST_CASE("eval_csr_vector_produces_csvector", "[sparse][vector][eval][audit][fix9]") {
+    zipper::COOVector<double, 5> coo;
+    coo.emplace(1) = 3.0;
+    coo.emplace(3) = 7.0;
+    coo.compress();
+
+    zipper::CSRVector<double, 5> csr(coo);
+
+    // eval() on a CSR vector expression should produce CSVector, not dense Vector
+    auto result = csr.eval();
+    using result_type = decltype(result);
+    static_assert(std::is_same_v<result_type, zipper::CSVector<double, 5>>);
+    CHECK(result(1) == 3.0);
+    CHECK(result(3) == 7.0);
+    CHECK(result(0) == 0.0);
+}
+
+TEST_CASE("eval_csvector_produces_csvector", "[sparse][vector][eval][audit][fix9]") {
+    zipper::COOVector<double, 5> coo;
+    coo.emplace(2) = 42.0;
+    coo.compress();
+
+    zipper::CSVector<double, 5> sv(coo);
+
+    auto result = sv.eval();
+    using result_type = decltype(result);
+    static_assert(std::is_same_v<result_type, zipper::CSVector<double, 5>>);
+    CHECK(result(2) == 42.0);
+    CHECK(result(0) == 0.0);
+}
+
+TEST_CASE("eval_dense_vector_still_produces_vector", "[sparse][vector][eval][audit][fix9]") {
+    zipper::Vector<double, 3> v({1.0, 2.0, 3.0});
+
+    auto result = v.eval();
+    using result_type = decltype(result);
+    // Dense vector eval() should still produce a dense Vector
+    static_assert(std::is_same_v<result_type, zipper::Vector<double, 3>>);
+    CHECK(result(0) == 1.0);
+    CHECK(result(2) == 3.0);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Audit fix #10: COOVector::to_cs() → CSVector
+// ═══════════════════════════════════════════════════════════════════════════
+
+TEST_CASE("coo_vector_to_cs", "[sparse][coo][vector][audit][fix10]") {
+    zipper::COOVector<double, 5> coo;
+    coo.emplace(0) = 1.0;
+    coo.emplace(2) = 3.0;
+    coo.emplace(4) = 5.0;
+    coo.compress();
+
+    auto sv = coo.to_cs();
+    using result_type = decltype(sv);
+    static_assert(std::is_same_v<result_type, zipper::CSVector<double, 5>>);
+
+    CHECK(sv(0) == 1.0);
+    CHECK(sv(1) == 0.0);
+    CHECK(sv(2) == 3.0);
+    CHECK(sv(3) == 0.0);
+    CHECK(sv(4) == 5.0);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Audit fix #12: CSRMatrix::layout_policy alias
+// ═══════════════════════════════════════════════════════════════════════════
+
+TEST_CASE("csr_matrix_layout_policy_alias", "[sparse][csr][audit][fix12]") {
+    static_assert(std::is_same_v<
+        zipper::CSRMatrix<double, 3, 3>::layout_policy,
+        zipper::storage::layout_right>);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Audit fix #13: SparseCompressedAccessor::clear()
+// ═══════════════════════════════════════════════════════════════════════════
+
+TEST_CASE("compressed_accessor_clear", "[sparse][compressed][audit][fix13]") {
+    std::vector<zipper::SparseEntry<double, 2>> entries = {
+        {{0, 0}, 1.0}, {{1, 1}, 2.0}, {{2, 2}, 3.0}};
+    zipper::CSRMatrix<double, 3, 3> csr(entries);
+
+    CHECK(csr(0, 0) == 1.0);
+    CHECK(csr(1, 1) == 2.0);
+    CHECK(csr(2, 2) == 3.0);
+
+    // clear() should remove all entries
+    csr.expression().clear();
+
+    CHECK(csr(0, 0) == 0.0);
+    CHECK(csr(1, 1) == 0.0);
+    CHECK(csr(2, 2) == 0.0);
+}
+
+TEST_CASE("csc_accessor_clear", "[sparse][csc][compressed][audit][fix13]") {
+    std::vector<zipper::SparseEntry<double, 2>> entries = {
+        {{0, 1}, 5.0}, {{2, 0}, 7.0}};
+    zipper::CSMatrix<double, 3, 3, zipper::storage::layout_left> csc(entries);
+
+    CHECK(csc(0, 1) == 5.0);
+    CHECK(csc(2, 0) == 7.0);
+
+    csc.expression().clear();
+
+    CHECK(csc(0, 1) == 0.0);
+    CHECK(csc(2, 0) == 0.0);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Audit fix #16: const_coeff_ref on const SparseCompressedAccessor
+//  (no longer gated on !is_const_v<ValueType>)
+// ═══════════════════════════════════════════════════════════════════════════
+
+TEST_CASE("compressed_const_coeff_ref_on_const_accessor",
+          "[sparse][compressed][audit][fix16]") {
+    std::vector<zipper::SparseEntry<double, 2>> entries = {
+        {{0, 0}, 1.0}, {{1, 1}, 2.0}};
+    zipper::CSRMatrix<double, 3, 3> csr(entries);
+
+    // const_coeff_ref should work via const reference
+    const auto &expr = csr.expression();
+    CHECK(expr.const_coeff_ref(0, 0) == 1.0);
+    CHECK(expr.const_coeff_ref(1, 1) == 2.0);
+    CHECK_THROWS(expr.const_coeff_ref(2, 2));  // missing
+}
+
+TEST_CASE("compressed_const_coeff_ref_on_const_value_type",
+          "[sparse][compressed][audit][fix16]") {
+    // Build a const-value-type accessor (read-only)
+    using ConstCSR = zipper::storage::SparseCompressedAccessor<
+        const double, zipper::extents<3, 3>, zipper::storage::layout_right>;
+
+    // const_coeff_ref should compile even for const ValueType
+    // (previously gated on !is_const_v<ValueType>)
+    static_assert(requires(const ConstCSR &a) { a.const_coeff_ref(0, 0); });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Audit fix #17: CSC-aware SparseAssignHelper iteration
+//  Assigning CSC → COO should produce correct values
+// ═══════════════════════════════════════════════════════════════════════════
+
+TEST_CASE("csc_to_coo_assign", "[sparse][csc][assign][audit][fix17]") {
+    // Build a CSC matrix
+    std::vector<zipper::SparseEntry<double, 2>> entries = {
+        {{0, 0}, 1.0}, {{0, 2}, 2.0},
+        {{1, 1}, 3.0},
+        {{2, 0}, 4.0}, {{2, 2}, 5.0}};
+    zipper::CSMatrix<double, 3, 3, zipper::storage::layout_left> csc(entries);
+
+    // Assign CSC → COO
+    zipper::COOMatrix<double, 3, 3> coo;
+    coo = csc;
+
+    CHECK(coo(0, 0) == 1.0);
+    CHECK(coo(0, 2) == 2.0);
+    CHECK(coo(1, 1) == 3.0);
+    CHECK(coo(2, 0) == 4.0);
+    CHECK(coo(2, 2) == 5.0);
+    CHECK(coo(0, 1) == 0.0);
+    CHECK(coo(1, 0) == 0.0);
+}
+
+TEST_CASE("csc_to_csr_assign", "[sparse][csc][csr][assign][audit][fix17]") {
+    // CSC → CSR via assignment (goes through SparseAssignHelper)
+    std::vector<zipper::SparseEntry<double, 2>> entries = {
+        {{0, 0}, 10.0}, {{1, 0}, 20.0}, {{1, 2}, 30.0}};
+    zipper::CSMatrix<double, 2, 3, zipper::storage::layout_left> csc(entries);
+
+    zipper::CSRMatrix<double, 2, 3> csr;
+    csr = csc;
+
+    CHECK(csr(0, 0) == 10.0);
+    CHECK(csr(1, 0) == 20.0);
+    CHECK(csr(1, 2) == 30.0);
+    CHECK(csr(0, 1) == 0.0);
+    CHECK(csr(0, 2) == 0.0);
+    CHECK(csr(1, 1) == 0.0);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Audit fix #18: Compressed-to-compressed fast path (same layout)
+// ═══════════════════════════════════════════════════════════════════════════
+
+TEST_CASE("compressed_to_compressed_same_layout_fast_path",
+          "[sparse][compressed][assign][audit][fix18]") {
+    // CSR → CSR: fast path should directly copy compressed data
+    std::vector<zipper::SparseEntry<double, 2>> entries = {
+        {{0, 0}, 1.0}, {{0, 2}, 2.0},
+        {{1, 1}, 3.0},
+        {{2, 0}, 4.0}, {{2, 2}, 5.0}};
+    zipper::CSRMatrix<double, 3, 3> src(entries);
+
+    zipper::CSRMatrix<double, 3, 3> dst;
+    dst = src;  // should use fast path
+
+    CHECK(dst(0, 0) == 1.0);
+    CHECK(dst(0, 2) == 2.0);
+    CHECK(dst(1, 1) == 3.0);
+    CHECK(dst(2, 0) == 4.0);
+    CHECK(dst(2, 2) == 5.0);
+    CHECK(dst(0, 1) == 0.0);
+}
+
+TEST_CASE("compressed_to_compressed_csc_fast_path",
+          "[sparse][csc][compressed][assign][audit][fix18]") {
+    // CSC → CSC: fast path
+    std::vector<zipper::SparseEntry<double, 2>> entries = {
+        {{0, 0}, 10.0}, {{1, 1}, 20.0}, {{2, 2}, 30.0}};
+    zipper::CSMatrix<double, 3, 3, zipper::storage::layout_left> src(entries);
+
+    zipper::CSMatrix<double, 3, 3, zipper::storage::layout_left> dst;
+    dst = src;
+
+    CHECK(dst(0, 0) == 10.0);
+    CHECK(dst(1, 1) == 20.0);
+    CHECK(dst(2, 2) == 30.0);
+    CHECK(dst(0, 1) == 0.0);
+}
+
+TEST_CASE("compressed_vector_same_layout_fast_path",
+          "[sparse][vector][compressed][assign][audit][fix18]") {
+    // CSVector → CSVector: fast path (rank-1, layout-agnostic)
+    std::vector<zipper::SparseEntry<double, 1>> entries = {
+        {{1}, 5.0}, {{3}, 15.0}};
+    zipper::CSVector<double, 5> src(entries);
+
+    zipper::CSVector<double, 5> dst;
+    dst = src;
+
+    CHECK(dst(0) == 0.0);
+    CHECK(dst(1) == 5.0);
+    CHECK(dst(2) == 0.0);
+    CHECK(dst(3) == 15.0);
+    CHECK(dst(4) == 0.0);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Audit fix #19: COO reserve() method
+// ═══════════════════════════════════════════════════════════════════════════
+
+TEST_CASE("coo_reserve", "[sparse][coo][audit][fix19]") {
+    // reserve() should not change behavior, only avoid reallocations.
+    // Verify it doesn't corrupt data.
+    zipper::storage::SparseCoordinateAccessor<double, zipper::extents<10>> acc;
+    acc.reserve(5);  // pre-allocate
+
+    acc.emplace(0) = 1.0;
+    acc.emplace(3) = 3.0;
+    acc.emplace(7) = 7.0;
+    acc.compress();
+
+    CHECK(acc.coeff(0) == 1.0);
+    CHECK(acc.coeff(3) == 3.0);
+    CHECK(acc.coeff(7) == 7.0);
+    CHECK(acc.coeff(1) == 0.0);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Audit fix #10 (cont.): COOMatrix::to_cs<LayoutPolicy>() template
+// ═══════════════════════════════════════════════════════════════════════════
+
+TEST_CASE("coo_matrix_to_cs_csr", "[sparse][coo][matrix][audit][fix10]") {
+    zipper::COOMatrix<double, 3, 3> coo;
+    coo.emplace(0, 0) = 1.0;
+    coo.emplace(1, 1) = 2.0;
+    coo.emplace(2, 2) = 3.0;
+    coo.compress();
+
+    auto csr = coo.to_cs<zipper::storage::layout_right>();
+    using result_type = decltype(csr);
+    static_assert(std::is_same_v<result_type,
+        zipper::CSMatrix<double, 3, 3, zipper::storage::layout_right>>);
+
+    CHECK(csr(0, 0) == 1.0);
+    CHECK(csr(1, 1) == 2.0);
+    CHECK(csr(2, 2) == 3.0);
+}
+
+TEST_CASE("coo_matrix_to_cs_csc", "[sparse][coo][matrix][audit][fix10]") {
+    zipper::COOMatrix<double, 3, 3> coo;
+    coo.emplace(0, 1) = 5.0;
+    coo.emplace(2, 0) = 7.0;
+    coo.compress();
+
+    auto csc = coo.to_cs<zipper::storage::layout_left>();
+    using result_type = decltype(csc);
+    static_assert(std::is_same_v<result_type,
+        zipper::CSMatrix<double, 3, 3, zipper::storage::layout_left>>);
+
+    CHECK(csc(0, 1) == 5.0);
+    CHECK(csc(2, 0) == 7.0);
+    CHECK(csc(0, 0) == 0.0);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Audit fix #14: COO clear() method (on SparseCoordinateAccessor)
+// ═══════════════════════════════════════════════════════════════════════════
+
+TEST_CASE("coo_accessor_clear", "[sparse][coo][audit][fix14]") {
+    zipper::COOMatrix<double, 3, 3> A;
+    A.emplace(0, 0) = 1.0;
+    A.emplace(1, 1) = 2.0;
+    A.compress();
+
+    CHECK(A(0, 0) == 1.0);
+    CHECK(A(1, 1) == 2.0);
+
+    A.expression().clear();
+
+    CHECK(A(0, 0) == 0.0);
+    CHECK(A(1, 1) == 0.0);
+    CHECK(A.is_compressed());  // clear() sets compressed = true
 }

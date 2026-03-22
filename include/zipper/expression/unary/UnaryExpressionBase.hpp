@@ -80,6 +80,10 @@ struct DefaultUnaryExpressionTraits
   /// in by value but still holds references to a and b.
   constexpr static bool stores_references =
       std::is_reference_v<Child> || _Detail::child_traits::stores_references;
+
+  /// Propagate the child's layout preference by default.
+  /// Specific unary expressions (e.g. Swizzle transpose) may override.
+  using preferred_layout = typename _Detail::child_traits::preferred_layout;
 };
 } // namespace detail
 

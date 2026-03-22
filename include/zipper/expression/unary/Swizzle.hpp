@@ -48,6 +48,25 @@ struct detail::ExpressionTraits<
 
   /// Backward-compatible alias for has_index_set.
   constexpr static bool has_known_zeros = has_index_set;
+
+private:
+  /// True when Indices... is exactly {1, 0} — a matrix transpose.
+  consteval static bool _is_transpose() {
+    constexpr std::array<index_type, sizeof...(Indices)> idx = {{Indices...}};
+    if constexpr (sizeof...(Indices) != 2) {
+      return false;
+    } else {
+      return idx[0] == 1 && idx[1] == 0;
+    }
+  }
+
+public:
+  /// For transpose (Swizzle<E,1,0>): flip layout (CSR↔CSC, row↔col-major).
+  /// For other swizzles: no preference (layout meaning is unclear).
+  using preferred_layout = std::conditional_t<
+      _is_transpose(),
+      zipper::detail::flip_layout_t<typename Base::preferred_layout>,
+      zipper::detail::NoLayoutPreference>;
 };
 
 namespace unary {

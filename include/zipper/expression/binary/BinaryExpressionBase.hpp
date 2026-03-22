@@ -71,6 +71,10 @@ struct DefaultBinaryExpressionTraits
   constexpr static bool stores_references =
       std::is_reference_v<ChildA> || std::is_reference_v<ChildB> ||
       _Detail::ATraits::stores_references || _Detail::BTraits::stores_references;
+
+  /// Propagate the LHS layout preference by default.
+  /// Specific binary expressions (e.g. MatrixVectorProduct) may override.
+  using preferred_layout = typename _Detail::ATraits::preferred_layout;
 };
 } // namespace detail
 

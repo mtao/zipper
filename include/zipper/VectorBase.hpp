@@ -13,6 +13,7 @@
 #include "MatrixBase.hpp"
 #include "detail/constexpr_arithmetic.hpp"
 #include "detail/extents/constexpr_extent.hpp"
+#include "detail/LayoutPreference.hpp"
 #include "expression/binary/CrossProduct.hpp"
 #include "expression/nullary/StlMDArray.hpp"
 #include "expression/reductions/CoefficientSum.hpp"
@@ -22,6 +23,7 @@
 
 namespace zipper {
 template <typename ValueType, index_type Rows> class Vector;
+template <typename ValueType, index_type N> class CSVector;
 
 template <concepts::Expression Expr>
   requires(concepts::QualifiedRankedExpression<Expr, 1>)
@@ -44,7 +46,15 @@ public:
   using Base::expression;
   using Base::swizzle;
 
-  auto eval() const { return Vector(*this); }
+  auto eval() const {
+    using pref = typename expression_traits::preferred_layout;
+    constexpr auto N = extents_type::static_extent(0);
+    if constexpr (detail::is_sparse_layout_preference_v<pref>) {
+      return CSVector<std::remove_const_t<value_type>, N>(*this);
+    } else {
+      return Vector(*this);
+    }
+  }
   template <concepts::Vector Other>
   VectorBase(const Other &other) : VectorBase(other.expression()) {}
 

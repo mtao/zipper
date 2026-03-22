@@ -82,6 +82,9 @@ struct detail::ExpressionTraits<binary::MatrixVectorProduct<A, B>>
     using extents_type = extents<_Detail::ATraits::extents_type::static_extent(0)>;
     constexpr static bool is_coefficient_consistent = false;
     constexpr static bool is_value_based = false;
+
+    /// Matrix-vector product produces a rank-1 result — no layout preference.
+    using preferred_layout = zipper::detail::NoLayoutPreference;
 };
 
 namespace binary {

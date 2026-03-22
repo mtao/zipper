@@ -3,6 +3,7 @@
 #include "zipper/concepts/Extents.hpp"
 #include "zipper/detail/ExtentsTraits.hpp"
 #include "zipper/detail/Features.hpp"
+#include "zipper/detail/LayoutPreference.hpp"
 #include "zipper/types.hpp"
 
 namespace zipper::expression::detail {
@@ -65,6 +66,11 @@ struct BasicExpressionTraits {
 
   /// Backward-compatible alias for has_index_set.
   constexpr static bool has_known_zeros = has_index_set;
+
+  /// Layout preference for smart eval().
+  /// Leaf expressions override this; non-leaf expressions propagate.
+  /// Default: no preference → eval() produces default row-major dense.
+  using preferred_layout = zipper::detail::NoLayoutPreference;
 };
 
 template <typename T> struct ExpressionTraits;

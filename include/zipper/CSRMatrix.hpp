@@ -42,6 +42,7 @@ public:
   using Base = MatrixBase<expression_type>;
   using value_type = typename Base::value_type;
   using extents_type = typename Base::extents_type;
+  using layout_policy = storage::layout_right;
   using extents_traits = detail::ExtentsTraits<extents_type>;
   using Base::expression;
   using Base::extent;
