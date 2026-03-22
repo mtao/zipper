@@ -40,4 +40,10 @@ test('pcg', test_pcg)
 test_multigrid = executable('test_multigrid', 'test_multigrid.cpp', dependencies: [zipper_test_dep])
 test('multigrid', test_multigrid)
 
+test_sparse_ops = executable('test_sparse_ops', 'test_sparse_ops.cpp', dependencies: [zipper_test_dep])
+test('sparse_ops', test_sparse_ops)
+
+test_sparse_decompositions = executable('test_sparse_decompositions', 'test_sparse_decompositions.cpp', dependencies: [zipper_test_dep])
+test('sparse_decompositions', test_sparse_decompositions)
+
 subdir('extents')
