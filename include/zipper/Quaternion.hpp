@@ -62,6 +62,9 @@ public:
     return *this;
   }
 
+  /// @brief Return the identity quaternion (1, 0, 0, 0).
+  static Quaternion identity() { return Quaternion(value_type(1), value_type(0), value_type(0), value_type(0)); }
+
   /// @brief Construct from four scalar components (w, x, y, z).
   Quaternion(value_type w, value_type x, value_type y, value_type z) {
     (*this)(0) = w;
