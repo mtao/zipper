@@ -532,3 +532,205 @@ TEST_CASE("QRFullResult::solve matches qr_solve_full", "[decomposition][qr_solve
               Catch::Approx(method_result->operator()(i)).margin(1e-14));
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Column-pivoted QR
+// ─────────────────────────────────────────────────────────────────────────────
+
+TEST_CASE("qr_col_pivot 3x3 full rank", "[decomposition][qr_col_pivot]") {
+    Matrix<double, 3, 3> A{
+        {1.0, 1.0, 0.0},
+        {1.0, 0.0, 1.0},
+        {0.0, 1.0, 1.0},
+    };
+
+    auto result = utils::decomposition::qr_col_pivot(A);
+    const auto &Q = result.Q;
+    const auto &R = result.R;
+    const auto &perm = result.col_perm;
+
+    // Q should have orthonormal columns: Q^T * Q ≈ I.
+    Matrix<double, 3, 3> QtQ(3, 3);
+    mat_mul_AtB(Q, Q, QtQ);
+    for (index_type i = 0; i < 3; ++i) {
+        for (index_type j = 0; j < 3; ++j) {
+            double expected = (i == j) ? 1.0 : 0.0;
+            CHECK(QtQ(i, j) == Catch::Approx(expected).margin(1e-12));
+        }
+    }
+
+    // R should be upper triangular.
+    for (index_type i = 0; i < 3; ++i) {
+        for (index_type j = 0; j < i; ++j) {
+            CHECK(R(i, j) == Catch::Approx(0.0).margin(1e-12));
+        }
+    }
+
+    // |R(i,i)| should be non-increasing.
+    for (index_type i = 0; i + 1 < 3; ++i) {
+        CHECK(std::abs(R(i, i)) >= std::abs(R(i + 1, i + 1)) - 1e-12);
+    }
+
+    // Q * R should equal A with columns permuted: (Q*R)(:,j) == A(:,perm[j]).
+    Matrix<double, 3, 3> QR(3, 3);
+    mat_mul(Q, R, QR);
+    for (index_type i = 0; i < 3; ++i) {
+        for (index_type j = 0; j < 3; ++j) {
+            CHECK(QR(i, j) == Catch::Approx(A(i, perm[j])).margin(1e-12));
+        }
+    }
+
+    // Full rank.
+    CHECK(result.rank() == 3);
+}
+
+TEST_CASE("qr_col_pivot 4x3 tall full rank", "[decomposition][qr_col_pivot]") {
+    Matrix<double, 4, 3> A{
+        {1.0, 2.0, 3.0},
+        {4.0, 5.0, 6.0},
+        {7.0, 8.0, 9.0},
+        {10.0, 11.0, 13.0},
+    };
+
+    auto result = utils::decomposition::qr_col_pivot(A);
+    const auto &Q = result.Q;
+    const auto &R = result.R;
+    const auto &perm = result.col_perm;
+
+    // Q^T * Q ≈ I (3x3).
+    Matrix<double, 3, 3> QtQ(3, 3);
+    mat_mul_AtB(Q, Q, QtQ);
+    for (index_type i = 0; i < 3; ++i) {
+        for (index_type j = 0; j < 3; ++j) {
+            double expected = (i == j) ? 1.0 : 0.0;
+            CHECK(QtQ(i, j) == Catch::Approx(expected).margin(1e-10));
+        }
+    }
+
+    // R upper triangular.
+    for (index_type i = 0; i < 3; ++i) {
+        for (index_type j = 0; j < i; ++j) {
+            CHECK(R(i, j) == Catch::Approx(0.0).margin(1e-10));
+        }
+    }
+
+    // |R(i,i)| non-increasing.
+    for (index_type i = 0; i + 1 < 3; ++i) {
+        CHECK(std::abs(R(i, i)) >= std::abs(R(i + 1, i + 1)) - 1e-10);
+    }
+
+    // Q * R ≈ A(:, perm).
+    Matrix<double, 4, 3> QR(4, 3);
+    mat_mul(Q, R, QR);
+    for (index_type i = 0; i < 4; ++i) {
+        for (index_type j = 0; j < 3; ++j) {
+            CHECK(QR(i, j) == Catch::Approx(A(i, perm[j])).margin(1e-10));
+        }
+    }
+
+    CHECK(result.rank() == 3);
+}
+
+TEST_CASE("qr_col_pivot rank-deficient 3x3", "[decomposition][qr_col_pivot]") {
+    // Col 2 = Col 0 + Col 1, so rank = 2.
+    Matrix<double, 3, 3> A{
+        {1.0, 0.0, 1.0},
+        {0.0, 1.0, 1.0},
+        {1.0, 1.0, 2.0},
+    };
+
+    auto result = utils::decomposition::qr_col_pivot(A);
+    CHECK(result.rank() == 2);
+
+    // Verify factorisation: Q * R ≈ A(:, perm).
+    const auto &Q = result.Q;
+    const auto &R = result.R;
+    const auto &perm = result.col_perm;
+
+    Matrix<double, 3, 3> QR(3, 3);
+    mat_mul(Q, R, QR);
+    for (index_type i = 0; i < 3; ++i) {
+        for (index_type j = 0; j < 3; ++j) {
+            CHECK(QR(i, j) == Catch::Approx(A(i, perm[j])).margin(1e-10));
+        }
+    }
+}
+
+TEST_CASE("qr_col_pivot rank-deficient 4x3", "[decomposition][qr_col_pivot]") {
+    // Rows 0 and 2 are identical, cols 0 and 2 are identical.
+    // Rank should be 2.
+    Matrix<double, 4, 3> A{
+        {1.0, 2.0, 1.0},
+        {3.0, 4.0, 3.0},
+        {1.0, 2.0, 1.0},
+        {5.0, 6.0, 5.0},
+    };
+
+    auto result = utils::decomposition::qr_col_pivot(A);
+    CHECK(result.rank() == 2);
+}
+
+TEST_CASE("qr_col_pivot rank 1", "[decomposition][qr_col_pivot]") {
+    // All columns are multiples of [1, 2, 3].
+    Matrix<double, 3, 3> A{
+        {1.0, 2.0, 3.0},
+        {2.0, 4.0, 6.0},
+        {3.0, 6.0, 9.0},
+    };
+
+    auto result = utils::decomposition::qr_col_pivot(A);
+    CHECK(result.rank() == 1);
+}
+
+TEST_CASE("qr_col_pivot zero matrix", "[decomposition][qr_col_pivot]") {
+    Matrix<double, 3, 3> A{
+        {0.0, 0.0, 0.0},
+        {0.0, 0.0, 0.0},
+        {0.0, 0.0, 0.0},
+    };
+
+    auto result = utils::decomposition::qr_col_pivot(A);
+    CHECK(result.rank() == 0);
+}
+
+TEST_CASE("qr_col_pivot rank convenience function",
+          "[decomposition][qr_col_pivot]") {
+    Matrix<double, 3, 3> A_full{
+        {1.0, 1.0, 0.0},
+        {1.0, 0.0, 1.0},
+        {0.0, 1.0, 1.0},
+    };
+    CHECK(utils::decomposition::rank(A_full) == 3);
+
+    // Rank-deficient.
+    Matrix<double, 3, 3> A_def{
+        {1.0, 0.0, 1.0},
+        {0.0, 1.0, 1.0},
+        {1.0, 1.0, 2.0},
+    };
+    CHECK(utils::decomposition::rank(A_def) == 2);
+}
+
+TEST_CASE("qr_col_pivot wide matrix 2x4", "[decomposition][qr_col_pivot]") {
+    // Wide matrix (more cols than rows). Rank should be 2 (full row rank).
+    Matrix<double, 2, 4> A{
+        {1.0, 0.0, 2.0, 1.0},
+        {0.0, 1.0, 1.0, 3.0},
+    };
+
+    auto result = utils::decomposition::qr_col_pivot(A);
+    CHECK(result.rank() == 2);
+
+    // Verify factorisation.
+    const auto &Q = result.Q;
+    const auto &R = result.R;
+    const auto &perm = result.col_perm;
+
+    Matrix<double, 2, 4> QR(2, 4);
+    mat_mul(Q, R, QR);
+    for (index_type i = 0; i < 2; ++i) {
+        for (index_type j = 0; j < 4; ++j) {
+            CHECK(QR(i, j) == Catch::Approx(A(i, perm[j])).margin(1e-10));
+        }
+    }
+}

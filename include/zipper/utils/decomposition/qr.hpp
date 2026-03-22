@@ -58,6 +58,9 @@
 #include <algorithm>
 #include <cmath>
 #include <expected>
+#include <limits>
+#include <numeric>
+#include <vector>
 
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
@@ -505,6 +508,238 @@ template <concepts::Matrix ADerived, concepts::Vector BDerived>
 auto qr_solve_full(const ADerived &A, const BDerived &b) {
   auto result = qr_full(A);
   return result.solve(b);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Column-pivoted QR result type
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Result of a column-pivoted QR decomposition.
+///
+/// Given an m x n matrix A, produces:
+///   A * P = Q * R
+/// equivalently:
+///   A = Q * R * P^T
+///
+/// where Q (m x p, p = min(m,n)) has orthonormal columns, R (p x n) is upper
+/// triangular, and P is a column permutation matrix.  Column pivoting selects,
+/// at each step, the remaining column with the largest 2-norm, guaranteeing
+/// that the diagonal entries of R are in non-increasing magnitude:
+///   |R(0,0)| >= |R(1,1)| >= ... >= |R(p-1,p-1)|
+///
+/// This ordering makes the factorisation suitable for reliable numerical rank
+/// determination: the rank is the number of leading diagonal entries that
+/// exceed a tolerance.
+template <typename T, index_type M, index_type N>
+struct QRColPivotResult {
+  /// Scalar type of the decomposition.
+  using value_type = T;
+
+  static constexpr index_type P = extents::min(M, N);
+
+  /// Orthonormal matrix Q (m x p, p = min(m,n)).
+  Matrix<T, M, P> Q;
+  /// Upper triangular matrix R (p x n).
+  Matrix<T, P, N> R;
+  /// Column permutation: col_perm[j] = original column index at position j.
+  std::vector<index_type> col_perm;
+
+  /// @brief Compute the numerical rank from the R diagonal.
+  ///
+  /// Returns the number of leading diagonal entries of R whose absolute value
+  /// exceeds `tol * |R(0,0)|`.  If no tolerance is provided, a default based
+  /// on machine epsilon and the matrix dimensions is used.
+  ///
+  /// @param tol_override  Optional explicit tolerance multiplier.
+  /// @return  The numerical rank.
+  auto rank(T tol_override = T{-1}) const -> index_type {
+    const index_type m = Q.extent(0);
+    const index_type n = R.extent(1);
+    const index_type p = std::min(m, n);
+
+    if (p == 0) return 0;
+
+    // Default tolerance: eps * max(m, n).
+    T tol = tol_override;
+    if (tol < T{0}) {
+      tol = std::numeric_limits<T>::epsilon() *
+            static_cast<T>(std::max(m, n));
+    }
+
+    const T threshold = tol * std::abs(R(0, 0));
+
+    index_type r = 0;
+    for (index_type i = 0; i < p; ++i) {
+      if (std::abs(R(i, i)) > threshold)
+        ++r;
+      else
+        break; // Diagonal is non-increasing, so all subsequent are <= this.
+    }
+    return r;
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Column-pivoted Householder QR
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// @brief Column-pivoted QR decomposition via Householder reflections.
+///
+/// At each step k, the algorithm selects the remaining column (index >= k) with
+/// the largest 2-norm and swaps it into position k before applying the
+/// Householder reflection.  This guarantees |R(k,k)| is non-increasing.
+///
+/// @param A  An m x n matrix.
+/// @return   A `QRColPivotResult` with Q (m x p), R (p x n), and col_perm.
+template <concepts::Matrix Derived> auto qr_col_pivot(const Derived &A) {
+  using AType = std::decay_t<Derived>;
+  using T = typename AType::value_type;
+  constexpr index_type M = AType::extents_type::static_extent(0);
+  constexpr index_type N = AType::extents_type::static_extent(1);
+  constexpr index_type P = extents::min(M, N);
+  using Vec = Vector<T, M>;
+
+  const index_type m = A.extent(0);
+  const index_type n = A.extent(1);
+  const index_type p = std::min(m, n);
+
+  // Work on a copy of A that will be transformed into R.
+  Matrix<T, M, N> R_work(A);
+
+  // Accumulate Q starting from identity (m x m), extract first p cols later.
+  Matrix<T, M, M> Q_full(m, m);
+  Q_full = expression::nullary::Identity<T, M, M>(Q_full.extents());
+
+  // Column permutation (identity initially).
+  std::vector<index_type> col_perm(n);
+  std::iota(col_perm.begin(), col_perm.end(), index_type{0});
+
+  // Precompute column norms squared for efficient pivot selection.
+  std::vector<T> col_norms_sq(n, T{0});
+  for (index_type j = 0; j < n; ++j) {
+    for (index_type i = 0; i < m; ++i) {
+      col_norms_sq[j] += R_work(i, j) * R_work(i, j);
+    }
+  }
+
+  for (index_type k = 0; k < p; ++k) {
+    // ── Column pivoting: find the column (>= k) with largest remaining norm.
+    index_type max_col = k;
+    T max_norm = col_norms_sq[k];
+    for (index_type j = k + 1; j < n; ++j) {
+      if (col_norms_sq[j] > max_norm) {
+        max_norm = col_norms_sq[j];
+        max_col = j;
+      }
+    }
+
+    // Swap columns k and max_col in R_work, col_perm, and col_norms_sq.
+    if (max_col != k) {
+      std::swap(col_perm[k], col_perm[max_col]);
+      std::swap(col_norms_sq[k], col_norms_sq[max_col]);
+      for (index_type i = 0; i < m; ++i) {
+        std::swap(R_work(i, k), R_work(i, max_col));
+      }
+    }
+
+    // ── Householder reflection (same as unpivoted qr).
+    Vec v(m);
+    v = expression::nullary::Constant(T{0}, v.extents());
+
+    T norm_sub = T{0};
+    for (index_type i = k; i < m; ++i) {
+      v(i) = R_work(i, k);
+      norm_sub += v(i) * v(i);
+    }
+    norm_sub = std::sqrt(norm_sub);
+
+    if (norm_sub < std::numeric_limits<T>::min()) {
+      continue;
+    }
+
+    if (v(k) >= T{0}) {
+      v(k) += norm_sub;
+    } else {
+      v(k) -= norm_sub;
+    }
+
+    T v_norm = T{0};
+    for (index_type i = k; i < m; ++i) {
+      v_norm += v(i) * v(i);
+    }
+    v_norm = std::sqrt(v_norm);
+    for (index_type i = k; i < m; ++i) {
+      v(i) /= v_norm;
+    }
+
+    // Apply H to R_work.
+    for (index_type j = k; j < n; ++j) {
+      T dot = T{0};
+      for (index_type i = k; i < m; ++i) {
+        dot += v(i) * R_work(i, j);
+      }
+      for (index_type i = k; i < m; ++i) {
+        R_work(i, j) -= T{2} * v(i) * dot;
+      }
+    }
+
+    // Apply H to Q_full.
+    for (index_type i = 0; i < m; ++i) {
+      T dot = T{0};
+      for (index_type j = k; j < m; ++j) {
+        dot += Q_full(i, j) * v(j);
+      }
+      for (index_type j = k; j < m; ++j) {
+        Q_full(i, j) -= T{2} * dot * v(j);
+      }
+    }
+
+    // ── Update column norms for remaining columns (downdate).
+    // After the reflection, R_work(k, j) for j > k has changed.
+    // The remaining norm squared of column j (rows k+1..m-1) is
+    // col_norms_sq[j] - R_work(k, j)^2.  This avoids recomputing from
+    // scratch and is the standard technique (Businger-Golub).
+    for (index_type j = k + 1; j < n; ++j) {
+      col_norms_sq[j] -= R_work(k, j) * R_work(k, j);
+      // Guard against negative due to rounding.
+      if (col_norms_sq[j] < T{0}) col_norms_sq[j] = T{0};
+    }
+  }
+
+  // Extract the reduced Q (first p columns) and R (top p rows).
+  Matrix<T, M, P> Q(m, p);
+  Matrix<T, P, N> R(p, n);
+
+  for (index_type i = 0; i < m; ++i) {
+    for (index_type j = 0; j < p; ++j) {
+      Q(i, j) = Q_full(i, j);
+    }
+  }
+
+  for (index_type i = 0; i < p; ++i) {
+    for (index_type j = 0; j < n; ++j) {
+      R(i, j) = R_work(i, j);
+    }
+  }
+
+  return QRColPivotResult<T, M, N>{
+      .Q = std::move(Q), .R = std::move(R), .col_perm = std::move(col_perm)};
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Rank via column-pivoted QR
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// @brief Compute the numerical rank of a matrix via column-pivoted QR.
+///
+/// This is a convenience function that performs a column-pivoted QR
+/// decomposition and returns the rank.
+///
+/// @param A  An m x n matrix.
+/// @return   The numerical rank.
+template <concepts::Matrix Derived>
+auto rank(const Derived &A) -> index_type {
+  return qr_col_pivot(A).rank();
 }
 
 } // namespace zipper::utils::decomposition
