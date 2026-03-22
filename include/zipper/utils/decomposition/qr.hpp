@@ -59,7 +59,7 @@
 #include <cmath>
 #include <expected>
 #include <limits>
-#include <numeric>
+#include <ranges>
 #include <vector>
 
 #include <zipper/Matrix.hpp>
@@ -611,15 +611,15 @@ template <concepts::Matrix Derived> auto qr_col_pivot(const Derived &A) {
   Q_full = expression::nullary::Identity<T, M, M>(Q_full.extents());
 
   // Column permutation (identity initially).
-  std::vector<index_type> col_perm(n);
-  std::iota(col_perm.begin(), col_perm.end(), index_type{0});
+  auto col_perm =
+      std::views::iota(index_type{0}, n) | std::ranges::to<std::vector>();
 
-  // Precompute column norms squared for efficient pivot selection.
-  std::vector<T> col_norms_sq(n, T{0});
+  // Precompute column norms squared (diagonal of the Gram matrix A^T A)
+  // for efficient pivot selection via Businger-Golub norm downdating.
+  auto gram_diag = R_work.colwise().template norm_powered<2>();
+  std::vector<T> col_norms_sq(n);
   for (index_type j = 0; j < n; ++j) {
-    for (index_type i = 0; i < m; ++i) {
-      col_norms_sq[j] += R_work(i, j) * R_work(i, j);
-    }
+    col_norms_sq[j] = gram_diag(j);
   }
 
   for (index_type k = 0; k < p; ++k) {
@@ -646,12 +646,12 @@ template <concepts::Matrix Derived> auto qr_col_pivot(const Derived &A) {
     Vec v(m);
     v = expression::nullary::Constant(T{0}, v.extents());
 
-    T norm_sub = T{0};
     for (index_type i = k; i < m; ++i) {
       v(i) = R_work(i, k);
-      norm_sub += v(i) * v(i);
     }
-    norm_sub = std::sqrt(norm_sub);
+    // v is zero for indices 0..k-1, so the full-vector norm equals
+    // the norm of the sub-column R_work(k:m-1, k).
+    T norm_sub = v.norm();
 
     if (norm_sub < std::numeric_limits<T>::min()) {
       continue;
@@ -663,14 +663,9 @@ template <concepts::Matrix Derived> auto qr_col_pivot(const Derived &A) {
       v(k) -= norm_sub;
     }
 
-    T v_norm = T{0};
-    for (index_type i = k; i < m; ++i) {
-      v_norm += v(i) * v(i);
-    }
-    v_norm = std::sqrt(v_norm);
-    for (index_type i = k; i < m; ++i) {
-      v(i) /= v_norm;
-    }
+    // Normalise v so that the reflection is H = I - 2*v*v^T.
+    // (Zero entries at 0..k-1 are unaffected by division.)
+    v.normalize();
 
     // Apply H to R_work.
     for (index_type j = k; j < n; ++j) {
@@ -707,20 +702,8 @@ template <concepts::Matrix Derived> auto qr_col_pivot(const Derived &A) {
   }
 
   // Extract the reduced Q (first p columns) and R (top p rows).
-  Matrix<T, M, P> Q(m, p);
-  Matrix<T, P, N> R(p, n);
-
-  for (index_type i = 0; i < m; ++i) {
-    for (index_type j = 0; j < p; ++j) {
-      Q(i, j) = Q_full(i, j);
-    }
-  }
-
-  for (index_type i = 0; i < p; ++i) {
-    for (index_type j = 0; j < n; ++j) {
-      R(i, j) = R_work(i, j);
-    }
-  }
+  Matrix<T, M, P> Q(Q_full.leftCols(p));
+  Matrix<T, P, N> R(R_work.topRows(p));
 
   return QRColPivotResult<T, M, N>{
       .Q = std::move(Q), .R = std::move(R), .col_perm = std::move(col_perm)};
