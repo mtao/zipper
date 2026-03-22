@@ -12,6 +12,8 @@
 #include "zipper/detail/pack_index.hpp"
 #include "zipper/expression/ExpressionBase.hpp"
 #include "zipper/expression/detail/IndexSet.hpp"
+#include "zipper/expression/detail/SparseAssignHelper.hpp"
+#include "zipper/utils/extents/assignable_extents.hpp"
 namespace zipper::storage {
 template <typename ValueType, typename Extents> class SparseCoordinateAccessor;
 
@@ -206,6 +208,25 @@ public:
   }
   auto cend() const -> const_iterator_type {
     return const_iterator_type{*this, data_size()};
+  }
+
+  /// Remove all stored entries, resetting to an empty sparse container.
+  void clear() {
+    m_data.clear();
+    for (auto &idx_vec : m_indices) {
+      idx_vec.clear();
+    }
+    m_compressed = true;
+  }
+
+  /// Assign from an arbitrary expression.  Clears existing entries and
+  /// emplaces only nonzero values from the source.
+  template <zipper::concepts::Expression V>
+  void assign(const V &v)
+    requires(zipper::utils::extents::assignable_extents_v<
+                typename V::extents_type, extents_type>)
+  {
+    expression::detail::SparseAssignHelper::assign(v, *this);
   }
 
   void compress() {

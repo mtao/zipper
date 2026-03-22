@@ -54,6 +54,53 @@ public:
   auto operator=(const COOMatrix &) -> COOMatrix & = default;
   auto operator=(COOMatrix &&) -> COOMatrix & = default;
 
+  /// Assign from any expression with compatible extents.
+  template <concepts::Expression Other>
+  auto operator=(const Other &other) -> COOMatrix &
+    requires(zipper::utils::extents::assignable_extents_v<
+                 typename Other::extents_type, extents_type>)
+  {
+    expression().assign(other);
+    return *this;
+  }
+
+  /// Assign from a Zipper-wrapped expression.
+  template <concepts::Zipper Other>
+  auto operator=(const Other &other) -> COOMatrix &
+    requires(zipper::utils::extents::assignable_extents_v<
+                 typename std::decay_t<Other>::extents_type, extents_type>)
+  {
+    expression().assign(other.expression());
+    return *this;
+  }
+
+  /// Construct from any expression with compatible extents.
+  template <concepts::Expression Other>
+  COOMatrix(const Other &other)
+    requires(zipper::utils::extents::assignable_extents_v<
+                 typename Other::extents_type, extents_type>)
+  {
+    if constexpr (!is_static) {
+      static_cast<extents_type&>(expression()) =
+          extents_traits::convert_from(other.extents());
+    }
+    expression().assign(other);
+  }
+
+  /// Construct from a Zipper-wrapped expression.
+  template <concepts::Zipper Other>
+  COOMatrix(const Other &other)
+    requires(!std::same_as<std::decay_t<Other>, COOMatrix> &&
+             zipper::utils::extents::assignable_extents_v<
+                 typename std::decay_t<Other>::extents_type, extents_type>)
+  {
+    if constexpr (!is_static) {
+      static_cast<extents_type&>(expression()) =
+          extents_traits::convert_from(other.extents());
+    }
+    expression().assign(other.expression());
+  }
+
   // Dynamic extents: from rows/cols
   COOMatrix(index_type rows, index_type cols)
     requires(extents_traits::is_dynamic)

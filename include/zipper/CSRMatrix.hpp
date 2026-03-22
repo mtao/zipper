@@ -52,6 +52,53 @@ public:
   auto operator=(const CSRMatrix &) -> CSRMatrix & = default;
   auto operator=(CSRMatrix &&) -> CSRMatrix & = default;
 
+  /// Assign from any expression with compatible extents.
+  template <concepts::Expression Other>
+  auto operator=(const Other &other) -> CSRMatrix &
+    requires(zipper::utils::extents::assignable_extents_v<
+                 typename Other::extents_type, extents_type>)
+  {
+    expression().assign(other);
+    return *this;
+  }
+
+  /// Assign from a Zipper-wrapped expression.
+  template <concepts::Zipper Other>
+  auto operator=(const Other &other) -> CSRMatrix &
+    requires(zipper::utils::extents::assignable_extents_v<
+                 typename std::decay_t<Other>::extents_type, extents_type>)
+  {
+    expression().assign(other.expression());
+    return *this;
+  }
+
+  /// Construct from any expression with compatible extents.
+  template <concepts::Expression Other>
+  CSRMatrix(const Other &other)
+    requires(zipper::utils::extents::assignable_extents_v<
+                 typename Other::extents_type, extents_type>)
+  {
+    if constexpr (!is_static) {
+      static_cast<extents_type&>(expression()) =
+          extents_traits::convert_from(other.extents());
+    }
+    expression().assign(other);
+  }
+
+  /// Construct from a Zipper-wrapped expression.
+  template <concepts::Zipper Other>
+  CSRMatrix(const Other &other)
+    requires(!std::same_as<std::decay_t<Other>, CSRMatrix> &&
+             zipper::utils::extents::assignable_extents_v<
+                 typename std::decay_t<Other>::extents_type, extents_type>)
+  {
+    if constexpr (!is_static) {
+      static_cast<extents_type&>(expression()) =
+          extents_traits::convert_from(other.extents());
+    }
+    expression().assign(other.expression());
+  }
+
   // From compressed accessor
   CSRMatrix(expression_type &&expr) : Base(std::move(expr)) {}
   CSRMatrix(const expression_type &expr) : Base(expr) {}

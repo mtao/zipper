@@ -45,6 +45,53 @@ public:
   auto operator=(const COOVector &) -> COOVector & = default;
   auto operator=(COOVector &&) -> COOVector & = default;
 
+  /// Assign from any expression with compatible extents.
+  template <concepts::Expression Other>
+  auto operator=(const Other &other) -> COOVector &
+    requires(zipper::utils::extents::assignable_extents_v<
+                 typename Other::extents_type, extents_type>)
+  {
+    expression().assign(other);
+    return *this;
+  }
+
+  /// Assign from a Zipper-wrapped expression.
+  template <concepts::Zipper Other>
+  auto operator=(const Other &other) -> COOVector &
+    requires(zipper::utils::extents::assignable_extents_v<
+                 typename std::decay_t<Other>::extents_type, extents_type>)
+  {
+    expression().assign(other.expression());
+    return *this;
+  }
+
+  /// Construct from any expression with compatible extents.
+  template <concepts::Expression Other>
+  COOVector(const Other &other)
+    requires(zipper::utils::extents::assignable_extents_v<
+                 typename Other::extents_type, extents_type>)
+  {
+    if constexpr (!is_static) {
+      static_cast<extents_type&>(expression()) =
+          extents_traits::convert_from(other.extents());
+    }
+    expression().assign(other);
+  }
+
+  /// Construct from a Zipper-wrapped expression.
+  template <concepts::Zipper Other>
+  COOVector(const Other &other)
+    requires(!std::same_as<std::decay_t<Other>, COOVector> &&
+             zipper::utils::extents::assignable_extents_v<
+                 typename std::decay_t<Other>::extents_type, extents_type>)
+  {
+    if constexpr (!is_static) {
+      static_cast<extents_type&>(expression()) =
+          extents_traits::convert_from(other.extents());
+    }
+    expression().assign(other.expression());
+  }
+
   // Dynamic extent
   COOVector(index_type size)
     requires(extents_traits::is_dynamic)

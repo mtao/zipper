@@ -52,6 +52,53 @@ public:
   auto operator=(const CSRVector &) -> CSRVector & = default;
   auto operator=(CSRVector &&) -> CSRVector & = default;
 
+  /// Assign from any expression with compatible extents.
+  template <concepts::Expression Other>
+  auto operator=(const Other &other) -> CSRVector &
+    requires(zipper::utils::extents::assignable_extents_v<
+                 typename Other::extents_type, extents_type>)
+  {
+    expression().assign(other);
+    return *this;
+  }
+
+  /// Assign from a Zipper-wrapped expression.
+  template <concepts::Zipper Other>
+  auto operator=(const Other &other) -> CSRVector &
+    requires(zipper::utils::extents::assignable_extents_v<
+                 typename std::decay_t<Other>::extents_type, extents_type>)
+  {
+    expression().assign(other.expression());
+    return *this;
+  }
+
+  /// Construct from any expression with compatible extents.
+  template <concepts::Expression Other>
+  CSRVector(const Other &other)
+    requires(zipper::utils::extents::assignable_extents_v<
+                 typename Other::extents_type, extents_type>)
+  {
+    if constexpr (!is_static) {
+      static_cast<extents_type&>(expression()) =
+          extents_traits::convert_from(other.extents());
+    }
+    expression().assign(other);
+  }
+
+  /// Construct from a Zipper-wrapped expression.
+  template <concepts::Zipper Other>
+  CSRVector(const Other &other)
+    requires(!std::same_as<std::decay_t<Other>, CSRVector> &&
+             zipper::utils::extents::assignable_extents_v<
+                 typename std::decay_t<Other>::extents_type, extents_type>)
+  {
+    if constexpr (!is_static) {
+      static_cast<extents_type&>(expression()) =
+          extents_traits::convert_from(other.extents());
+    }
+    expression().assign(other.expression());
+  }
+
   // From compressed accessor
   CSRVector(expression_type &&expr) : Base(std::move(expr)) {}
   CSRVector(const expression_type &expr) : Base(expr) {}

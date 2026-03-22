@@ -7,9 +7,11 @@
 #include "zipper/detail/ExtentsTraits.hpp"
 #include "zipper/expression/ExpressionBase.hpp"
 #include "zipper/expression/detail/IndexSet.hpp"
+#include "zipper/expression/detail/SparseAssignHelper.hpp"
 #include "zipper/storage/SparseCoordinateAccessor.hpp"
 #include "zipper/storage/detail/SparseCompressedData.hpp"
 #include "zipper/storage/detail/to_sparse_compressed_data.hpp"
+#include "zipper/utils/extents/assignable_extents.hpp"
 
 namespace zipper::storage {
 
@@ -113,6 +115,22 @@ public:
     requires(!std::is_const_v<ValueType>)
   {
     return m_data;
+  }
+
+  /// Assign from an arbitrary expression.  Builds an intermediate COO
+  /// representation and converts to compressed format.
+  template <zipper::concepts::Expression V>
+  void assign(const V &v)
+    requires(!std::is_const_v<ValueType> &&
+             zipper::utils::extents::assignable_extents_v<
+                 typename V::extents_type, extents_type>)
+  {
+    SparseCoordinateAccessor<element_type, extents_type> coo;
+    if constexpr (!IsStatic) {
+      static_cast<extents_type&>(coo) = this->extents();
+    }
+    expression::detail::SparseAssignHelper::assign(v, coo);
+    m_data = detail::to_sparse_compressed_data(coo);
   }
 
   // ── index_set: rank-1 ────────────────────────────────────────────────

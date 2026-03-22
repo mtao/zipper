@@ -389,3 +389,230 @@ TEST_CASE("coo_matrix_duplicate_entries", "[sparse][coo][matrix]") {
 
     CHECK(A(1, 1) == 10.0);
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Sparse Assignment: dense → COO
+// ═══════════════════════════════════════════════════════════════════════════
+
+TEST_CASE("coo_vector_assign_from_dense", "[sparse][coo][assign]") {
+    zipper::Vector<double, 5> v({1.0, 0.0, 3.0, 0.0, 5.0});
+
+    zipper::COOVector<double, 5> sv;
+    sv = v;
+
+    CHECK(sv(0) == 1.0);
+    CHECK(sv(1) == 0.0);
+    CHECK(sv(2) == 3.0);
+    CHECK(sv(3) == 0.0);
+    CHECK(sv(4) == 5.0);
+}
+
+TEST_CASE("coo_matrix_assign_from_dense", "[sparse][coo][assign]") {
+    zipper::Matrix<double, 2, 3> M;
+    M(0, 0) = 1.0; M(0, 1) = 0.0; M(0, 2) = 2.0;
+    M(1, 0) = 0.0; M(1, 1) = 3.0; M(1, 2) = 0.0;
+
+    zipper::COOMatrix<double, 2, 3> A;
+    A = M;
+
+    CHECK(A(0, 0) == 1.0);
+    CHECK(A(0, 1) == 0.0);
+    CHECK(A(0, 2) == 2.0);
+    CHECK(A(1, 0) == 0.0);
+    CHECK(A(1, 1) == 3.0);
+    CHECK(A(1, 2) == 0.0);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Sparse Assignment: dense → CSR
+// ═══════════════════════════════════════════════════════════════════════════
+
+TEST_CASE("csr_vector_assign_from_dense", "[sparse][csr][assign]") {
+    zipper::Vector<double, 5> v({0.0, 2.0, 0.0, 4.0, 0.0});
+
+    zipper::CSRVector<double, 5> sv;
+    sv = v;
+
+    CHECK(sv(0) == 0.0);
+    CHECK(sv(1) == 2.0);
+    CHECK(sv(2) == 0.0);
+    CHECK(sv(3) == 4.0);
+    CHECK(sv(4) == 0.0);
+}
+
+TEST_CASE("csr_matrix_assign_from_dense", "[sparse][csr][assign]") {
+    zipper::Matrix<double, 3, 3> M;
+    M(0, 0) = 1.0; M(0, 1) = 0.0; M(0, 2) = 0.0;
+    M(1, 0) = 0.0; M(1, 1) = 2.0; M(1, 2) = 0.0;
+    M(2, 0) = 0.0; M(2, 1) = 0.0; M(2, 2) = 3.0;
+
+    zipper::CSRMatrix<double, 3, 3> A;
+    A = M;
+
+    CHECK(A(0, 0) == 1.0);
+    CHECK(A(1, 1) == 2.0);
+    CHECK(A(2, 2) == 3.0);
+    CHECK(A(0, 1) == 0.0);
+    CHECK(A(1, 0) == 0.0);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Sparse Assignment: sparse → sparse (COO → COO, CSR → COO, etc.)
+// ═══════════════════════════════════════════════════════════════════════════
+
+TEST_CASE("coo_vector_assign_from_coo", "[sparse][coo][assign]") {
+    zipper::COOVector<double, 5> src;
+    src.emplace(1) = 10.0;
+    src.emplace(3) = 30.0;
+    src.compress();
+
+    zipper::COOVector<double, 5> dst;
+    dst = src;
+
+    CHECK(dst(0) == 0.0);
+    CHECK(dst(1) == 10.0);
+    CHECK(dst(2) == 0.0);
+    CHECK(dst(3) == 30.0);
+    CHECK(dst(4) == 0.0);
+}
+
+TEST_CASE("coo_matrix_assign_from_csr", "[sparse][assign]") {
+    std::vector<zipper::SparseEntry<double, 2>> entries = {
+        {{0, 0}, 1.0}, {{1, 1}, 2.0}, {{2, 2}, 3.0}};
+    zipper::CSRMatrix<double, 3, 3> csr(entries);
+
+    zipper::COOMatrix<double, 3, 3> coo;
+    coo = csr;
+
+    CHECK(coo(0, 0) == 1.0);
+    CHECK(coo(1, 1) == 2.0);
+    CHECK(coo(2, 2) == 3.0);
+    CHECK(coo(0, 1) == 0.0);
+}
+
+TEST_CASE("csr_matrix_assign_from_coo", "[sparse][assign]") {
+    zipper::COOMatrix<double, 3, 3> coo;
+    coo.emplace(0, 2) = 5.0;
+    coo.emplace(2, 0) = 7.0;
+    coo.compress();
+
+    zipper::CSRMatrix<double, 3, 3> csr;
+    csr = coo;
+
+    CHECK(csr(0, 2) == 5.0);
+    CHECK(csr(2, 0) == 7.0);
+    CHECK(csr(0, 0) == 0.0);
+    CHECK(csr(1, 1) == 0.0);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Sparse Assignment: expression → sparse (e.g., A * x → COO)
+// ═══════════════════════════════════════════════════════════════════════════
+
+TEST_CASE("coo_vector_assign_from_spmv_expr", "[sparse][coo][assign]") {
+    // A = | 1  0 |,  x = | 2 |  =>  y = | 2 |
+    //     | 0  3 |       | 4 |           | 12 |
+    zipper::COOMatrix<double, 2, 2> A;
+    A.emplace(0, 0) = 1.0;
+    A.emplace(1, 1) = 3.0;
+    A.compress();
+
+    zipper::Vector<double, 2> x({2.0, 4.0});
+
+    zipper::COOVector<double, 2> y;
+    y = A * x;
+
+    CHECK(y(0) == 2.0);
+    CHECK(y(1) == 12.0);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Sparse Assignment: construct-from-expression
+// ═══════════════════════════════════════════════════════════════════════════
+
+TEST_CASE("coo_vector_construct_from_dense", "[sparse][coo][assign]") {
+    zipper::Vector<double, 3> v({1.0, 0.0, 3.0});
+
+    zipper::COOVector<double, 3> sv(v);
+
+    CHECK(sv(0) == 1.0);
+    CHECK(sv(1) == 0.0);
+    CHECK(sv(2) == 3.0);
+}
+
+TEST_CASE("coo_matrix_construct_from_dense", "[sparse][coo][assign]") {
+    zipper::Matrix<double, 2, 2> M;
+    M(0, 0) = 5.0; M(0, 1) = 0.0;
+    M(1, 0) = 0.0; M(1, 1) = 7.0;
+
+    zipper::COOMatrix<double, 2, 2> A(M);
+
+    CHECK(A(0, 0) == 5.0);
+    CHECK(A(0, 1) == 0.0);
+    CHECK(A(1, 0) == 0.0);
+    CHECK(A(1, 1) == 7.0);
+}
+
+TEST_CASE("csr_vector_construct_from_dense", "[sparse][csr][assign]") {
+    zipper::Vector<double, 4> v({0.0, 2.0, 0.0, 4.0});
+
+    zipper::CSRVector<double, 4> sv(v);
+
+    CHECK(sv(0) == 0.0);
+    CHECK(sv(1) == 2.0);
+    CHECK(sv(2) == 0.0);
+    CHECK(sv(3) == 4.0);
+}
+
+TEST_CASE("csr_matrix_construct_from_dense", "[sparse][csr][assign]") {
+    zipper::Matrix<double, 2, 2> M;
+    M(0, 0) = 1.0; M(0, 1) = 0.0;
+    M(1, 0) = 0.0; M(1, 1) = 2.0;
+
+    zipper::CSRMatrix<double, 2, 2> A(M);
+
+    CHECK(A(0, 0) == 1.0);
+    CHECK(A(0, 1) == 0.0);
+    CHECK(A(1, 0) == 0.0);
+    CHECK(A(1, 1) == 2.0);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Sparse Assignment: reassignment replaces old data
+// ═══════════════════════════════════════════════════════════════════════════
+
+TEST_CASE("coo_vector_reassignment_replaces_old", "[sparse][coo][assign]") {
+    zipper::COOVector<double, 3> sv;
+    sv.emplace(0) = 100.0;
+    sv.emplace(1) = 200.0;
+    sv.emplace(2) = 300.0;
+    sv.compress();
+
+    zipper::Vector<double, 3> v({0.0, 5.0, 0.0});
+    sv = v;
+
+    // Old data should be gone; only index 1 should be nonzero.
+    CHECK(sv(0) == 0.0);
+    CHECK(sv(1) == 5.0);
+    CHECK(sv(2) == 0.0);
+}
+
+TEST_CASE("coo_matrix_reassignment_replaces_old", "[sparse][coo][assign]") {
+    zipper::COOMatrix<double, 2, 2> A;
+    A.emplace(0, 0) = 10.0;
+    A.emplace(0, 1) = 20.0;
+    A.emplace(1, 0) = 30.0;
+    A.emplace(1, 1) = 40.0;
+    A.compress();
+
+    zipper::Matrix<double, 2, 2> M;
+    M(0, 0) = 0.0; M(0, 1) = 1.0;
+    M(1, 0) = 0.0; M(1, 1) = 0.0;
+
+    A = M;
+
+    CHECK(A(0, 0) == 0.0);
+    CHECK(A(0, 1) == 1.0);
+    CHECK(A(1, 0) == 0.0);
+    CHECK(A(1, 1) == 0.0);
+}
