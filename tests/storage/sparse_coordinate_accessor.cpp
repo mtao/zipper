@@ -447,3 +447,161 @@ TEST_CASE("sparse_iterator_difference", "[sparse]") {
     CHECK(it.value() == 3.0);
     CHECK(it - A.begin() == 2);
 }
+
+// ── index_set tests ─────────────────────────────────────────────────────────
+
+TEST_CASE("sparse_index_set_rank2_col_for_row", "[sparse][index_set]") {
+    // Matrix with entries at (0,1), (0,3), (1,2), (2,0), (2,3)
+    storage::SparseCoordinateAccessor<double, extents<4, 5>> A;
+    A.emplace(0, 1) = 1.0;
+    A.emplace(0, 3) = 2.0;
+    A.emplace(1, 2) = 3.0;
+    A.emplace(2, 0) = 4.0;
+    A.emplace(2, 3) = 5.0;
+    A.compress();
+
+    SECTION("row 0 has columns {1, 3}") {
+        auto cols = A.index_set<1>(0);
+        REQUIRE(cols.size() == 2);
+        auto it = cols.begin();
+        CHECK(*it++ == 1);
+        CHECK(*it++ == 3);
+        CHECK(cols.contains(1));
+        CHECK(cols.contains(3));
+        CHECK(!cols.contains(0));
+        CHECK(!cols.contains(2));
+    }
+
+    SECTION("row 1 has columns {2}") {
+        auto cols = A.index_set<1>(1);
+        REQUIRE(cols.size() == 1);
+        CHECK(*cols.begin() == 2);
+    }
+
+    SECTION("row 2 has columns {0, 3}") {
+        auto cols = A.index_set<1>(2);
+        REQUIRE(cols.size() == 2);
+        auto it = cols.begin();
+        CHECK(*it++ == 0);
+        CHECK(*it++ == 3);
+    }
+
+    SECTION("row 3 has no entries") {
+        auto cols = A.index_set<1>(3);
+        CHECK(cols.size() == 0);
+        CHECK(cols.empty());
+    }
+
+    SECTION("convenience alias col_range_for_row") {
+        auto cols = A.col_range_for_row(0);
+        CHECK(cols.size() == 2);
+    }
+}
+
+TEST_CASE("sparse_index_set_rank2_row_for_col", "[sparse][index_set]") {
+    // Same matrix as above: (0,1), (0,3), (1,2), (2,0), (2,3)
+    storage::SparseCoordinateAccessor<double, extents<4, 5>> A;
+    A.emplace(0, 1) = 1.0;
+    A.emplace(0, 3) = 2.0;
+    A.emplace(1, 2) = 3.0;
+    A.emplace(2, 0) = 4.0;
+    A.emplace(2, 3) = 5.0;
+    A.compress();
+
+    SECTION("col 0 has rows {2}") {
+        auto rows = A.index_set<0>(0);
+        REQUIRE(rows.size() == 1);
+        CHECK(*rows.begin() == 2);
+    }
+
+    SECTION("col 1 has rows {0}") {
+        auto rows = A.index_set<0>(1);
+        REQUIRE(rows.size() == 1);
+        CHECK(*rows.begin() == 0);
+    }
+
+    SECTION("col 3 has rows {0, 2}") {
+        auto rows = A.index_set<0>(3);
+        REQUIRE(rows.size() == 2);
+        auto it = rows.begin();
+        CHECK(*it++ == 0);
+        CHECK(*it++ == 2);
+    }
+
+    SECTION("col 4 has no entries") {
+        auto rows = A.index_set<0>(4);
+        CHECK(rows.size() == 0);
+        CHECK(rows.empty());
+    }
+
+    SECTION("convenience alias row_range_for_col") {
+        auto rows = A.row_range_for_col(3);
+        CHECK(rows.size() == 2);
+    }
+}
+
+TEST_CASE("sparse_index_set_rank1", "[sparse][index_set]") {
+    storage::SparseCoordinateAccessor<double, extents<10>> V;
+    V.emplace(2) = 1.0;
+    V.emplace(5) = 2.0;
+    V.emplace(7) = 3.0;
+    V.compress();
+
+    auto idx = V.index_set<0>();
+    REQUIRE(idx.size() == 3);
+    auto it = idx.begin();
+    CHECK(*it++ == 2);
+    CHECK(*it++ == 5);
+    CHECK(*it++ == 7);
+    CHECK(idx.contains(2));
+    CHECK(idx.contains(5));
+    CHECK(idx.contains(7));
+    CHECK(!idx.contains(0));
+    CHECK(!idx.contains(3));
+
+    SECTION("convenience alias nonzero_segment") {
+        auto seg = V.nonzero_segment();
+        CHECK(seg.size() == 3);
+    }
+}
+
+TEST_CASE("sparse_index_set_empty_matrix", "[sparse][index_set]") {
+    storage::SparseCoordinateAccessor<double, extents<3, 3>> A;
+    // Empty but compressed (default state)
+    REQUIRE(A.is_compressed());
+
+    auto cols = A.index_set<1>(0);
+    CHECK(cols.size() == 0);
+    CHECK(cols.empty());
+
+    auto rows = A.index_set<0>(0);
+    CHECK(rows.size() == 0);
+    CHECK(rows.empty());
+}
+
+TEST_CASE("sparse_index_set_diagonal", "[sparse][index_set]") {
+    // Diagonal matrix — each row has exactly one column
+    storage::SparseCoordinateAccessor<double, extents<3, 3>> A;
+    A.emplace(0, 0) = 1.0;
+    A.emplace(1, 1) = 2.0;
+    A.emplace(2, 2) = 3.0;
+    A.compress();
+
+    for (index_type i = 0; i < 3; ++i) {
+        auto cols = A.index_set<1>(i);
+        REQUIRE(cols.size() == 1);
+        CHECK(*cols.begin() == i);
+
+        auto rows = A.index_set<0>(i);
+        REQUIRE(rows.size() == 1);
+        CHECK(*rows.begin() == i);
+    }
+}
+
+TEST_CASE("sparse_index_set_has_index_set_trait", "[sparse][index_set]") {
+    using SCA = storage::SparseCoordinateAccessor<double, extents<3, 3>>;
+    using traits = expression::detail::ExpressionTraits<SCA>;
+    STATIC_REQUIRE(traits::has_index_set);
+    STATIC_REQUIRE(traits::has_known_zeros);
+    STATIC_REQUIRE(!traits::access_features.is_reference);
+}

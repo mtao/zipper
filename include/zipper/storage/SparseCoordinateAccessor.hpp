@@ -11,6 +11,7 @@
 #include "zipper/detail/ExtentsTraits.hpp"
 #include "zipper/detail/pack_index.hpp"
 #include "zipper/expression/ExpressionBase.hpp"
+#include "zipper/expression/detail/IndexSet.hpp"
 namespace zipper::storage {
 template <typename ValueType, typename Extents> class SparseCoordinateAccessor;
 
@@ -310,6 +311,61 @@ public:
     return emplace(std::make_integer_sequence<rank_type, rank()>{}, indices...);
   }
 
+  // ── index_set: rank-1 (no argument, returns all stored indices) ──────────
+  template <rank_type D>
+    requires(D == 0 && rank() == 1)
+  auto index_set() const -> expression::detail::SpanSparseIndexSet {
+    ZIPPER_ASSERT(m_compressed);
+    return {std::span<const index_type>(m_indices[0])};
+  }
+
+  // ── index_set: rank-2 (returns indices along dimension D for other_idx) ──
+  template <rank_type D>
+    requires(D < rank() && rank() == 2)
+  auto index_set(index_type other_idx) const {
+    ZIPPER_ASSERT(m_compressed);
+    if constexpr (D == 1) {
+      // Column indices for a given row — contiguous after compression
+      auto lo = std::lower_bound(m_indices[0].begin(), m_indices[0].end(),
+                                 other_idx);
+      auto hi = std::upper_bound(lo, m_indices[0].end(), other_idx);
+      auto lo_off =
+          static_cast<size_t>(std::distance(m_indices[0].begin(), lo));
+      auto count = static_cast<size_t>(std::distance(lo, hi));
+      return expression::detail::SpanSparseIndexSet{
+          std::span<const index_type>(m_indices[1].data() + lo_off, count)};
+    } else {
+      // Row indices for a given column — must scan all entries
+      std::vector<index_type> result;
+      for (size_t i = 0; i < data_size(); ++i) {
+        if (m_indices[1][i] == other_idx) {
+          result.push_back(m_indices[0][i]);
+        }
+      }
+      return expression::detail::DynamicSparseIndexSet{std::move(result)};
+    }
+  }
+
+  // ── rank-1 convenience ───────────────────────────────────────────────────
+  auto nonzero_segment() const
+    requires(rank() == 1)
+  {
+    return index_set<0>();
+  }
+
+  // ── rank-2 convenience ───────────────────────────────────────────────────
+  auto col_range_for_row(index_type row) const
+    requires(rank() == 2)
+  {
+    return index_set<1>(row);
+  }
+
+  auto row_range_for_col(index_type col) const
+    requires(rank() == 2)
+  {
+    return index_set<0>(col);
+  }
+
 private:
   std::vector<value_type> m_data = {};
   std::array<std::vector<index_type>, rank()> m_indices = {};
@@ -328,8 +384,11 @@ struct detail::ExpressionTraits<
           ValueType, Extents,
           zipper::detail::AccessFeatures{
               .is_const = std::is_const_v<ValueType>,
-              .is_reference = true},
-          zipper::detail::ShapeFeatures{.is_resizable = false}> {};
+              .is_reference = false},
+          zipper::detail::ShapeFeatures{.is_resizable = false}> {
+  constexpr static bool has_index_set = true;
+  constexpr static bool has_known_zeros = has_index_set;
+};
 
 } // namespace zipper::expression
 

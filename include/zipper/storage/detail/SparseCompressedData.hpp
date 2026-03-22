@@ -1,6 +1,7 @@
 #if !defined(ZIPPER_STORAGE_DETAIL_SPARSECOMPRESSEDDATA_HPP)
 #define ZIPPER_STORAGE_DETAIL_SPARSECOMPRESSEDDATA_HPP
 
+#include <stdexcept>
 #include <vector>
 #include <zipper/concepts/Index.hpp>
 #include <zipper/types.hpp>
@@ -45,6 +46,53 @@ struct SparseCompressedData : public SparseCompressedData<T, N - 1> {
   auto __attribute__((pure)) coeff(index_type index, Leftover... leftover) const
       -> value_type {
     return coeff_(0, m_spans.size(), index, leftover...);
+  }
+
+  template <zipper::concepts::IndexPack... Leftover>
+    requires(sizeof...(Leftover) == N)
+  auto coeff_ref_(size_t start, size_t size, index_type index,
+                  Leftover... leftover) -> value_type & {
+    auto spans = std::span(m_spans).subspan(start, size);
+    auto it = std::lower_bound(
+        spans.begin(), spans.end(), index,
+        [](const std::tuple<index_type, size_t, size_t> &a,
+           index_type b) -> auto { return std::get<0>(a) < b; });
+    if (it != spans.end() && std::get<0>(*it) == index) {
+      auto [i, mystart, mysize] = *it;
+      return Parent::coeff_ref_(mystart, mysize, leftover...);
+    } else {
+      throw std::invalid_argument("Index not found in SparseCompressedData");
+    }
+  }
+  template <typename... Leftover>
+    requires((sizeof...(Leftover) == N) &&
+             zipper::concepts::IndexPack<Leftover...>)
+  auto coeff_ref(index_type index, Leftover... leftover) -> value_type & {
+    return coeff_ref_(0, m_spans.size(), index, leftover...);
+  }
+
+  template <zipper::concepts::IndexPack... Leftover>
+    requires(sizeof...(Leftover) == N)
+  auto const_coeff_ref_(size_t start, size_t size, index_type index,
+                        Leftover... leftover) const -> const value_type & {
+    auto spans = std::span(m_spans).subspan(start, size);
+    auto it = std::lower_bound(
+        spans.begin(), spans.end(), index,
+        [](const std::tuple<index_type, size_t, size_t> &a,
+           index_type b) -> auto { return std::get<0>(a) < b; });
+    if (it != spans.end() && std::get<0>(*it) == index) {
+      auto [i, mystart, mysize] = *it;
+      return Parent::const_coeff_ref_(mystart, mysize, leftover...);
+    } else {
+      throw std::invalid_argument("Index not found in SparseCompressedData");
+    }
+  }
+  template <typename... Leftover>
+    requires((sizeof...(Leftover) == N) &&
+             zipper::concepts::IndexPack<Leftover...>)
+  auto const_coeff_ref(index_type index, Leftover... leftover) const
+      -> const value_type & {
+    return const_coeff_ref_(0, m_spans.size(), index, leftover...);
   }
 
   template <zipper::concepts::IndexPack... Leftover>
@@ -103,6 +151,38 @@ template <typename T> struct SparseCompressedData<T, 0> {
   [[nodiscard]] auto size() const -> size_t { return m_data.size(); }
   auto __attribute__((pure)) coeff(index_type index) const -> value_type {
     return coeff_(0, m_data.size(), index);
+  }
+  auto coeff_ref_(size_t start, size_t size, index_type index)
+      -> value_type & {
+    auto sp = std::span(m_data).subspan(start, size);
+    auto it =
+        std::lower_bound(sp.begin(), sp.end(), index,
+                         [](const std::pair<index_type, T> &a,
+                            index_type b) -> auto { return a.first < b; });
+    if (it != sp.end() && it->first == index) {
+      return it->second;
+    } else {
+      throw std::invalid_argument("Index not found in SparseCompressedData");
+    }
+  }
+  auto coeff_ref(index_type index) -> value_type & {
+    return coeff_ref_(0, m_data.size(), index);
+  }
+  auto const_coeff_ref_(size_t start, size_t size, index_type index) const
+      -> const value_type & {
+    auto sp = std::span(m_data).subspan(start, size);
+    auto it =
+        std::lower_bound(sp.begin(), sp.end(), index,
+                         [](const std::pair<index_type, T> &a,
+                            index_type b) -> auto { return a.first < b; });
+    if (it != sp.end() && it->first == index) {
+      return it->second;
+    } else {
+      throw std::invalid_argument("Index not found in SparseCompressedData");
+    }
+  }
+  auto const_coeff_ref(index_type index) const -> const value_type & {
+    return const_coeff_ref_(0, m_data.size(), index);
   }
   auto insert_back(index_type index) -> value_type & {
     return insert_back_(0, m_data.size(), index);

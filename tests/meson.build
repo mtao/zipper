@@ -41,3 +41,6 @@ test('function_boundary', test_function_boundary)
 
 test_readme_examples = executable('test_readme_examples', 'readme_examples.cpp', dependencies: [zipper_test_dep])
 test('readme_examples', test_readme_examples)
+
+test_sparse_types = executable('test_sparse_types', 'sparse_types.cpp', dependencies: [zipper_test_dep])
+test('sparse_types', test_sparse_types)
