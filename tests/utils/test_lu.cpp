@@ -69,7 +69,7 @@ TEST_CASE("plu 2x2", "[decomposition][plu]") {
             for (index_type k = 0; k < n; ++k) {
                 lu_ij += L(i, k) * U(k, j);
             }
-            CHECK(lu_ij == Catch::Approx(A(perm[i], j)).margin(1e-12));
+            CHECK(lu_ij == Catch::Approx(A(perm(i), j)).margin(1e-12));
         }
     }
 }
@@ -109,7 +109,7 @@ TEST_CASE("plu 3x3", "[decomposition][plu]") {
             for (index_type k = 0; k < n; ++k) {
                 lu_ij += L(i, k) * U(k, j);
             }
-            CHECK(lu_ij == Catch::Approx(A(perm[i], j)).margin(1e-12));
+            CHECK(lu_ij == Catch::Approx(A(perm(i), j)).margin(1e-12));
         }
     }
 }
@@ -367,7 +367,7 @@ TEST_CASE("PLUResult::L and U reconstruct P*A", "[decomposition][plu]") {
             for (index_type k = 0; k < n; ++k) {
                 lu_ij += L(i, k) * U(k, j);
             }
-            CHECK(lu_ij == Catch::Approx(A(perm[i], j)).margin(1e-12));
+            CHECK(lu_ij == Catch::Approx(A(perm(i), j)).margin(1e-12));
         }
     }
 }

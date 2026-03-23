@@ -497,11 +497,11 @@ TEST_CASE("qr_col_pivot 3x3 full rank", "[decomposition][qr_col_pivot]") {
         CHECK(std::abs(R(i, i)) >= std::abs(R(i + 1, i + 1)) - 1e-12);
     }
 
-    // Q * R should equal A with columns permuted: (Q*R)(:,j) == A(:,perm[j]).
+    // Q * R should equal A with columns permuted: (Q*R)(:,j) == A(:,perm(j)).
     Matrix<double, 3, 3> QR = Q * R;
     for (index_type i = 0; i < 3; ++i) {
         for (index_type j = 0; j < 3; ++j) {
-            CHECK(QR(i, j) == Catch::Approx(A(i, perm[j])).margin(1e-12));
+            CHECK(QR(i, j) == Catch::Approx(A(i, perm(j))).margin(1e-12));
         }
     }
 
@@ -547,7 +547,7 @@ TEST_CASE("qr_col_pivot 4x3 tall full rank", "[decomposition][qr_col_pivot]") {
     Matrix<double, 4, 3> QR = Q * R;
     for (index_type i = 0; i < 4; ++i) {
         for (index_type j = 0; j < 3; ++j) {
-            CHECK(QR(i, j) == Catch::Approx(A(i, perm[j])).margin(1e-10));
+            CHECK(QR(i, j) == Catch::Approx(A(i, perm(j))).margin(1e-10));
         }
     }
 
@@ -573,7 +573,7 @@ TEST_CASE("qr_col_pivot rank-deficient 3x3", "[decomposition][qr_col_pivot]") {
     Matrix<double, 3, 3> QR = Q * R;
     for (index_type i = 0; i < 3; ++i) {
         for (index_type j = 0; j < 3; ++j) {
-            CHECK(QR(i, j) == Catch::Approx(A(i, perm[j])).margin(1e-10));
+            CHECK(QR(i, j) == Catch::Approx(A(i, perm(j))).margin(1e-10));
         }
     }
 }
@@ -651,7 +651,7 @@ TEST_CASE("qr_col_pivot wide matrix 2x4", "[decomposition][qr_col_pivot]") {
     Matrix<double, 2, 4> QR = Q * R;
     for (index_type i = 0; i < 2; ++i) {
         for (index_type j = 0; j < 4; ++j) {
-            CHECK(QR(i, j) == Catch::Approx(A(i, perm[j])).margin(1e-10));
+            CHECK(QR(i, j) == Catch::Approx(A(i, perm(j))).margin(1e-10));
         }
     }
 }

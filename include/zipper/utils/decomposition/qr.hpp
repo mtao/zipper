@@ -59,9 +59,9 @@
 #include <cmath>
 #include <expected>
 #include <limits>
-#include <ranges>
-#include <vector>
+#include <numeric>
 
+#include <zipper/DataArray.hpp>
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
 #include <zipper/expression/nullary/Constant.hpp>
@@ -541,8 +541,8 @@ struct QRColPivotResult {
   Matrix<T, M, P> Q;
   /// Upper triangular matrix R (p x n).
   Matrix<T, P, N> R;
-  /// Column permutation: col_perm[j] = original column index at position j.
-  std::vector<index_type> col_perm;
+  /// Column permutation: col_perm(j) = original column index at position j.
+  DataArray<index_type, N> col_perm;
 
   /// @brief Compute the numerical rank from the R diagonal.
   ///
@@ -611,32 +611,32 @@ template <concepts::Matrix Derived> auto qr_col_pivot(const Derived &A) {
   Q_full = expression::nullary::Identity<T, M, M>(Q_full.extents());
 
   // Column permutation (identity initially).
-  auto col_perm =
-      std::views::iota(index_type{0}, n) | std::ranges::to<std::vector>();
+  DataArray<index_type, N> col_perm(n);
+  std::iota(col_perm.begin(), col_perm.end(), index_type{0});
 
   // Precompute column norms squared (diagonal of the Gram matrix A^T A)
   // for efficient pivot selection via Businger-Golub norm downdating.
   auto gram_diag = R_work.colwise().template norm_powered<2>();
-  std::vector<T> col_norms_sq(n);
+  Vector<T, N> col_norms_sq(n);
   for (index_type j = 0; j < n; ++j) {
-    col_norms_sq[j] = gram_diag(j);
+    col_norms_sq(j) = gram_diag(j);
   }
 
   for (index_type k = 0; k < p; ++k) {
     // ── Column pivoting: find the column (>= k) with largest remaining norm.
     index_type max_col = k;
-    T max_norm = col_norms_sq[k];
+    T max_norm = col_norms_sq(k);
     for (index_type j = k + 1; j < n; ++j) {
-      if (col_norms_sq[j] > max_norm) {
-        max_norm = col_norms_sq[j];
+      if (col_norms_sq(j) > max_norm) {
+        max_norm = col_norms_sq(j);
         max_col = j;
       }
     }
 
     // Swap columns k and max_col in R_work, col_perm, and col_norms_sq.
     if (max_col != k) {
-      std::swap(col_perm[k], col_perm[max_col]);
-      std::swap(col_norms_sq[k], col_norms_sq[max_col]);
+      std::swap(col_perm(k), col_perm(max_col));
+      std::swap(col_norms_sq(k), col_norms_sq(max_col));
       for (index_type i = 0; i < m; ++i) {
         std::swap(R_work(i, k), R_work(i, max_col));
       }
@@ -692,12 +692,12 @@ template <concepts::Matrix Derived> auto qr_col_pivot(const Derived &A) {
     // ── Update column norms for remaining columns (downdate).
     // After the reflection, R_work(k, j) for j > k has changed.
     // The remaining norm squared of column j (rows k+1..m-1) is
-    // col_norms_sq[j] - R_work(k, j)^2.  This avoids recomputing from
+    // col_norms_sq(j) - R_work(k, j)^2.  This avoids recomputing from
     // scratch and is the standard technique (Businger-Golub).
     for (index_type j = k + 1; j < n; ++j) {
-      col_norms_sq[j] -= R_work(k, j) * R_work(k, j);
+      col_norms_sq(j) -= R_work(k, j) * R_work(k, j);
       // Guard against negative due to rounding.
-      if (col_norms_sq[j] < T{0}) col_norms_sq[j] = T{0};
+      if (col_norms_sq(j) < T{0}) col_norms_sq(j) = T{0};
     }
   }
 
