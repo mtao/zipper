@@ -48,6 +48,52 @@ sources = []
 
 include_dirs = [include_directories('include')]
 
+# ── Optional: SuiteSparse (CHOLMOD, UMFPACK, SPQR) ─────────────────────
+suitesparse_opt = get_option('use_suitesparse')
+suitesparse_deps = []
+have_suitesparse = false
+
+if suitesparse_opt.disabled()
+  message('SuiteSparse support disabled by user')
+else
+  # Try pkg-config / cmake first, then fall back to find_library + has_header.
+  cholmod_dep  = dependency('CHOLMOD',  required: false)
+  umfpack_dep  = dependency('UMFPACK',  required: false)
+  spqr_dep     = dependency('SPQR',     required: false)
+
+  if cholmod_dep.found() and umfpack_dep.found() and spqr_dep.found()
+    suitesparse_deps = [cholmod_dep, umfpack_dep, spqr_dep]
+    have_suitesparse = true
+  else
+    # Manual fallback: check for headers + libraries
+    _ss_libs = []
+    _ss_ok = true
+    foreach _lib : ['cholmod', 'umfpack', 'spqr', 'suitesparseconfig']
+      _dep = cpp_compiler.find_library(_lib, required: false)
+      if _dep.found()
+        _ss_libs += _dep
+      else
+        _ss_ok = false
+      endif
+    endforeach
+
+    if _ss_ok and cpp_compiler.has_header('cholmod.h') and cpp_compiler.has_header('umfpack.h') and cpp_compiler.has_header('SuiteSparseQR.hpp')
+      suitesparse_deps = _ss_libs
+      have_suitesparse = true
+    endif
+  endif
+
+  if have_suitesparse
+    message('SuiteSparse found — enabling CHOLMOD/UMFPACK/SPQR bindings')
+    compile_args += '-DZIPPER_HAS_SUITESPARSE'
+    required_deps += suitesparse_deps
+  elif suitesparse_opt.enabled()
+    error('SuiteSparse requested but not found')
+  else
+    message('SuiteSparse not found — sparse direct solvers disabled')
+  endif
+endif
+
 zipper_dep = declare_dependency(
   dependencies: required_deps,
   include_directories: include_dirs,

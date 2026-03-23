@@ -40,4 +40,7 @@ test('pcg', test_pcg)
 test_multigrid = executable('test_multigrid', 'test_multigrid.cpp', dependencies: [zipper_test_dep])
 test('multigrid', test_multigrid)
 
+test_suitesparse = executable('test_suitesparse', 'suitesparse.cpp', dependencies: [zipper_test_dep])
+test('suitesparse', test_suitesparse)
+
 subdir('extents')
