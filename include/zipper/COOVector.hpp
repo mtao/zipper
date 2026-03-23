@@ -15,6 +15,7 @@
 
 #include "SparseEntry.hpp"
 #include "concepts/Vector.hpp"
+#include "detail/extents_check.hpp"
 #include "VectorBase.hxx"
 #include "storage/SparseCoordinateAccessor.hpp"
 
@@ -108,7 +109,7 @@ public:
   COOVector([[maybe_unused]] index_type size)
     requires(is_static)
       : Base() {
-    ZIPPER_ASSERT(size == extent(0));
+    detail::check_extents<extents_type>(size);
   }
 
   // From extents

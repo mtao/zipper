@@ -55,7 +55,7 @@
 /// @see zipper::utils::inverse — compute the matrix inverse.
 
 #include "concepts/Matrix.hpp"
-#include "detail/assert.hpp"
+#include "detail/extents_check.hpp"
 #include "expression/nullary/MDArray.hpp"
 #include "storage/layout_types.hpp"
 //
@@ -109,10 +109,9 @@ public:
   Matrix(const std::initializer_list<std::initializer_list<T>> &l)
     requires(extents_traits::is_static)
   {
-    ZIPPER_ASSERT(l.size() == extent(0));
+    detail::check_extents<extents_type>(l.size(), l.begin()->size());
     auto it = l.begin();
     for (index_type j = 0; j < l.size(); ++j, ++it) {
-      ZIPPER_ASSERT(it->size() == extent(1));
       row(j) = *it;
     }
   }
@@ -122,22 +121,30 @@ public:
       : Base(extents_type(extents_traits::is_dynamic_extent(0)
                               ? l.size()
                               : l.begin()->size())) {
-    auto it = l.begin();
-    for (index_type j = 0; j < l.size(); ++j, ++it) {
-      ZIPPER_ASSERT(it->size() == extent(1));
-      row(j) = *it;
-    }
-  }
-  template <typename T>
-  Matrix(const std::initializer_list<std::initializer_list<T>> &l)
-    requires(extents_traits::rank_dynamic == 2)
-      : Base(extents_type(l.size(), l.begin()->size())) {
-    auto it = l.begin();
-    for (index_type j = 0; j < l.size(); ++j, ++it) {
-      ZIPPER_ASSERT(it->size() == extent(1));
-      row(j) = *it;
-    }
-  }
+     auto it = l.begin();
+     for (index_type j = 0; j < l.size(); ++j, ++it) {
+       if (it->size() != extent(1)) {
+         throw std::invalid_argument(std::format(
+             "Matrix initializer_list: row {} has size {} but expected {}",
+             j, it->size(), extent(1)));
+       }
+       row(j) = *it;
+     }
+   }
+   template <typename T>
+   Matrix(const std::initializer_list<std::initializer_list<T>> &l)
+     requires(extents_traits::rank_dynamic == 2)
+       : Base(extents_type(l.size(), l.begin()->size())) {
+     auto it = l.begin();
+     for (index_type j = 0; j < l.size(); ++j, ++it) {
+       if (it->size() != extent(1)) {
+         throw std::invalid_argument(std::format(
+             "Matrix initializer_list: row {} has size {} but expected {}",
+             j, it->size(), extent(1)));
+       }
+       row(j) = *it;
+     }
+   }
 
   auto as_span() -> span_type {
     if constexpr (is_static) {
@@ -173,8 +180,7 @@ public:
   Matrix([[maybe_unused]] index_type rows, [[maybe_unused]] index_type cols)
     requires(extents_traits::is_static)
       : Base() {
-    ZIPPER_ASSERT(rows == extent(0));
-    ZIPPER_ASSERT(cols == extent(1));
+    detail::check_extents<extents_type>(rows, cols);
   }
 
   template <concepts::Matrix Other> Matrix(const Other &other) : Base(other) {}

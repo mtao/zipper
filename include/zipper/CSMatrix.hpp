@@ -28,6 +28,7 @@
 #include "COOMatrix.hpp"
 #include "concepts/Matrix.hpp"
 #include "MatrixBase.hxx"
+#include "detail/extents_check.hpp"
 #include "storage/SparseCompressedAccessor.hpp"
 
 namespace zipper {
@@ -97,6 +98,23 @@ public:
   CSMatrix(CSMatrix &&) = default;
   auto operator=(const CSMatrix &) -> CSMatrix & = default;
   auto operator=(CSMatrix &&) -> CSMatrix & = default;
+
+  /// Construct an empty CSMatrix with dynamic extents.
+  CSMatrix(index_type rows, index_type cols)
+    requires(extents_traits::is_dynamic)
+      : Base(expression_type(extents_type(rows, cols))) {}
+
+  /// Construct an empty CSMatrix with one dynamic extent.
+  CSMatrix(index_type dyn_size)
+    requires(extents_traits::rank_dynamic == 1)
+      : Base(expression_type(extents_type(dyn_size))) {}
+
+  /// Construct an empty CSMatrix with static extents, validating sizes.
+  CSMatrix([[maybe_unused]] index_type rows, [[maybe_unused]] index_type cols)
+    requires(extents_traits::is_static)
+      : Base() {
+    detail::check_extents<extents_type>(rows, cols);
+  }
 
   /// Assign from any expression with compatible extents.
   template <concepts::Expression Other>

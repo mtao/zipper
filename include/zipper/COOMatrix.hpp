@@ -24,6 +24,7 @@
 
 #include "SparseEntry.hpp"
 #include "concepts/Matrix.hpp"
+#include "detail/extents_check.hpp"
 #include "MatrixBase.hxx"
 #include "storage/SparseCoordinateAccessor.hpp"
 
@@ -122,8 +123,7 @@ public:
             [[maybe_unused]] index_type cols)
     requires(is_static)
       : Base() {
-    ZIPPER_ASSERT(rows == extent(0));
-    ZIPPER_ASSERT(cols == extent(1));
+    detail::check_extents<extents_type>(rows, cols);
   }
 
   // Move from expression

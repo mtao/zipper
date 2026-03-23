@@ -25,6 +25,7 @@
 #include "COOVector.hpp"
 #include "concepts/Vector.hpp"
 #include "VectorBase.hxx"
+#include "detail/extents_check.hpp"
 #include "storage/SparseCompressedAccessor.hpp"
 
 namespace zipper {
@@ -77,6 +78,18 @@ public:
   CSVector(CSVector &&) = default;
   auto operator=(const CSVector &) -> CSVector & = default;
   auto operator=(CSVector &&) -> CSVector & = default;
+
+  /// Construct an empty CSVector with dynamic extent.
+  CSVector(index_type size)
+    requires(!is_static)
+      : Base(expression_type(extents_type(size))) {}
+
+  /// Construct an empty CSVector with static extent, validating the size.
+  CSVector([[maybe_unused]] index_type size)
+    requires(is_static)
+      : Base() {
+    detail::check_extents<extents_type>(size);
+  }
 
   /// Assign from any expression with compatible extents.
   template <concepts::Expression Other>

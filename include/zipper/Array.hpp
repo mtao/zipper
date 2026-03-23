@@ -6,6 +6,7 @@
 #include "concepts/Extents.hpp"
 #include "concepts/Matrix.hpp"
 #include "concepts/Vector.hpp"
+#include "detail/extents_check.hpp"
 #include "zipper/expression/nullary/MDArray.hpp"
 #include "zipper/types.hpp"
 namespace zipper {
@@ -31,6 +32,7 @@ public:
       ArrayBase<expression::nullary::MDSpan<ValueType, Extents, layout_type,
                                             default_accessor_policy<ValueType>>>;
 
+  Array_() = default;
   Array_(const Array_ &o) = default;
   Array_(Array_ &&o) = default;
   auto operator=(const Array_ &o) -> Array_ & = default;
@@ -41,8 +43,14 @@ public:
   Array_(const Other &other) : Base(other) {}
   template <typename... Args>
   Array_(Args &&...args)
-    requires((std::is_convertible_v<Args, index_type> && ...))
-      : Base(Extents(std::forward<Args>(args)...)) {}
+    requires((std::is_convertible_v<Args, index_type> && ...) &&
+             (sizeof...(Args) == Extents::rank() ||
+              sizeof...(Args) == Extents::rank_dynamic()))
+      : Base(Extents(std::forward<Args>(args)...)) {
+    if constexpr (sizeof...(Args) == Extents::rank()) {
+      detail::check_extents<Extents>(static_cast<index_type>(args)...);
+    }
+  }
   template <index_type... indices>
   Array_(const zipper::extents<indices...> &e) : Base(e) {}
 };
