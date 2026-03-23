@@ -271,6 +271,44 @@ inline auto make_cholmod_sparse_ptr(cholmod_sparse *p, cholmod_common *cc)
   return CholmodSparsePtr(p, CholmodSparseDeleter{cc});
 }
 
+// ═══════════════════════════════════════════════════════════════════════
+// from_cholmod_sparse — convert cholmod_sparse to CSMatrix (CSC)
+// ═══════════════════════════════════════════════════════════════════════
+
+/// Convert a `cholmod_sparse` matrix (CSC format) to a zipper CSMatrix.
+///
+/// Creates an owned CSMatrix by copying the data from the CHOLMOD sparse
+/// matrix via the COO intermediary.  The CHOLMOD matrix must be in
+/// packed, sorted CSC format with `xtype == CHOLMOD_REAL` and
+/// `dtype == CHOLMOD_DOUBLE`.
+///
+/// @tparam R  Static row extent (or `dynamic_extent`).
+/// @tparam C  Static column extent (or `dynamic_extent`).
+/// @param  S  CHOLMOD sparse matrix.
+/// @return    An owned CSMatrix in CSC layout.
+template <index_type R = dynamic_extent, index_type C = dynamic_extent>
+auto from_cholmod_sparse(const cholmod_sparse *S)
+    -> CSMatrix<double, R, C, storage::layout_left> {
+  const index_type nrow = static_cast<index_type>(S->nrow);
+  const index_type ncol = static_cast<index_type>(S->ncol);
+
+  const auto *colptr =
+      static_cast<const SuiteSparse_long *>(S->p);
+  const auto *rowind =
+      static_cast<const SuiteSparse_long *>(S->i);
+  const auto *vals = static_cast<const double *>(S->x);
+
+  // Build via COO intermediary.
+  COOMatrix<double, R, C> coo(nrow, ncol);
+  for (index_type j = 0; j < ncol; ++j) {
+    for (SuiteSparse_long k = colptr[j]; k < colptr[j + 1]; ++k) {
+      coo.emplace(static_cast<index_type>(rowind[k]), j) = vals[k];
+    }
+  }
+  coo.compress();
+  return CSMatrix<double, R, C, storage::layout_left>(coo);
+}
+
 } // namespace zipper::utils::suitesparse
 
 #endif // ZIPPER_HAS_SUITESPARSE

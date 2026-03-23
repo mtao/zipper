@@ -143,6 +143,30 @@ static_assert(zipper::concepts::DirectSolver<PLU3>);
 static_assert(zipper::concepts::DirectSolver<PLUX>);
 
 // -----------------------------------------------------------------------
+// SuiteSparse result types satisfy DirectSolver (when available)
+// -----------------------------------------------------------------------
+#ifdef ZIPPER_HAS_SUITESPARSE
+#include <zipper/utils/suitesparse/cholmod.hpp>
+#include <zipper/utils/suitesparse/umfpack.hpp>
+#include <zipper/utils/suitesparse/spqr.hpp>
+
+using Cholmod3 = zipper::utils::suitesparse::CholmodResult<3>;
+using CholmodX = zipper::utils::suitesparse::CholmodResult<>;
+static_assert(zipper::concepts::DirectSolver<Cholmod3>);
+static_assert(zipper::concepts::DirectSolver<CholmodX>);
+
+using Umfpack3 = zipper::utils::suitesparse::UmfpackResult<3>;
+using UmfpackX = zipper::utils::suitesparse::UmfpackResult<>;
+static_assert(zipper::concepts::DirectSolver<Umfpack3>);
+static_assert(zipper::concepts::DirectSolver<UmfpackX>);
+
+using Spqr3 = zipper::utils::suitesparse::SpqrResult<3>;
+using SpqrX = zipper::utils::suitesparse::SpqrResult<>;
+static_assert(zipper::concepts::DirectSolver<Spqr3>);
+static_assert(zipper::concepts::DirectSolver<SpqrX>);
+#endif // ZIPPER_HAS_SUITESPARSE
+
+// -----------------------------------------------------------------------
 // Preconditioner concept: preconditioner types satisfy it
 // -----------------------------------------------------------------------
 using JacobiP3 = zipper::utils::solver::JacobiPreconditioner<double, 3>;

@@ -293,3 +293,81 @@ TEST_CASE("PLUResult::solve matches plu_solve", "[decomposition][plu_solve]") {
               Catch::Approx(method_result->operator()(i)).margin(1e-14));
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PLUResult::L() and PLUResult::U() — TriangularView accessors
+// ─────────────────────────────────────────────────────────────────────────────
+
+TEST_CASE("PLUResult::L returns unit lower triangular view",
+          "[decomposition][plu]") {
+    Matrix<double, 3, 3> A{
+        {2.0, 1.0, 1.0}, {4.0, 3.0, 3.0}, {8.0, 7.0, 9.0}};
+
+    auto decomp = utils::decomposition::plu(A);
+    REQUIRE(decomp.has_value());
+
+    auto L = decomp->L();
+    const index_type n = 3;
+
+    // L should be unit lower triangular:
+    //   - diagonal entries are 1
+    //   - upper triangle entries are 0
+    //   - lower triangle matches LU's lower triangle
+    for (index_type i = 0; i < n; ++i) {
+        CHECK(L(i, i) == Catch::Approx(1.0).margin(1e-14));
+        for (index_type j = i + 1; j < n; ++j) {
+            CHECK(L(i, j) == Catch::Approx(0.0).margin(1e-14));
+        }
+        for (index_type j = 0; j < i; ++j) {
+            CHECK(L(i, j) == Catch::Approx(decomp->LU(i, j)).margin(1e-14));
+        }
+    }
+}
+
+TEST_CASE("PLUResult::U returns upper triangular view",
+          "[decomposition][plu]") {
+    Matrix<double, 3, 3> A{
+        {2.0, 1.0, 1.0}, {4.0, 3.0, 3.0}, {8.0, 7.0, 9.0}};
+
+    auto decomp = utils::decomposition::plu(A);
+    REQUIRE(decomp.has_value());
+
+    auto U = decomp->U();
+    const index_type n = 3;
+
+    // U should be upper triangular:
+    //   - lower triangle entries are 0
+    //   - upper triangle (including diagonal) matches LU's upper triangle
+    for (index_type i = 0; i < n; ++i) {
+        for (index_type j = 0; j < i; ++j) {
+            CHECK(U(i, j) == Catch::Approx(0.0).margin(1e-14));
+        }
+        for (index_type j = i; j < n; ++j) {
+            CHECK(U(i, j) == Catch::Approx(decomp->LU(i, j)).margin(1e-14));
+        }
+    }
+}
+
+TEST_CASE("PLUResult::L and U reconstruct P*A", "[decomposition][plu]") {
+    Matrix<double, 3, 3> A{
+        {2.0, 1.0, 1.0}, {4.0, 3.0, 3.0}, {8.0, 7.0, 9.0}};
+
+    auto decomp = utils::decomposition::plu(A);
+    REQUIRE(decomp.has_value());
+
+    auto L = decomp->L();
+    auto U = decomp->U();
+    auto &perm = decomp->perm;
+    const index_type n = 3;
+
+    // Verify L * U = P * A (using manual matrix multiply).
+    for (index_type i = 0; i < n; ++i) {
+        for (index_type j = 0; j < n; ++j) {
+            double lu_ij = 0.0;
+            for (index_type k = 0; k < n; ++k) {
+                lu_ij += L(i, k) * U(k, j);
+            }
+            CHECK(lu_ij == Catch::Approx(A(perm[i], j)).margin(1e-12));
+        }
+    }
+}

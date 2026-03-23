@@ -69,6 +69,9 @@ using UmfpackNumericPtr = std::unique_ptr<void, UmfpackNumericDeleter>;
 ///
 /// @tparam N  Static dimension of the matrix (rows), or `dynamic_extent`.
 template <index_type N = dynamic_extent> struct UmfpackResult {
+  /// Scalar type of the decomposition.
+  using value_type = double;
+
   /// UMFPACK numeric factorization handle.
   detail::UmfpackNumericPtr numeric;
   /// Matrix dimensions.

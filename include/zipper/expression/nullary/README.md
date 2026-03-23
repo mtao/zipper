@@ -32,6 +32,7 @@ These compute their coefficients on-the-fly from parameters (no stored data).
 |--------|-----------|-------------|
 | `Constant.hpp` | `Constant<T, Indices...>` | Returns the same value for all indices |
 | `Identity.hpp` | `Identity<T, N>` | Kronecker delta: 1 on diagonal, 0 elsewhere |
+| `Iota.hpp` | `Iota<T, D, Indices...>` | Returns the D-th index cast to T (counting sequence along an axis) |
 | `Unit.hpp` | `Unit<T, Extent, IndexType>` | Unit (basis) vector: 1 at one index, 0 elsewhere |
 | `Random.hpp` | `Random<T, Indices...>` | Random values (generated once and cached) |
 
@@ -40,6 +41,8 @@ These compute their coefficients on-the-fly from parameters (no stored data).
 - `unit_vector<T, size, index>()` -- static extent + static index
 - `unit_vector<T, size>(index)` -- static extent + dynamic index
 - `unit_vector<T>(size, index)` -- dynamic extent + dynamic index
+- `iota<T, D>(start, extents)` -- counting sequence starting at `start` along axis D (Iota + Constant via binary::Plus)
+- `linear_space<T, D>(start, stop, extents)` -- evenly spaced values from `start` to `stop` (inclusive) along axis D
 
 ### Zero-Aware Sparsity
 

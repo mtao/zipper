@@ -45,11 +45,11 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libfmt-dev catch2 ccache
+          sudo apt-get install -y libfmt-dev catch2 ccache libsuitesparse-dev
 
       - name: Install system dependencies (macOS)
         if: runner.os == 'macOS'
-        run: brew install fmt catch2 ccache
+        run: brew install fmt catch2 ccache suite-sparse
 
       - name: Install Meson and Ninja
         run: python -m pip install meson==${{ env.MESON_VERSION }} ninja
@@ -85,6 +85,7 @@ jobs:
           --buildtype=${{ matrix.build_type }}
           --wrap-mode=forcefallback
           -Dtesting=true
+          -Duse_suitesparse=enabled
 
       - name: Build
         run: meson compile -C build/

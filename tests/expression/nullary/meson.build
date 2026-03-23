@@ -1,3 +1,3 @@
-sources = ['constant.cpp', 'identity.cpp', 'random.cpp', 'mdspan.cpp', 'mdarray.cpp', 'static_constant.cpp']
+sources = ['constant.cpp', 'identity.cpp', 'iota.cpp', 'random.cpp', 'mdspan.cpp', 'mdarray.cpp', 'static_constant.cpp']
 test_nullary_views = executable('test_nullary_views', sources, dependencies: [zipper_test_dep])
 test('nullary_views', test_nullary_views)

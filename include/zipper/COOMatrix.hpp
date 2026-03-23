@@ -20,7 +20,7 @@
 ///   - `compress()` sorts and deduplicates entries.
 ///
 /// Conversion:
-///   - `to_csr()` returns a `CSRMatrix` with the same data.
+///   - `to_csr()` returns a CSR-layout `CSMatrix` with the same data.
 
 #include "SparseEntry.hpp"
 #include "concepts/Matrix.hpp"
@@ -28,9 +28,6 @@
 #include "storage/SparseCoordinateAccessor.hpp"
 
 namespace zipper {
-
-template <typename T, index_type Rows, index_type Cols>
-class CSRMatrix; // forward (backward compat)
 
 template <typename T, index_type Rows, index_type Cols, typename LayoutPolicy>
 class CSMatrix; // forward
@@ -179,7 +176,9 @@ public:
   }
 
   // ── Conversion ────────────────────────────────────────────────────────
-  auto to_csr() const -> CSRMatrix<ValueType, Rows, Cols>;
+  /// Convert to CSR (compressed sparse row) format.
+  auto to_csr() const
+      -> CSMatrix<ValueType, Rows, Cols, storage::layout_right>;
 
   /// Convert to CSC (compressed sparse column) format.
   auto to_csc() const

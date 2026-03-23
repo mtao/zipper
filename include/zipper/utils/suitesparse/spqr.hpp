@@ -13,6 +13,11 @@
 ///   - `rank()`        — numerical rank estimate
 ///   - `permutation()` — fill-reducing column permutation E
 ///
+/// Explicit Q/R extraction:
+///   - `spqr_qr(A)`               — returns SpqrQRResult with explicit
+///                                   sparse Q and R factors plus column
+///                                   permutation E, such that A*E = Q*R
+///
 /// For overdetermined systems (m > n), this computes the least-squares
 /// solution.  For square systems, this is equivalent to QR-based direct
 /// solve.
@@ -69,6 +74,9 @@ using SpqrFactorizationPtr =
 ///
 /// @tparam N  Static column extent of the matrix, or `dynamic_extent`.
 template <index_type N = dynamic_extent> struct SpqrResult {
+  /// Scalar type of the decomposition.
+  using value_type = double;
+
   /// CHOLMOD common struct (SPQR uses CHOLMOD internally).
   std::shared_ptr<CholmodCommon> common;
   /// SPQR factorization handle (owns internal Q in Householder form + R).
@@ -253,6 +261,147 @@ auto spqr_rank(const CSMatrix<T, R, C, storage::layout_left> &A,
     return 0;
   }
   return result->rank();
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// SpqrQRResult — explicit Q and R factors from sparse QR
+// ═══════════════════════════════════════════════════════════════════════
+
+/// Result of explicit sparse QR decomposition via SuiteSparseQR.
+///
+/// Holds the Q and R factors as owned sparse CSC matrices and the
+/// column permutation E such that A*E = Q*R (equivalently, A(:,E) = Q*R
+/// in MATLAB notation).
+///
+/// Unlike `SpqrResult`, which stores Q in Householder form for efficient
+/// solves, this struct stores Q and R as explicit sparse matrices.
+/// This is useful when you need to inspect or manipulate the factors
+/// directly (e.g., for rank-revealing analysis, computing projections,
+/// or forming the pseudoinverse).
+///
+/// The decomposition is "economy" sized: Q is m x econ and R is econ x n,
+/// where econ = min(m, n) or the estimated rank, depending on SPQR's
+/// internal decisions.
+///
+/// @tparam R  Static row extent of the input matrix (or `dynamic_extent`).
+/// @tparam C  Static column extent of the input matrix (or `dynamic_extent`).
+template <index_type R = dynamic_extent, index_type C = dynamic_extent>
+struct SpqrQRResult {
+  /// Scalar type of the decomposition.
+  using value_type = double;
+
+  /// Orthonormal factor Q (m x econ, CSC format).
+  CSMatrix<double, R, dynamic_extent, storage::layout_left> Q;
+
+  /// Upper trapezoidal factor R (econ x n, CSC format).
+  CSMatrix<double, dynamic_extent, C, storage::layout_left> R_factor;
+
+  /// Fill-reducing column permutation E such that A*E = Q*R.
+  /// Empty if the permutation is the identity.
+  std::vector<index_type> col_perm;
+
+  /// Matrix dimensions.
+  index_type nrow, ncol;
+
+  /// Estimated numerical rank (number of columns in the economy-size Q).
+  index_type rank_estimate;
+
+  /// @brief Numerical rank estimate.
+  [[nodiscard]] auto rank() const -> index_type { return rank_estimate; }
+};
+
+// ═══════════════════════════════════════════════════════════════════════
+// spqr_qr — explicit sparse QR decomposition
+// ═══════════════════════════════════════════════════════════════════════
+
+/// @brief Compute the explicit sparse QR decomposition of a general
+///        matrix via SuiteSparseQR.
+///
+/// Uses the "full form" of SuiteSparseQR that directly outputs the Q
+/// and R factors as sparse matrices, along with the column permutation E.
+///
+/// The decomposition satisfies A*E = Q*R, where:
+///   - Q is m x econ, orthonormal columns
+///   - R is econ x n, upper trapezoidal
+///   - E is a column permutation (fill-reducing ordering)
+///
+/// @param A    An m x n matrix in CSC layout.
+/// @param tol  Columns with 2-norm <= tol are treated as zero.
+///             Default: `SPQR_DEFAULT_TOL` (uses SPQR's internal heuristic).
+/// @return     `std::expected<SpqrQRResult<R, C>, SolverError>`.
+template <typename T, index_type R, index_type C>
+auto spqr_qr(const CSMatrix<T, R, C, storage::layout_left> &A,
+             double tol = SPQR_DEFAULT_TOL)
+    -> std::expected<SpqrQRResult<R, C>, solver::SolverError> {
+  static_assert(std::is_same_v<T, double>,
+                "SPQR only supports double precision");
+  using Result = std::expected<SpqrQRResult<R, C>, solver::SolverError>;
+
+  try {
+
+  auto common = std::make_shared<CholmodCommon>();
+  auto *cc = common->get();
+
+  // Create non-owning view of A (validates index bounds).
+  auto cs = to_cholmod_sparse(A);
+
+  // Call the full-form SuiteSparseQR that outputs explicit Q, R, E.
+  cholmod_sparse *Q_raw = nullptr;
+  cholmod_sparse *R_raw = nullptr;
+  SuiteSparse_long *E_raw = nullptr;
+
+  const SuiteSparse_long econ = static_cast<SuiteSparse_long>(
+      std::min(A.rows(), A.cols()));
+
+  SuiteSparse_long rnk = SuiteSparseQR<double>(
+      SPQR_ORDERING_DEFAULT, tol, econ, &cs, &Q_raw, &R_raw, &E_raw, cc);
+
+  // Wrap outputs in RAII handles immediately.
+  auto Q_ptr = make_cholmod_sparse_ptr(Q_raw, cc);
+  auto R_ptr = make_cholmod_sparse_ptr(R_raw, cc);
+  // E_raw is allocated with cholmod_l_malloc; free with cholmod_l_free.
+  auto E_deleter = [cc, ncol = A.cols()](SuiteSparse_long *p) {
+    if (p) {
+      cholmod_l_free(ncol, sizeof(SuiteSparse_long), p, cc);
+    }
+  };
+  std::unique_ptr<SuiteSparse_long, decltype(E_deleter)> E_ptr(
+      E_raw, E_deleter);
+
+  if (rnk < 0 || !Q_ptr || !R_ptr) {
+    return Result{std::unexpected(solver::SolverError{
+        .kind = solver::SolverError::Kind::breakdown,
+        .message = "SPQR: explicit QR decomposition failed"})};
+  }
+
+  // Convert CHOLMOD sparse matrices to zipper CSMatrix.
+  auto Q_mat = from_cholmod_sparse<R, dynamic_extent>(Q_ptr.get());
+  auto R_mat = from_cholmod_sparse<dynamic_extent, C>(R_ptr.get());
+
+  // Extract permutation vector.
+  std::vector<index_type> perm;
+  if (E_ptr) {
+    const index_type ncol = A.cols();
+    perm.resize(ncol);
+    for (index_type j = 0; j < ncol; ++j) {
+      perm[j] = static_cast<index_type>(E_ptr.get()[j]);
+    }
+  }
+
+  return Result{SpqrQRResult<R, C>{
+      .Q = std::move(Q_mat),
+      .R_factor = std::move(R_mat),
+      .col_perm = std::move(perm),
+      .nrow = A.rows(),
+      .ncol = A.cols(),
+      .rank_estimate = static_cast<index_type>(rnk),
+  }};
+
+  } catch (const std::overflow_error &e) {
+    return Result{std::unexpected(solver::SolverError{
+        .kind = solver::SolverError::Kind::breakdown,
+        .message = e.what()})};
+  }
 }
 
 } // namespace zipper::utils::suitesparse

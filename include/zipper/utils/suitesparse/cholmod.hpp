@@ -58,6 +58,9 @@ using CholmodFactorPtr =
 /// @tparam N  Static dimension of the matrix (rows/cols), or
 ///            `dynamic_extent` for runtime-sized.
 template <index_type N = dynamic_extent> struct CholmodResult {
+  /// Scalar type of the decomposition.
+  using value_type = double;
+
   /// CHOLMOD common struct (must outlive the factor).
   std::shared_ptr<CholmodCommon> common;
   /// CHOLMOD factorization handle.

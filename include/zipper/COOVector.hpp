@@ -21,9 +21,6 @@
 namespace zipper {
 
 template <typename T, index_type N>
-class CSRVector; // forward
-
-template <typename T, index_type N>
 class CSVector; // forward
 
 template <typename ValueType, index_type N>
@@ -168,7 +165,9 @@ public:
   }
 
   // ── Conversion ────────────────────────────────────────────────────────
-  auto to_csr() const -> CSRVector<ValueType, N>;
+  /// Convert to compressed sparse vector format (CSR layout).
+  /// @note `to_csr()` is a backward-compatible alias for `to_cs()`.
+  auto to_csr() const -> CSVector<ValueType, N>;
 
   /// Convert to compressed sparse vector format.
   auto to_cs() const -> CSVector<ValueType, N>;

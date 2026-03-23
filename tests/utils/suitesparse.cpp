@@ -256,6 +256,50 @@ TEST_CASE("spqr_permutation", "[suitesparse][spqr]") {
 }
 
 // ════════════════════════════════════════════════════════════════════════
+// SPQR explicit QR decomposition tests
+// ════════════════════════════════════════════════════════════════════════
+
+TEST_CASE("spqr_qr_general_3x3", "[suitesparse][spqr]") {
+  auto A = make_general_3x3();
+
+  auto result = spqr_qr(A);
+  REQUIRE(result.has_value());
+
+  auto &qr = *result;
+
+  // Verify dimensions: Q is m x econ, R is econ x n
+  CHECK(qr.Q.rows() == 3);
+  CHECK(qr.R_factor.cols() == 3);
+  CHECK(qr.Q.cols() == qr.R_factor.rows()); // econ dimension matches
+
+  // Verify rank is 3 (full rank matrix)
+  CHECK(qr.rank() == 3);
+
+  // Verify permutation is valid (either empty or a permutation of {0,1,2})
+  if (!qr.col_perm.empty()) {
+    REQUIRE(qr.col_perm.size() == 3);
+    auto sorted = qr.col_perm;
+    std::sort(sorted.begin(), sorted.end());
+    CHECK(sorted[0] == 0);
+    CHECK(sorted[1] == 1);
+    CHECK(sorted[2] == 2);
+  }
+}
+
+TEST_CASE("spqr_qr_spd_3x3", "[suitesparse][spqr]") {
+  auto A = make_spd_3x3();
+
+  auto result = spqr_qr(A);
+  REQUIRE(result.has_value());
+
+  auto &qr = *result;
+
+  CHECK(qr.Q.rows() == 3);
+  CHECK(qr.R_factor.cols() == 3);
+  CHECK(qr.rank() == 3);
+}
+
+// ════════════════════════════════════════════════════════════════════════
 // Dynamic extent tests (runtime-sized matrices)
 // ════════════════════════════════════════════════════════════════════════
 

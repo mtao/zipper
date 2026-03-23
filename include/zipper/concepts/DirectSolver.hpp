@@ -11,6 +11,10 @@
 ///   - `LDLTResult`        (LDLT)
 ///   - `QRReducedResult`   (reduced QR)
 ///   - `QRFullResult`      (full QR)
+///   - `PLUResult`         (LU with partial pivoting)
+///   - `CholmodResult`     (sparse Cholesky via SuiteSparse)
+///   - `UmfpackResult`     (sparse LU via SuiteSparse)
+///   - `SpqrResult`        (sparse QR via SuiteSparse)
 ///
 /// The concept is structural (constraint-based): it checks for a `value_type`
 /// member type and the existence of a `.solve(b)` method that accepts a
@@ -20,6 +24,10 @@
 /// @see zipper::utils::decomposition::LDLTResult
 /// @see zipper::utils::decomposition::QRReducedResult
 /// @see zipper::utils::decomposition::QRFullResult
+/// @see zipper::utils::decomposition::PLUResult
+/// @see zipper::utils::suitesparse::CholmodResult
+/// @see zipper::utils::suitesparse::UmfpackResult
+/// @see zipper::utils::suitesparse::SpqrResult
 
 #pragma once
 

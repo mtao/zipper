@@ -78,6 +78,23 @@ template <typename T, index_type N> struct PLUResult {
   /// Sign of the permutation (+1 or -1).
   int sign;
 
+  /// @brief Unit lower triangular factor L.
+  ///
+  /// Returns a read-only TriangularView of the combined LU matrix with
+  /// UnitLower mode: the strict lower triangle contains the L multipliers,
+  /// and the diagonal is implicitly 1.
+  auto L() const {
+    return LU.template as_triangular<expression::TriangularMode::UnitLower>();
+  }
+
+  /// @brief Upper triangular factor U.
+  ///
+  /// Returns a read-only TriangularView of the combined LU matrix with
+  /// Upper mode: the upper triangle (including the diagonal) contains U.
+  auto U() const {
+    return LU.template as_triangular<expression::TriangularMode::Upper>();
+  }
+
   /// @brief Solve A*x = b using the stored PLU factors.
   ///
   /// Performs:
@@ -103,18 +120,14 @@ template <typename T, index_type N> struct PLUResult {
     }
 
     // 2. Forward substitution: L * y = Pb  (L is unit lower triangular).
-    auto L_lower =
-        LU.template as_triangular<expression::TriangularMode::UnitLower>();
-    auto y_result = L_lower.solve(Pb);
+    auto y_result = L().solve(Pb);
 
     if (!y_result) {
       return Result{std::unexpected(std::move(y_result.error()))};
     }
 
     // 3. Back substitution: U * x = y  (U is upper triangular).
-    auto U_upper =
-        LU.template as_triangular<expression::TriangularMode::Upper>();
-    auto x_result = U_upper.solve(*y_result);
+    auto x_result = U().solve(*y_result);
 
     if (!x_result) {
       return Result{std::unexpected(std::move(x_result.error()))};
