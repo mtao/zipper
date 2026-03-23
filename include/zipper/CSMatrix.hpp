@@ -66,6 +66,32 @@ public:
   constexpr static bool is_csc =
       std::is_same_v<LayoutPolicy, storage::layout_left>;
 
+private:
+  template <typename E>
+  static auto make_expr_with_extents_(const E &ext) -> expression_type {
+    if constexpr (is_static) {
+      return expression_type();
+    } else {
+      return expression_type(extents_traits::convert_from(ext));
+    }
+  }
+
+public:
+
+  // ── Span types (non-owning views) ───────────────────────────────────
+  using span_expression_type =
+      storage::SparseCompressedAccessor<ValueType,
+                                        zipper::extents<Rows, Cols>,
+                                        LayoutPolicy,
+                                        storage::detail::SpanStorage>;
+  using const_span_expression_type =
+      storage::SparseCompressedAccessor<const ValueType,
+                                        zipper::extents<Rows, Cols>,
+                                        LayoutPolicy,
+                                        storage::detail::SpanStorage>;
+  using span_type = MatrixBase<span_expression_type>;
+  using const_span_type = MatrixBase<const_span_expression_type>;
+
   CSMatrix() = default;
   CSMatrix(const CSMatrix &) = default;
   CSMatrix(CSMatrix &&) = default;
@@ -97,11 +123,8 @@ public:
   CSMatrix(const Other &other)
     requires(zipper::utils::extents::assignable_extents_v<
                  typename Other::extents_type, extents_type>)
+      : Base(make_expr_with_extents_(other.extents()))
   {
-    if constexpr (!is_static) {
-      static_cast<extents_type &>(expression()) =
-          extents_traits::convert_from(other.extents());
-    }
     expression().assign(other);
   }
 
@@ -111,11 +134,8 @@ public:
     requires(!std::same_as<std::decay_t<Other>, CSMatrix> &&
              zipper::utils::extents::assignable_extents_v<
                  typename std::decay_t<Other>::extents_type, extents_type>)
+      : Base(make_expr_with_extents_(other.extents()))
   {
-    if constexpr (!is_static) {
-      static_cast<extents_type &>(expression()) =
-          extents_traits::convert_from(other.extents());
-    }
     expression().assign(other.expression());
   }
 
@@ -158,6 +178,36 @@ public:
   auto compressed_data() const -> const auto & {
     return expression().compressed_data();
   }
+
+  // ── Span views (non-owning) ───────────────────────────────────────────
+
+  /// Return a non-owning mutable sparse view of this matrix.
+  /// The CSMatrix must outlive the returned span.
+  auto as_span() -> span_type {
+    auto &cd = expression().compressed_data();
+    using SpanData = storage::detail::SparseCompressedSpanData<value_type, 1>;
+    SpanData span_data(
+        std::span<const index_type>(cd.m_indptr.data(), cd.m_indptr.size()),
+        std::span<const index_type>(cd.m_indices.data(), cd.m_indices.size()),
+        std::span<value_type>(cd.m_values.data(), cd.m_values.size()));
+    return span_type(span_expression_type(std::move(span_data), extents()));
+  }
+
+  /// Return a non-owning const sparse view of this matrix.
+  /// The CSMatrix must outlive the returned span.
+  auto as_const_span() const -> const_span_type {
+    const auto &cd = expression().compressed_data();
+    using SpanData =
+        typename const_span_expression_type::compressed_data_type;
+    SpanData span_data(
+        std::span<const index_type>(cd.m_indptr.data(), cd.m_indptr.size()),
+        std::span<const index_type>(cd.m_indices.data(), cd.m_indices.size()),
+        std::span<const value_type>(cd.m_values.data(), cd.m_values.size()));
+    return const_span_type(
+        const_span_expression_type(std::move(span_data), extents()));
+  }
+
+  auto as_span() const -> const_span_type { return as_const_span(); }
 
   // ── Conversion to COO ─────────────────────────────────────────────────
   auto to_coo() const -> COOMatrix<value_type, Rows, Cols> {

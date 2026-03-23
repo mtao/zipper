@@ -26,7 +26,9 @@
 #include <cholmod.h>
 
 #include <cstring>
+#include <limits>
 #include <memory>
+#include <span>
 #include <stdexcept>
 #include <type_traits>
 
@@ -43,6 +45,31 @@ namespace zipper::utils::suitesparse {
 static_assert(sizeof(index_type) == sizeof(SuiteSparse_long),
               "zipper::index_type and SuiteSparse_long must have the same "
               "width for zero-copy index interop");
+
+// ── Dimension safety check ────────────────────────────────────────────
+// SuiteSparse_long is signed (int64_t).  Zipper's index_type is unsigned
+// (size_t).  Although both are 8 bytes on LP64, a size_t value exceeding
+// INT64_MAX would be misinterpreted as negative by SuiteSparse.
+//
+// Rather than checking every index element, we validate that the matrix
+// dimensions and nnz fit in SuiteSparse_long.  Since all index values
+// are bounded by max(rows, cols) and all indptr values by nnz, this
+// single upfront check guarantees every element is in range.
+constexpr auto max_suitesparse_index =
+    static_cast<index_type>(std::numeric_limits<SuiteSparse_long>::max());
+
+/// Verify that matrix dimensions and nnz are representable as
+/// SuiteSparse_long.  Throws std::overflow_error if not.
+inline void check_suitesparse_bounds(index_type nrow, index_type ncol,
+                                     size_t nnz) {
+  if (nrow > max_suitesparse_index || ncol > max_suitesparse_index ||
+      nnz > max_suitesparse_index) {
+    throw std::overflow_error(
+        "Matrix dimensions or nnz exceed SuiteSparse_long range "
+        "(INT64_MAX). Cannot safely convert size_t indices to "
+        "SuiteSparse_long.");
+  }
+}
 
 // ═══════════════════════════════════════════════════════════════════════
 // CholmodCommon — RAII wrapper around cholmod_common
@@ -96,23 +123,28 @@ auto to_cholmod_sparse(const CSMatrix<T, R, C, storage::layout_left> &A)
 
   const auto &cd = A.compressed_data();
 
+  // Verify dimensions fit in SuiteSparse_long before reinterpreting
+  // index arrays from size_t to int64_t.
+  check_suitesparse_bounds(A.rows(), A.cols(), cd.nnz());
+
   cholmod_sparse cs{};
   cs.nrow = static_cast<size_t>(A.rows());
   cs.ncol = static_cast<size_t>(A.cols());
   cs.nzmax = cd.nnz();
 
   // Column pointers (outer pointer array for CSC).
-  // CHOLMOD expects int64_t*, we have size_t* — same width on LP64.
+  // CHOLMOD expects SuiteSparse_long*, we have index_type* — same width
+  // on LP64 (guarded by static_assert above).
   cs.p = const_cast<void *>(
-      static_cast<const void *>(cd.m_indptr.data()));
+      static_cast<const void *>(cd.indptr_data()));
 
   // Row indices (inner index array for CSC).
   cs.i = const_cast<void *>(
-      static_cast<const void *>(cd.m_indices.data()));
+      static_cast<const void *>(cd.indices_data()));
 
   // Values.
   cs.x = const_cast<void *>(
-      static_cast<const void *>(cd.m_values.data()));
+      static_cast<const void *>(cd.values_data()));
 
   cs.z = nullptr; // No imaginary part (real matrix).
 
@@ -141,13 +173,13 @@ auto to_cholmod_sparse(const CSMatrix<T, R, C, storage::layout_left> &A,
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// to_cholmod_dense — copy Vector/Matrix to cholmod_dense
+// to_cholmod_dense — copy Vector to cholmod_dense
 // ═══════════════════════════════════════════════════════════════════════
 
 /// Convert a zipper Vector to a CHOLMOD-owned dense column vector.
 ///
 /// Allocates a `cholmod_dense` via `cholmod_l_allocate_dense` and copies
-/// the vector elements.  The caller must free via `cholmod_l_free_dense`.
+/// the vector elements using zipper's expression interface.
 ///
 /// @param b   Input vector.
 /// @param cc  CHOLMOD common struct (for allocation).
@@ -156,7 +188,7 @@ template <concepts::Vector BDerived>
 auto to_cholmod_dense(const BDerived &b, cholmod_common *cc)
     -> cholmod_dense * {
   using T = typename std::decay_t<BDerived>::value_type;
-  static_assert(std::is_same_v<T, double>,
+  static_assert(std::is_same_v<std::remove_const_t<T>, double>,
                 "CHOLMOD only supports double precision");
 
   const index_type n = b.rows();
@@ -166,10 +198,9 @@ auto to_cholmod_dense(const BDerived &b, cholmod_common *cc)
     throw std::runtime_error("cholmod_l_allocate_dense failed");
   }
 
-  auto *xp = static_cast<double *>(B->x);
-  for (index_type i = 0; i < n; ++i) {
-    xp[i] = b(i);
-  }
+  // Wrap CHOLMOD's buffer as a zipper span view and assign from b.
+  auto dst = VectorBase(std::span<double>(static_cast<double *>(B->x), n));
+  dst = b;
 
   return B;
 }
@@ -180,6 +211,9 @@ auto to_cholmod_dense(const BDerived &b, cholmod_common *cc)
 
 /// Convert a `cholmod_dense` column vector to a zipper Vector.
 ///
+/// Wraps the CHOLMOD buffer as a non-owning zipper span view and copies
+/// into an owned Vector via zipper's assignment infrastructure.
+///
 /// @tparam N   Static extent for the result vector (use `dynamic_extent`
 ///             for runtime-sized).
 /// @param X    CHOLMOD dense matrix (must be n x 1).
@@ -187,11 +221,11 @@ auto to_cholmod_dense(const BDerived &b, cholmod_common *cc)
 template <index_type N = dynamic_extent>
 auto from_cholmod_dense(const cholmod_dense *X) -> Vector<double, N> {
   const index_type n = X->nrow;
-  Vector<double, N> result(n);
-  const auto *xp = static_cast<const double *>(X->x);
-  for (index_type i = 0; i < n; ++i) {
-    result(i) = xp[i];
-  }
+  // Wrap CHOLMOD's buffer as a const zipper span view.
+  auto src = VectorBase(
+      std::span<const double>(static_cast<const double *>(X->x), n));
+  // Construct owned Vector from the span view (deep copy via assign).
+  Vector<double, N> result(src);
   return result;
 }
 

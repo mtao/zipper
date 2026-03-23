@@ -23,6 +23,7 @@
 
 #include <expected>
 #include <memory>
+#include <span>
 #include <vector>
 
 #include <zipper/CSMatrix.hpp>
@@ -62,6 +63,9 @@ using UmfpackNumericPtr = std::unique_ptr<void, UmfpackNumericDeleter>;
 /// Result of a sparse LU factorization via UMFPACK.
 ///
 /// Owns the UMFPACK numeric handle and the CSC arrays needed for solve.
+/// Index arrays are stored as `std::vector<SuiteSparse_long>` (non-
+/// mathematical bookkeeping data, analogous to permutation vectors in
+/// the dense PLU decomposition).
 ///
 /// @tparam N  Static dimension of the matrix (rows), or `dynamic_extent`.
 template <index_type N = dynamic_extent> struct UmfpackResult {
@@ -83,17 +87,16 @@ template <index_type N = dynamic_extent> struct UmfpackResult {
       -> std::expected<Vector<double, N>, solver::SolverError> {
     using Result = std::expected<Vector<double, N>, solver::SolverError>;
 
-    // Copy RHS into a contiguous double array.
-    std::vector<double> bx(nrow);
-    for (index_type i = 0; i < nrow; ++i) {
-      bx[i] = b(i);
-    }
+    // Copy RHS into contiguous storage via zipper assignment.
+    Vector<double, N> bx(nrow);
+    bx = b;
 
-    std::vector<double> xx(nrow);
+    // Allocate solution vector.
+    Vector<double, N> x(nrow);
 
     int status = umfpack_dl_solve(
         UMFPACK_A, colptr.data(), rowind.data(), values.data(),
-        xx.data(), bx.data(), numeric.get(), nullptr, nullptr);
+        &x(0), &bx(0), numeric.get(), nullptr, nullptr);
 
     if (status != UMFPACK_OK) {
       return Result{std::unexpected(solver::SolverError{
@@ -102,10 +105,6 @@ template <index_type N = dynamic_extent> struct UmfpackResult {
                      std::to_string(status) + ")"})};
     }
 
-    Vector<double, N> x(nrow);
-    for (index_type i = 0; i < nrow; ++i) {
-      x(i) = xx[i];
-    }
     return Result{std::move(x)};
   }
 };
@@ -127,23 +126,39 @@ auto umfpack_factor(const CSMatrix<T, R, C, storage::layout_left> &A)
   constexpr index_type N = R;
   using Result = std::expected<UmfpackResult<N>, solver::SolverError>;
 
+  try {
+
   const auto &cd = A.compressed_data();
   const index_type nrow = A.rows();
   const index_type ncol = A.cols();
   const size_t nnz = cd.nnz();
 
-  // Copy index arrays to SuiteSparse_long (may be a reinterpret on LP64,
-  // but we do a proper copy for portability and to make the result
-  // self-contained / independent of A's lifetime).
+  // Verify dimensions fit in SuiteSparse_long before casting indices.
+  check_suitesparse_bounds(nrow, ncol, nnz);
+
+  // Copy index arrays to SuiteSparse_long for self-contained factorization.
+  // These are non-mathematical bookkeeping arrays (like permutation vectors
+  // in the dense PLU decomposition).
   std::vector<SuiteSparse_long> colptr(ncol + 1);
+  auto indptr_src = VectorBase(
+      std::span<const index_type>(cd.indptr_data(), ncol + 1));
   for (index_type j = 0; j <= ncol; ++j) {
-    colptr[j] = static_cast<SuiteSparse_long>(cd.m_indptr[j]);
+    colptr[j] = static_cast<SuiteSparse_long>(indptr_src(j));
   }
+
   std::vector<SuiteSparse_long> rowind(nnz);
+  auto indices_src = VectorBase(
+      std::span<const index_type>(cd.indices_data(), nnz));
   for (size_t k = 0; k < nnz; ++k) {
-    rowind[k] = static_cast<SuiteSparse_long>(cd.m_indices[k]);
+    rowind[k] = static_cast<SuiteSparse_long>(indices_src(k));
   }
-  std::vector<double> vals(cd.m_values.begin(), cd.m_values.end());
+
+  // Values can be accessed via a span view (same type, no conversion).
+  auto vals_src = VectorBase(
+      std::span<const double>(cd.values_data(), nnz));
+  std::vector<double> vals(nnz);
+  auto vals_dst = VectorBase(std::span<double>(vals.data(), nnz));
+  vals_dst = vals_src;
 
   // Symbolic analysis.
   void *symbolic_raw = nullptr;
@@ -183,6 +198,12 @@ auto umfpack_factor(const CSMatrix<T, R, C, storage::layout_left> &A)
       .rowind = std::move(rowind),
       .values = std::move(vals),
   }};
+
+  } catch (const std::overflow_error &e) {
+    return Result{std::unexpected(solver::SolverError{
+        .kind = solver::SolverError::Kind::breakdown,
+        .message = e.what()})};
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════

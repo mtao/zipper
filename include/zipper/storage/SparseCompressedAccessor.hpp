@@ -16,8 +16,7 @@
 
 namespace zipper::storage {
 
-/// @brief Read-only (by default) expression wrapper around
-/// SparseCompressedData.
+/// @brief Expression wrapper around SparseCompressedData.
 ///
 /// Provides `coeff()` for all indices (returns 0 for missing entries).
 /// When `ValueType` is non-const, also provides `coeff_ref()` and
@@ -26,28 +25,40 @@ namespace zipper::storage {
 ///
 /// Supports `index_set<D>()` for zero-aware expression operations.
 ///
-/// @tparam LayoutPolicy  `layout_right` for CSR (row-compressed, default),
-///                       `layout_left` for CSC (column-compressed).
+/// @tparam LayoutPolicy    `layout_right` for CSR (row-compressed, default),
+///                         `layout_left` for CSC (column-compressed).
 ///   - CSR: outer dimension = rows (dim 0), inner dimension = columns (dim 1).
 ///     Data is sorted by (row, col). `index_set<1>(row)` is O(log R).
 ///   - CSC: outer dimension = columns (dim 1), inner dimension = rows (dim 0).
 ///     Data is sorted by (col, row). `index_set<0>(col)` is O(log C).
+///
+/// @tparam StoragePolicy   `detail::OwnedStorage` (default) — data in vectors.
+///                         `detail::SpanStorage` — non-owning span views.
 template <typename ValueType, typename Extents,
-          typename LayoutPolicy = default_layout_policy>
+          typename LayoutPolicy = default_layout_policy,
+          typename StoragePolicy = detail::OwnedStorage>
 class SparseCompressedAccessor
     : public expression::ExpressionBase<
-          SparseCompressedAccessor<ValueType, Extents, LayoutPolicy>>,
+          SparseCompressedAccessor<ValueType, Extents, LayoutPolicy,
+                                   StoragePolicy>>,
       public Extents {
 public:
   using ParentType = expression::ExpressionBase<
-      SparseCompressedAccessor<ValueType, Extents, LayoutPolicy>>;
+      SparseCompressedAccessor<ValueType, Extents, LayoutPolicy,
+                                StoragePolicy>>;
   using value_type = ValueType;
   using element_type = std::remove_const_t<ValueType>;
   using extents_type = Extents;
   using layout_policy = LayoutPolicy;
+  using storage_policy = StoragePolicy;
   using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
   using compressed_data_type =
-      detail::SparseCompressedData<element_type, extents_type::rank() - 1>;
+      detail::SparseCompressedData<
+          std::conditional_t<detail::is_span_storage_v<StoragePolicy>,
+                             ValueType, element_type>,
+          extents_type::rank() - 1, StoragePolicy>;
+
+  static constexpr bool is_span = detail::is_span_storage_v<StoragePolicy>;
 
   constexpr static auto rank() -> rank_type { return extents_type::rank(); }
   constexpr static bool IsStatic =
@@ -104,8 +115,9 @@ public:
   /// Construct from a SparseCoordinateAccessor (compresses internally).
   /// Uses ReverseIndices when layout is CSC so that the compressed data
   /// is stored column-major (outer=col, inner=row).
+  /// Only available for owned storage (span views cannot be built from COO).
   template <typename VT2>
-    requires std::convertible_to<VT2, element_type>
+    requires(std::convertible_to<VT2, element_type> && !is_span)
   explicit SparseCompressedAccessor(
       const SparseCoordinateAccessor<VT2, Extents> &coo)
       : extents_type(coo.extents()),
@@ -165,8 +177,9 @@ public:
   }
 
   /// Clear all stored entries, resetting to an empty compressed container.
+  /// Only available for owned storage.
   void clear()
-    requires(!std::is_const_v<ValueType>)
+    requires(!std::is_const_v<ValueType> && !is_span)
   {
     m_data = {};
   }
@@ -176,9 +189,11 @@ public:
   ///
   /// Fast path: if the source is a SparseCompressedAccessor with the same
   /// layout, directly copy the compressed data (O(nnz), no allocation).
+  ///
+  /// Only available for owned storage (span views are structurally immutable).
   template <zipper::concepts::Expression V>
   void assign(const V &v)
-    requires(!std::is_const_v<ValueType> &&
+    requires(!std::is_const_v<ValueType> && !is_span &&
              zipper::utils::extents::assignable_extents_v<
                  typename V::extents_type, extents_type>)
   {
@@ -204,12 +219,21 @@ public:
       m_data = v.compressed_data();
       return;
     }
-    SparseCoordinateAccessor<element_type, extents_type> coo;
-    if constexpr (!IsStatic) {
-      static_cast<extents_type&>(coo) = this->extents();
-    }
+    auto make_coo = [&]() {
+      if constexpr (IsStatic) {
+        return SparseCoordinateAccessor<element_type, extents_type>();
+      } else {
+        return SparseCoordinateAccessor<element_type, extents_type>(
+            zipper::detail::ExtentsTraits<extents_type>::convert_from(
+                v.extents()));
+      }
+    };
+    auto coo = make_coo();
     expression::detail::SparseAssignHelper::assign(v, coo);
     m_data = detail::to_sparse_compressed_data<LayoutPolicy>(coo);
+    if constexpr (!IsStatic) {
+      static_cast<extents_type&>(*this) = coo.extents();
+    }
   }
 
   // ── index_set: rank-1 ────────────────────────────────────────────────
@@ -238,15 +262,15 @@ public:
       }
       auto start = m_data.m_indptr[other_idx];
       auto end = m_data.m_indptr[other_idx + 1];
-      using Base = detail::SparseCompressedData<element_type, 0>;
+      using Base = detail::SparseCompressedData<typename compressed_data_type::value_type, 0, StoragePolicy>;
       const auto &base = static_cast<const Base &>(m_data);
       std::vector<index_type> result(base.m_indices.begin() + start,
-                                     base.m_indices.begin() + end);
+                                      base.m_indices.begin() + end);
       return {std::move(result)};
     } else {
       // Slow path: outer indices for a given inner index.
       // Must scan all outer indices and check each one's inner entries.
-      using Base = detail::SparseCompressedData<element_type, 0>;
+      using Base = detail::SparseCompressedData<typename compressed_data_type::value_type, 0, StoragePolicy>;
       const auto &base = static_cast<const Base &>(m_data);
       std::vector<index_type> result;
       for (index_type outer = 0; outer < m_data.outer_size(); ++outer) {
@@ -315,21 +339,25 @@ private:
   }
 };
 
-template <typename ValueType, typename Extents, typename LayoutPolicy>
-SparseCompressedAccessor<ValueType, Extents, LayoutPolicy>::
-    ~SparseCompressedAccessor() = default;
+template <typename ValueType, typename Extents, typename LayoutPolicy,
+          typename StoragePolicy>
+SparseCompressedAccessor<ValueType, Extents, LayoutPolicy,
+                          StoragePolicy>::~SparseCompressedAccessor() = default;
 
 } // namespace zipper::storage
 
 namespace zipper::expression {
-template <typename ValueType, typename Extents, typename LayoutPolicy>
+template <typename ValueType, typename Extents, typename LayoutPolicy,
+          typename StoragePolicy>
 struct detail::ExpressionTraits<
-    zipper::storage::SparseCompressedAccessor<ValueType, Extents, LayoutPolicy>>
+    zipper::storage::SparseCompressedAccessor<ValueType, Extents, LayoutPolicy,
+                                              StoragePolicy>>
     : public detail::BasicExpressionTraits<
           ValueType, Extents,
           zipper::detail::AccessFeatures{
               .is_const = std::is_const_v<ValueType>,
-              .is_reference = false},
+              .is_reference =
+                  zipper::storage::detail::is_span_storage_v<StoragePolicy>},
           zipper::detail::ShapeFeatures{.is_resizable = false}> {
   constexpr static bool has_index_set = true;
   constexpr static bool has_known_zeros = has_index_set;
@@ -337,6 +365,10 @@ struct detail::ExpressionTraits<
   /// Sparse compressed leaf → prefer the compressed layout it uses.
   using preferred_layout =
       zipper::detail::SparseLayoutPreference<LayoutPolicy>;
+
+  /// Span-based accessors store references to external memory.
+  constexpr static bool stores_references =
+      zipper::storage::detail::is_span_storage_v<StoragePolicy>;
 };
 } // namespace zipper::expression
 

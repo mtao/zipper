@@ -9,6 +9,7 @@
 
 #ifdef ZIPPER_HAS_SUITESPARSE
 
+#include <algorithm>
 #include <cmath>
 #include <zipper/CSMatrix.hpp>
 #include <zipper/Vector.hpp>
@@ -198,6 +199,60 @@ TEST_CASE("spqr_solve_spd_3x3", "[suitesparse][spqr]") {
   double rnorm = std::sqrt(r0 * r0 + r1 * r1 + r2 * r2);
 
   CHECK(rnorm < 1e-12);
+}
+
+TEST_CASE("spqr_factor_and_reuse", "[suitesparse][spqr]") {
+  auto A = make_general_3x3();
+
+  auto factored = spqr_factor(A);
+  REQUIRE(factored.has_value());
+
+  // Solve with two different RHS vectors using stored factorization.
+  {
+    Vector<double, 3> b1{1.0, 0.0, 0.0};
+    auto x1 = factored->solve(b1);
+    REQUIRE(x1.has_value());
+    CHECK(x1->rows() == 3);
+  }
+  {
+    Vector<double, 3> b2{0.0, 1.0, 0.0};
+    auto x2 = factored->solve(b2);
+    REQUIRE(x2.has_value());
+    CHECK(x2->rows() == 3);
+  }
+}
+
+TEST_CASE("spqr_rank_full_rank", "[suitesparse][spqr]") {
+  auto A = make_general_3x3();
+
+  auto factored = spqr_factor(A);
+  REQUIRE(factored.has_value());
+
+  // The 3x3 general matrix is full rank.
+  CHECK(factored->rank() == 3);
+}
+
+TEST_CASE("spqr_rank_convenience", "[suitesparse][spqr]") {
+  auto A = make_general_3x3();
+  CHECK(spqr_rank(A) == 3);
+}
+
+TEST_CASE("spqr_permutation", "[suitesparse][spqr]") {
+  auto A = make_general_3x3();
+
+  auto factored = spqr_factor(A);
+  REQUIRE(factored.has_value());
+
+  auto perm = factored->permutation();
+  // Permutation is either empty (identity) or a valid permutation of {0,1,2}.
+  if (!perm.empty()) {
+    REQUIRE(perm.size() == 3);
+    auto sorted = perm;
+    std::sort(sorted.begin(), sorted.end());
+    CHECK(sorted[0] == 0);
+    CHECK(sorted[1] == 1);
+    CHECK(sorted[2] == 2);
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════════

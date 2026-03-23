@@ -1475,3 +1475,341 @@ TEST_CASE("coo_accessor_clear", "[sparse][coo][audit][fix14]") {
     CHECK(A(1, 1) == 0.0);
     CHECK(A.is_compressed());  // clear() sets compressed = true
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Sparse span views: CSMatrix::as_span() / as_const_span()
+// ═══════════════════════════════════════════════════════════════════════════
+
+TEST_CASE("csmatrix_csr_as_span_reads", "[sparse][csmatrix][span]") {
+    std::vector<zipper::SparseEntry<double, 2>> entries = {
+        {{0, 0}, 1.0}, {{0, 2}, 2.0},
+        {{1, 1}, 3.0},
+        {{2, 0}, 4.0}, {{2, 2}, 5.0}};
+    zipper::CSMatrix<double, 3, 3, zipper::storage::layout_right> csr(entries);
+
+    auto span = csr.as_span();
+    // Existing entries: mutable operator() returns reference.
+    CHECK(span(0, 0) == 1.0);
+    CHECK(span(0, 2) == 2.0);
+    CHECK(span(1, 1) == 3.0);
+    CHECK(span(2, 0) == 4.0);
+    CHECK(span(2, 2) == 5.0);
+    // Missing entries: use const access (coeff returns 0).
+    CHECK(std::as_const(span)(0, 1) == 0.0);
+}
+
+TEST_CASE("csmatrix_csc_as_span_reads", "[sparse][csmatrix][span]") {
+    std::vector<zipper::SparseEntry<double, 2>> entries = {
+        {{0, 0}, 1.0}, {{0, 2}, 2.0},
+        {{1, 1}, 3.0},
+        {{2, 0}, 4.0}, {{2, 2}, 5.0}};
+    zipper::CSMatrix<double, 3, 3, zipper::storage::layout_left> csc(entries);
+
+    auto span = csc.as_span();
+    CHECK(span(0, 0) == 1.0);
+    CHECK(span(0, 2) == 2.0);
+    CHECK(span(1, 1) == 3.0);
+    CHECK(span(2, 0) == 4.0);
+    CHECK(span(2, 2) == 5.0);
+    // Missing entries: use const access (coeff returns 0).
+    CHECK(std::as_const(span)(0, 1) == 0.0);
+}
+
+TEST_CASE("csmatrix_as_span_mutates", "[sparse][csmatrix][span]") {
+    std::vector<zipper::SparseEntry<double, 2>> entries = {
+        {{0, 0}, 1.0}, {{1, 1}, 2.0}, {{2, 2}, 3.0}};
+    zipper::CSMatrix<double, 3, 3, zipper::storage::layout_right> csr(entries);
+
+    // Modify through the span view.
+    auto span = csr.as_span();
+    span(1, 1) = 99.0;
+
+    // The original matrix should see the change (non-owning view).
+    CHECK(csr(1, 1) == 99.0);
+}
+
+TEST_CASE("csmatrix_as_const_span_reads", "[sparse][csmatrix][span]") {
+    std::vector<zipper::SparseEntry<double, 2>> entries = {
+        {{0, 0}, 1.0}, {{1, 1}, 2.0}};
+    zipper::CSMatrix<double, 3, 3, zipper::storage::layout_right> csr(entries);
+
+    auto cspan = csr.as_const_span();
+    CHECK(cspan(0, 0) == 1.0);
+    CHECK(cspan(1, 1) == 2.0);
+    CHECK(cspan(0, 1) == 0.0);
+}
+
+TEST_CASE("csmatrix_const_as_span_gives_const", "[sparse][csmatrix][span]") {
+    std::vector<zipper::SparseEntry<double, 2>> entries = {
+        {{0, 0}, 1.0}, {{1, 1}, 2.0}};
+    const zipper::CSMatrix<double, 3, 3, zipper::storage::layout_right> csr(entries);
+
+    // Calling as_span() on a const CSMatrix should return const_span_type.
+    auto cspan = csr.as_span();
+    CHECK(cspan(0, 0) == 1.0);
+    CHECK(cspan(1, 1) == 2.0);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Sparse span views: CSVector::as_span() / as_const_span()
+// ═══════════════════════════════════════════════════════════════════════════
+
+TEST_CASE("csvector_as_span_reads", "[sparse][csvector][span]") {
+    std::vector<zipper::SparseEntry<double, 1>> entries = {
+        {{1}, 3.0}, {{3}, 7.0}};
+    zipper::CSVector<double, 5> sv(entries);
+
+    auto span = sv.as_span();
+    // Existing entries via mutable operator().
+    CHECK(span(1) == 3.0);
+    CHECK(span(3) == 7.0);
+    // Missing entries: use const access (coeff returns 0).
+    CHECK(std::as_const(span)(0) == 0.0);
+    CHECK(std::as_const(span)(2) == 0.0);
+    CHECK(std::as_const(span)(4) == 0.0);
+}
+
+TEST_CASE("csvector_as_span_mutates", "[sparse][csvector][span]") {
+    std::vector<zipper::SparseEntry<double, 1>> entries = {
+        {{0}, 1.0}, {{2}, 3.0}, {{4}, 5.0}};
+    zipper::CSVector<double, 5> sv(entries);
+
+    auto span = sv.as_span();
+    span(2) = 42.0;
+
+    // Original should see the mutation.
+    CHECK(sv(2) == 42.0);
+}
+
+TEST_CASE("csvector_as_const_span_reads", "[sparse][csvector][span]") {
+    std::vector<zipper::SparseEntry<double, 1>> entries = {
+        {{1}, 10.0}, {{3}, 30.0}};
+    zipper::CSVector<double, 5> sv(entries);
+
+    auto cspan = sv.as_const_span();
+    CHECK(cspan(1) == 10.0);
+    CHECK(cspan(3) == 30.0);
+    CHECK(cspan(0) == 0.0);
+}
+
+TEST_CASE("csvector_const_as_span_gives_const", "[sparse][csvector][span]") {
+    std::vector<zipper::SparseEntry<double, 1>> entries = {
+        {{2}, 42.0}};
+    const zipper::CSVector<double, 5> sv(entries);
+
+    auto cspan = sv.as_span();
+    CHECK(cspan(2) == 42.0);
+    CHECK(cspan(0) == 0.0);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Sparse span views: SpMV through span view
+// ═══════════════════════════════════════════════════════════════════════════
+
+TEST_CASE("sparse_span_spmv", "[sparse][csmatrix][span][spmv]") {
+    // | 1  0  2 |   | 1 |   | 7  |
+    // | 0  3  0 | * | 2 | = | 6  |
+    // | 4  0  5 |   | 3 |   | 19 |
+    std::vector<zipper::SparseEntry<double, 2>> entries = {
+        {{0, 0}, 1.0}, {{0, 2}, 2.0},
+        {{1, 1}, 3.0},
+        {{2, 0}, 4.0}, {{2, 2}, 5.0}};
+    zipper::CSMatrix<double, 3, 3, zipper::storage::layout_right> csr(entries);
+
+    auto span = csr.as_const_span();
+    zipper::Vector<double, 3> x({1.0, 2.0, 3.0});
+
+    zipper::Vector<double, 3> y(span * x);
+    CHECK(y(0) == 7.0);
+    CHECK(y(1) == 6.0);
+    CHECK(y(2) == 19.0);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Dynamic-extent converting constructors from expressions
+//
+//  BUG: CSRMatrix, COOMatrix, and CSMatrix have converting constructors
+//  that accept any concepts::Expression or concepts::Zipper with compatible
+//  extents. These constructors implicitly default-construct the Base chain
+//  (CSRMatrix -> MatrixBase -> ZipperBase), then try to set extents and
+//  assign in the body. But for dynamic-extent sparse types, the underlying
+//  accessor (SparseCompressedAccessor / SparseCoordinateAccessor) has NO
+//  default constructor — its default ctor is `requires(IsStatic)`. So the
+//  Base's default ctor is implicitly deleted, and these converting
+//  constructors fail to compile.
+//
+//  The fix: use a member initializer list to construct Base with an
+//  expression_type that already has the correct extents, e.g.:
+//    CSRMatrix(const Other &other)
+//      : Base(expression_type(extents_traits::convert_from(other.extents())))
+//    { expression().assign(other); }
+//
+//  These tests verify that dynamic-extent sparse types can be constructed
+//  from:
+//    1. Static-extent sparse matrices (static -> dynamic conversion)
+//    2. Lazy transpose expressions (Zipper-wrapped Swizzle)
+//    3. Lazy matrix product expressions (Zipper-wrapped MatrixProduct)
+//    4. The .eval() path (which routes through MatrixBase::eval() -> CSMatrix)
+// ═══════════════════════════════════════════════════════════════════════════
+
+constexpr auto dyn = zipper::dynamic_extent;
+
+TEST_CASE("csrmatrix_dynamic_from_static_csrmatrix",
+          "[sparse][csr][dynamic][converting_ctor]") {
+    // Construct a static-extent CSR, then convert to dynamic-extent CSR.
+    std::vector<zipper::SparseEntry<double, 2>> entries = {
+        {{0, 0}, 1.0}, {{0, 1}, 2.0},
+        {{1, 0}, 3.0}, {{1, 1}, 4.0}};
+    zipper::CSRMatrix<double, 2, 2> A(entries);
+
+    // This should invoke CSRMatrix(const Zipper &other) with !is_static,
+    // which currently fails because Base() is deleted for dynamic extents.
+    zipper::CSRMatrix<double, dyn, dyn> B(A);
+
+    CHECK(B.rows() == 2);
+    CHECK(B.cols() == 2);
+    CHECK(B(0, 0) == 1.0);
+    CHECK(B(0, 1) == 2.0);
+    CHECK(B(1, 0) == 3.0);
+    CHECK(B(1, 1) == 4.0);
+}
+
+TEST_CASE("coomatrix_dynamic_from_static_coomatrix",
+          "[sparse][coo][dynamic][converting_ctor]") {
+    // Construct a static-extent COO, then convert to dynamic-extent COO.
+    std::vector<zipper::SparseEntry<double, 2>> entries = {
+        {{0, 0}, 1.0}, {{1, 1}, 5.0}, {{2, 0}, 9.0}};
+    zipper::COOMatrix<double, 3, 2> A(entries);
+
+    // This should invoke COOMatrix(const Zipper &other) with !is_static.
+    zipper::COOMatrix<double, dyn, dyn> B(A);
+
+    CHECK(B.rows() == 3);
+    CHECK(B.cols() == 2);
+    CHECK(B(0, 0) == 1.0);
+    CHECK(B(1, 1) == 5.0);
+    CHECK(B(2, 0) == 9.0);
+    CHECK(B(0, 1) == 0.0);
+}
+
+TEST_CASE("csrmatrix_dynamic_from_transpose_expression",
+          "[sparse][csr][dynamic][converting_ctor]") {
+    // Build a 2x3 static CSR, transpose it (lazy Swizzle expression),
+    // and construct a dynamic-extent CSR from the transposed view.
+    std::vector<zipper::SparseEntry<double, 2>> entries = {
+        {{0, 0}, 1.0}, {{0, 2}, 2.0},
+        {{1, 1}, 3.0}};
+    zipper::CSRMatrix<double, 2, 3> A(entries);
+
+    // A.transpose() returns MatrixBase<Swizzle<...>> — a Zipper type.
+    // Constructing a dynamic CSR from it exercises the Zipper converting ctor.
+    zipper::CSRMatrix<double, dyn, dyn> At(A.transpose());
+
+    CHECK(At.rows() == 3);
+    CHECK(At.cols() == 2);
+    CHECK(At(0, 0) == 1.0);
+    CHECK(At(1, 1) == 3.0);
+    CHECK(At(2, 0) == 2.0);
+    CHECK(At(0, 1) == 0.0);
+}
+
+TEST_CASE("coomatrix_dynamic_from_transpose_expression",
+          "[sparse][coo][dynamic][converting_ctor]") {
+    std::vector<zipper::SparseEntry<double, 2>> entries = {
+        {{0, 0}, 1.0}, {{0, 1}, 2.0},
+        {{1, 0}, 3.0}, {{1, 1}, 4.0}};
+    zipper::COOMatrix<double, 2, 2> A(entries);
+
+    // COOMatrix from a Zipper-wrapped transpose.
+    zipper::COOMatrix<double, dyn, dyn> At(A.transpose());
+
+    CHECK(At.rows() == 2);
+    CHECK(At.cols() == 2);
+    CHECK(At(0, 0) == 1.0);
+    CHECK(At(0, 1) == 3.0);
+    CHECK(At(1, 0) == 2.0);
+    CHECK(At(1, 1) == 4.0);
+}
+
+TEST_CASE("csrmatrix_dynamic_from_matrix_product",
+          "[sparse][csr][dynamic][converting_ctor]") {
+    // A (2x3) * B (3x2) -> C (2x2), materialized into dynamic CSR.
+    std::vector<zipper::SparseEntry<double, 2>> a_entries = {
+        {{0, 0}, 1.0}, {{0, 2}, 2.0},
+        {{1, 1}, 3.0}};
+    std::vector<zipper::SparseEntry<double, 2>> b_entries = {
+        {{0, 0}, 1.0},
+        {{1, 1}, 1.0},
+        {{2, 0}, 1.0}};
+    zipper::CSRMatrix<double, 2, 3> A(a_entries);
+    zipper::CSRMatrix<double, 3, 2> B(b_entries);
+
+    // A * B is a lazy MatrixProduct expression (Zipper-wrapped).
+    zipper::CSRMatrix<double, dyn, dyn> C(A * B);
+
+    CHECK(C.rows() == 2);
+    CHECK(C.cols() == 2);
+    // C = [1*1+0+2*1, 0;  0, 3*1] = [3, 0; 0, 3]
+    CHECK(C(0, 0) == 3.0);
+    CHECK(C(0, 1) == 0.0);
+    CHECK(C(1, 0) == 0.0);
+    CHECK(C(1, 1) == 3.0);
+}
+
+TEST_CASE("csmatrix_dynamic_from_expression",
+          "[sparse][csmatrix][dynamic][converting_ctor]") {
+    // CSMatrix has the same converting constructor pattern.
+    std::vector<zipper::SparseEntry<double, 2>> entries = {
+        {{0, 0}, 1.0}, {{1, 1}, 2.0}};
+    zipper::CSMatrix<double, 2, 2, zipper::storage::layout_right> A(entries);
+
+    // Construct dynamic-extent CSMatrix from static-extent CSMatrix (Zipper).
+    zipper::CSMatrix<double, dyn, dyn, zipper::storage::layout_right> B(A);
+
+    CHECK(B.rows() == 2);
+    CHECK(B.cols() == 2);
+    CHECK(B(0, 0) == 1.0);
+    CHECK(B(1, 1) == 2.0);
+    CHECK(B(0, 1) == 0.0);
+}
+
+TEST_CASE("csrmatrix_dynamic_from_raw_expression",
+          "[sparse][csr][dynamic][converting_ctor]") {
+    // Test the Expression converting ctor (not Zipper).
+    // Build a static-extent COO accessor and pass it directly.
+    zipper::storage::SparseCoordinateAccessor<double,
+        zipper::extents<2, 2>> coo_acc;
+    coo_acc.emplace(0, 0) = 5.0;
+    coo_acc.emplace(1, 1) = 7.0;
+    coo_acc.compress();
+
+    // This calls CSRMatrix(const Expression &other) with !is_static.
+    zipper::CSRMatrix<double, dyn, dyn> A(coo_acc);
+
+    CHECK(A.rows() == 2);
+    CHECK(A.cols() == 2);
+    CHECK(A(0, 0) == 5.0);
+    CHECK(A(1, 1) == 7.0);
+}
+
+TEST_CASE("csrmatrix_dynamic_eval_transpose",
+          "[sparse][csr][dynamic][converting_ctor]") {
+    // eval() on a transpose of a dynamic-extent CSR should produce a
+    // dynamic-extent CSMatrix (since the Swizzle expression has dynamic
+    // extents). This exercises the CSMatrix converting ctor from within
+    // MatrixBase::eval().
+    std::vector<zipper::SparseEntry<double, 2>> entries = {
+        {{0, 0}, 1.0}, {{0, 2}, 2.0},
+        {{1, 1}, 3.0}};
+    zipper::CSRMatrix<double, 2, 3> A(entries);
+
+    // A.transpose() is a lazy view; eval() materializes it.
+    // The result type depends on preferred_layout: CSR transpose -> CSC.
+    auto At = A.transpose().eval();
+
+    CHECK(At.rows() == 3);
+    CHECK(At.cols() == 2);
+    CHECK(At(0, 0) == 1.0);
+    CHECK(At(1, 1) == 3.0);
+    CHECK(At(2, 0) == 2.0);
+}

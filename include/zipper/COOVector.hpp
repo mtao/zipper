@@ -42,6 +42,19 @@ public:
   using Base::extents;
   constexpr static bool is_static = extents_traits::is_static;
 
+private:
+  /// Helper: construct an expression_type with correct extents.
+  /// For static extents, default-constructs. For dynamic, uses the given extents.
+  template <typename E>
+  static auto make_expr_with_extents_(const E &ext) -> expression_type {
+    if constexpr (is_static) {
+      return expression_type();
+    } else {
+      return expression_type(extents_traits::convert_from(ext));
+    }
+  }
+
+public:
   COOVector() = default;
   COOVector(const COOVector &) = default;
   COOVector(COOVector &&) = default;
@@ -73,11 +86,8 @@ public:
   COOVector(const Other &other)
     requires(zipper::utils::extents::assignable_extents_v<
                  typename Other::extents_type, extents_type>)
+      : Base(make_expr_with_extents_(other.extents()))
   {
-    if constexpr (!is_static) {
-      static_cast<extents_type&>(expression()) =
-          extents_traits::convert_from(other.extents());
-    }
     expression().assign(other);
   }
 
@@ -87,11 +97,8 @@ public:
     requires(!std::same_as<std::decay_t<Other>, COOVector> &&
              zipper::utils::extents::assignable_extents_v<
                  typename std::decay_t<Other>::extents_type, extents_type>)
+      : Base(make_expr_with_extents_(other.extents()))
   {
-    if constexpr (!is_static) {
-      static_cast<extents_type&>(expression()) =
-          extents_traits::convert_from(other.extents());
-    }
     expression().assign(other.expression());
   }
 

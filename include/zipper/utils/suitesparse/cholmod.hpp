@@ -115,6 +115,8 @@ auto cholmod_factor(const CSMatrix<T, R, C, storage::layout_left> &A,
   constexpr index_type N = R;
   using Result = std::expected<CholmodResult<N>, solver::SolverError>;
 
+  try {
+
   auto common = std::make_shared<CholmodCommon>();
   auto *cc = common->get();
 
@@ -143,6 +145,12 @@ auto cholmod_factor(const CSMatrix<T, R, C, storage::layout_left> &A,
       .factor = std::move(L),
       .dim = static_cast<index_type>(A.rows()),
   }};
+
+  } catch (const std::overflow_error &e) {
+    return Result{std::unexpected(solver::SolverError{
+        .kind = solver::SolverError::Kind::breakdown,
+        .message = e.what()})};
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════
