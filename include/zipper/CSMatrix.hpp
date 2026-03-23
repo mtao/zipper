@@ -170,10 +170,12 @@ public:
         storage::detail::SparseCompressedData<
             std::remove_const_t<value_type>, 0>;
     const auto &base = static_cast<const Base0 &>(cd);
-    for (const auto &[outer, start, sz] : cd.m_spans) {
-      for (size_t i = start; i < start + sz; ++i) {
-        auto inner = base.m_data[i].first;
-        auto val = base.m_data[i].second;
+    for (index_type outer = 0; outer < cd.outer_size(); ++outer) {
+      auto start = cd.m_indptr[outer];
+      auto end = cd.m_indptr[outer + 1];
+      for (auto i = start; i < end; ++i) {
+        auto inner = base.m_indices[i];
+        auto val = base.m_values[i];
         if constexpr (is_csr) {
           // outer = row, inner = col
           result.emplace(outer, inner) = val;

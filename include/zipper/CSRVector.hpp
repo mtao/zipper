@@ -148,8 +148,8 @@ public:
       result = COOVector<ValueType, N>(extents());
     }
     const auto &cd = compressed_data();
-    for (const auto &[idx, val] : cd.m_data) {
-      result.emplace(idx) = val;
+    for (size_t k = 0; k < cd.m_indices.size(); ++k) {
+      result.emplace(cd.m_indices[k]) = cd.m_values[k];
     }
     result.compress();
     return result;

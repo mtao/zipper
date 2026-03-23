@@ -153,9 +153,11 @@ public:
     using Base0 =
         storage::detail::SparseCompressedData<std::remove_const_t<ValueType>, 0>;
     const auto &base = static_cast<const Base0 &>(cd);
-    for (const auto &[row, start, sz] : cd.m_spans) {
-      for (size_t i = start; i < start + sz; ++i) {
-        result.emplace(row, base.m_data[i].first) = base.m_data[i].second;
+    for (index_type row = 0; row < cd.outer_size(); ++row) {
+      auto start = cd.m_indptr[row];
+      auto end = cd.m_indptr[row + 1];
+      for (auto i = start; i < end; ++i) {
+        result.emplace(row, base.m_indices[i]) = base.m_values[i];
       }
     }
     result.compress();

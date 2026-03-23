@@ -216,56 +216,47 @@ public:
   template <rank_type D>
     requires(D == 0 && rank() == 1)
   auto index_set() const -> expression::detail::DynamicSparseIndexSet {
-    // Base-level m_data stores pairs of (index, value).
-    std::vector<index_type> result;
-    result.reserve(m_data.size());
-    for (const auto &[idx, val] : m_data.m_data) {
-      result.push_back(idx);
-    }
+    // Base-level stores separate m_indices and m_values arrays.
+    std::vector<index_type> result(m_data.m_indices.begin(),
+                                   m_data.m_indices.end());
     return {std::move(result)};
   }
 
   // ── index_set: rank-2 ────────────────────────────────────────────────
-  // For CSR: D==1 (cols for given row) is fast O(log R), D==0 is slow O(nnz).
-  // For CSC: D==0 (rows for given col) is fast O(log C), D==1 is slow O(nnz).
-  // Generalized: D==inner_dim is fast (spans lookup), D==outer_dim is slow.
+  // For CSR: D==1 (cols for given row) is fast O(nnz_row), D==0 is slow O(nnz).
+  // For CSC: D==0 (rows for given col) is fast O(nnz_col), D==1 is slow O(nnz).
+  // Generalized: D==inner_dim is fast (indptr lookup), D==outer_dim is slow.
   template <rank_type D>
     requires(D < rank() && rank() == 2)
   auto index_set(index_type other_idx) const
       -> expression::detail::DynamicSparseIndexSet {
     if constexpr (D == inner_dim) {
       // Fast path: inner indices for a given outer index.
-      // m_spans stores (outer_index, start, size) tuples.
-      auto it = std::lower_bound(
-          m_data.m_spans.begin(), m_data.m_spans.end(), other_idx,
-          [](const std::tuple<index_type, size_t, size_t> &a,
-             index_type b) -> auto { return std::get<0>(a) < b; });
-      if (it != m_data.m_spans.end() && std::get<0>(*it) == other_idx) {
-        auto [outer, start, sz] = *it;
-        std::vector<index_type> result;
-        result.reserve(sz);
-        // Parent (N=0) m_data stores (inner_index, value) pairs.
-        using Base = detail::SparseCompressedData<element_type, 0>;
-        const auto &base = static_cast<const Base &>(m_data);
-        for (size_t i = start; i < start + sz; ++i) {
-          result.push_back(base.m_data[i].first);
-        }
-        return {std::move(result)};
+      // Use m_indptr to find the range in m_indices.
+      if (other_idx >= m_data.outer_size()) {
+        return {{}};
       }
-      return {{}};
+      auto start = m_data.m_indptr[other_idx];
+      auto end = m_data.m_indptr[other_idx + 1];
+      using Base = detail::SparseCompressedData<element_type, 0>;
+      const auto &base = static_cast<const Base &>(m_data);
+      std::vector<index_type> result(base.m_indices.begin() + start,
+                                     base.m_indices.begin() + end);
+      return {std::move(result)};
     } else {
       // Slow path: outer indices for a given inner index.
-      // Must scan all spans and check each outer's inner entries.
+      // Must scan all outer indices and check each one's inner entries.
       using Base = detail::SparseCompressedData<element_type, 0>;
       const auto &base = static_cast<const Base &>(m_data);
       std::vector<index_type> result;
-      for (const auto &[outer, start, sz] : m_data.m_spans) {
-        auto sp = std::span(base.m_data).subspan(start, sz);
-        auto inner_it = std::lower_bound(
-            sp.begin(), sp.end(), other_idx,
-            [](const std::pair<index_type, element_type> &a,
-               index_type b) -> auto { return a.first < b; });
-        if (inner_it != sp.end() && inner_it->first == other_idx) {
+      for (index_type outer = 0; outer < m_data.outer_size(); ++outer) {
+        auto start = m_data.m_indptr[outer];
+        auto end = m_data.m_indptr[outer + 1];
+        auto it = std::lower_bound(
+            base.m_indices.begin() + start,
+            base.m_indices.begin() + end,
+            other_idx);
+        if (it != base.m_indices.begin() + end && *it == other_idx) {
           result.push_back(outer);
         }
       }
