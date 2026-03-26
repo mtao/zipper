@@ -11,6 +11,12 @@
 *.gch
 *.pch
 
+# Linker files
+*.ilk
+
+# Debugger Files
+*.pdb
+
 # Compiled Dynamic libraries
 *.so
 *.dylib
@@ -36,12 +42,9 @@
 
 compile_commands.json
 
-build*
 
-# Generated Doxygen output
-docs/html/
+build*
 
 # meson wrap likes to add this file
 .meson-subproject-wrap-hash.txt
-subprojects/.wraplock
-subprojects/*/
+docs/

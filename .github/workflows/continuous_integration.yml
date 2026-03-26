@@ -3,7 +3,25 @@ name: Zipper CI
 on:
   push:
     branches: [main]
+    paths:
+      - "**.cpp"
+      - "**.hpp"
+      - "**.hxx"
+      - "meson.build"
+      - "meson_options.txt"
+      - "**/meson.build"
+      - "subprojects/*.wrap"
+      - ".github/workflows/continuous_integration.yml"
   pull_request:
+    paths:
+      - "**.cpp"
+      - "**.hpp"
+      - "**.hxx"
+      - "meson.build"
+      - "meson_options.txt"
+      - "**/meson.build"
+      - "subprojects/*.wrap"
+      - ".github/workflows/continuous_integration.yml"
 
 jobs:
   build:
@@ -14,40 +32,37 @@ jobs:
       matrix:
         build_type: [debug, release]
         platform:
-          - name: Linux (GCC 14)
+          - name: Ubuntu (GCC 15)
             image: ubuntu-24.04
-            cc: gcc-14
-            cxx: g++-14
+            cc: gcc-15
+            cxx: g++-15
           - name: macOS (Clang)
-            image: macos-15
+            image: macos-latest
             cc: clang
             cxx: clang++
     env:
-      CC: ${{ matrix.platform.cc }}
-      CXX: ${{ matrix.platform.cxx }}
       MESON_VERSION: "1.7.2"
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.x"
 
-      # ── Toolchain ──────────────────────────────────────────────
-      - name: Set up Homebrew
-        if: runner.os == 'macOS'
-        uses: Homebrew/actions/setup-homebrew@master
-
-      - name: Install system dependencies (Linux)
+      # ── Toolchain & packages ───────────────────────────────────
+      - name: Install packages (Linux)
         if: runner.os == 'Linux'
         run: |
+          sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
           sudo apt-get update
-          sudo apt-get install -y libfmt-dev catch2 ccache libsuitesparse-dev
+          sudo apt-get install -y gcc-15 g++-15 ccache
+          sudo apt-get install -y libfmt-dev catch2 libsuitesparse-dev
 
-      - name: Install system dependencies (macOS)
+      - name: Install packages (macOS)
         if: runner.os == 'macOS'
         run: brew install fmt catch2 ccache suite-sparse
 
@@ -56,9 +71,9 @@ jobs:
 
       # ── Caches ─────────────────────────────────────────────────
       - name: Cache ccache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
-          path: ~/.cache/ccache
+          path: ${{ env.CCACHE_DIR }}
           key: ccache-${{ matrix.platform.image }}-${{ matrix.build_type }}-${{ github.sha }}
           restore-keys: |
             ccache-${{ matrix.platform.image }}-${{ matrix.build_type }}-
@@ -70,7 +85,7 @@ jobs:
           ccache -z
 
       - name: Cache subproject downloads
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: subprojects/packagecache
           key: subprojects-${{ hashFiles('subprojects/*.wrap') }}
@@ -97,7 +112,7 @@ jobs:
         run: meson test -C build/ -v
 
       - name: Upload test log
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: ${{ matrix.platform.name }}-${{ matrix.build_type }}-testlog

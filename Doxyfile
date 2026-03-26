@@ -17,7 +17,6 @@ FILE_PATTERNS          = *.hpp *.hxx *.md *.dox
 RECURSIVE              = YES
 EXCLUDE_PATTERNS       = */subprojects/* */build*/* */tests/*
 
-# Treat .md files as documentation pages
 USE_MDFILE_AS_MAINPAGE = include/zipper/mainpage.md
 
 #---------------------------------------------------------------------------
@@ -29,11 +28,8 @@ EXTRACT_STATIC         = YES
 EXTRACT_LOCAL_CLASSES  = YES
 EXTRACT_ANON_NSPACES   = NO
 
-# Existing comments use implicit brief (first sentence), not @brief
 JAVADOC_AUTOBRIEF      = YES
 MULTILINE_CPP_IS_BRIEF = NO
-
-# Show all members, including inherited
 INLINE_INHERITED_MEMB  = YES
 
 #---------------------------------------------------------------------------
@@ -56,7 +52,7 @@ PREDEFINED             = __cplusplus=202602L \
                          ZIPPER_DONT_USE_ALIAS_CTAD=
 
 #---------------------------------------------------------------------------
-# Output — HTML only
+# Output - HTML only
 #---------------------------------------------------------------------------
 GENERATE_HTML          = YES
 HTML_OUTPUT            = html
@@ -79,7 +75,6 @@ COLLABORATION_GRAPH    = NO
 INCLUDE_GRAPH          = NO
 INCLUDED_BY_GRAPH      = NO
 
-# Disable LaTeX formula rendering (avoids latex dependency errors)
 FORMULA_FONTSIZE       = 10
 FORMULA_TRANSPARENT    = YES
 
