@@ -19,6 +19,7 @@ Expression              any expression node
         Matrix          rank-2 matrix algebra
         Vector          rank-1 column vector
         Form            rank-1 row vector / covector
+      Quaternion        rank-1 extent-4 quaternion (Hamilton product)
 ```
 
 | Header | Concept | Satisfied By |
@@ -31,6 +32,7 @@ Expression              any expression node
 | `Matrix.hpp` | `Matrix<T>` | `MatrixBase<Expr>` |
 | `Vector.hpp` | `Vector<T>` | `VectorBase<Expr>` |
 | `Form.hpp` | `Form<T>` | `FormBase<Expr>` |
+| `Quaternion.hpp` | `Quaternion<T>` | `QuaternionBase<Expr>` |
 
 **Important:** `Zipper` and `Expression` are **disjoint** -- wrapper types
 satisfy `Zipper` but not `Expression`, and vice versa. To get the underlying

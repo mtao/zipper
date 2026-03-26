@@ -5,7 +5,7 @@ They all inherit from `UnaryExpressionBase<Derived, ChildExpr>` and store the
 child via `expression_storage_t<ChildExpr>` (lvalue ref by reference, rvalue by
 value).
 
-This directory contains 19 expression types plus the CRTP base, organized below
+This directory contains 24 expression types plus the CRTP base, organized below
 by what they do to the index space.
 
 ---
@@ -56,8 +56,13 @@ These expressions change the rank by adding or collapsing dimensions.
 | `Repeat.hpp` | `Repeat<Mode, Count, Child>` | Tiles/broadcasts by prepending (`Left`) or appending (`Right`) dimensions | Rank + `Count` | Propagated: child dims from child, repeated dims return `FullRange` |
 | `AntiSlice.hpp` | `AntiSlice<Expr, Dims...>` | Inserts new size-1 dimensions (inverse of integer-slice in `Slice`) | Rank + `sizeof...(Dims)` | No |
 | `Diagonal.hpp` | `Diagonal<Expr>` | Extracts diagonal: `coeff(i)` -> `child.coeff(i, i, ...)` | Always rank 1 | No |
+| `DiagonalExtract.hpp` | `DiagonalExtract<Expr>` | Extracts diagonal elements of a tensor as a rank-1 vector; diagonal length is `min(extent(d)...)` | Always rank 1 | No |
+| `DiagonalEmbed.hpp` | `DiagonalEmbed<Expr>` | Embeds a rank-1 vector as a square diagonal matrix; off-diagonal entries are zero | Rank 1 -> rank 2 | Yes (returns `SingleIndexRange{other_idx}`) |
+| `DiagonalMatrix.hpp` | (alias) | Backward-compatibility alias for `DiagonalEmbed`; new code should use `DiagonalEmbed` directly | -- | -- |
 | `Homogeneous.hpp` | `Homogeneous<Mode, Child>` | Extends dimension 0 by 1 for homogeneous coordinates (`Append` or `Prepend`) | Same rank, dim 0 grows by 1 | No |
 | `Reshape.hpp` | `Reshape<Expr, NewExtents>` | Reinterprets shape via linearize + unravel (row-major) | Arbitrary | No |
+| `ExtentView.hpp` | `ExtentView<Expr, NewExtents>` | Re-types extents without changing data layout or access; enables zero-cost static-to-dynamic and dynamic-to-static extent conversions (`as_dynamic()`, `as_extents<E>()`) | Same | Propagated from child |
+| `Lift.hpp` | `Lift<Count, Child>` | Appends `Count` new dynamic dimensions after the child's existing extents, broadcasting the child to a higher rank | Rank + `Count` | No |
 
 **Repeat** propagates IndexSets from the child for child dimensions. Repeated
 (broadcast) dimensions are fully dense — all indices are active because the

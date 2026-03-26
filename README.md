@@ -292,6 +292,217 @@ zipper::Tensor<double, 3, 3> M;
 double tr = zipper::full_contract(M);  // equivalent to trace
 ```
 
+## Quaternions
+
+`Quaternion<T>` provides quaternion algebra with scalar-first storage
+`(w, x, y, z)`, matching the mathematical convention `q = w + xi + yj + zk`.
+
+```cpp
+#include <zipper/Quaternion.hpp>
+
+zipper::Quaternion<double> q(1.0, 0.0, 0.0, 0.0);  // identity
+zipper::Quaternion<double> r(0.0, 1.0, 0.0, 0.0);   // 180 degrees around x
+
+auto product = q * r;          // Hamilton product (lazy expression)
+auto conj = q.conjugate();     // q* = w - xi - yj - zk
+auto inv = q.inverse();        // q* / |q|^2
+double n = q.norm();           // |q|
+auto u = q.normalized();       // unit quaternion
+double d = q.dot(r);           // quaternion inner product
+
+// Component access
+double w = q.w();  // scalar
+double x = q.x();  // i
+double y = q.y();  // j
+double z = q.z();  // k
+```
+
+The Hamilton product is implemented as a lazy binary expression
+(`HamiltonProduct`), following the same expression template architecture as
+matrix and vector operations.
+
+## Sparse Types
+
+Zipper provides sparse matrix and vector types in two storage formats:
+coordinate (COO) for construction and mutation, and compressed (CSR/CSC) for
+efficient arithmetic.
+
+### COO (Coordinate) Format
+
+```cpp
+#include <zipper/COOMatrix.hpp>
+
+// Build a sparse matrix by inserting entries
+zipper::COOMatrix<double, 3, 3> A;
+A.emplace(0, 0) = 4.0;
+A.emplace(0, 1) = -1.0;
+A.emplace(1, 0) = -1.0;
+A.emplace(1, 1) = 4.0;
+A.emplace(2, 2) = 3.0;
+
+A.compress();  // sort and deduplicate
+```
+
+### Compressed Format (CSR / CSC)
+
+```cpp
+#include <zipper/CSRMatrix.hpp>
+#include <zipper/CSMatrix.hpp>
+
+// Convert COO to CSR
+auto B = A.to_csr();
+
+// CSMatrix is the unified type, parameterized by layout:
+//   layout_right = CSR (row-compressed, default)
+//   layout_left  = CSC (column-compressed)
+auto csc = B.as_csc();    // convert to CSC
+auto coo = B.to_coo();    // convert back to COO
+```
+
+Sparse types support `coeff()` for read access (returning 0 for missing
+entries) and provide `index_set<D>()` for zero-aware expression optimizations
+(e.g., skipping known-zero entries in matrix-vector products).
+
+Sparse vectors are also available: `COOVector<T, N>` and `CSVector<T, N>`.
+
+## Transforms
+
+The `zipper::transform` namespace provides geometric transform types and
+factory functions for spatial transformations, projections, and coordinate
+mapping. All types follow right-handed coordinate conventions (OpenGL style).
+
+### Transform Types
+
+```cpp
+#include <zipper/transform/transform.hpp>  // umbrella header
+using namespace zipper::transform;
+
+// General matrix-backed transform (4x4 for 3D)
+AffineTransform<float, 3> xform;
+auto lin = xform.linear();       // 3x3 view of upper-left block
+auto t   = xform.translation();  // 3-vector view of last column
+auto inv = xform.inverse();      // mode-aware inverse
+
+// Specialised types (minimal storage)
+Rotation<float, 3> R;          // 3x3 orthogonal matrix
+Scaling<float, 3> S;           // 3-vector of scale factors
+Translation<float, 3> T;      // 3-vector displacement
+AxisAngleRotation<float> aa;   // angle + axis
+
+// Composition via operator*
+auto composed = T * R * S;  // modes promote automatically
+```
+
+`TransformMode` controls inverse computation: `Isometry` (transpose),
+`Affine` (block inverse), `Projective` (general inverse). When composing
+transforms, the result uses the least restrictive mode.
+
+### Projections and View Matrices
+
+```cpp
+auto P = perspective(radians(45.0f), 16.0f/9.0f, 0.1f, 100.0f);
+auto O = ortho(-1.0f, 1.0f, -1.0f, 1.0f, 0.1f, 100.0f);
+auto V = look_at(eye, center, up);
+```
+
+### Quaternion Transforms
+
+```cpp
+auto q = angle_axis(radians(90.0f), zipper::Vector<float, 3>({0, 1, 0}));
+auto A = to_affine(q);              // quaternion -> AffineTransform
+auto M = to_rotation_matrix(q);     // quaternion -> 3x3 rotation matrix
+auto q2 = to_quaternion(A);         // affine -> quaternion
+auto q3 = slerp(q, q2, 0.5f);      // spherical linear interpolation
+```
+
+See [`include/zipper/transform/README.md`](include/zipper/transform/README.md)
+for the full API reference.
+
+## Utilities
+
+Zipper provides matrix decompositions, iterative solvers, and Krylov
+subspace methods in the `zipper::utils` namespace.
+
+### Matrix Decompositions
+
+```cpp
+#include <zipper/utils/decomposition/qr.hpp>
+#include <zipper/utils/decomposition/lu.hpp>
+#include <zipper/utils/decomposition/llt.hpp>
+#include <zipper/utils/decomposition/ldlt.hpp>
+
+zipper::Matrix<double, 3, 3> A{{4,-1,0},{-1,4,-1},{0,-1,4}};
+zipper::Vector<double, 3> b{1, 2, 3};
+
+auto [Q, R] = zipper::utils::qr(A);          // Householder QR
+auto plu = zipper::utils::plu(A);             // PLU (partial pivoting)
+auto x1 = plu.solve(b);                       // solve via PLU
+
+auto L = zipper::utils::llt(A);               // Cholesky (SPD matrices)
+auto x2 = zipper::utils::llt_solve(A, b);
+
+auto [Ld, D] = zipper::utils::ldlt(A);        // LDLT (avoids square roots)
+auto x3 = zipper::utils::ldlt_solve(A, b);
+```
+
+### Iterative Solvers
+
+All iterative solvers return `std::expected<SolverResult, SolverError>`.
+
+```cpp
+#include <zipper/utils/solver/conjugate_gradient.hpp>
+#include <zipper/utils/solver/gmres.hpp>
+#include <zipper/utils/solver/bicgstab.hpp>
+
+// Conjugate Gradient (SPD matrices)
+auto result = zipper::utils::solver::conjugate_gradient(A, b, 1e-10, 100);
+
+// GMRES (general non-symmetric)
+auto result2 = zipper::utils::solver::gmres(A, b, 1e-10, 100);
+
+// BiCGSTAB (general non-symmetric, no transpose needed)
+auto result3 = zipper::utils::solver::bicgstab(A, b, 1e-10, 100);
+```
+
+Additional solvers: Preconditioned CG (`pcg`), Jacobi, Gauss-Seidel,
+Multigrid. Preconditioners: `JacobiPreconditioner`, `SSORPreconditioner`.
+
+### Krylov Methods
+
+```cpp
+#include <zipper/utils/krylov/power_method.hpp>
+#include <zipper/utils/krylov/arnoldi.hpp>
+#include <zipper/utils/krylov/lanczos.hpp>
+
+// Dominant eigenvalue/eigenvector via power iteration
+auto [eigenvalue, eigenvector] = zipper::utils::power_method(A);
+
+// Arnoldi iteration (general matrices)
+auto [Q, H] = zipper::utils::arnoldi(A, v0, k);
+
+// Lanczos iteration (symmetric matrices)
+auto [Q, T] = zipper::utils::lanczos(A, v0, k);
+```
+
+### SuiteSparse Bindings (Optional)
+
+When built with `use_suitesparse=true`, Zipper provides bindings for
+CHOLMOD, UMFPACK, and SPQR for large sparse systems. Input matrices must be
+in CSC format.
+
+```cpp
+#include <zipper/utils/suitesparse/cholmod.hpp>
+#include <zipper/utils/suitesparse/umfpack.hpp>
+#include <zipper/utils/suitesparse/spqr.hpp>
+
+auto x = zipper::utils::cholmod_solve(A_csc, b);   // sparse Cholesky (SPD)
+auto x = zipper::utils::umfpack_solve(A_csc, b);   // sparse LU (general)
+auto x = zipper::utils::spqr_solve(A_csc, b);      // sparse QR (least-squares)
+```
+
+See [`include/zipper/utils/README.md`](include/zipper/utils/README.md) for
+the full API reference.
+
 ## Dependencies
 
 Zipper depends on [mdspan](https://github.com/kokkos/mdspan). This
@@ -325,9 +536,9 @@ ninja # build
 
 ```
 Expression nodes (lazy evaluation tree)
-  NullaryExpression    MDArray, MDSpan, Constant, Identity, Unit, Random
-  UnaryExpression      Slice, Swizzle, Reshape, Cast, Abs, UnsafeRef, ...
-  BinaryExpression     Addition, MatrixProduct, TensorProduct, ...
+  NullaryExpression    MDArray, MDSpan, Constant, StaticConstant, Identity, Unit, Random
+  UnaryExpression      Slice, Swizzle, Reshape, Cast, Abs, DiagonalEmbed, ExtentView, UnsafeRef, ...
+  BinaryExpression     Addition, MatrixProduct, TensorProduct, HamiltonProduct, ...
   Reduction            Sum, Trace, Determinant, Norm, Contraction, ...
 
 User-facing wrappers (CRTP, semantic layer)
@@ -337,11 +548,16 @@ User-facing wrappers (CRTP, semantic layer)
       MatrixBase       matrix algebra (product, inverse, decomposition)
       VectorBase       column vectors (dot, cross, norm)
       FormBase         row vectors / covectors (contraction with vectors)
+    QuaternionBase     quaternion algebra (Hamilton product, conjugate, slerp)
 ```
 
 **Concrete owning types** (static extents):
 `DataArray<T, N...>`, `Tensor<T, N...>`, `Array<T, N...>`,
-`Vector<T, N>`, `Matrix<T, R, C>`, `Form<T, N>`.
+`Vector<T, N>`, `Matrix<T, R, C>`, `Form<T, N>`, `Quaternion<T>`.
+
+**Sparse types:**
+`COOMatrix<T, R, C>`, `COOVector<T, N>`, `CSMatrix<T, R, C>`,
+`CSRMatrix<T, R, C>`, `CSVector<T, N>`.
 
 ## Comparison with Eigen and Blaze
 

@@ -33,6 +33,7 @@ handles the multidimensional-to-linear mapping.
 | Header | Description |
 |--------|-------------|
 | `SparseCoordinateAccessor.hpp` | COO-format sparse accessor |
+| `SparseCompressedAccessor.hpp` | CSR/CSC expression wrapper around `SparseCompressedData`; `layout_right` = CSR, `layout_left` = CSC. Provides `coeff()` (returns 0 for missing entries), `coeff_ref()` (mutable access to existing entries), and `index_set<D>()` for zero-aware operations. Backs the user-facing `CSMatrix` and `CSVector` types. |
 | `detail/SparseCompressedData.hpp` | CSR/CSC compressed sparse data |
 | `detail/to_sparse_compressed_data.hpp` | Conversion to compressed format |
 

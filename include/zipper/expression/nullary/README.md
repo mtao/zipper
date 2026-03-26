@@ -35,6 +35,7 @@ These compute their coefficients on-the-fly from parameters (no stored data).
 | `Iota.hpp` | `Iota<T, D, Indices...>` | Returns the D-th index cast to T (counting sequence along an axis) |
 | `Unit.hpp` | `Unit<T, Extent, IndexType>` | Unit (basis) vector: 1 at one index, 0 elsewhere |
 | `Random.hpp` | `Random<T, Indices...>` | Random values (generated once and cached) |
+| `StaticConstant.hpp` | `StaticConstant<T, Value, Indices...>` | Returns `static_cast<T>(Value)` for all indices, where `Value` is a compile-time `constexpr int`; aliases: `Zero<T, Indices...>` (Value=0), `Ones<T, Indices...>` (Value=1). When Value==0, has `has_index_set = true` with empty index sets for zero-aware optimisation. Unlike `Constant`, the value is encoded in the type. |
 
 ### Factory Functions
 

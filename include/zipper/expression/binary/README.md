@@ -34,6 +34,7 @@ output shape.
 | `FormTensorProduct.hpp` | `FormTensorProduct<A, B>` | (a...) x (b...) | scalar or contracted | Tensor product composed with partial trace; used by Form * Vector (dot product) |
 | `CrossProduct.hpp` | `CrossProduct<A, B>` | (3,) x (3,) | (3,) | 3D vector cross product |
 | `WedgeProduct.hpp` | `WedgeProduct<A, B>` | (N,) x (N,) | (N,N) | Exterior (wedge) product; antisymmetric rank-2 result |
+| `HamiltonProduct.hpp` | `HamiltonProduct<A, B>` | (4,) x (4,) | (4,) | Quaternion Hamilton product; scalar-first storage (w,x,y,z); used by `QuaternionBase::operator*` |
 
 ### Tensor Product and Contraction
 
