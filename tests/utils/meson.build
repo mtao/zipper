@@ -37,6 +37,9 @@ test('lu', test_lu)
 test_svd = executable('test_svd', 'test_svd.cpp', dependencies: [zipper_test_dep])
 test('svd', test_svd)
 
+test_polar = executable('test_polar', 'test_polar.cpp', dependencies: [zipper_test_dep])
+test('polar', test_polar)
+
 test_pcg = executable('test_pcg', 'test_pcg.cpp', dependencies: [zipper_test_dep])
 test('pcg', test_pcg)
 
