@@ -19,13 +19,14 @@
 #include <cmath>
 
 #include <zipper/Vector.hpp>
+#include <zipper/concepts/Vector.hpp>
 
 namespace zipper::transform {
 
 /// @brief Compute the distance between two points.
 ///
 /// Equivalent to (p1 - p0).norm().
-template <concepts::Vector V>
+template <zipper::concepts::Vector V>
 auto distance(const V& p0, const V& p1) -> typename V::value_type {
     return Vector(p1 - p0).norm();
 }
@@ -34,7 +35,7 @@ auto distance(const V& p0, const V& p1) -> typename V::value_type {
 ///
 /// Formula: I - 2 * dot(N, I) * N.
 /// N must be normalized.
-template <concepts::Vector V>
+template <zipper::concepts::Vector V>
 auto reflect(const V& I, const V& N) {
     using T = typename V::value_type;
     auto d = N.dot(I);
@@ -47,7 +48,7 @@ auto reflect(const V& I, const V& N) {
 /// @param N   Normalized surface normal.
 /// @param eta Ratio of indices of refraction (n1/n2).
 /// @return    Refracted vector, or zero vector if total internal reflection occurs.
-template <concepts::Vector V>
+template <zipper::concepts::Vector V>
 auto refract(const V& I, const V& N, typename V::value_type eta) {
     using T = typename V::value_type;
     constexpr index_type Size = V::extents_type::static_extent(0);
@@ -64,7 +65,7 @@ auto refract(const V& I, const V& N, typename V::value_type eta) {
 /// @brief Orient normal N to face the viewer.
 ///
 /// Returns N if dot(Nref, I) < 0, otherwise -N.
-template <concepts::Vector V>
+template <zipper::concepts::Vector V>
 auto face_forward(const V& N, const V& I, const V& Nref) {
     if (Nref.dot(I) < typename V::value_type(0)) {
         return Vector(N);
