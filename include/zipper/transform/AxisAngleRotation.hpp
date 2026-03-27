@@ -37,46 +37,33 @@ class AxisAngleRotation {
 
     /// @brief Default-construct to identity (zero angle).
     AxisAngleRotation() : m_angle(T(0)), m_axis() {
-        m_axis(0) = T(1);  // arbitrary unit axis
+        m_axis(0) = T(1); // arbitrary unit axis
     }
 
     /// @brief Construct from angle and axis vector (axis is normalized).
     template <zipper::concepts::Vector V>
         requires(std::decay_t<V>::extents_type::static_extent(0) == 3)
-    AxisAngleRotation(T angle, const V& axis) : m_angle(angle), m_axis() {
-        // Normalize the axis
-        T len = T(0);
+    AxisAngleRotation(T angle, const V &axis) : m_angle(angle), m_axis() {
+        // Copy and normalize the axis
         for (index_type i = 0; i < 3; ++i) {
             m_axis(i) = static_cast<T>(axis(i));
-            len += m_axis(i) * m_axis(i);
         }
-        len = std::sqrt(len);
-        for (index_type i = 0; i < 3; ++i) {
-            m_axis(i) /= len;
-        }
+        m_axis.normalize();
     }
 
     /// @brief Construct from angle and initializer list for axis.
     AxisAngleRotation(T angle, std::initializer_list<T> axis_init)
-        : m_angle(angle), m_axis(axis_init) {
-        // Normalize
-        T len = T(0);
-        for (index_type i = 0; i < 3; ++i) {
-            len += m_axis(i) * m_axis(i);
-        }
-        len = std::sqrt(len);
-        for (index_type i = 0; i < 3; ++i) {
-            m_axis(i) /= len;
-        }
+      : m_angle(angle), m_axis(axis_init) {
+        m_axis.normalize();
     }
 
     /// @brief Get the rotation angle.
     T angle() const { return m_angle; }
-    T& angle() { return m_angle; }
+    T &angle() { return m_angle; }
 
     /// @brief Get the rotation axis (normalized).
-    auto const& axis() const { return m_axis; }
-    auto& axis() { return m_axis; }
+    auto const &axis() const { return m_axis; }
+    auto &axis() { return m_axis; }
 
     /// @brief Return a zero translation vector (concept API).
     ///
@@ -104,9 +91,9 @@ class AxisAngleRotation {
         T const s = std::sin(m_angle);
         T const t = T(1) - c;
 
-        T const& x = m_axis(0);
-        T const& y = m_axis(1);
-        T const& z = m_axis(2);
+        T const &x = m_axis(0);
+        T const &y = m_axis(1);
+        T const &z = m_axis(2);
 
         Rotation<T, 3> result;
         result(0, 0) = c + t * x * x;
@@ -141,29 +128,31 @@ class AxisAngleRotation {
 
 // Register AxisAngleRotation as a Transform type.
 namespace detail {
-template <typename T>
-struct IsTransform<AxisAngleRotation<T>> : std::true_type {};
+    template <typename T>
+    struct IsTransform<AxisAngleRotation<T>> : std::true_type {};
 } // namespace detail
 
 // ============================================================================
 // AxisAngleRotation composition operators
 // ============================================================================
 
-/// @brief AxisAngleRotation * AxisAngleRotation → Rotation (not closed in axis-angle).
+/// @brief AxisAngleRotation * AxisAngleRotation → Rotation (not closed in
+/// axis-angle).
 template <typename T>
-auto operator*(const AxisAngleRotation<T>& lhs, const AxisAngleRotation<T>& rhs) {
+auto operator*(const AxisAngleRotation<T> &lhs,
+               const AxisAngleRotation<T> &rhs) {
     return lhs.to_rotation() * rhs.to_rotation();
 }
 
 /// @brief AxisAngleRotation * Rotation → Rotation.
 template <typename T>
-auto operator*(const AxisAngleRotation<T>& lhs, const Rotation<T, 3>& rhs) {
+auto operator*(const AxisAngleRotation<T> &lhs, const Rotation<T, 3> &rhs) {
     return lhs.to_rotation() * rhs;
 }
 
 /// @brief Rotation * AxisAngleRotation → Rotation.
 template <typename T>
-auto operator*(const Rotation<T, 3>& lhs, const AxisAngleRotation<T>& rhs) {
+auto operator*(const Rotation<T, 3> &lhs, const AxisAngleRotation<T> &rhs) {
     return lhs * rhs.to_rotation();
 }
 
@@ -173,29 +162,14 @@ auto operator*(const Rotation<T, 3>& lhs, const AxisAngleRotation<T>& rhs) {
 ///   v' = v*cos(θ) + (axis × v)*sin(θ) + axis*(axis·v)*(1-cos(θ))
 template <typename T, zipper::concepts::Vector V>
     requires(std::decay_t<V>::extents_type::static_extent(0) == 3)
-auto operator*(const AxisAngleRotation<T>& lhs, const V& rhs) {
+auto operator*(const AxisAngleRotation<T> &lhs, const V &rhs) {
     T const c = std::cos(lhs.angle());
     T const s = std::sin(lhs.angle());
-    auto const& a = lhs.axis();
+    auto const &a = lhs.axis();
 
-    // dot = axis · v
-    T dot = T(0);
-    for (index_type i = 0; i < 3; ++i) {
-        dot += a(i) * rhs(i);
-    }
-
-    // cross = axis × v
-    zipper::Vector<T, 3> cross;
-    cross(0) = a(1) * rhs(2) - a(2) * rhs(1);
-    cross(1) = a(2) * rhs(0) - a(0) * rhs(2);
-    cross(2) = a(0) * rhs(1) - a(1) * rhs(0);
-
-    // Rodrigues: v*cos + cross*sin + axis*(dot)*(1-cos)
-    zipper::Vector<T, 3> result;
-    for (index_type i = 0; i < 3; ++i) {
-        result(i) = rhs(i) * c + cross(i) * s + a(i) * dot * (T(1) - c);
-    }
-    return result;
+    // Rodrigues: v*cos + (axis × v)*sin + axis*(axis·v)*(1-cos)
+    return zipper::Vector<T, 3>(c * rhs + s * a.cross(rhs)
+                                + ((T(1) - c) * a.dot(rhs)) * a);
 }
 
 } // namespace zipper::transform

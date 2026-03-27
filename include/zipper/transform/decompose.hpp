@@ -39,9 +39,9 @@
 #include <cmath>
 #include <tuple>
 
-#include "Translation.hpp"
 #include "Rotation.hpp"
 #include "Scaling.hpp"
+#include "Translation.hpp"
 #include "detail/TransformBase.hpp"
 
 namespace zipper::transform {
@@ -60,13 +60,11 @@ namespace zipper::transform {
 /// @tparam A  An AffineTransform (Affine or Isometry mode).
 /// @param  xf The transform to decompose.
 /// @return    `std::tuple<Translation<T,D>, Rotation<T,D>, Scaling<T,D>>`.
-template<concepts::AffineTransform A>
-auto trs_decompose(const A &xf)
-  -> std::tuple<
+template <concepts::AffineTransform A>
+auto trs_decompose(const A &xf) -> std::tuple<
     Translation<typename std::decay_t<A>::value_type, std::decay_t<A>::dim>,
     Rotation<typename std::decay_t<A>::value_type, std::decay_t<A>::dim>,
     Scaling<typename std::decay_t<A>::value_type, std::decay_t<A>::dim>> {
-
     using Decayed = std::decay_t<A>;
     using T = typename Decayed::value_type;
     constexpr index_type D = Decayed::dim;
@@ -75,23 +73,13 @@ auto trs_decompose(const A &xf)
     Translation<T, D> t;
     {
         auto tv = xf.translation();
-        for (index_type i = 0; i < D; ++i) {
-            t(i) = static_cast<T>(tv(i));
-        }
+        for (index_type i = 0; i < D; ++i) { t(i) = static_cast<T>(tv(i)); }
     }
 
     // ── 2. Extract column norms as scale factors ────────────────────
     auto lin = xf.linear();
 
-    Vector<T, D> scale_factors;
-    for (index_type c = 0; c < D; ++c) {
-        T sum = T(0);
-        for (index_type r = 0; r < D; ++r) {
-            T v = static_cast<T>(lin(r, c));
-            sum += v * v;
-        }
-        scale_factors(c) = std::sqrt(sum);
-    }
+    Vector<T, D> scale_factors(lin.colwise().norm());
 
     // Handle reflection: if the determinant of the linear block is
     // negative, negate the first scale factor so the rotation matrix
@@ -103,16 +91,19 @@ auto trs_decompose(const A &xf)
     if constexpr (D == 2) {
         T det = static_cast<T>(lin(0, 0)) * static_cast<T>(lin(1, 1))
                 - static_cast<T>(lin(0, 1)) * static_cast<T>(lin(1, 0));
-        if (det < T(0)) {
-            scale_factors(0) = -scale_factors(0);
-        }
+        if (det < T(0)) { scale_factors(0) = -scale_factors(0); }
     } else if constexpr (D == 3) {
-        T det = static_cast<T>(lin(0, 0)) * (static_cast<T>(lin(1, 1)) * static_cast<T>(lin(2, 2)) - static_cast<T>(lin(1, 2)) * static_cast<T>(lin(2, 1)))
-                - static_cast<T>(lin(0, 1)) * (static_cast<T>(lin(1, 0)) * static_cast<T>(lin(2, 2)) - static_cast<T>(lin(1, 2)) * static_cast<T>(lin(2, 0)))
-                + static_cast<T>(lin(0, 2)) * (static_cast<T>(lin(1, 0)) * static_cast<T>(lin(2, 1)) - static_cast<T>(lin(1, 1)) * static_cast<T>(lin(2, 0)));
-        if (det < T(0)) {
-            scale_factors(0) = -scale_factors(0);
-        }
+        T det =
+            static_cast<T>(lin(0, 0))
+                * (static_cast<T>(lin(1, 1)) * static_cast<T>(lin(2, 2))
+                   - static_cast<T>(lin(1, 2)) * static_cast<T>(lin(2, 1)))
+            - static_cast<T>(lin(0, 1))
+                  * (static_cast<T>(lin(1, 0)) * static_cast<T>(lin(2, 2))
+                     - static_cast<T>(lin(1, 2)) * static_cast<T>(lin(2, 0)))
+            + static_cast<T>(lin(0, 2))
+                  * (static_cast<T>(lin(1, 0)) * static_cast<T>(lin(2, 1))
+                     - static_cast<T>(lin(1, 1)) * static_cast<T>(lin(2, 0)));
+        if (det < T(0)) { scale_factors(0) = -scale_factors(0); }
     }
     // For D > 3, we skip the determinant check (no reflection handling).
 
@@ -121,20 +112,18 @@ auto trs_decompose(const A &xf)
     for (index_type c = 0; c < D; ++c) {
         T s = scale_factors(c);
         T inv_s = (std::abs(s) > std::numeric_limits<T>::epsilon() * T(100))
-                    ? (T(1) / s)
-                    : T(0);
+                      ? (T(1) / s)
+                      : T(0);
         for (index_type row = 0; row < D; ++row) {
             r(row, c) = static_cast<T>(lin(row, c)) * inv_s;
         }
     }
 
     Scaling<T, D> sc;
-    for (index_type i = 0; i < D; ++i) {
-        sc(i) = scale_factors(i);
-    }
+    for (index_type i = 0; i < D; ++i) { sc(i) = scale_factors(i); }
 
-    return { t, r, sc };
+    return {t, r, sc};
 }
 
-}// namespace zipper::transform
+} // namespace zipper::transform
 #endif

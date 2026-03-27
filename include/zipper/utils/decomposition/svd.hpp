@@ -27,14 +27,16 @@
 #define ZIPPER_UTILS_DECOMPOSITION_SVD_HPP
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <limits>
 
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
-#include <zipper/expression/nullary/Constant.hpp>
 #include <zipper/expression/nullary/Identity.hpp>
+#include <zipper/expression/nullary/Unit.hpp>
 #include <zipper/utils/extents/extent_arithmetic.hpp>
+#include <zipper/utils/orthogonalization/gram_schmidt.hpp>
 
 namespace zipper::utils::decomposition {
 
@@ -120,15 +122,11 @@ auto svd(const Derived &A) {
     using DynMat = Matrix<T, std::dynamic_extent, std::dynamic_extent>;
 
     // Working copy of A.
-    DynMat W(m, n);
-    for (index_type i = 0; i < m; ++i) {
-        for (index_type j = 0; j < n; ++j) { W(i, j) = A(i, j); }
-    }
+    DynMat W(A);
 
     // V accumulates right rotations (n x n identity initially).
-    DynMat V(n, n);
-    V = expression::nullary::
-        Identity<T, std::dynamic_extent, std::dynamic_extent>(V.extents());
+    DynMat V(expression::nullary::
+                 Identity<T, std::dynamic_extent, std::dynamic_extent>(n, n));
 
     const T eps = std::numeric_limits<T>::epsilon();
     const index_type max_sweeps = 100;
@@ -137,23 +135,15 @@ auto svd(const Derived &A) {
         // Check convergence: is W^T W close to diagonal?
         // We check that all off-diagonal entries of W^T W are small
         // relative to the diagonal.
+
+        // diag_norm_sq = sum of ||col_j||^4 = sum of (||col_j||^2)^2
+        auto col_norms_sq = W.colwise().template norm_powered<2>();
+        T diag_norm_sq = zipper::as_array(col_norms_sq).pow(T{2}).sum();
+
         T off_diag_norm_sq = T{0};
-        T diag_norm_sq = T{0};
-
-        for (index_type j = 0; j < n; ++j) {
-            T col_norm_sq = T{0};
-            for (index_type i = 0; i < m; ++i) {
-                col_norm_sq += W(i, j) * W(i, j);
-            }
-            diag_norm_sq += col_norm_sq * col_norm_sq;
-        }
-
         for (index_type j1 = 0; j1 < n; ++j1) {
             for (index_type j2 = j1 + 1; j2 < n; ++j2) {
-                T dot = T{0};
-                for (index_type i = 0; i < m; ++i) {
-                    dot += W(i, j1) * W(i, j2);
-                }
+                T dot = W.col(j1).dot(W.col(j2));
                 off_diag_norm_sq += T{2} * dot * dot;
             }
         }
@@ -167,12 +157,9 @@ auto svd(const Derived &A) {
                 //   G = [ a  d ]   where a = W(:,j1)^T W(:,j1)
                 //       [ d  b ]         b = W(:,j2)^T W(:,j2)
                 //                        d = W(:,j1)^T W(:,j2)
-                T a = T{0}, b = T{0}, d = T{0};
-                for (index_type i = 0; i < m; ++i) {
-                    a += W(i, j1) * W(i, j1);
-                    b += W(i, j2) * W(i, j2);
-                    d += W(i, j1) * W(i, j2);
-                }
+                T a = W.col(j1).dot(W.col(j1));
+                T b = W.col(j2).dot(W.col(j2));
+                T d = W.col(j1).dot(W.col(j2));
 
                 // If d is negligible, columns are already orthogonal.
                 if (std::abs(d) <= eps * std::sqrt(a * b)) { continue; }
@@ -196,22 +183,21 @@ auto svd(const Derived &A) {
                     s = t * c;
                 }
 
-                // Apply right rotation to W: columns j1 and j2.
-                //   W(:,j1)' =  c * W(:,j1) + s * W(:,j2)
-                //   W(:,j2)' = -s * W(:,j1) + c * W(:,j2)
-                for (index_type i = 0; i < m; ++i) {
-                    T w1 = W(i, j1);
-                    T w2 = W(i, j2);
-                    W(i, j1) = c * w1 + s * w2;
-                    W(i, j2) = -s * w1 + c * w2;
+                // Build the 2x2 Givens rotation matrix:
+                //   G = [ c  -s ]
+                //       [ s   c ]
+                Matrix<T, 2, 2> G{{{c, -s}, {s, c}}};
+
+                // Apply right rotation to W: W(:,[j1,j2]) *= G
+                {
+                    auto W_sub = W.col_slice(std::array<index_type, 2>{j1, j2});
+                    W_sub = (W_sub * G).eval();
                 }
 
-                // Accumulate into V: columns j1 and j2.
-                for (index_type i = 0; i < n; ++i) {
-                    T v1 = V(i, j1);
-                    T v2 = V(i, j2);
-                    V(i, j1) = c * v1 + s * v2;
-                    V(i, j2) = -s * v1 + c * v2;
+                // Accumulate into V: V(:,[j1,j2]) *= G
+                {
+                    auto V_sub = V.col_slice(std::array<index_type, 2>{j1, j2});
+                    V_sub = (V_sub * G).eval();
                 }
             }
         }
@@ -230,12 +216,7 @@ auto svd(const Derived &A) {
     // there are n columns but only p = min(m,n) non-trivial singular values).
 
     // First compute all n column norms.
-    Vector<T, std::dynamic_extent> all_sigmas(n);
-    for (index_type j = 0; j < n; ++j) {
-        T norm_sq = T{0};
-        for (index_type i = 0; i < m; ++i) { norm_sq += W(i, j) * W(i, j); }
-        all_sigmas(j) = std::sqrt(norm_sq);
-    }
+    Vector<T, std::dynamic_extent> all_sigmas(W.colwise().norm());
 
     // Build a permutation array sorted by descending singular value.
     std::vector<index_type> perm(n);
@@ -254,56 +235,22 @@ auto svd(const Derived &A) {
         S_result(k) = all_sigmas(col);
 
         if (S_result(k) > std::numeric_limits<T>::min()) {
-            for (index_type i = 0; i < m; ++i) {
-                U_result(i, k) = W(i, col) / S_result(k);
-            }
+            U_result.col(k) = W.col(col) / S_result(k);
         } else {
-            // Zero singular value — choose an arbitrary orthonormal vector.
-            // For simplicity, use a column from the identity (adjusted below
-            // via Gram-Schmidt if needed).
-            for (index_type i = 0; i < m; ++i) { U_result(i, k) = T{0}; }
-            if (k < m) { U_result(k, k) = T{1}; }
+            // Zero singular value — seed with e_k so that Gram-Schmidt
+            // below can orthonormalise it against the other columns.
+            U_result.col(k) =
+                expression::nullary::unit_vector<T>(m, k < m ? k : 0);
         }
 
         // Vt is p x n: row k of Vt = column perm[k] of V, transposed.
-        for (index_type j = 0; j < n; ++j) { Vt_result(k, j) = V(j, col); }
+        Vt_result.row(k) = V.col(col);
     }
 
-    // Orthonormalise U columns for zero singular values using modified
-    // Gram-Schmidt against the existing columns.
-    for (index_type k = 0; k < p; ++k) {
-        if (S_result(k) > std::numeric_limits<T>::min()) { continue; }
-
-        // Try basis vectors e_0, e_1, ..., e_{m-1} until we find one
-        // that is linearly independent from the existing U columns.
-        for (index_type trial = 0; trial < m; ++trial) {
-            // Start with e_{trial}.
-            for (index_type i = 0; i < m; ++i) { U_result(i, k) = T{0}; }
-            U_result(trial, k) = T{1};
-
-            // Orthogonalise against all previous columns.
-            for (index_type j = 0; j < k; ++j) {
-                T dot = T{0};
-                for (index_type i = 0; i < m; ++i) {
-                    dot += U_result(i, k) * U_result(i, j);
-                }
-                for (index_type i = 0; i < m; ++i) {
-                    U_result(i, k) -= dot * U_result(i, j);
-                }
-            }
-
-            // Normalise.
-            T norm_sq = T{0};
-            for (index_type i = 0; i < m; ++i) {
-                norm_sq += U_result(i, k) * U_result(i, k);
-            }
-            T norm = std::sqrt(norm_sq);
-            if (norm > T{1e-10}) {
-                for (index_type i = 0; i < m; ++i) { U_result(i, k) /= norm; }
-                break;
-            }
-        }
-    }
+    // Orthonormalise U columns.  The non-zero-SV columns are already
+    // orthonormal; Gram-Schmidt will leave them unchanged and make the
+    // zero-SV seed columns orthogonal to everything else.
+    orthogonalization::gram_schmidt_in_place(U_result);
 
     return SVDResult<T, M, N>{.U = std::move(U_result),
                               .S = std::move(S_result),

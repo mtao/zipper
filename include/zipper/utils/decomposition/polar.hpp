@@ -81,14 +81,9 @@ auto polar(const Derived &F) {
         // In practice this should be caught earlier, but guard anyway.
         // Return identity R and F as S as a fallback.
         PolarResult<T, M> result;
-        result.R = Matrix<T, M, N>(n, n);
-        result.S = Matrix<T, M, N>(n, n);
-        for (index_type i = 0; i < n; ++i) {
-            for (index_type j = 0; j < n; ++j) {
-                result.R(i, j) = (i == j) ? T{1} : T{0};
-                result.S(i, j) = F(i, j);
-            }
-        }
+        result.R =
+            Matrix<T, M, N>(expression::nullary::Identity<T, M, N>(n, n));
+        result.S = Matrix<T, M, N>(F);
         return result;
     }
 
@@ -105,7 +100,7 @@ auto polar(const Derived &F) {
         // since SVD returns singular values in descending order)
         // to get a proper rotation.
         const index_type last = n - 1;
-        for (index_type i = 0; i < n; ++i) { U(i, last) = -U(i, last); }
+        U.col(last) = -U.col(last);
         // Also flip the corresponding singular value.
         sigma(last) = -sigma(last);
         // Recompute R.

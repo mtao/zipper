@@ -21,6 +21,7 @@
 
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
+#include <zipper/as.hpp>
 
 namespace zipper::utils::solver {
 
@@ -42,12 +43,9 @@ struct JacobiPreconditioner {
     ///
     /// @param A  The coefficient matrix.  Must have non-zero diagonal entries.
     template <concepts::Matrix MDerived>
-    explicit JacobiPreconditioner(const MDerived &A)
-        : inv_diag(A.rows()) {
+    explicit JacobiPreconditioner(const MDerived &A) : inv_diag(A.rows()) {
         const index_type n = A.rows();
-        for (index_type i = 0; i < n; ++i) {
-            inv_diag(i) = T{1} / A(i, i);
-        }
+        for (index_type i = 0; i < n; ++i) { inv_diag(i) = T{1} / A(i, i); }
     }
 
     /// @brief Apply the preconditioner: z = M^{-1} * r.
@@ -58,12 +56,8 @@ struct JacobiPreconditioner {
     /// @return   Preconditioned vector z = M^{-1} r.
     template <concepts::Vector VDerived>
     auto apply(const VDerived &r) const -> Vector<T, Dim> {
-        const index_type n = inv_diag.extent(0);
-        Vector<T, Dim> z(n);
-        for (index_type i = 0; i < n; ++i) {
-            z(i) = r(i) * inv_diag(i);
-        }
-        return z;
+        auto arr = inv_diag.as_array() * r.as_array();
+        return Vector<T, Dim>(as_vector(arr));
     }
 };
 

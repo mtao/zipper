@@ -26,6 +26,7 @@
 
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
+#include <zipper/as.hpp>
 
 namespace zipper::utils::solver {
 
@@ -56,13 +57,11 @@ struct SSORPreconditioner {
     /// @brief Construct from a matrix and relaxation parameter.
     ///
     /// @param A      The coefficient matrix (SPD with non-zero diagonal).
-    /// @param omega  Relaxation parameter (default: 1.0 = symmetric Gauss-Seidel).
+    /// @param omega  Relaxation parameter (default: 1.0 = symmetric
+    /// Gauss-Seidel).
     template <concepts::Matrix MDerived>
     explicit SSORPreconditioner(const MDerived &A, T omega_ = T{1})
-        : inv_diag(A.rows()),
-          diag(A.rows()),
-          omega(omega_),
-          A_copy(A) {
+      : inv_diag(A.rows()), diag(A.rows()), omega(omega_), A_copy(A) {
         const index_type n = A.rows();
         for (index_type i = 0; i < n; ++i) {
             diag(i) = A(i, i);
@@ -89,17 +88,13 @@ struct SSORPreconditioner {
         Vector<T, Dim> y(n);
         for (index_type i = 0; i < n; ++i) {
             T sum = T{0};
-            for (index_type j = 0; j < i; ++j) {
-                sum += A_copy(i, j) * y(j);
-            }
+            for (index_type j = 0; j < i; ++j) { sum += A_copy(i, j) * y(j); }
             y(i) = (r(i) - omega * sum) * inv_diag(i);
         }
 
         // Step 2: Diagonal scale -- z_i = D_i * y_i
-        Vector<T, Dim> z(n);
-        for (index_type i = 0; i < n; ++i) {
-            z(i) = diag(i) * y(i);
-        }
+        auto diag_y = diag.as_array() * y.as_array();
+        Vector<T, Dim> z(as_vector(diag_y));
 
         // Step 3: Backward sweep -- solve (D + omega*U) w = z
         // w_i = (z_i - omega * sum_{j>i} A_{ij} * w_j) / A_{ii}
@@ -113,10 +108,7 @@ struct SSORPreconditioner {
         }
 
         // Step 4: Scale by (2 - omega)
-        T scale = T{2} - omega;
-        for (index_type i = 0; i < n; ++i) {
-            w(i) *= scale;
-        }
+        w = ((T{2} - omega) * w).eval();
 
         return w;
     }

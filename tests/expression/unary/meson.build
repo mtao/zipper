@@ -1,5 +1,6 @@
 sources = [
   'partial_reduction.cpp',
+  'partial_transform.cpp',
   'repeat.cpp',
   'lift.cpp',
   'cast.cpp',
