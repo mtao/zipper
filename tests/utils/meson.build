@@ -49,4 +49,7 @@ test('multigrid', test_multigrid)
 test_suitesparse = executable('test_suitesparse', 'suitesparse.cpp', dependencies: [zipper_test_dep])
 test('suitesparse', test_suitesparse)
 
+test_matrix_utils = executable('test_matrix_utils', 'test_matrix_utils.cpp', dependencies: [zipper_test_dep])
+test('matrix_utils', test_matrix_utils)
+
 subdir('extents')
