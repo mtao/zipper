@@ -252,12 +252,18 @@ auto schur(const Derived &A, index_type max_iter = 0)
         }
     }
 
-    // Phase 2: Implicit QR iteration with Wilkinson (single) shift.
+    // Phase 2: Francis implicit double-shift QR iteration.
     //
-    // We use a simple single-shift implicit QR strategy with Givens rotations.
-    // This converges for real eigenvalues; for complex conjugate pairs, the
-    // 2x2 block at the bottom will not deflate further, which is correct for
-    // real Schur form.
+    // We use the Francis double-shift strategy with Householder reflections.
+    // The two shifts are the eigenvalues of the trailing 2x2 block.  When
+    // they are complex conjugates their sum (trace) and product (determinant)
+    // are still real, so the implicit first column of (H - s1 I)(H - s2 I)
+    // is computed with real arithmetic only.
+    //
+    // For a 3x1 block the unreduced sub-matrix is [q, p) and the active size
+    // is p - q >= 3. On each step we compute the first column of the
+    // double-shift polynomial, introduce a 3x1 bulge via a Householder
+    // reflector, and then chase the bulge down the Hessenberg matrix.
     const T eps = std::numeric_limits<T>::epsilon();
     index_type p = n;  // active sub-matrix is H[0:p, 0:p]
     index_type total_iter = 0;
@@ -269,7 +275,7 @@ auto schur(const Derived &A, index_type max_iter = 0)
                 .message = "schur: QR iteration did not converge"});
         }
 
-        // Check for deflation at the bottom.
+        // Check for deflation at the bottom (1x1 block).
         T threshold = eps * (std::abs(H(p - 2, p - 2)) +
                              std::abs(H(p - 1, p - 1)));
         if (threshold == T{0}) { threshold = eps; }
@@ -280,10 +286,7 @@ auto schur(const Derived &A, index_type max_iter = 0)
             continue;
         }
 
-        // Check if we have a 2x2 block at the bottom with complex eigenvalues.
-        // The 2x2 block H(p-2:p, p-2:p) has complex eigenvalues iff
-        // discriminant < 0. In that case, check if H(p-2, p-3) is negligible
-        // to deflate the whole 2x2 block.
+        // Check for deflation of a 2x2 block at the bottom.
         if (p >= 3) {
             T thresh2 = eps * (std::abs(H(p - 3, p - 3)) +
                                std::abs(H(p - 2, p - 2)));
@@ -308,58 +311,86 @@ auto schur(const Derived &A, index_type max_iter = 0)
             --q;
         }
 
-        // If the block is already 1x1 or 2x2, deflate directly.
+        // If the unreduced block is already 1x1 or 2x2, deflate directly.
         if (p - q <= 2) {
             p = q;
             continue;
         }
 
-        // Wilkinson shift: eigenvalue of the bottom-right 2x2 block
-        // closest to H(p-1, p-1).
-        T a11 = H(p - 2, p - 2);
-        T a12 = H(p - 2, p - 1);
-        T a21 = H(p - 1, p - 2);
-        T a22 = H(p - 1, p - 1);
+        // --- Francis double shift ---
+        // Shifts are the eigenvalues of the trailing 2x2 block H(p-2:p, p-2:p).
+        // We only need their sum (s) and product (t) which are always real.
+        T s = H(p - 2, p - 2) + H(p - 1, p - 1);  // trace
+        T t = H(p - 2, p - 2) * H(p - 1, p - 1)
+            - H(p - 2, p - 1) * H(p - 1, p - 2);   // determinant
 
-        T trace = a11 + a22;
-        T det = a11 * a22 - a12 * a21;
-        T disc = trace * trace - T{4} * det;
+        // First column of M = H^2 - s*H + t*I (only first 3 entries are
+        // non-zero because H is upper Hessenberg).
+        T h00 = H(q, q);
+        T h10 = H(q + 1, q);
+        T h01 = H(q, q + 1);
+        T h11 = H(q + 1, q + 1);
+        T h21 = (q + 2 < n) ? H(q + 2, q + 1) : T{0};
 
-        T shift;
-        if (disc >= T{0}) {
-            // Two real eigenvalues; pick the one closer to a22.
-            T sqrt_disc = std::sqrt(disc);
-            T e1 = (trace + sqrt_disc) / T{2};
-            T e2 = (trace - sqrt_disc) / T{2};
-            shift = (std::abs(e1 - a22) < std::abs(e2 - a22)) ? e1 : e2;
-        } else {
-            // Complex conjugate pair; use a22 as the shift (exceptional shift).
-            shift = a22;
-        }
+        T x = h00 * h00 + h01 * h10 - s * h00 + t;
+        T y = h10 * (h00 + h11 - s);
+        T z = h10 * h21;
 
-        // Implicit QR step with Givens rotations on H[q:p, q:p].
-        // First rotation: zero out (H(q,q) - shift, H(q+1,q)).
-        T x = H(q, q) - shift;
-        T y = H(q + 1, q);
+        // Chase the bulge from q to p-3 using 3x3 Householder reflectors,
+        // then finish with a 2x2 Givens rotation.
+        for (index_type k = q; k <= p - 3; ++k) {
+            // Build Householder reflector for [x, y, z].
+            index_type r = std::min(index_type{3}, p - k);
 
-        for (index_type k = q; k < p - 1; ++k) {
-            auto [c, s] = detail::givens_params(x, y);
+            Vector<T, dynamic_extent> v(r);
+            v(0) = x;
+            if (r > 1) v(1) = y;
+            if (r > 2) v(2) = z;
 
-            // Apply G from the left to rows k and k+1.
-            detail::givens_rotate_rows(H, k, k + 1, c, s, 0, n);
-            // Apply G^T from the right to columns k and k+1.
-            detail::givens_rotate_cols(H, k, k + 1, c, s, 0, n);
-            // Accumulate into U.
-            detail::givens_rotate_cols(U_acc, k, k + 1, c, s, 0, n);
+            T sigma = v.norm();
+            if (sigma < std::numeric_limits<T>::min()) {
+                // Bulge has vanished; skip this reflector.
+                if (k + 3 < p) {
+                    x = H(k + 1, k);
+                    y = H(k + 2, k);
+                    z = (k + 3 < p) ? H(k + 3, k) : T{0};
+                }
+                continue;
+            }
+            if (v(0) >= T{0}) { sigma = -sigma; }
+            v(0) -= sigma;
+            T v_norm = v.norm();
+            for (index_type i = 0; i < r; ++i) { v(i) /= v_norm; }
 
-            // Prepare for next iteration: the bulge entry.
-            if (k + 2 < p) {
+            // Determine row/col bounds for applying the reflector.
+            index_type r0 = (k > q) ? (k - 1) : q;  // leftmost column affected
+            index_type c1 = n;                        // right boundary
+
+            // Apply from the left: H(k:k+r, r0:c1)
+            detail::apply_householder_left(H, v, k, r, r0, c1);
+            // Apply from the right: H(0:min(k+r+1,p), k:k+r)
+            index_type r1 = std::min(k + r + 1, p);
+            detail::apply_householder_right(H, v, 0, r1, k, r);
+            // Accumulate into U: U(:, k:k+r)
+            detail::apply_householder_right(U_acc, v, 0, n, k, r);
+
+            // Set up the bulge entries for the next iteration.
+            if (k + 3 < p) {
                 x = H(k + 1, k);
                 y = H(k + 2, k);
+                z = (k + 3 < p) ? H(k + 3, k) : T{0};
             }
         }
 
-        // Clean up sub-sub-diagonal entries created by numerical noise.
+        // Final 2x2 Givens rotation for the last bulge entry at (p-2, p-3).
+        if (p >= 3 && p - 2 > q) {
+            auto [c, s_val] = detail::givens_params(H(p - 2, p - 3), H(p - 1, p - 3));
+            detail::givens_rotate_rows(H, p - 2, p - 1, c, s_val, 0, n);
+            detail::givens_rotate_cols(H, p - 2, p - 1, c, s_val, 0, n);
+            detail::givens_rotate_cols(U_acc, p - 2, p - 1, c, s_val, 0, n);
+        }
+
+        // Clean up numerical noise below the sub-diagonal.
         for (index_type i = q + 2; i < p; ++i) {
             for (index_type j = q; j < i - 1; ++j) {
                 H(i, j) = T{0};
