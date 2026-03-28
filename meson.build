@@ -99,6 +99,7 @@ zipper_dep = declare_dependency(
   include_directories: include_dirs,
   compile_args: compile_args,
 )
+meson.override_dependency('zipper', zipper_dep)
 
 if get_option('testing')
   subdir('tests')
