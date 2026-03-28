@@ -20,7 +20,27 @@
 #include "detail/extents/static_extents_to_integral_sequence.hpp"
 #include "expression/ternary/Select.hpp"
 #include "expression/unary/Abs.hpp"
+#include "expression/unary/Acos.hpp"
+#include "expression/unary/Asin.hpp"
+#include "expression/unary/Atan.hpp"
+#include "expression/unary/Cbrt.hpp"
+#include "expression/unary/Ceil.hpp"
+#include "expression/unary/Cos.hpp"
+#include "expression/unary/Cosh.hpp"
+#include "expression/unary/Exp.hpp"
+#include "expression/unary/Exp2.hpp"
+#include "expression/unary/Floor.hpp"
+#include "expression/unary/Log.hpp"
+#include "expression/unary/Log10.hpp"
+#include "expression/unary/Log2.hpp"
+#include "expression/unary/Round.hpp"
 #include "expression/unary/ScalarPower.hpp"
+#include "expression/unary/Sign.hpp"
+#include "expression/unary/Sin.hpp"
+#include "expression/unary/Sinh.hpp"
+#include "expression/unary/Sqrt.hpp"
+#include "expression/unary/Tan.hpp"
+#include "expression/unary/Tanh.hpp"
 
 #include <compare>
 
@@ -123,6 +143,146 @@ class ArrayBase : public ZipperBase<ArrayBase, Expr> {
     auto abs(this Self &&self) {
         using child_t = detail::member_child_storage_t<Self, expression_type>;
         return ArrayBase<expression::unary::Abs<child_t>>(
+            std::in_place, std::forward<Self>(self).expression());
+    }
+
+    template <typename Self>
+    auto sqrt(this Self &&self) {
+        using child_t = detail::member_child_storage_t<Self, expression_type>;
+        return ArrayBase<expression::unary::Sqrt<child_t>>(
+            std::in_place, std::forward<Self>(self).expression());
+    }
+
+    template <typename Self>
+    auto cbrt(this Self &&self) {
+        using child_t = detail::member_child_storage_t<Self, expression_type>;
+        return ArrayBase<expression::unary::Cbrt<child_t>>(
+            std::in_place, std::forward<Self>(self).expression());
+    }
+
+    template <typename Self>
+    auto sin(this Self &&self) {
+        using child_t = detail::member_child_storage_t<Self, expression_type>;
+        return ArrayBase<expression::unary::Sin<child_t>>(
+            std::in_place, std::forward<Self>(self).expression());
+    }
+
+    template <typename Self>
+    auto cos(this Self &&self) {
+        using child_t = detail::member_child_storage_t<Self, expression_type>;
+        return ArrayBase<expression::unary::Cos<child_t>>(
+            std::in_place, std::forward<Self>(self).expression());
+    }
+
+    template <typename Self>
+    auto tan(this Self &&self) {
+        using child_t = detail::member_child_storage_t<Self, expression_type>;
+        return ArrayBase<expression::unary::Tan<child_t>>(
+            std::in_place, std::forward<Self>(self).expression());
+    }
+
+    template <typename Self>
+    auto asin(this Self &&self) {
+        using child_t = detail::member_child_storage_t<Self, expression_type>;
+        return ArrayBase<expression::unary::Asin<child_t>>(
+            std::in_place, std::forward<Self>(self).expression());
+    }
+
+    template <typename Self>
+    auto acos(this Self &&self) {
+        using child_t = detail::member_child_storage_t<Self, expression_type>;
+        return ArrayBase<expression::unary::Acos<child_t>>(
+            std::in_place, std::forward<Self>(self).expression());
+    }
+
+    template <typename Self>
+    auto atan(this Self &&self) {
+        using child_t = detail::member_child_storage_t<Self, expression_type>;
+        return ArrayBase<expression::unary::Atan<child_t>>(
+            std::in_place, std::forward<Self>(self).expression());
+    }
+
+    template <typename Self>
+    auto sinh(this Self &&self) {
+        using child_t = detail::member_child_storage_t<Self, expression_type>;
+        return ArrayBase<expression::unary::Sinh<child_t>>(
+            std::in_place, std::forward<Self>(self).expression());
+    }
+
+    template <typename Self>
+    auto cosh(this Self &&self) {
+        using child_t = detail::member_child_storage_t<Self, expression_type>;
+        return ArrayBase<expression::unary::Cosh<child_t>>(
+            std::in_place, std::forward<Self>(self).expression());
+    }
+
+    template <typename Self>
+    auto tanh(this Self &&self) {
+        using child_t = detail::member_child_storage_t<Self, expression_type>;
+        return ArrayBase<expression::unary::Tanh<child_t>>(
+            std::in_place, std::forward<Self>(self).expression());
+    }
+
+    template <typename Self>
+    auto exp(this Self &&self) {
+        using child_t = detail::member_child_storage_t<Self, expression_type>;
+        return ArrayBase<expression::unary::Exp<child_t>>(
+            std::in_place, std::forward<Self>(self).expression());
+    }
+
+    template <typename Self>
+    auto exp2(this Self &&self) {
+        using child_t = detail::member_child_storage_t<Self, expression_type>;
+        return ArrayBase<expression::unary::Exp2<child_t>>(
+            std::in_place, std::forward<Self>(self).expression());
+    }
+
+    template <typename Self>
+    auto log(this Self &&self) {
+        using child_t = detail::member_child_storage_t<Self, expression_type>;
+        return ArrayBase<expression::unary::Log<child_t>>(
+            std::in_place, std::forward<Self>(self).expression());
+    }
+
+    template <typename Self>
+    auto log2(this Self &&self) {
+        using child_t = detail::member_child_storage_t<Self, expression_type>;
+        return ArrayBase<expression::unary::Log2<child_t>>(
+            std::in_place, std::forward<Self>(self).expression());
+    }
+
+    template <typename Self>
+    auto log10(this Self &&self) {
+        using child_t = detail::member_child_storage_t<Self, expression_type>;
+        return ArrayBase<expression::unary::Log10<child_t>>(
+            std::in_place, std::forward<Self>(self).expression());
+    }
+
+    template <typename Self>
+    auto floor(this Self &&self) {
+        using child_t = detail::member_child_storage_t<Self, expression_type>;
+        return ArrayBase<expression::unary::Floor<child_t>>(
+            std::in_place, std::forward<Self>(self).expression());
+    }
+
+    template <typename Self>
+    auto ceil(this Self &&self) {
+        using child_t = detail::member_child_storage_t<Self, expression_type>;
+        return ArrayBase<expression::unary::Ceil<child_t>>(
+            std::in_place, std::forward<Self>(self).expression());
+    }
+
+    template <typename Self>
+    auto round(this Self &&self) {
+        using child_t = detail::member_child_storage_t<Self, expression_type>;
+        return ArrayBase<expression::unary::Round<child_t>>(
+            std::in_place, std::forward<Self>(self).expression());
+    }
+
+    template <typename Self>
+    auto sign(this Self &&self) {
+        using child_t = detail::member_child_storage_t<Self, expression_type>;
+        return ArrayBase<expression::unary::Sign<child_t>>(
             std::in_place, std::forward<Self>(self).expression());
     }
 

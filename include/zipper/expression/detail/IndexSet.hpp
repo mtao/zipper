@@ -1325,6 +1325,58 @@ struct is_zero_preserving_unary_op : std::false_type {};
 template <typename T>
 struct is_zero_preserving_unary_op<std::negate<T>> : std::true_type {};
 
+} // namespace zipper::expression::detail
+
+// Forward-declare the unary functor structs so we can specialize
+// is_zero_preserving_unary_op without including the full headers.
+// The actual definitions live in expression/unary/*.hpp.
+namespace zipper::expression::unary::detail {
+template <typename A> struct abs;
+template <typename A> struct sqrt;
+template <typename A> struct cbrt;
+template <typename A> struct sin;
+template <typename A> struct tan;
+template <typename A> struct asin;
+template <typename A> struct atan;
+template <typename A> struct sinh;
+template <typename A> struct tanh;
+template <typename A> struct floor;
+template <typename A> struct ceil;
+template <typename A> struct round;
+template <typename A> struct sign;
+} // namespace zipper::expression::unary::detail
+
+// Specialize zero-preserving trait for math functors where f(0) == 0.
+// NOT zero-preserving: cos, acos, cosh, exp, exp2, log, log2, log10.
+namespace zipper::expression::detail {
+
+template <typename T>
+struct is_zero_preserving_unary_op<unary::detail::abs<T>> : std::true_type {};
+template <typename T>
+struct is_zero_preserving_unary_op<unary::detail::sqrt<T>> : std::true_type {};
+template <typename T>
+struct is_zero_preserving_unary_op<unary::detail::cbrt<T>> : std::true_type {};
+template <typename T>
+struct is_zero_preserving_unary_op<unary::detail::sin<T>> : std::true_type {};
+template <typename T>
+struct is_zero_preserving_unary_op<unary::detail::tan<T>> : std::true_type {};
+template <typename T>
+struct is_zero_preserving_unary_op<unary::detail::asin<T>> : std::true_type {};
+template <typename T>
+struct is_zero_preserving_unary_op<unary::detail::atan<T>> : std::true_type {};
+template <typename T>
+struct is_zero_preserving_unary_op<unary::detail::sinh<T>> : std::true_type {};
+template <typename T>
+struct is_zero_preserving_unary_op<unary::detail::tanh<T>> : std::true_type {};
+template <typename T>
+struct is_zero_preserving_unary_op<unary::detail::floor<T>> : std::true_type {};
+template <typename T>
+struct is_zero_preserving_unary_op<unary::detail::ceil<T>> : std::true_type {};
+template <typename T>
+struct is_zero_preserving_unary_op<unary::detail::round<T>> : std::true_type {};
+template <typename T>
+struct is_zero_preserving_unary_op<unary::detail::sign<T>> : std::true_type {};
+
 template <typename Op>
 concept ZeroPreservingUnaryOp = is_zero_preserving_unary_op<Op>::value;
 
