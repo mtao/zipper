@@ -873,10 +873,99 @@ TEST_CASE("dynamic_scalar_subtract_array", "[dynamic][scalar]") {
     CHECK(y(2) == 13.0);
 }
 
-// NOTE: Compound assignment operators (+=, -=, *=, /=) are not tested here
-// because ZipperBase::operator+= uses `*this + other` where `*this` has type
-// ZipperBase&, which fails concept resolution for the binary operator overloads.
-// This is a known library limitation (also untested in static-extent tests).
+// ============================================================
+// Compound Assignment
+// ============================================================
+
+TEST_CASE("dynamic_vector_compound_add", "[dynamic][compound]") {
+    VectorX<double> x = {1.0, 2.0, 3.0};
+    VectorX<double> y = {10.0, 20.0, 30.0};
+    x += y;
+    CHECK(x(0) == 11.0);
+    CHECK(x(1) == 22.0);
+    CHECK(x(2) == 33.0);
+}
+
+TEST_CASE("dynamic_vector_compound_sub", "[dynamic][compound]") {
+    VectorX<double> x = {10.0, 20.0, 30.0};
+    VectorX<double> y = {1.0, 2.0, 3.0};
+    x -= y;
+    CHECK(x(0) == 9.0);
+    CHECK(x(1) == 18.0);
+    CHECK(x(2) == 27.0);
+}
+
+TEST_CASE("dynamic_vector_compound_scalar_mul", "[dynamic][compound]") {
+    VectorX<double> x = {1.0, 2.0, 3.0};
+    x *= 3.0;
+    CHECK(x(0) == 3.0);
+    CHECK(x(1) == 6.0);
+    CHECK(x(2) == 9.0);
+}
+
+TEST_CASE("dynamic_vector_compound_scalar_div", "[dynamic][compound]") {
+    VectorX<double> x = {6.0, 12.0, 18.0};
+    x /= 3.0;
+    CHECK(x(0) == 2.0);
+    CHECK(x(1) == 4.0);
+    CHECK(x(2) == 6.0);
+}
+
+TEST_CASE("dynamic_matrix_compound_add", "[dynamic][compound]") {
+    MatrixXX<double> A(2, 2);
+    A(0, 0) = 1.0; A(0, 1) = 2.0;
+    A(1, 0) = 3.0; A(1, 1) = 4.0;
+    MatrixXX<double> B(2, 2);
+    B(0, 0) = 10.0; B(0, 1) = 20.0;
+    B(1, 0) = 30.0; B(1, 1) = 40.0;
+    A += B;
+    CHECK(A(0, 0) == 11.0);
+    CHECK(A(0, 1) == 22.0);
+    CHECK(A(1, 0) == 33.0);
+    CHECK(A(1, 1) == 44.0);
+}
+
+TEST_CASE("dynamic_matrix_compound_sub", "[dynamic][compound]") {
+    MatrixXX<double> A(2, 2);
+    A(0, 0) = 10.0; A(0, 1) = 20.0;
+    A(1, 0) = 30.0; A(1, 1) = 40.0;
+    MatrixXX<double> B(2, 2);
+    B(0, 0) = 1.0; B(0, 1) = 2.0;
+    B(1, 0) = 3.0; B(1, 1) = 4.0;
+    A -= B;
+    CHECK(A(0, 0) == 9.0);
+    CHECK(A(0, 1) == 18.0);
+    CHECK(A(1, 0) == 27.0);
+    CHECK(A(1, 1) == 36.0);
+}
+
+TEST_CASE("dynamic_matrix_compound_scalar_mul", "[dynamic][compound]") {
+    MatrixXX<double> A(2, 2);
+    A(0, 0) = 1.0; A(0, 1) = 2.0;
+    A(1, 0) = 3.0; A(1, 1) = 4.0;
+    A *= 2.0;
+    CHECK(A(0, 0) == 2.0);
+    CHECK(A(0, 1) == 4.0);
+    CHECK(A(1, 0) == 6.0);
+    CHECK(A(1, 1) == 8.0);
+}
+
+TEST_CASE("dynamic_matrix_compound_scalar_div", "[dynamic][compound]") {
+    MatrixXX<double> A(2, 2);
+    A(0, 0) = 2.0; A(0, 1) = 4.0;
+    A(1, 0) = 6.0; A(1, 1) = 8.0;
+    A /= 2.0;
+    CHECK(A(0, 0) == 1.0);
+    CHECK(A(0, 1) == 2.0);
+    CHECK(A(1, 0) == 3.0);
+    CHECK(A(1, 1) == 4.0);
+}
+
+// NOTE: Form compound assignment (*=, /=) is currently broken because
+// FormBase::operator= does `expression() = v.expression()` which calls
+// MDArray::operator= (only accepts MDArray, not expression types).
+// This should be fixed by using Base::operator= or expression().assign()
+// like VectorBase/MatrixBase do. Tracked separately.
 
 // ============================================================
 // Normalized

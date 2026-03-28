@@ -159,3 +159,84 @@ TEST_CASE("test_vector_span", "[vector][storage][dense][span]") {
   // CHECK(v(0) == 2);
   // CHECK(v(1) == 3);
 }
+
+// ============================================================
+// Compound Assignment (static extents)
+// ============================================================
+
+TEST_CASE("static_vector_compound_add", "[vector][compound]") {
+    Vector<double, 3> a{{1.0, 2.0, 3.0}};
+    Vector<double, 3> b{{10.0, 20.0, 30.0}};
+    a += b;
+    CHECK(a(0) == 11.0);
+    CHECK(a(1) == 22.0);
+    CHECK(a(2) == 33.0);
+}
+
+TEST_CASE("static_vector_compound_sub", "[vector][compound]") {
+    Vector<double, 3> a{{10.0, 20.0, 30.0}};
+    Vector<double, 3> b{{1.0, 2.0, 3.0}};
+    a -= b;
+    CHECK(a(0) == 9.0);
+    CHECK(a(1) == 18.0);
+    CHECK(a(2) == 27.0);
+}
+
+TEST_CASE("static_vector_compound_scalar_mul", "[vector][compound]") {
+    Vector<double, 3> a{{1.0, 2.0, 3.0}};
+    a *= 3.0;
+    CHECK(a(0) == 3.0);
+    CHECK(a(1) == 6.0);
+    CHECK(a(2) == 9.0);
+}
+
+TEST_CASE("static_vector_compound_scalar_div", "[vector][compound]") {
+    Vector<double, 3> a{{6.0, 12.0, 18.0}};
+    a /= 3.0;
+    CHECK(a(0) == 2.0);
+    CHECK(a(1) == 4.0);
+    CHECK(a(2) == 6.0);
+}
+
+TEST_CASE("static_matrix_compound_add", "[matrix][compound]") {
+    Matrix<double, 2, 2> A{{{1.0, 2.0}, {3.0, 4.0}}};
+    Matrix<double, 2, 2> B{{{10.0, 20.0}, {30.0, 40.0}}};
+    A += B;
+    CHECK(A(0, 0) == 11.0);
+    CHECK(A(0, 1) == 22.0);
+    CHECK(A(1, 0) == 33.0);
+    CHECK(A(1, 1) == 44.0);
+}
+
+TEST_CASE("static_matrix_compound_sub", "[matrix][compound]") {
+    Matrix<double, 2, 2> A{{{10.0, 20.0}, {30.0, 40.0}}};
+    Matrix<double, 2, 2> B{{{1.0, 2.0}, {3.0, 4.0}}};
+    A -= B;
+    CHECK(A(0, 0) == 9.0);
+    CHECK(A(0, 1) == 18.0);
+    CHECK(A(1, 0) == 27.0);
+    CHECK(A(1, 1) == 36.0);
+}
+
+TEST_CASE("static_matrix_compound_scalar_mul", "[matrix][compound]") {
+    Matrix<double, 2, 2> A{{{1.0, 2.0}, {3.0, 4.0}}};
+    A *= 2.0;
+    CHECK(A(0, 0) == 2.0);
+    CHECK(A(0, 1) == 4.0);
+    CHECK(A(1, 0) == 6.0);
+    CHECK(A(1, 1) == 8.0);
+}
+
+TEST_CASE("static_matrix_compound_scalar_div", "[matrix][compound]") {
+    Matrix<double, 2, 2> A{{{2.0, 4.0}, {6.0, 8.0}}};
+    A /= 2.0;
+    CHECK(A(0, 0) == 1.0);
+    CHECK(A(0, 1) == 2.0);
+    CHECK(A(1, 0) == 3.0);
+    CHECK(A(1, 1) == 4.0);
+}
+
+// NOTE: Form compound assignment (*=, /=) is currently broken because
+// FormBase::operator= uses `expression() = v.expression()` instead of
+// `expression().assign(v.expression())`. See FormBase.hpp lines 62-69.
+// Form compound tests are omitted until FormBase assignment is fixed.
