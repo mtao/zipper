@@ -58,10 +58,10 @@ namespace detail {
 /// On exit, T_out contains the tridiagonal matrix and Q_out is orthogonal
 /// such that A = Q * T * Q^T.
 template <typename T>
-void symmetric_tridiag_reduce(
+auto symmetric_tridiag_reduce(
     const Matrix<T, dynamic_extent, dynamic_extent> &A,
     Matrix<T, dynamic_extent, dynamic_extent> &T_out,
-    Matrix<T, dynamic_extent, dynamic_extent> &Q_out) {
+    Matrix<T, dynamic_extent, dynamic_extent> &Q_out) -> void {
     const index_type n = A.extent(0);
 
     // Copy A into T_out (will be modified in-place).
@@ -89,7 +89,7 @@ void symmetric_tridiag_reduce(
         v(0) -= sigma;
         T v_norm = v.norm();
         if (v_norm < std::numeric_limits<T>::min()) { continue; }
-        for (index_type i = 0; i < m; ++i) { v(i) /= v_norm; }
+        v = (v / v_norm).eval();
 
         // Apply Householder P = I - 2*v*v^T from left and right to T_out.
         // Because T_out is symmetric, we use the symmetric update formula:
@@ -107,10 +107,7 @@ void symmetric_tridiag_reduce(
         }
 
         // Compute K = v^T * p
-        T K = T{0};
-        for (index_type i = 0; i < m; ++i) {
-            K += v(i) * p(i);
-        }
+        T K = utils::detail::dot(v, p);
 
         // q = 2*p - 2*K*v (the "reduced" form for symmetric update)
         // T_out(k+1:n, k+1:n) -= v * q^T + q * v^T

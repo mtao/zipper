@@ -66,10 +66,10 @@ namespace detail {
 /// @brief Apply a Householder reflection P = I - 2 v v^T to a matrix from
 ///        the left: H[r0:r0+len, c0:c1) -= 2 * v * (v^T * H[...]).
 template <typename T>
-void apply_householder_left(
+auto apply_householder_left(
     Matrix<T, dynamic_extent, dynamic_extent> &H,
     const Vector<T, dynamic_extent> &v,
-    index_type r0, index_type len, index_type c0, index_type c1) {
+    index_type r0, index_type len, index_type c0, index_type c1) -> void {
     for (index_type j = c0; j < c1; ++j) {
         T dot = T{0};
         for (index_type i = 0; i < len; ++i) {
@@ -85,10 +85,10 @@ void apply_householder_left(
 /// @brief Apply a Householder reflection from the right:
 ///        H[r0:r1, c0:c0+len) -= 2 * (H[...] * v) * v^T.
 template <typename T>
-void apply_householder_right(
+auto apply_householder_right(
     Matrix<T, dynamic_extent, dynamic_extent> &H,
     const Vector<T, dynamic_extent> &v,
-    index_type r0, index_type r1, index_type c0, index_type len) {
+    index_type r0, index_type r1, index_type c0, index_type len) -> void {
     for (index_type i = r0; i < r1; ++i) {
         T dot = T{0};
         for (index_type j = 0; j < len; ++j) {
@@ -107,9 +107,9 @@ void apply_householder_right(
 /// On exit, H is upper Hessenberg (H(i,j) = 0 for i > j+1) and Q is
 /// orthogonal such that A = Q * H * Q^T.
 template <typename T>
-void hessenberg_reduce(
+auto hessenberg_reduce(
     Matrix<T, dynamic_extent, dynamic_extent> &H,
-    Matrix<T, dynamic_extent, dynamic_extent> &Q) {
+    Matrix<T, dynamic_extent, dynamic_extent> &Q) -> void {
     const index_type n = H.extent(0);
 
     Q = expression::nullary::Identity<T, dynamic_extent, dynamic_extent>(n, n);
@@ -133,7 +133,7 @@ void hessenberg_reduce(
         v(0) -= sigma;
         T v_norm = v.norm();
         if (v_norm < std::numeric_limits<T>::min()) { continue; }
-        for (index_type i = 0; i < m; ++i) { v(i) /= v_norm; }
+        v = (v / v_norm).eval();
 
         // H <- P H P  where P = I - 2 v v^T acts on rows k+1:n.
         apply_householder_left(H, v, k + 1, m, k, n);
@@ -150,11 +150,11 @@ void hessenberg_reduce(
 ///   G = [c  s]   so  [H(p,:)] <- [ c  s] [H(p,:)]
 ///       [-s c]       [H(q,:)]    [-s  c] [H(q,:)]
 template <typename T>
-void givens_rotate_rows(
+auto givens_rotate_rows(
     Matrix<T, dynamic_extent, dynamic_extent> &H,
     index_type p, index_type q,
     T c, T s,
-    index_type c0, index_type c1) {
+    index_type c0, index_type c1) -> void {
     for (index_type j = c0; j < c1; ++j) {
         T hp = H(p, j);
         T hq = H(q, j);
@@ -166,11 +166,11 @@ void givens_rotate_rows(
 /// @brief Apply a 2x2 Givens rotation G from the right to columns p and q
 ///        of H, for rows r0..r1-1.
 template <typename T>
-void givens_rotate_cols(
+auto givens_rotate_cols(
     Matrix<T, dynamic_extent, dynamic_extent> &H,
     index_type p, index_type q,
     T c, T s,
-    index_type r0, index_type r1) {
+    index_type r0, index_type r1) -> void {
     for (index_type i = r0; i < r1; ++i) {
         T hp = H(i, p);
         T hq = H(i, q);
@@ -360,7 +360,7 @@ auto schur(const Derived &A, index_type max_iter = 0)
             if (v(0) >= T{0}) { sigma = -sigma; }
             v(0) -= sigma;
             T v_norm = v.norm();
-            for (index_type i = 0; i < r; ++i) { v(i) /= v_norm; }
+            v = (v / v_norm).eval();
 
             // Determine row/col bounds for applying the reflector.
             index_type r0 = (k > q) ? (k - 1) : q;  // leftmost column affected

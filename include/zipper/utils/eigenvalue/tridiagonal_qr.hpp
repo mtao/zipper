@@ -85,15 +85,15 @@ auto tridiagonal_qr_eigen(const Derived &T_in, index_type max_iter = 0)
     }
 
     // Extract diagonal (d) and sub-diagonal (e) into working arrays.
-    std::vector<T> d(n);
-    std::vector<T> e(n);  // e[0..n-2] are the sub-diagonal, e[n-1] = 0
+    VectorX<T> d(n);
+    VectorX<T> e(n);  // e[0..n-2] are the sub-diagonal, e[n-1] = 0
     for (index_type i = 0; i < n; ++i) {
-        d[i] = T_in(i, i);
+        d(i) = T_in(i, i);
     }
     for (index_type i = 0; i + 1 < n; ++i) {
-        e[i] = T_in(i + 1, i);
+        e(i) = T_in(i + 1, i);
     }
-    e[n - 1] = T{0};
+    e(n - 1) = T{0};
 
     // Eigenvector accumulation.
     Matrix<T, dynamic_extent, dynamic_extent> Z(
@@ -111,9 +111,9 @@ auto tridiagonal_qr_eigen(const Derived &T_in, index_type max_iter = 0)
             // Find the smallest m >= l such that e[m] is negligible.
             index_type m = l;
             while (m + 1 < n) {
-                T dd = std::abs(d[m]) + std::abs(d[m + 1]);
+                T dd = std::abs(d(m)) + std::abs(d(m + 1));
                 if (dd == T{0}) { dd = T{1}; }
-                if (std::abs(e[m]) <= eps * dd) {
+                if (std::abs(e(m)) <= eps * dd) {
                     break;
                 }
                 ++m;
@@ -130,12 +130,12 @@ auto tridiagonal_qr_eigen(const Derived &T_in, index_type max_iter = 0)
             ++iter;
 
             // Wilkinson shift: eigenvalue of the trailing 2x2 block
-            // closest to d[l].
-            T g = (d[l + 1] - d[l]) / (T{2} * e[l]);
+            // closest to d(l).
+            T g = (d(l + 1) - d(l)) / (T{2} * e(l));
             T r = std::sqrt(g * g + T{1});
-            // g = d[m] - d[l] + e[l] / (g + sign(g)*r)
+            // g = d(m) - d(l) + e(l) / (g + sign(g)*r)
             T sign_g = (g >= T{0}) ? T{1} : T{-1};
-            g = d[m] - d[l] + e[l] / (g + sign_g * r);
+            g = d(m) - d(l) + e(l) / (g + sign_g * r);
 
             T s = T{1};
             T c = T{1};
@@ -143,28 +143,28 @@ auto tridiagonal_qr_eigen(const Derived &T_in, index_type max_iter = 0)
 
             // QL step: chase the bulge from m down to l+1.
             for (index_type i = m; i > l; --i) {
-                T f = s * e[i - 1];
-                T b = c * e[i - 1];
+                T f = s * e(i - 1);
+                T b = c * e(i - 1);
 
                 // Compute Givens rotation.
                 if (std::abs(f) >= std::abs(g)) {
                     c = g / f;
                     r = std::sqrt(c * c + T{1});
-                    e[i] = f * r;
+                    e(i) = f * r;
                     s = T{1} / r;
                     c *= s;
                 } else {
                     s = f / g;
                     r = std::sqrt(s * s + T{1});
-                    e[i] = g * r;
+                    e(i) = g * r;
                     c = T{1} / r;
                     s *= c;
                 }
 
-                g = d[i] - p;
-                r = (d[i - 1] - g) * s + T{2} * c * b;
+                g = d(i) - p;
+                r = (d(i - 1) - g) * s + T{2} * c * b;
                 p = s * r;
-                d[i] = g + p;
+                d(i) = g + p;
                 g = c * r - b;
 
                 // Accumulate eigenvectors: Z_new = Z * G(i-1, i, c, s).
@@ -176,16 +176,16 @@ auto tridiagonal_qr_eigen(const Derived &T_in, index_type max_iter = 0)
                 }
             }
 
-            d[l] -= p;
-            e[l] = g;
-            e[m] = T{0};
+            d(l) -= p;
+            e(l) = g;
+            e(m) = T{0};
         }
     }
 
     // Build eigenvalue vector.
     Vector<T, dynamic_extent> eigenvalues(n);
     for (index_type i = 0; i < n; ++i) {
-        eigenvalues(i) = d[i];
+        eigenvalues(i) = d(i);
     }
 
     // Sort eigenvalues in ascending order and permute eigenvectors.
