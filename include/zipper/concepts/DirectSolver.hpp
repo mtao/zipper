@@ -29,7 +29,8 @@
 /// @see zipper::utils::suitesparse::UmfpackResult
 /// @see zipper::utils::suitesparse::SpqrResult
 
-#pragma once
+#if !defined(ZIPPER_CONCEPTS_DIRECTSOLVER_HPP)
+#define ZIPPER_CONCEPTS_DIRECTSOLVER_HPP
 
 #include <type_traits>
 
@@ -66,3 +67,4 @@ concept DirectSolver = requires {
 } && direct_solver_detail::HasSolveMethod<S>::value;
 
 } // namespace zipper::concepts
+#endif

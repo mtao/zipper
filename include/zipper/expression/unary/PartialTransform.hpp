@@ -1,4 +1,5 @@
-#pragma once
+#if !defined(ZIPPER_EXPRESSION_UNARY_PARTIALTRANSFORM_HPP)
+#define ZIPPER_EXPRESSION_UNARY_PARTIALTRANSFORM_HPP
 
 // PartialTransform — fiber-wise function application.
 //
@@ -423,3 +424,4 @@ namespace unary {
 
 } // namespace unary
 } // namespace zipper::expression
+#endif

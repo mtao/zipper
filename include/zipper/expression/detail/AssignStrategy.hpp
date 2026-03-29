@@ -1,4 +1,5 @@
-#pragma once
+#if !defined(ZIPPER_EXPRESSION_DETAIL_ASSIGNSTRATEGY_HPP)
+#define ZIPPER_EXPRESSION_DETAIL_ASSIGNSTRATEGY_HPP
 
 // ── AssignStrategy ───────────────────────────────────────────────────────
 //
@@ -87,3 +88,4 @@ inline constexpr bool is_fiber_assign_strategy_v =
     is_fiber_assign_strategy<T>::value;
 
 } // namespace zipper::expression::detail
+#endif

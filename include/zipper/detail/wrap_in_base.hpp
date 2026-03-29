@@ -1,4 +1,5 @@
-#pragma once
+#if !defined(ZIPPER_DETAIL_WRAP_IN_BASE_HPP)
+#define ZIPPER_DETAIL_WRAP_IN_BASE_HPP
 
 // ── wrap_in_base ─────────────────────────────────────────────────────────
 //
@@ -97,3 +98,4 @@ auto wrap_in_base(Args &&...args) -> wrap_in_base_t<Expr, BaseOverride> {
 }
 
 } // namespace zipper::detail
+#endif

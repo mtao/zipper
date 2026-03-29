@@ -22,7 +22,8 @@
 /// @see zipper::concepts::Preconditioner
 /// @see zipper::utils::solver::preconditioned_conjugate_gradient
 
-#pragma once
+#if !defined(ZIPPER_UTILS_SOLVER_PRECONDITIONER_SSOR_PRECONDITIONER_HPP)
+#define ZIPPER_UTILS_SOLVER_PRECONDITIONER_SSOR_PRECONDITIONER_HPP
 
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
@@ -115,3 +116,4 @@ struct SSORPreconditioner {
 };
 
 } // namespace zipper::utils::solver
+#endif
