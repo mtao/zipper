@@ -5,11 +5,13 @@
 #if !defined(ZIPPER_UTILS_SPARSE_ADD_HPP)
 #define ZIPPER_UTILS_SPARSE_ADD_HPP
 
-#include <stdexcept>
+#include <expected>
+#include <string>
 #include <vector>
 
 #include <zipper/CSMatrix.hpp>
 #include <zipper/CSRMatrix.hpp>
+#include <zipper/utils/sparse/error.hpp>
 
 namespace zipper::utils::sparse {
 
@@ -25,20 +27,21 @@ namespace zipper::utils::sparse {
 /// @param B      Second sparse matrix.
 /// @param alpha  Scalar multiplier for A (default 1).
 /// @param beta   Scalar multiplier for B (default 1).
-/// @return       C = alpha * A + beta * B as a new CSMatrix.
+/// @return       C = alpha * A + beta * B, or SparseError on dimension mismatch.
 template <typename T, index_type Rows, index_type Cols, typename LayoutPolicy>
 auto add(const CSMatrix<T, Rows, Cols, LayoutPolicy> &A,
          const CSMatrix<T, Rows, Cols, LayoutPolicy> &B,
          T alpha = T{1},
          T beta = T{1})
-    -> CSMatrix<T, Rows, Cols, LayoutPolicy> {
+    -> std::expected<CSMatrix<T, Rows, Cols, LayoutPolicy>, SparseError> {
     using OutMatrix = CSMatrix<T, Rows, Cols, LayoutPolicy>;
     using out_expression_type = typename OutMatrix::expression_type;
     using out_data_type = typename out_expression_type::compressed_data_type;
 
     if (A.extent(0) != B.extent(0) || A.extent(1) != B.extent(1)) {
-        throw std::invalid_argument(
-            "sparse::add: matrices must have the same dimensions");
+        return std::unexpected(SparseError{
+            SparseError::Kind::dimension_mismatch,
+            "sparse::add: matrices must have the same dimensions"});
     }
 
     const auto &cd_a = A.expression().compressed_data();

@@ -7,11 +7,13 @@
 #define ZIPPER_UTILS_SPARSE_MULTIPLY_HPP
 
 #include <algorithm>
-#include <stdexcept>
+#include <expected>
+#include <string>
 #include <vector>
 
 #include <zipper/CSMatrix.hpp>
 #include <zipper/CSRMatrix.hpp>
+#include <zipper/utils/sparse/error.hpp>
 
 namespace zipper::utils::sparse {
 
@@ -37,11 +39,11 @@ namespace zipper::utils::sparse {
 ///
 /// @param A  Left operand (m x k, CSR).
 /// @param B  Right operand (k x n, CSR).
-/// @return   C = A * B (m x n, CSR).
+/// @return   C = A * B (m x n, CSR), or SparseError on dimension mismatch.
 template <typename T, index_type M, index_type K1, index_type K2, index_type N>
 auto spgemm(const CSRMatrix<T, M, K1> &A,
             const CSRMatrix<T, K2, N> &B)
-    -> CSRMatrix<T, M, N> {
+    -> std::expected<CSRMatrix<T, M, N>, SparseError> {
     using OutMatrix = CSRMatrix<T, M, N>;
     using out_expression_type = typename OutMatrix::expression_type;
     using out_data_type = typename out_expression_type::compressed_data_type;
@@ -51,8 +53,9 @@ auto spgemm(const CSRMatrix<T, M, K1> &A,
     const auto n = B.extent(1);
 
     if (k != B.extent(0)) {
-        throw std::invalid_argument(
-            "sparse::spgemm: inner dimensions must agree");
+        return std::unexpected(SparseError{
+            SparseError::Kind::dimension_mismatch,
+            "sparse::spgemm: inner dimensions must agree"});
     }
 
     const auto &cd_a = A.expression().compressed_data();

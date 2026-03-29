@@ -135,7 +135,9 @@ TEST_CASE("sparse_add_same_pattern", "[sparse][add]") {
     auto A = make_test_csr_3x3();
 
     // A + A = 2*A
-    auto C = utils::sparse::add(A, A);
+    auto C_result = utils::sparse::add(A, A);
+    REQUIRE(C_result.has_value());
+    auto C = std::move(C_result).value();
     for (index_type i = 0; i < 3; ++i) {
         for (index_type j = 0; j < 3; ++j) {
             CHECK(C(i, j) == Catch::Approx(2.0 * A(i, j)));
@@ -148,7 +150,9 @@ TEST_CASE("sparse_add_disjoint_patterns", "[sparse][add]") {
     auto B = make_test_csr_3x3_b();
 
     // A and B have completely disjoint sparsity patterns.
-    auto C = utils::sparse::add(A, B);
+    auto C_result = utils::sparse::add(A, B);
+    REQUIRE(C_result.has_value());
+    auto C = std::move(C_result).value();
 
     // C should be:
     // [[1, 6, 2],
@@ -170,7 +174,9 @@ TEST_CASE("sparse_add_with_scalars", "[sparse][add]") {
     auto B = make_test_csr_3x3();
 
     // 2*A - A = A
-    auto C = utils::sparse::add(A, B, 2.0, -1.0);
+    auto C_result = utils::sparse::add(A, B, 2.0, -1.0);
+    REQUIRE(C_result.has_value());
+    auto C = std::move(C_result).value();
     for (index_type i = 0; i < 3; ++i) {
         for (index_type j = 0; j < 3; ++j) {
             CHECK(C(i, j) == Catch::Approx(A(i, j)));
@@ -182,7 +188,9 @@ TEST_CASE("sparse_add_cancellation", "[sparse][add]") {
     auto A = make_test_csr_3x3();
 
     // A - A = 0
-    auto C = utils::sparse::add(A, A, 1.0, -1.0);
+    auto C_result = utils::sparse::add(A, A, 1.0, -1.0);
+    REQUIRE(C_result.has_value());
+    auto C = std::move(C_result).value();
     for (index_type i = 0; i < 3; ++i) {
         for (index_type j = 0; j < 3; ++j) {
             CHECK(C(i, j) == Catch::Approx(0.0));
@@ -198,7 +206,9 @@ TEST_CASE("spgemm_identity_left", "[sparse][multiply]") {
     auto I = utils::sparse::sparse_identity<double>(3);
     auto A = make_test_csr_3x3();
 
-    auto C = utils::sparse::spgemm(I, A);
+    auto C_result = utils::sparse::spgemm(I, A);
+    REQUIRE(C_result.has_value());
+    auto C = std::move(C_result).value();
     CHECK(C.extent(0) == 3);
     CHECK(C.extent(1) == 3);
 
@@ -213,7 +223,9 @@ TEST_CASE("spgemm_identity_right", "[sparse][multiply]") {
     auto A = make_test_csr_3x3();
     auto I = utils::sparse::sparse_identity<double>(3);
 
-    auto C = utils::sparse::spgemm(A, I);
+    auto C_result = utils::sparse::spgemm(A, I);
+    REQUIRE(C_result.has_value());
+    auto C = std::move(C_result).value();
     for (index_type i = 0; i < 3; ++i) {
         for (index_type j = 0; j < 3; ++j) {
             CHECK(C(i, j) == Catch::Approx(A(i, j)));
@@ -228,7 +240,9 @@ TEST_CASE("spgemm_known_product", "[sparse][multiply]") {
     // A = [[1,0,2],[0,3,0],[4,0,5]]
     // A^2 = [[1*1+2*4, 0, 1*2+2*5], [0, 9, 0], [4*1+5*4, 0, 4*2+5*5]]
     //     = [[9, 0, 12], [0, 9, 0], [24, 0, 33]]
-    auto C = utils::sparse::spgemm(A, A);
+    auto C_result = utils::sparse::spgemm(A, A);
+    REQUIRE(C_result.has_value());
+    auto C = std::move(C_result).value();
 
     CHECK(C(0, 0) == Catch::Approx(9.0));
     CHECK(C(0, 1) == Catch::Approx(0.0));
@@ -258,7 +272,9 @@ TEST_CASE("spgemm_rectangular", "[sparse][multiply]") {
     auto B = coo_b.to_csr();
 
     // C = A * B = [[1*4+2*6, 0], [0, 3*5]] = [[16, 0], [0, 15]]
-    auto C = utils::sparse::spgemm(A, B);
+    auto C_result = utils::sparse::spgemm(A, B);
+    REQUIRE(C_result.has_value());
+    auto C = std::move(C_result).value();
     CHECK(C.extent(0) == 2);
     CHECK(C.extent(1) == 2);
     CHECK(C(0, 0) == Catch::Approx(16.0));
@@ -272,7 +288,9 @@ TEST_CASE("spgemm_vs_dense", "[sparse][multiply]") {
     auto A = make_test_csr_3x3();
     auto B = make_test_csr_3x3_b();
 
-    auto C_sparse = utils::sparse::spgemm(A, B);
+    auto C_sparse_result = utils::sparse::spgemm(A, B);
+    REQUIRE(C_sparse_result.has_value());
+    auto C_sparse = std::move(C_sparse_result).value();
 
     // Dense reference: A_dense * B_dense.
     Matrix<double, 3, 3> A_dense{{{1, 0, 2}, {0, 3, 0}, {4, 0, 5}}};
