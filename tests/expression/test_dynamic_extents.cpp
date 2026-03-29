@@ -204,9 +204,9 @@ namespace {
 template <typename ExpressionType, int index>
 auto make_partial_sum(const ExpressionType &a,
                       std::integral_constant<int, index>) {
-    return expression::unary::detail::PartialReductionDispatcher<
-               const ExpressionType, index>(a)
-        .sum();
+    return expression::unary::detail::
+        PartialReductionDispatcher<const ExpressionType, index>(a)
+            .sum();
 }
 } // namespace
 
@@ -226,14 +226,16 @@ TEST_CASE("dynamic_partial_sum_rowwise", "[dynamic][reduction]") {
     A(2, 3) = 0;
 
     // Sum along axis 1 (cols) -> row sums
-    auto pr = make_partial_sum(A.expression(), std::integral_constant<int, 1>{});
+    auto pr =
+        make_partial_sum(A.expression(), std::integral_constant<int, 1>{});
     REQUIRE(pr.extent(0) == 3);
     CHECK(pr(0) == 1.0);
     CHECK(pr(1) == 1.0);
     CHECK(pr(2) == 1.0);
 
     // Sum along axis 0 (rows) -> column sums
-    auto pc = make_partial_sum(A.expression(), std::integral_constant<int, 0>{});
+    auto pc =
+        make_partial_sum(A.expression(), std::integral_constant<int, 0>{});
     REQUIRE(pc.extent(0) == 4);
     CHECK(pc(0) == 1.0);
     CHECK(pc(1) == 1.0);
@@ -246,9 +248,8 @@ TEST_CASE("dynamic_partial_sum_rowwise", "[dynamic][reduction]") {
 // ============================================================
 
 TEST_CASE("dynamic_trace", "[dynamic][reduction]") {
-    MatrixXX<double> I =
-        expression::nullary::Identity<double, std::dynamic_extent,
-                                      std::dynamic_extent>(3, 3);
+    MatrixXX<double> I = expression::nullary::
+        Identity<double, std::dynamic_extent, std::dynamic_extent>(3, 3);
     CHECK(I.trace() == 3.0);
 
     MatrixXX<double> A(3, 3);
@@ -326,9 +327,8 @@ TEST_CASE("dynamic_cofactor_3x3", "[dynamic][cofactor]") {
 // ============================================================
 
 TEST_CASE("dynamic_cast_double_to_float", "[dynamic][cast]") {
-    MatrixXX<double> A =
-        expression::nullary::Identity<double, std::dynamic_extent,
-                                      std::dynamic_extent>(3, 3);
+    MatrixXX<double> A = expression::nullary::
+        Identity<double, std::dynamic_extent, std::dynamic_extent>(3, 3);
 
     auto B = expression::unary::cast<float>(A.expression());
     CHECK(B(0, 0) == 1.0f);
@@ -403,9 +403,8 @@ TEST_CASE("dynamic_compound_operations", "[dynamic][compound]") {
 }
 
 TEST_CASE("dynamic_matrix_identity_multiply", "[dynamic][product]") {
-    MatrixXX<double> I =
-        expression::nullary::Identity<double, std::dynamic_extent,
-                                      std::dynamic_extent>(3, 3);
+    MatrixXX<double> I = expression::nullary::
+        Identity<double, std::dynamic_extent, std::dynamic_extent>(3, 3);
     MatrixXX<double> A(3, 3);
     A(0, 0) = 1;
     A(0, 1) = 2;
@@ -419,9 +418,7 @@ TEST_CASE("dynamic_matrix_identity_multiply", "[dynamic][product]") {
 
     MatrixXX<double> B = I * A;
     for (index_type r = 0; r < 3; ++r) {
-        for (index_type c = 0; c < 3; ++c) {
-            CHECK(B(r, c) == A(r, c));
-        }
+        for (index_type c = 0; c < 3; ++c) { CHECK(B(r, c) == A(r, c)); }
     }
 }
 
@@ -463,27 +460,21 @@ TEST_CASE("dynamic_matrix_resize", "[dynamic][resize]") {
 TEST_CASE("dynamic_matrix_transpose", "[dynamic][transpose]") {
     MatrixXX<double> A(3, 3);
     for (index_type j = 0; j < 3; ++j) {
-        for (index_type k = 0; k < 3; ++k) {
-            A(j, k) = 3.0 * j + k;
-        }
+        for (index_type k = 0; k < 3; ++k) { A(j, k) = 3.0 * j + k; }
     }
 
     auto AT = A.transpose();
     REQUIRE(AT.extent(0) == 3);
     REQUIRE(AT.extent(1) == 3);
     for (index_type j = 0; j < 3; ++j) {
-        for (index_type k = 0; k < 3; ++k) {
-            CHECK(AT(k, j) == 3.0 * j + k);
-        }
+        for (index_type k = 0; k < 3; ++k) { CHECK(AT(k, j) == 3.0 * j + k); }
     }
 }
 
 TEST_CASE("dynamic_transpose_product", "[dynamic][transpose][product]") {
     MatrixXX<double> M(3, 3);
     for (index_type j = 0; j < 3; ++j) {
-        for (index_type k = 0; k < 3; ++k) {
-            M(j, k) = 3.0 * j + k;
-        }
+        for (index_type k = 0; k < 3; ++k) { M(j, k) = 3.0 * j + k; }
     }
 
     MatrixXX<double> MTM = M.transpose() * M;
@@ -526,9 +517,8 @@ TEST_CASE("dynamic_determinant_3x3", "[dynamic][reduction][determinant]") {
 }
 
 TEST_CASE("dynamic_determinant_identity", "[dynamic][reduction][determinant]") {
-    MatrixXX<double> I =
-        expression::nullary::Identity<double, std::dynamic_extent,
-                                      std::dynamic_extent>(4, 4);
+    MatrixXX<double> I = expression::nullary::
+        Identity<double, std::dynamic_extent, std::dynamic_extent>(4, 4);
     double det = expression::reductions::Determinant(I.expression())();
     CHECK(det == Catch::Approx(1.0));
 }
@@ -573,9 +563,7 @@ TEST_CASE("dynamic_vector_segment", "[dynamic][slicing]") {
 TEST_CASE("dynamic_matrix_row_col", "[dynamic][slicing]") {
     MatrixXX<double> A(3, 4);
     for (index_type j = 0; j < 3; ++j) {
-        for (index_type k = 0; k < 4; ++k) {
-            A(j, k) = 4.0 * j + k;
-        }
+        for (index_type k = 0; k < 4; ++k) { A(j, k) = 4.0 * j + k; }
     }
 
     auto r1 = A.row(index_type(1));
@@ -599,27 +587,21 @@ TEST_CASE("dynamic_matrix_row_col", "[dynamic][slicing]") {
 TEST_CASE("dynamic_matrix_topRows", "[dynamic][slicing][blocks]") {
     MatrixXX<double> A(4, 3);
     for (index_type j = 0; j < 4; ++j) {
-        for (index_type k = 0; k < 3; ++k) {
-            A(j, k) = j;
-        }
+        for (index_type k = 0; k < 3; ++k) { A(j, k) = j; }
     }
 
     auto top = A.topRows(2);
     REQUIRE(top.rows() == 2);
     REQUIRE(top.cols() == 3);
     for (index_type j = 0; j < 2; ++j) {
-        for (index_type k = 0; k < 3; ++k) {
-            CHECK(top(j, k) == j);
-        }
+        for (index_type k = 0; k < 3; ++k) { CHECK(top(j, k) == j); }
     }
 }
 
 TEST_CASE("dynamic_matrix_bottomRows", "[dynamic][slicing][blocks]") {
     MatrixXX<double> A(4, 3);
     for (index_type j = 0; j < 4; ++j) {
-        for (index_type k = 0; k < 3; ++k) {
-            A(j, k) = j;
-        }
+        for (index_type k = 0; k < 3; ++k) { A(j, k) = j; }
     }
 
     auto bot = A.bottomRows(2);
@@ -632,36 +614,28 @@ TEST_CASE("dynamic_matrix_bottomRows", "[dynamic][slicing][blocks]") {
 TEST_CASE("dynamic_matrix_leftCols", "[dynamic][slicing][blocks]") {
     MatrixXX<double> A(3, 5);
     for (index_type j = 0; j < 3; ++j) {
-        for (index_type k = 0; k < 5; ++k) {
-            A(j, k) = k;
-        }
+        for (index_type k = 0; k < 5; ++k) { A(j, k) = k; }
     }
 
     auto left = A.leftCols(3);
     REQUIRE(left.rows() == 3);
     REQUIRE(left.cols() == 3);
     for (index_type j = 0; j < 3; ++j) {
-        for (index_type k = 0; k < 3; ++k) {
-            CHECK(left(j, k) == k);
-        }
+        for (index_type k = 0; k < 3; ++k) { CHECK(left(j, k) == k); }
     }
 }
 
 TEST_CASE("dynamic_matrix_rightCols", "[dynamic][slicing][blocks]") {
     MatrixXX<double> A(3, 5);
     for (index_type j = 0; j < 3; ++j) {
-        for (index_type k = 0; k < 5; ++k) {
-            A(j, k) = k;
-        }
+        for (index_type k = 0; k < 5; ++k) { A(j, k) = k; }
     }
 
     auto right = A.rightCols(3);
     REQUIRE(right.rows() == 3);
     REQUIRE(right.cols() == 3);
     for (index_type j = 0; j < 3; ++j) {
-        for (index_type k = 0; k < 3; ++k) {
-            CHECK(right(j, k) == k + 2);
-        }
+        for (index_type k = 0; k < 3; ++k) { CHECK(right(j, k) == k + 2); }
     }
 }
 
@@ -691,9 +665,7 @@ TEST_CASE("dynamic_diagonal_access", "[dynamic][diagonal]") {
 TEST_CASE("dynamic_diagonal_assignment", "[dynamic][diagonal]") {
     MatrixXX<double> A(3, 3);
     for (index_type j = 0; j < 3; ++j) {
-        for (index_type k = 0; k < 3; ++k) {
-            A(j, k) = 0;
-        }
+        for (index_type k = 0; k < 3; ++k) { A(j, k) = 0; }
     }
 
     A.diagonal() = expression::nullary::Constant<double, 3>(1.0);
@@ -913,11 +885,15 @@ TEST_CASE("dynamic_vector_compound_scalar_div", "[dynamic][compound]") {
 
 TEST_CASE("dynamic_matrix_compound_add", "[dynamic][compound]") {
     MatrixXX<double> A(2, 2);
-    A(0, 0) = 1.0; A(0, 1) = 2.0;
-    A(1, 0) = 3.0; A(1, 1) = 4.0;
+    A(0, 0) = 1.0;
+    A(0, 1) = 2.0;
+    A(1, 0) = 3.0;
+    A(1, 1) = 4.0;
     MatrixXX<double> B(2, 2);
-    B(0, 0) = 10.0; B(0, 1) = 20.0;
-    B(1, 0) = 30.0; B(1, 1) = 40.0;
+    B(0, 0) = 10.0;
+    B(0, 1) = 20.0;
+    B(1, 0) = 30.0;
+    B(1, 1) = 40.0;
     A += B;
     CHECK(A(0, 0) == 11.0);
     CHECK(A(0, 1) == 22.0);
@@ -927,11 +903,15 @@ TEST_CASE("dynamic_matrix_compound_add", "[dynamic][compound]") {
 
 TEST_CASE("dynamic_matrix_compound_sub", "[dynamic][compound]") {
     MatrixXX<double> A(2, 2);
-    A(0, 0) = 10.0; A(0, 1) = 20.0;
-    A(1, 0) = 30.0; A(1, 1) = 40.0;
+    A(0, 0) = 10.0;
+    A(0, 1) = 20.0;
+    A(1, 0) = 30.0;
+    A(1, 1) = 40.0;
     MatrixXX<double> B(2, 2);
-    B(0, 0) = 1.0; B(0, 1) = 2.0;
-    B(1, 0) = 3.0; B(1, 1) = 4.0;
+    B(0, 0) = 1.0;
+    B(0, 1) = 2.0;
+    B(1, 0) = 3.0;
+    B(1, 1) = 4.0;
     A -= B;
     CHECK(A(0, 0) == 9.0);
     CHECK(A(0, 1) == 18.0);
@@ -941,8 +921,10 @@ TEST_CASE("dynamic_matrix_compound_sub", "[dynamic][compound]") {
 
 TEST_CASE("dynamic_matrix_compound_scalar_mul", "[dynamic][compound]") {
     MatrixXX<double> A(2, 2);
-    A(0, 0) = 1.0; A(0, 1) = 2.0;
-    A(1, 0) = 3.0; A(1, 1) = 4.0;
+    A(0, 0) = 1.0;
+    A(0, 1) = 2.0;
+    A(1, 0) = 3.0;
+    A(1, 1) = 4.0;
     A *= 2.0;
     CHECK(A(0, 0) == 2.0);
     CHECK(A(0, 1) == 4.0);
@@ -952,8 +934,10 @@ TEST_CASE("dynamic_matrix_compound_scalar_mul", "[dynamic][compound]") {
 
 TEST_CASE("dynamic_matrix_compound_scalar_div", "[dynamic][compound]") {
     MatrixXX<double> A(2, 2);
-    A(0, 0) = 2.0; A(0, 1) = 4.0;
-    A(1, 0) = 6.0; A(1, 1) = 8.0;
+    A(0, 0) = 2.0;
+    A(0, 1) = 4.0;
+    A(1, 0) = 6.0;
+    A(1, 1) = 8.0;
     A /= 2.0;
     CHECK(A(0, 0) == 1.0);
     CHECK(A(0, 1) == 2.0);
