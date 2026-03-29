@@ -251,11 +251,11 @@ public:
   /// Usage:
   ///   auto r = x.ref();       // r is Returnable
   ///   auto h = r.head<3>();   // h is also Returnable (unlike x.unsafe())
-  auto ref() const & {
+  auto ref() const & -> DerivedT<expression::unary::UnsafeRef<const expression_type &, true>> {
     using V = expression::unary::UnsafeRef<const expression_type &, true>;
     return DerivedT<V>(std::in_place, expression());
   }
-  auto ref() & {
+  auto ref() & -> DerivedT<expression::unary::UnsafeRef<expression_type &, true>> {
     using V = expression::unary::UnsafeRef<expression_type &, true>;
     return DerivedT<V>(std::in_place, expression());
   }

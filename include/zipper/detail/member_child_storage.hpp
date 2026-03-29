@@ -13,7 +13,6 @@ namespace zipper::detail {
 /// expression type stored in the wrapper, this trait selects:
 ///
 ///   - `ExprType`          when Self is an rvalue  → store by value (safe to return)
-///   - `ExprType`          when Self is an rvalue  → store by value (safe to return)
 ///   - `ExprType`          when ExprType is view-propagating → store by value
 ///                         (copying is cheap — just copies a reference wrapper)
 ///   - `const ExprType &`  when Self is a const lvalue  → store by const ref

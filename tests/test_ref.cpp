@@ -15,7 +15,7 @@ using namespace zipper;
 // Section 1: ref() / cref() basic usage
 // ============================================================================
 
-TEST_CASE("ref(vector) returns a Returnable view", "[ref][vector]") {
+TEST_CASE("ref_vector_returns_returnable_view", "[ref][vector]") {
     Vector<double, 3> v({1.0, 2.0, 3.0});
     auto r = ref(v);
 
@@ -28,7 +28,7 @@ TEST_CASE("ref(vector) returns a Returnable view", "[ref][vector]") {
     STATIC_REQUIRE(std::is_copy_constructible_v<R>);
 }
 
-TEST_CASE("cref(vector) returns a const Returnable view", "[ref][vector][const]") {
+TEST_CASE("cref_vector_returns_const_returnable_view", "[ref][vector][const]") {
     Vector<double, 3> v({1.0, 2.0, 3.0});
     auto r = cref(v);
 
@@ -38,7 +38,7 @@ TEST_CASE("cref(vector) returns a const Returnable view", "[ref][vector][const]"
     STATIC_REQUIRE(std::is_copy_constructible_v<R>);
 }
 
-TEST_CASE("cref(const vector) binds to const lvalue", "[ref][vector][const]") {
+TEST_CASE("cref_const_vector_binds_to_const_lvalue", "[ref][vector][const]") {
     const Vector<double, 3> v({1.0, 2.0, 3.0});
     auto r = cref(v);
 
@@ -47,7 +47,7 @@ TEST_CASE("cref(const vector) binds to const lvalue", "[ref][vector][const]") {
     REQUIRE(r(2) == 3.0);
 }
 
-TEST_CASE("ref(matrix) works", "[ref][matrix]") {
+TEST_CASE("ref_matrix_works", "[ref][matrix]") {
     Matrix<double, 2, 3> m({{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}});
     auto r = ref(m);
 
@@ -62,7 +62,7 @@ TEST_CASE("ref(matrix) works", "[ref][matrix]") {
 // Section 2: rvalue overloads are deleted
 // ============================================================================
 
-TEST_CASE("ref(rvalue) is deleted", "[ref][static]") {
+TEST_CASE("ref_rvalue_is_deleted", "[ref][static]") {
     STATIC_REQUIRE_FALSE(
         std::is_invocable_v<decltype(static_cast<auto(*)(Vector<double,3>&) -> decltype(ref(std::declval<Vector<double,3>&>()))>(&ref<Vector<double,3>>)),
                            Vector<double, 3>&&>);
@@ -72,7 +72,7 @@ TEST_CASE("ref(rvalue) is deleted", "[ref][static]") {
 // Section 3: View propagation — derived views are Returnable
 // ============================================================================
 
-TEST_CASE("head() from ref(vector) is Returnable", "[ref][vector][views]") {
+TEST_CASE("head_from_ref_vector_is_returnable", "[ref][vector][views]") {
     Vector<double, 5> v({1.0, 2.0, 3.0, 4.0, 5.0});
     auto r = ref(v);
     auto h = r.head<3>();
@@ -86,7 +86,7 @@ TEST_CASE("head() from ref(vector) is Returnable", "[ref][vector][views]") {
     REQUIRE(h(2) == 3.0);
 }
 
-TEST_CASE("tail() from ref(vector) is Returnable", "[ref][vector][views]") {
+TEST_CASE("tail_from_ref_vector_is_returnable", "[ref][vector][views]") {
     Vector<double, 5> v({1.0, 2.0, 3.0, 4.0, 5.0});
     auto r = ref(v);
     auto t = r.tail<3>();
@@ -100,7 +100,7 @@ TEST_CASE("tail() from ref(vector) is Returnable", "[ref][vector][views]") {
     REQUIRE(t(2) == 5.0);
 }
 
-TEST_CASE("transpose() from ref(matrix) is Returnable", "[ref][matrix][views]") {
+TEST_CASE("transpose_from_ref_matrix_is_returnable", "[ref][matrix][views]") {
     Matrix<double, 2, 3> m({{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}});
     auto r = ref(m);
     auto t = r.transpose();
@@ -114,7 +114,7 @@ TEST_CASE("transpose() from ref(matrix) is Returnable", "[ref][matrix][views]") 
     REQUIRE(t(0, 1) == 4.0);
 }
 
-TEST_CASE("row() from ref(matrix) is Returnable", "[ref][matrix][views]") {
+TEST_CASE("row_from_ref_matrix_is_returnable", "[ref][matrix][views]") {
     Matrix<double, 3, 3> m({{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}, {7.0, 8.0, 9.0}});
     auto r = ref(m);
     auto row = r.row(1);
@@ -132,7 +132,7 @@ TEST_CASE("row() from ref(matrix) is Returnable", "[ref][matrix][views]") {
 // Section 4: ref() reflects mutations (it's a reference)
 // ============================================================================
 
-TEST_CASE("ref(vector) reflects mutations of original", "[ref][vector][mutation]") {
+TEST_CASE("ref_vector_reflects_mutations_of_original", "[ref][vector][mutation]") {
     Vector<double, 3> v({1.0, 2.0, 3.0});
     auto r = ref(v);
 
@@ -140,7 +140,7 @@ TEST_CASE("ref(vector) reflects mutations of original", "[ref][vector][mutation]
     REQUIRE(r(0) == 42.0);
 }
 
-TEST_CASE("ref(vector) allows mutation through ref", "[ref][vector][mutation]") {
+TEST_CASE("ref_vector_allows_mutation_through_ref", "[ref][vector][mutation]") {
     Vector<double, 3> v({1.0, 2.0, 3.0});
     auto r = ref(v);
 
@@ -148,7 +148,7 @@ TEST_CASE("ref(vector) allows mutation through ref", "[ref][vector][mutation]") 
     REQUIRE(v(0) == 42.0);
 }
 
-TEST_CASE("head() from ref(vector) reflects mutations", "[ref][vector][views][mutation]") {
+TEST_CASE("head_from_ref_vector_reflects_mutations", "[ref][vector][views][mutation]") {
     Vector<double, 5> v({1.0, 2.0, 3.0, 4.0, 5.0});
     auto r = ref(v);
     auto h = r.head<3>();
@@ -175,7 +175,7 @@ auto get_row(const M& m) {
 
 } // namespace
 
-TEST_CASE("ref(vector) through function boundary: head", "[ref][vector][function]") {
+TEST_CASE("ref_vector_through_function_boundary_head", "[ref][vector][function]") {
     Vector<double, 5> v({10.0, 20.0, 30.0, 40.0, 50.0});
     auto h = get_head(ref(v));
 
@@ -188,7 +188,7 @@ TEST_CASE("ref(vector) through function boundary: head", "[ref][vector][function
     REQUIRE(h(0) == 99.0);
 }
 
-TEST_CASE("ref(matrix) through function boundary: row", "[ref][matrix][function]") {
+TEST_CASE("ref_matrix_through_function_boundary_row", "[ref][matrix][function]") {
     Matrix<double, 3, 3> m({{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}, {7.0, 8.0, 9.0}});
     auto r = get_row(ref(m));
 
@@ -197,7 +197,7 @@ TEST_CASE("ref(matrix) through function boundary: row", "[ref][matrix][function]
     REQUIRE(r(2) == 6.0);
 }
 
-TEST_CASE("cref(vector) through function boundary", "[ref][vector][const][function]") {
+TEST_CASE("cref_vector_through_function_boundary", "[ref][vector][const][function]") {
     const Vector<double, 5> v({10.0, 20.0, 30.0, 40.0, 50.0});
     auto h = get_head(cref(v));
 
@@ -210,7 +210,7 @@ TEST_CASE("cref(vector) through function boundary", "[ref][vector][const][functi
 // Section 6: unsafe() does NOT propagate (existing behavior preserved)
 // ============================================================================
 
-TEST_CASE("unsafe() itself is Returnable but derived views are not",
+TEST_CASE("unsafe_itself_is_returnable_but_derived_views_are_not",
           "[unsafe][vector][views]") {
     Vector<double, 5> v({1.0, 2.0, 3.0, 4.0, 5.0});
     auto u = v.unsafe();
@@ -230,7 +230,7 @@ TEST_CASE("unsafe() itself is Returnable but derived views are not",
 // Section 7: is_view_propagating trait checks
 // ============================================================================
 
-TEST_CASE("is_view_propagating trait", "[ref][traits]") {
+TEST_CASE("is_view_propagating_trait", "[ref][traits]") {
     using V = Vector<double, 3>;
     using VExpr = V::expression_type;
 

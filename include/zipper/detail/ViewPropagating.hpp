@@ -1,4 +1,5 @@
-#pragma once
+#if !defined(ZIPPER_DETAIL_VIEWPROPAGATING_HPP)
+#define ZIPPER_DETAIL_VIEWPROPAGATING_HPP
 
 #include <concepts>
 #include <type_traits>
@@ -16,3 +17,5 @@ concept ViewPropagating = requires {
 } && std::decay_t<T>::is_view_propagating;
 
 } // namespace zipper::detail
+
+#endif

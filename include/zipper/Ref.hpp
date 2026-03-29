@@ -1,4 +1,5 @@
-#pragma once
+#if !defined(ZIPPER_REF_HPP)
+#define ZIPPER_REF_HPP
 
 #include "concepts/Zipper.hpp"
 
@@ -18,7 +19,7 @@ namespace zipper {
 ///   auto f(const A& a) { return a.head<3>(); }
 ///   auto h2 = f(ref(x));        // h2 is Returnable
 template <concepts::Zipper T>
-auto ref(T &x) { return x.ref(); }
+auto ref(T &x) -> decltype(x.ref()) { return x.ref(); }
 
 /// Rvalue overload is deleted — ref() requires an lvalue with a
 /// guaranteed lifetime.
@@ -30,10 +31,12 @@ void ref(const T &&) = delete;
 /// Like ref(), but the result is read-only.  Binds to both const and
 /// mutable lvalues.
 template <concepts::Zipper T>
-auto cref(const T &x) { return x.ref(); }
+auto cref(const T &x) -> decltype(x.ref()) { return x.ref(); }
 
 /// Rvalue overload is deleted.
 template <concepts::Zipper T>
 void cref(const T &&) = delete;
 
 } // namespace zipper
+
+#endif
