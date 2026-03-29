@@ -10,50 +10,6 @@
 using namespace zipper;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────────────────
-//
-// Since zipper may not support matrix-matrix multiplication directly, all
-// verification is done via element-level loops.
-
-/// Compute C = A * B element-by-element and store in C.
-/// C must already be allocated with the right dimensions.
-template <typename T, index_type M, index_type K, index_type N>
-void mat_mul(const Matrix<T, M, K> &A, const Matrix<T, K, N> &B,
-             Matrix<T, M, N> &C) {
-  const index_type m = A.extent(0);
-  const index_type k = A.extent(1);
-  const index_type n = B.extent(1);
-  for (index_type i = 0; i < m; ++i) {
-    for (index_type j = 0; j < n; ++j) {
-      T sum = T{0};
-      for (index_type l = 0; l < k; ++l) {
-        sum += A(i, l) * B(l, j);
-      }
-      C(i, j) = sum;
-    }
-  }
-}
-
-/// Compute C = A^T * B element-by-element.
-template <typename T, index_type M, index_type K, index_type N>
-void mat_mul_AtB(const Matrix<T, M, K> &A, const Matrix<T, M, N> &B,
-                 Matrix<T, K, N> &C) {
-  const index_type m = A.extent(0);
-  const index_type k = A.extent(1);
-  const index_type n = B.extent(1);
-  for (index_type i = 0; i < k; ++i) {
-    for (index_type j = 0; j < n; ++j) {
-      T sum = T{0};
-      for (index_type l = 0; l < m; ++l) {
-        sum += A(l, i) * B(l, j);
-      }
-      C(i, j) = sum;
-    }
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Householder QR (reduced)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -66,9 +22,8 @@ TEST_CASE("qr reduced 3x3", "[decomposition][qr]") {
 
     auto [Q, R] = utils::decomposition::qr(A);
 
-    // Q should have orthonormal columns: Q^T * Q ≈ I.
-    Matrix<double, 3, 3> QtQ(3, 3);
-    mat_mul_AtB(Q, Q, QtQ);
+    // Q should have orthonormal columns: Q^T * Q ≈ I (Gram matrix).
+    Matrix<double, 3, 3> QtQ = Q.transpose() * Q;
     for (index_type i = 0; i < 3; ++i) {
         for (index_type j = 0; j < 3; ++j) {
             double expected = (i == j) ? 1.0 : 0.0;
@@ -84,8 +39,7 @@ TEST_CASE("qr reduced 3x3", "[decomposition][qr]") {
     }
 
     // Q * R ≈ A.
-    Matrix<double, 3, 3> QR(3, 3);
-    mat_mul(Q, R, QR);
+    Matrix<double, 3, 3> QR = Q * R;
     for (index_type i = 0; i < 3; ++i) {
         for (index_type j = 0; j < 3; ++j) {
             CHECK(QR(i, j) == Catch::Approx(A(i, j)).margin(1e-12));
@@ -104,9 +58,8 @@ TEST_CASE("qr reduced 4x3 tall", "[decomposition][qr]") {
 
     auto [Q, R] = utils::decomposition::qr(A);
 
-    // Q^T * Q ≈ I (3x3).
-    Matrix<double, 3, 3> QtQ(3, 3);
-    mat_mul_AtB(Q, Q, QtQ);
+    // Q^T * Q ≈ I (3x3 Gram matrix).
+    Matrix<double, 3, 3> QtQ = Q.transpose() * Q;
     for (index_type i = 0; i < 3; ++i) {
         for (index_type j = 0; j < 3; ++j) {
             double expected = (i == j) ? 1.0 : 0.0;
@@ -122,8 +75,7 @@ TEST_CASE("qr reduced 4x3 tall", "[decomposition][qr]") {
     }
 
     // Q * R ≈ A.
-    Matrix<double, 4, 3> QR(4, 3);
-    mat_mul(Q, R, QR);
+    Matrix<double, 4, 3> QR = Q * R;
     for (index_type i = 0; i < 4; ++i) {
         for (index_type j = 0; j < 3; ++j) {
             CHECK(QR(i, j) == Catch::Approx(A(i, j)).margin(1e-10));
@@ -144,9 +96,8 @@ TEST_CASE("qr_full 3x3", "[decomposition][qr_full]") {
 
     auto [Q, R] = utils::decomposition::qr_full(A);
 
-    // Q should be orthogonal: Q^T * Q ≈ I (3x3).
-    Matrix<double, 3, 3> QtQ(3, 3);
-    mat_mul_AtB(Q, Q, QtQ);
+    // Q should be orthogonal: Q^T * Q ≈ I (Gram matrix).
+    Matrix<double, 3, 3> QtQ = Q.transpose() * Q;
     for (index_type i = 0; i < 3; ++i) {
         for (index_type j = 0; j < 3; ++j) {
             double expected = (i == j) ? 1.0 : 0.0;
@@ -162,8 +113,7 @@ TEST_CASE("qr_full 3x3", "[decomposition][qr_full]") {
     }
 
     // Q * R ≈ A.
-    Matrix<double, 3, 3> QR(3, 3);
-    mat_mul(Q, R, QR);
+    Matrix<double, 3, 3> QR = Q * R;
     for (index_type i = 0; i < 3; ++i) {
         for (index_type j = 0; j < 3; ++j) {
             CHECK(QR(i, j) == Catch::Approx(A(i, j)).margin(1e-12));
@@ -181,9 +131,8 @@ TEST_CASE("qr_full 4x3 tall", "[decomposition][qr_full]") {
 
     auto [Q, R] = utils::decomposition::qr_full(A);
 
-    // Q is 4x4, should be orthogonal.
-    Matrix<double, 4, 4> QtQ(4, 4);
-    mat_mul_AtB(Q, Q, QtQ);
+    // Q is 4x4, should be orthogonal (Gram matrix Q^T Q ≈ I).
+    Matrix<double, 4, 4> QtQ = Q.transpose() * Q;
     for (index_type i = 0; i < 4; ++i) {
         for (index_type j = 0; j < 4; ++j) {
             double expected = (i == j) ? 1.0 : 0.0;
@@ -199,8 +148,7 @@ TEST_CASE("qr_full 4x3 tall", "[decomposition][qr_full]") {
     }
 
     // Q * R ≈ A.
-    Matrix<double, 4, 3> QR(4, 3);
-    mat_mul(Q, R, QR);
+    Matrix<double, 4, 3> QR = Q * R;
     for (index_type i = 0; i < 4; ++i) {
         for (index_type j = 0; j < 3; ++j) {
             CHECK(QR(i, j) == Catch::Approx(A(i, j)).margin(1e-10));
@@ -221,9 +169,8 @@ TEST_CASE("qr_gram_schmidt 3x3", "[decomposition][qr_gram_schmidt]") {
 
     auto [Q, R] = utils::decomposition::qr_gram_schmidt(A);
 
-    // Q^T * Q ≈ I.
-    Matrix<double, 3, 3> QtQ(3, 3);
-    mat_mul_AtB(Q, Q, QtQ);
+    // Q^T * Q ≈ I (Gram matrix).
+    Matrix<double, 3, 3> QtQ = Q.transpose() * Q;
     for (index_type i = 0; i < 3; ++i) {
         for (index_type j = 0; j < 3; ++j) {
             double expected = (i == j) ? 1.0 : 0.0;
@@ -239,8 +186,7 @@ TEST_CASE("qr_gram_schmidt 3x3", "[decomposition][qr_gram_schmidt]") {
     }
 
     // Q * R ≈ A.
-    Matrix<double, 3, 3> QR(3, 3);
-    mat_mul(Q, R, QR);
+    Matrix<double, 3, 3> QR = Q * R;
     for (index_type i = 0; i < 3; ++i) {
         for (index_type j = 0; j < 3; ++j) {
             CHECK(QR(i, j) == Catch::Approx(A(i, j)).margin(1e-10));
@@ -258,9 +204,8 @@ TEST_CASE("qr_gram_schmidt 4x3 tall", "[decomposition][qr_gram_schmidt]") {
 
     auto [Q, R] = utils::decomposition::qr_gram_schmidt(A);
 
-    // Q^T * Q ≈ I (3x3).
-    Matrix<double, 3, 3> QtQ(3, 3);
-    mat_mul_AtB(Q, Q, QtQ);
+    // Q^T * Q ≈ I (3x3 Gram matrix).
+    Matrix<double, 3, 3> QtQ = Q.transpose() * Q;
     for (index_type i = 0; i < 3; ++i) {
         for (index_type j = 0; j < 3; ++j) {
             double expected = (i == j) ? 1.0 : 0.0;
@@ -276,8 +221,7 @@ TEST_CASE("qr_gram_schmidt 4x3 tall", "[decomposition][qr_gram_schmidt]") {
     }
 
     // Q * R ≈ A.
-    Matrix<double, 4, 3> QR(4, 3);
-    mat_mul(Q, R, QR);
+    Matrix<double, 4, 3> QR = Q * R;
     for (index_type i = 0; i < 4; ++i) {
         for (index_type j = 0; j < 3; ++j) {
             CHECK(QR(i, j) == Catch::Approx(A(i, j)).margin(1e-10));
@@ -298,8 +242,7 @@ TEST_CASE("qr diagonal of R has consistent sign", "[decomposition][qr]") {
     auto [Q, R] = utils::decomposition::qr(A);
 
     // Q * R ≈ A.
-    Matrix<double, 2, 2> QR(2, 2);
-    mat_mul(Q, R, QR);
+    Matrix<double, 2, 2> QR = Q * R;
     for (index_type i = 0; i < 2; ++i) {
         for (index_type j = 0; j < 2; ++j) {
             CHECK(QR(i, j) == Catch::Approx(A(i, j)).margin(1e-12));
@@ -311,20 +254,7 @@ TEST_CASE("qr diagonal of R has consistent sign", "[decomposition][qr]") {
 // qr_solve (reduced)
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Helper to compute A * x via element-level loop (matrix-vector product).
-template <typename T, index_type M, index_type N>
-void mat_vec(const Matrix<T, M, N> &A, const Vector<T, N> &x,
-             Vector<T, M> &y) {
-  const index_type m = A.extent(0);
-  const index_type n = A.extent(1);
-  for (index_type i = 0; i < m; ++i) {
-    T sum = T{0};
-    for (index_type j = 0; j < n; ++j) {
-      sum += A(i, j) * x(j);
-    }
-    y(i) = sum;
-  }
-}
+// ─────────────────────────────────────────────────────────────────────────────
 
 TEST_CASE("qr_solve 2x2", "[decomposition][qr_solve]") {
     // A = [[4, 1], [1, 3]], b = [1, 2], x = [1/11, 7/11]
@@ -346,8 +276,7 @@ TEST_CASE("qr_solve 3x3", "[decomposition][qr_solve]") {
     };
     // Choose x_true = [1, 2, 3] and compute b = A * x_true.
     Vector<double, 3> x_true{1.0, 2.0, 3.0};
-    Vector<double, 3> b(3);
-    mat_vec(A, x_true, b);
+    Vector<double, 3> b = A * x_true;
 
     auto result = utils::decomposition::qr_solve(A, b);
     REQUIRE(result.has_value());
@@ -467,8 +396,7 @@ TEST_CASE("QRReducedResult::solve 3x3", "[decomposition][qr_solve]") {
     Matrix<double, 3, 3> A{
         {4.0, 1.0, 1.0}, {1.0, 4.0, 1.0}, {1.0, 1.0, 4.0}};
     Vector<double, 3> x_true{1.0, 2.0, 3.0};
-    Vector<double, 3> b(3);
-    mat_vec(A, x_true, b);
+    Vector<double, 3> b = A * x_true;
 
     auto decomp = utils::decomposition::qr(A);
     auto result = decomp.solve(b);
@@ -502,8 +430,7 @@ TEST_CASE("QRFullResult::solve 3x3", "[decomposition][qr_solve_full]") {
     Matrix<double, 3, 3> A{
         {4.0, 1.0, 1.0}, {1.0, 4.0, 1.0}, {1.0, 1.0, 4.0}};
     Vector<double, 3> x_true{1.0, 2.0, 3.0};
-    Vector<double, 3> b(3);
-    mat_vec(A, x_true, b);
+    Vector<double, 3> b = A * x_true;
 
     auto decomp = utils::decomposition::qr_full(A);
     auto result = decomp.solve(b);
@@ -530,5 +457,201 @@ TEST_CASE("QRFullResult::solve matches qr_solve_full", "[decomposition][qr_solve
     for (index_type i = 0; i < 3; ++i) {
         CHECK(free_result->operator()(i) ==
               Catch::Approx(method_result->operator()(i)).margin(1e-14));
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Column-pivoted QR
+// ─────────────────────────────────────────────────────────────────────────────
+
+TEST_CASE("qr_col_pivot 3x3 full rank", "[decomposition][qr_col_pivot]") {
+    Matrix<double, 3, 3> A{
+        {1.0, 1.0, 0.0},
+        {1.0, 0.0, 1.0},
+        {0.0, 1.0, 1.0},
+    };
+
+    auto result = utils::decomposition::qr_col_pivot(A);
+    const auto &Q = result.Q;
+    const auto &R = result.R;
+    const auto &perm = result.col_perm;
+
+    // Q should have orthonormal columns: Q^T * Q ≈ I (Gram matrix).
+    Matrix<double, 3, 3> QtQ = Q.transpose() * Q;
+    for (index_type i = 0; i < 3; ++i) {
+        for (index_type j = 0; j < 3; ++j) {
+            double expected = (i == j) ? 1.0 : 0.0;
+            CHECK(QtQ(i, j) == Catch::Approx(expected).margin(1e-12));
+        }
+    }
+
+    // R should be upper triangular.
+    for (index_type i = 0; i < 3; ++i) {
+        for (index_type j = 0; j < i; ++j) {
+            CHECK(R(i, j) == Catch::Approx(0.0).margin(1e-12));
+        }
+    }
+
+    // |R(i,i)| should be non-increasing.
+    for (index_type i = 0; i + 1 < 3; ++i) {
+        CHECK(std::abs(R(i, i)) >= std::abs(R(i + 1, i + 1)) - 1e-12);
+    }
+
+    // Q * R should equal A with columns permuted: (Q*R)(:,j) == A(:,perm(j)).
+    Matrix<double, 3, 3> QR = Q * R;
+    for (index_type i = 0; i < 3; ++i) {
+        for (index_type j = 0; j < 3; ++j) {
+            CHECK(QR(i, j) == Catch::Approx(A(i, perm(j))).margin(1e-12));
+        }
+    }
+
+    // Full rank.
+    CHECK(result.rank() == 3);
+}
+
+TEST_CASE("qr_col_pivot 4x3 tall full rank", "[decomposition][qr_col_pivot]") {
+    Matrix<double, 4, 3> A{
+        {1.0, 2.0, 3.0},
+        {4.0, 5.0, 6.0},
+        {7.0, 8.0, 9.0},
+        {10.0, 11.0, 13.0},
+    };
+
+    auto result = utils::decomposition::qr_col_pivot(A);
+    const auto &Q = result.Q;
+    const auto &R = result.R;
+    const auto &perm = result.col_perm;
+
+    // Q^T * Q ≈ I (3x3 Gram matrix).
+    Matrix<double, 3, 3> QtQ = Q.transpose() * Q;
+    for (index_type i = 0; i < 3; ++i) {
+        for (index_type j = 0; j < 3; ++j) {
+            double expected = (i == j) ? 1.0 : 0.0;
+            CHECK(QtQ(i, j) == Catch::Approx(expected).margin(1e-10));
+        }
+    }
+
+    // R upper triangular.
+    for (index_type i = 0; i < 3; ++i) {
+        for (index_type j = 0; j < i; ++j) {
+            CHECK(R(i, j) == Catch::Approx(0.0).margin(1e-10));
+        }
+    }
+
+    // |R(i,i)| non-increasing.
+    for (index_type i = 0; i + 1 < 3; ++i) {
+        CHECK(std::abs(R(i, i)) >= std::abs(R(i + 1, i + 1)) - 1e-10);
+    }
+
+    // Q * R ≈ A(:, perm).
+    Matrix<double, 4, 3> QR = Q * R;
+    for (index_type i = 0; i < 4; ++i) {
+        for (index_type j = 0; j < 3; ++j) {
+            CHECK(QR(i, j) == Catch::Approx(A(i, perm(j))).margin(1e-10));
+        }
+    }
+
+    CHECK(result.rank() == 3);
+}
+
+TEST_CASE("qr_col_pivot rank-deficient 3x3", "[decomposition][qr_col_pivot]") {
+    // Col 2 = Col 0 + Col 1, so rank = 2.
+    Matrix<double, 3, 3> A{
+        {1.0, 0.0, 1.0},
+        {0.0, 1.0, 1.0},
+        {1.0, 1.0, 2.0},
+    };
+
+    auto result = utils::decomposition::qr_col_pivot(A);
+    CHECK(result.rank() == 2);
+
+    // Verify factorisation: Q * R ≈ A(:, perm).
+    const auto &Q = result.Q;
+    const auto &R = result.R;
+    const auto &perm = result.col_perm;
+
+    Matrix<double, 3, 3> QR = Q * R;
+    for (index_type i = 0; i < 3; ++i) {
+        for (index_type j = 0; j < 3; ++j) {
+            CHECK(QR(i, j) == Catch::Approx(A(i, perm(j))).margin(1e-10));
+        }
+    }
+}
+
+TEST_CASE("qr_col_pivot rank-deficient 4x3", "[decomposition][qr_col_pivot]") {
+    // Rows 0 and 2 are identical, cols 0 and 2 are identical.
+    // Rank should be 2.
+    Matrix<double, 4, 3> A{
+        {1.0, 2.0, 1.0},
+        {3.0, 4.0, 3.0},
+        {1.0, 2.0, 1.0},
+        {5.0, 6.0, 5.0},
+    };
+
+    auto result = utils::decomposition::qr_col_pivot(A);
+    CHECK(result.rank() == 2);
+}
+
+TEST_CASE("qr_col_pivot rank 1", "[decomposition][qr_col_pivot]") {
+    // All columns are multiples of [1, 2, 3].
+    Matrix<double, 3, 3> A{
+        {1.0, 2.0, 3.0},
+        {2.0, 4.0, 6.0},
+        {3.0, 6.0, 9.0},
+    };
+
+    auto result = utils::decomposition::qr_col_pivot(A);
+    CHECK(result.rank() == 1);
+}
+
+TEST_CASE("qr_col_pivot zero matrix", "[decomposition][qr_col_pivot]") {
+    Matrix<double, 3, 3> A{
+        {0.0, 0.0, 0.0},
+        {0.0, 0.0, 0.0},
+        {0.0, 0.0, 0.0},
+    };
+
+    auto result = utils::decomposition::qr_col_pivot(A);
+    CHECK(result.rank() == 0);
+}
+
+TEST_CASE("qr_col_pivot rank convenience function",
+          "[decomposition][qr_col_pivot]") {
+    Matrix<double, 3, 3> A_full{
+        {1.0, 1.0, 0.0},
+        {1.0, 0.0, 1.0},
+        {0.0, 1.0, 1.0},
+    };
+    CHECK(utils::decomposition::rank(A_full) == 3);
+
+    // Rank-deficient.
+    Matrix<double, 3, 3> A_def{
+        {1.0, 0.0, 1.0},
+        {0.0, 1.0, 1.0},
+        {1.0, 1.0, 2.0},
+    };
+    CHECK(utils::decomposition::rank(A_def) == 2);
+}
+
+TEST_CASE("qr_col_pivot wide matrix 2x4", "[decomposition][qr_col_pivot]") {
+    // Wide matrix (more cols than rows). Rank should be 2 (full row rank).
+    Matrix<double, 2, 4> A{
+        {1.0, 0.0, 2.0, 1.0},
+        {0.0, 1.0, 1.0, 3.0},
+    };
+
+    auto result = utils::decomposition::qr_col_pivot(A);
+    CHECK(result.rank() == 2);
+
+    // Verify factorisation.
+    const auto &Q = result.Q;
+    const auto &R = result.R;
+    const auto &perm = result.col_perm;
+
+    Matrix<double, 2, 4> QR = Q * R;
+    for (index_type i = 0; i < 2; ++i) {
+        for (index_type j = 0; j < 4; ++j) {
+            CHECK(QR(i, j) == Catch::Approx(A(i, perm(j))).margin(1e-10));
+        }
     }
 }

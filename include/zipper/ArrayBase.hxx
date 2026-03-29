@@ -13,8 +13,8 @@ namespace zipper {
 
 // Deduction guide from std::mdspan
 template <typename T, typename Extents, typename Layout, typename Accessor>
-ArrayBase(zipper::mdspan<T, Extents, Layout, Accessor>) -> ArrayBase<
-    expression::nullary::MDSpan<T, Extents, Layout, Accessor>>;
+ArrayBase(zipper::mdspan<T, Extents, Layout, Accessor>)
+    -> ArrayBase<expression::nullary::MDSpan<T, Extents, Layout, Accessor>>;
 
 UNARY_DECLARATION(ArrayBase, LogicalNot, operator!)
 UNARY_DECLARATION(ArrayBase, BitNot, operator~)
@@ -36,6 +36,7 @@ SCALAR_BINARY_DECLARATION(ArrayBase, LessEqual, operator<=)
 SCALAR_BINARY_DECLARATION(ArrayBase, BitAnd, operator&)
 SCALAR_BINARY_DECLARATION(ArrayBase, BitOr, operator|)
 SCALAR_BINARY_DECLARATION(ArrayBase, BitXor, operator^)
+SCALAR_BINARY_DECLARATION(ArrayBase, ThreeWayCompare, operator<=>)
 
 ZERO_AWARE_BINARY_DECLARATION(ArrayBase, Plus, operator+)
 ZERO_AWARE_BINARY_DECLARATION(ArrayBase, Minus, operator-)
@@ -57,6 +58,11 @@ BINARY_DECLARATION(ArrayBase, BitXor, operator^)
 
 BINARY_DECLARATION(ArrayBase, Min, min)
 BINARY_DECLARATION(ArrayBase, Max, max)
+
+// Element-wise three-way comparison: produces an array of ordering values
+// (std::partial_ordering for floating-point, std::strong_ordering for
+// integers).
+BINARY_DECLARATION(ArrayBase, ThreeWayCompare, operator<=>)
 
 } // namespace zipper
 

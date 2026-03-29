@@ -1,61 +1,71 @@
 # zipper::expression
 
-<!--toc:start-->
-- [zipper::expression](#zipperexpression)
-  - [`MDArray`](#mdarray)
-  - [Expression](#expression)
-<!--toc:end-->
+The expression layer is the core of Zipper's lazy evaluation engine. Every
+computation is represented as a tree of expression nodes that are evaluated
+on-demand when coefficients are accessed.
 
-The central object in zipper is an _expression_ over multi-dimensional arrays
-(`MDArray`s), where a MDArray has no built-in concepts like addition or
-multiplication. Classes like `zipper::MatrixView`, `zipper::FormView`, or
-`zipper::TensorView` will store a single expression via a class derived from
-`zipper::expresion::ExpressionBase` as a member, and operators between these
-classes classes interact a new `zipper::*View` will be created a new
-`Expression` type, representing the expression of those respective operators.
-generated.
+## Architecture
 
-## `MDArray`
+```
+ExpressionBase<Derived>                        (CRTP root)
+  ├── NullaryExpressionBase<D>                 (leaf nodes)
+  │     MDArray, MDSpan, Constant, Identity, Unit, Random
+  ├── UnaryExpressionBase<D, Child>            (single-child transforms)
+  │     Slice, Swizzle, Reshape, Cast, Abs, UnsafeRef, ...
+  ├── BinaryExpressionBase<D, LHS, RHS>        (two-child operations)
+  │     Addition, MatrixProduct, TensorProduct, ...
+  └── ReductionBase<D, Child>                  (whole-expression reductions)
+        Sum, Trace, Determinant, Norm, Contraction, ...
+```
 
-A `MDArray` is a multi-dimensional array, i.e an element of
-$\mathcal{F}^{e_0 \times e_1, \ldots, e_n}$ for some field $\mathcal{F}$ and
-some set of $n$ extents. For example:
+## Expression Interface
 
-- $\mathbb{R}^0$ is the set of scalar real values,
-- $\mathbb{Z}^3$ is the set of single dimensional arrays of integers with $3$
-elements,
-- $\mathbb{Z_2}^{2\times2}$ is the set of square matrices with width $2$ with
-boolean values.
+Every expression provides:
 
-A `MDArray` satisfies a basic interface:
+- `rank()` -- number of dimensions (compile-time constant)
+- `extent(rank_type d)` -- size along dimension `d`
+- `extents()` -- the full `std::extents<...>` object
+- `coeff(index_type... i) const -> value_type` -- coefficient by value
 
-- A `consteval` function `rank() -> rank_type` that is the number of dimensions
-  in the array.
-- A `extent(rank_type d) -> index_type` that is the size of the array in the
-dimension `d`. An extent of $0$ will be interpretted as $\infty$.
-- Value access to elements via `coeff(index_type... i) const -> value_type`
-- Reference access to internal data via `coeff_ref(index_type... i) -> value_type&`
-- `const` Reference access to internal data via `const_coeff_ref(index_type... i) const -> value_type&`
+Writable expressions (`WritableExpression` concept) additionally provide:
 
-For convenience bracket access is also allowed via `operator()`
-
-## Expression
-
-An _Operation_ is any a map from $0$ or more `MDArray`s to `MDArray`s. That is,
-an expression is a function space of `MDArray`s. In this library we lazily
-evaluate _Operation_s by building trees of operations without evaluating them,
-i.e _Expression_ trees.
-In this library we use the Curiously Recurring Template Patterm (CRTP) and
-expression templates to represent to statically store the expressions.
-The evaluation of an `Expression` is always a `MDArray`, and so each expression
-derives its extents. Every `Expression` has to satisfy
-
-- `rank() -> rank_type`
-- `extent(rank_type d) -> index_type`
-- `coeff(index_type... i) const -> value_type`
-In general `Expression`s do not have plain data (i.e values in stored in memory by [Eigen's parlance](https://libeigen.gitlab.io/eigen/docs-nightly/TopicClassHierarchy.html)), but there are a few like
-`MDArray`s or slices.
-and swizzles (like the transpose) of
-and if the expression has the `has_plain_data` trait then
-- `coeff_ref(index_type... i) const -> value_type&`
+- `coeff_ref(index_type... i) -> value_type&` -- mutable reference
 - `const_coeff_ref(index_type... i) const -> value_type const&`
+- `assign(const Other&)` -- bulk assignment from another expression
+
+## Value Category and Ownership
+
+Child expressions are stored via `expression_storage_t<T>`:
+
+- **Lvalue references** are stored by reference (cheap, zero-copy)
+- **Rvalue temporaries** are moved in and stored by value (owned)
+
+This means expression trees automatically own their temporaries, preventing
+the dangling-reference bugs common in Eigen.
+
+Expressions that hold references have `stores_references = true` in their
+`ExpressionTraits`. At the wrapper level (`ZipperBase`), this causes the
+type to inherit `NonReturnable` (deleted copy constructor), preventing
+accidental escapes from scope.
+
+## ExpressionTraits
+
+Each expression type specialises `ExpressionTraits<T>`, which provides:
+
+- `value_type` -- scalar type
+- `extents_type` -- `std::extents<...>` type
+- `is_writable` -- can coefficients be mutated?
+- `stores_references` -- does the expression hold references?
+- `has_index_set` -- does it provide sparse index information?
+- `is_resizable` -- can the extents change at runtime?
+
+## Subdirectories
+
+| Directory | Contents | README |
+|-----------|----------|--------|
+| `nullary/` | Leaf nodes (data sources) | [nullary/README.md](nullary/README.md) |
+| `unary/` | Single-child transforms | [unary/README.md](unary/README.md) |
+| `binary/` | Two-child operations | [binary/README.md](binary/README.md) |
+| `reductions/` | Whole-expression reductions | [reductions/README.md](reductions/README.md) |
+| `concepts/` | Expression capability concepts (`WritableExpression`, etc.) | -- |
+| `detail/` | Traits, assignment helpers, index sets | -- |

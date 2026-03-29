@@ -1,4 +1,4 @@
-catch2_with_main_dep = dependency('catch2-with-main')
+catch2_with_main_dep = dependency('catch2-with-main', default_options: ['tests=false'])
 
 zipper_test_dep = declare_dependency(
   dependencies: [zipper_dep, catch2_with_main_dep],
@@ -13,6 +13,7 @@ subdir('integration')
 subdir('storage')
 subdir('utils')
 subdir('detail')
+subdir('transform')
 
 test_struct = executable('test_struct', 'struct.cpp', dependencies: [zipper_test_dep])
 test('struct', test_struct)
@@ -32,11 +33,8 @@ test('span_construction', test_span_construction)
 test_zipperbase_stl = executable('test_zipperbase_stl', 'zipperbase_stl.cpp', dependencies: [zipper_test_dep])
 test('zipperbase_stl', test_zipperbase_stl)
 
-# TODO: Container classes need to be ported to refactor_all's ZipperBase API
-# (missing constructors from extents/span/STL containers, Slice ctor mismatch).
-# Re-enable once Container{,Base}.{hpp,hxx} are updated.
-#test_container = executable('test_container', 'container.cpp', dependencies: [zipper_test_dep])
-#test('container', test_container)
+test_data_array = executable('test_data_array', 'data_array.cpp', dependencies: [zipper_test_dep])
+test('data_array', test_data_array)
 
 test_function_boundary = executable('test_function_boundary', 'test_function_boundary.cpp', dependencies: [zipper_test_dep])
 test('function_boundary', test_function_boundary)
@@ -46,3 +44,6 @@ test('readme_examples', test_readme_examples)
 
 test_ref = executable('test_ref', 'test_ref.cpp', dependencies: [zipper_test_dep])
 test('ref', test_ref)
+
+test_sparse_types = executable('test_sparse_types', 'sparse_types.cpp', dependencies: [zipper_test_dep])
+test('sparse_types', test_sparse_types)

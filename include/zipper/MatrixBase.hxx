@@ -43,6 +43,19 @@ template <typename Expr1, typename Expr2>
 auto operator*(Expr1&& lhs, Expr2&& rhs) {
   using A = detail::forwarded_expression_t<Expr1>;
   using B = detail::forwarded_expression_t<Expr2>;
+
+  // Block CSC × CSR: no efficient evaluation strategy exists.
+  // Use A.as_csr() * B  or  A * B.as_csc()  instead.
+  using LhsPref = typename expression::detail::ExpressionTraits<
+      std::decay_t<A>>::preferred_layout;
+  using RhsPref = typename expression::detail::ExpressionTraits<
+      std::decay_t<B>>::preferred_layout;
+  static_assert(
+      !detail::is_csc_times_csr_v<LhsPref, RhsPref>,
+      "CSC × CSR matrix multiply is not supported — neither operand's "
+      "layout gives efficient inner-product traversal. "
+      "Convert one side: use A.as_csr() * B  or  A * B.as_csc().");
+
   using V = expression::binary::MatrixProduct<A, B>;
   return MatrixBase<V>(std::in_place,
       std::forward<Expr1>(lhs).expression(),

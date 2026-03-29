@@ -99,7 +99,7 @@ template <zipper::concepts::Index... Args>
 auto ExpressionBase<Derived>::const_access_index_pack(Args &&...idxs) const
     -> decltype(auto) {
   ZIPPER_ASSERT(zipper::utils::extents::indices_in_range(extents(), idxs...));
-  if constexpr (traits::is_referrable()) {
+  if constexpr (traits::is_referrable() && !traits::has_known_zeros) {
     return const_coeff_ref(std::forward<Args>(idxs)...);
   } else {
     return coeff(std::forward<Args>(idxs)...);

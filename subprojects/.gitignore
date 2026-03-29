@@ -1,0 +1,4 @@
+# Ignore downloaded subproject directories, keep .wrap files and patches
+*/
+!packagefiles/
+.wraplock

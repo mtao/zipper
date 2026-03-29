@@ -1,3 +1,4 @@
 option('testing', type: 'boolean', value: false, description: 'enable unit testing')
 option('examples', type: 'boolean', value: false, description: 'enable example targets')
 option('use_mdspan_subproject', type: 'boolean', value: true, description: 'use mdspan from a subproject')
+option('use_suitesparse', type: 'feature', value: 'auto', description: 'enable SuiteSparse sparse solver bindings (CHOLMOD, UMFPACK, SPQR)')

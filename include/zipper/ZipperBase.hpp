@@ -8,7 +8,7 @@
 #include "expression/concepts/capabilities.hpp"
 #include "expression/unary/Cast.hpp"
 #include "expression/unary/CoefficientWiseOperation.hpp"
-#include "expression/unary/Diagonal.hpp"
+#include "expression/unary/DiagonalExtract.hpp"
 #include "expression/unary/Lift.hpp"
 #include "expression/unary/Repeat.hpp"
 #include "expression/unary/Slice.hpp"
@@ -177,6 +177,21 @@ public:
     return derived();
   }
 
+  /// Assigns from a Zipper-wrapped expression by unwrapping to the
+  /// expression layer.  This enables compound assignment operators
+  /// (`+=`, `-=`, etc.) whose RHS is a Zipper wrapper rather than a
+  /// raw Expression.
+  template <concepts::Zipper Other>
+  auto operator=(const Other &other) -> Derived &
+    requires(expression::concepts::WritableExpression<expression_type> &&
+             !is_const &&
+             zipper::utils::extents::assignable_extents_v<
+                 typename std::decay_t<Other>::extents_type, extents_type>)
+  {
+    m_expression.assign(other.expression());
+    return derived();
+  }
+
   template <concepts::Zipper Other>
   auto operator+=(const Other &other) -> Derived &
     requires(expression::concepts::WritableExpression<expression_type> &&
@@ -285,7 +300,7 @@ public:
   template <typename Self>
   auto diagonal(this Self&& self) {
     using child_t = detail::member_child_storage_t<Self, expression_type>;
-    return VectorBase<expression::unary::Diagonal<child_t>>(
+    return VectorBase<expression::unary::DiagonalExtract<child_t>>(
         std::in_place, std::forward<Self>(self).expression());
   }
 

@@ -4,6 +4,7 @@
 #include "TensorBase.hxx"
 #include "concepts/Extents.hpp"
 #include "concepts/Tensor.hpp"
+#include "detail/extents_check.hpp"
 #include "zipper/expression/nullary/MDArray.hpp"
 #include "zipper/expression/nullary/MDSpan.hpp"
 #include "zipper/types.hpp"
@@ -39,7 +40,13 @@ class Tensor_ : public TensorBase<expression::nullary::MDArray<
     Tensor_(const Other& other) : Base(other) {}
     template <concepts::Index... Args>
     Tensor_(Args&&... args)
-        : Base(Extents(std::forward<Args>(args)...)) {}
+      requires(sizeof...(Args) == Extents::rank() ||
+               sizeof...(Args) == Extents::rank_dynamic())
+        : Base(Extents(std::forward<Args>(args)...)) {
+        if constexpr (sizeof...(Args) == Extents::rank()) {
+            detail::check_extents<Extents>(static_cast<index_type>(args)...);
+        }
+    }
     Tensor_() = default;
     Tensor_(const Tensor_&) = default;
     Tensor_(Tensor_&&) = default;

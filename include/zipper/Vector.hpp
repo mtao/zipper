@@ -53,6 +53,7 @@
 
 #include "VectorBase.hxx"
 #include "zipper/detail/assert.hpp"
+#include "zipper/detail/extents_check.hpp"
 #include "zipper/expression/nullary/MDArray.hpp"
 #include "zipper/expression/nullary/MDSpan.hpp"
 #include "zipper/types.hpp"
@@ -95,7 +96,7 @@ public:
   Vector([[maybe_unused]] index_type rows)
     requires(extents_traits::is_static)
       : Base() {
-    ZIPPER_ASSERT(rows == extent(0));
+    detail::check_extents<extents_type>(rows);
   }
 
   template <index_type R2>
@@ -111,7 +112,7 @@ public:
   Vector(const std::initializer_list<T> &l)
     requires(extents_traits::is_static)
   {
-    ZIPPER_ASSERT(l.size() == extent(0));
+    detail::check_extents<extents_type>(l.size());
     std::ranges::copy(l, begin());
   }
   template <typename T>

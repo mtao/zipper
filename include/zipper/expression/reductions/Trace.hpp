@@ -3,7 +3,7 @@
 
 #include "CoefficientSum.hpp"
 #include "ReductionBase.hpp"
-#include "zipper/expression/unary/Diagonal.hpp"
+#include "zipper/expression/unary/DiagonalExtract.hpp"
 
 namespace zipper::expression {
 namespace reductions {
@@ -21,7 +21,7 @@ public:
 
   value_type operator()() const {
     return reductions::CoefficientSum(
-        unary::Diagonal<const expression_type&>(expression()))();
+        unary::DiagonalExtract<const expression_type&>(expression()))();
   }
 };
 

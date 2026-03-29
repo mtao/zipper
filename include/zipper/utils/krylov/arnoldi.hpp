@@ -28,12 +28,12 @@
 #if !defined(ZIPPER_UTILS_KRYLOV_ARNOLDI_HPP)
 #define ZIPPER_UTILS_KRYLOV_ARNOLDI_HPP
 
-#include <cassert>
 #include <limits>
 #include <type_traits>
 
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
+#include <zipper/detail/assert.hpp>
 #include <zipper/detail/is_integral_constant.hpp>
 #include <zipper/expression/nullary/Constant.hpp>
 #include <zipper/utils/detail/dot.hpp>
@@ -85,7 +85,7 @@ auto arnoldi(const Derived &M, const BDerived &b, auto n_param) {
 
   constexpr index_type RowsStatic = MType::extents_type::static_extent(0);
   if constexpr (!MType::extents_traits::is_static) {
-    assert(M.extent(0) == M.extent(1));
+    ZIPPER_ASSERT(M.extent(0) == M.extent(1));
   } else {
     constexpr index_type ColsStatic = MType::extents_type::static_extent(1);
     static_assert(ColsStatic == RowsStatic);

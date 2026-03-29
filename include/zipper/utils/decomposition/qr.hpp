@@ -58,7 +58,10 @@
 #include <algorithm>
 #include <cmath>
 #include <expected>
+#include <limits>
+#include <numeric>
 
+#include <zipper/DataArray.hpp>
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
 #include <zipper/expression/nullary/Constant.hpp>
@@ -82,64 +85,62 @@ namespace zipper::utils::decomposition {
 /// R * x = c via back substitution.  For square systems this is the exact
 /// solution; for overdetermined systems (m > n) this is the least-squares
 /// solution.
-template <typename T, index_type M, index_type N> struct QRReducedResult {
-  /// Scalar type of the decomposition.
-  using value_type = T;
+template <typename T, index_type M, index_type N>
+struct QRReducedResult {
+    /// Scalar type of the decomposition.
+    using value_type = T;
 
-  static constexpr index_type P = extents::min(M, N);
+    static constexpr index_type P = extents::min(M, N);
 
-  /// Orthonormal matrix Q (m x p).
-  Matrix<T, M, P> Q;
-  /// Upper triangular matrix R (p x n).
-  Matrix<T, P, N> R;
+    /// Orthonormal matrix Q (m x p).
+    Matrix<T, M, P> Q;
+    /// Upper triangular matrix R (p x n).
+    Matrix<T, P, N> R;
 
-  /// @brief Solve A*x = b (or least-squares min||Ax-b||) using the stored
-  ///        QR factors.
-  ///
-  /// Computes c = Q^T * b, then solves the leading p x p block of R against c
-  /// via upper-triangular back substitution.
-  ///
-  /// @param b  Right-hand side vector of length m.
-  /// @return   `std::expected<Vector<T,P>, SolverError>` — the solution on
-  ///           success, or a breakdown error if R has a zero pivot.
-  template <concepts::Vector BDerived>
-  auto solve(const BDerived &b) const
-      -> std::expected<Vector<T, P>, solver::SolverError> {
-    using ResultVec = Vector<T, P>;
-    using Result = std::expected<ResultVec, solver::SolverError>;
+    /// @brief Solve A*x = b (or least-squares min||Ax-b||) using the stored
+    ///        QR factors.
+    ///
+    /// Computes c = Q^T * b, then solves the leading p x p block of R against c
+    /// via upper-triangular back substitution.
+    ///
+    /// @param b  Right-hand side vector of length m.
+    /// @return   `std::expected<Vector<T,P>, SolverError>` — the solution on
+    ///           success, or a breakdown error if R has a zero pivot.
+    template <concepts::Vector BDerived>
+    auto solve(const BDerived &b) const
+        -> std::expected<Vector<T, P>, solver::SolverError> {
+        using ResultVec = Vector<T, P>;
+        using Result = std::expected<ResultVec, solver::SolverError>;
 
-    const index_type m = Q.extent(0);
-    const index_type p = Q.extent(1);
+        const index_type m = Q.extent(0);
+        const index_type p = Q.extent(1);
 
-    // 1. Compute c = Q^T * b (p-dimensional vector).
-    ResultVec c(p);
-    for (index_type i = 0; i < p; ++i) {
-      T sum = T{0};
-      for (index_type k = 0; k < m; ++k) {
-        sum += Q(k, i) * b(k);
-      }
-      c(i) = sum;
+        // 1. Compute c = Q^T * b (p-dimensional vector).
+        ResultVec c(p);
+        for (index_type i = 0; i < p; ++i) {
+            T sum = T{0};
+            for (index_type k = 0; k < m; ++k) { sum += Q(k, i) * b(k); }
+            c(i) = sum;
+        }
+
+        // 2. Solve R * x = c via upper-triangular back substitution.
+        //    Extract the leading p x p block of R into a square matrix.
+        Matrix<T, P, P> R_sq(p, p);
+        for (index_type i = 0; i < p; ++i) {
+            for (index_type j = 0; j < p; ++j) { R_sq(i, j) = R(i, j); }
+        }
+
+        auto R_upper =
+            expression::triangular_view<expression::TriangularMode::Upper>(
+                R_sq);
+        auto solve_result = R_upper.solve(c);
+
+        if (!solve_result) {
+            return Result{std::unexpected(std::move(solve_result.error()))};
+        }
+
+        return Result{std::move(*solve_result)};
     }
-
-    // 2. Solve R * x = c via upper-triangular back substitution.
-    //    Extract the leading p x p block of R into a square matrix.
-    Matrix<T, P, P> R_sq(p, p);
-    for (index_type i = 0; i < p; ++i) {
-      for (index_type j = 0; j < p; ++j) {
-        R_sq(i, j) = R(i, j);
-      }
-    }
-
-    auto R_upper = expression::triangular_view<
-        expression::TriangularMode::Upper>(R_sq);
-    auto solve_result = R_upper.solve(c);
-
-    if (!solve_result) {
-      return Result{std::unexpected(std::move(solve_result.error()))};
-    }
-
-    return Result{std::move(*solve_result)};
-  }
 };
 
 /// Result of a full QR decomposition.
@@ -148,64 +149,62 @@ template <typename T, index_type M, index_type N> struct QRReducedResult {
 ///
 /// Calling `.solve(b)` computes c = Q^T * b (first p entries) and then
 /// solves R_top * x = c via back substitution, where p = min(m, n).
-template <typename T, index_type M, index_type N> struct QRFullResult {
-  /// Scalar type of the decomposition.
-  using value_type = T;
+template <typename T, index_type M, index_type N>
+struct QRFullResult {
+    /// Scalar type of the decomposition.
+    using value_type = T;
 
-  static constexpr index_type P = extents::min(M, N);
+    static constexpr index_type P = extents::min(M, N);
 
-  /// Orthogonal matrix Q (m x m).
-  Matrix<T, M, M> Q;
-  /// Upper trapezoidal matrix R (m x n).
-  Matrix<T, M, N> R;
+    /// Orthogonal matrix Q (m x m).
+    Matrix<T, M, M> Q;
+    /// Upper trapezoidal matrix R (m x n).
+    Matrix<T, M, N> R;
 
-  /// @brief Solve A*x = b (or least-squares min||Ax-b||) using the stored
-  ///        full QR factors.
-  ///
-  /// Computes c = Q^T * b (first p entries), then solves the leading p x p
-  /// block of R against c via upper-triangular back substitution.
-  ///
-  /// @param b  Right-hand side vector of length m.
-  /// @return   `std::expected<Vector<T,P>, SolverError>` — the solution on
-  ///           success, or a breakdown error if R has a zero pivot.
-  template <concepts::Vector BDerived>
-  auto solve(const BDerived &b) const
-      -> std::expected<Vector<T, P>, solver::SolverError> {
-    using ResultVec = Vector<T, P>;
-    using Result = std::expected<ResultVec, solver::SolverError>;
+    /// @brief Solve A*x = b (or least-squares min||Ax-b||) using the stored
+    ///        full QR factors.
+    ///
+    /// Computes c = Q^T * b (first p entries), then solves the leading p x p
+    /// block of R against c via upper-triangular back substitution.
+    ///
+    /// @param b  Right-hand side vector of length m.
+    /// @return   `std::expected<Vector<T,P>, SolverError>` — the solution on
+    ///           success, or a breakdown error if R has a zero pivot.
+    template <concepts::Vector BDerived>
+    auto solve(const BDerived &b) const
+        -> std::expected<Vector<T, P>, solver::SolverError> {
+        using ResultVec = Vector<T, P>;
+        using Result = std::expected<ResultVec, solver::SolverError>;
 
-    const index_type m = Q.extent(0);
-    const index_type n = R.extent(1);
-    const index_type p = std::min(m, n);
+        const index_type m = Q.extent(0);
+        const index_type n = R.extent(1);
+        const index_type p = std::min(m, n);
 
-    // 1. Compute c = Q^T * b, but only the first p entries matter.
-    ResultVec c(p);
-    for (index_type i = 0; i < p; ++i) {
-      T sum = T{0};
-      for (index_type k = 0; k < m; ++k) {
-        sum += Q(k, i) * b(k);
-      }
-      c(i) = sum;
+        // 1. Compute c = Q^T * b, but only the first p entries matter.
+        ResultVec c(p);
+        for (index_type i = 0; i < p; ++i) {
+            T sum = T{0};
+            for (index_type k = 0; k < m; ++k) { sum += Q(k, i) * b(k); }
+            c(i) = sum;
+        }
+
+        // 2. Solve R_top * x = c, where R_top is the leading p x p block of R.
+        Matrix<T, P, P> R_sq(p, p);
+        for (index_type i = 0; i < p; ++i) {
+            for (index_type j = 0; j < p; ++j) { R_sq(i, j) = R(i, j); }
+        }
+
+        auto R_upper =
+            expression::triangular_view<expression::TriangularMode::Upper>(
+                R_sq);
+        auto solve_result = R_upper.solve(c);
+
+        if (!solve_result) {
+            return Result{std::unexpected(std::move(solve_result.error()))};
+        }
+
+        return Result{std::move(*solve_result)};
     }
-
-    // 2. Solve R_top * x = c, where R_top is the leading p x p block of R.
-    Matrix<T, P, P> R_sq(p, p);
-    for (index_type i = 0; i < p; ++i) {
-      for (index_type j = 0; j < p; ++j) {
-        R_sq(i, j) = R(i, j);
-      }
-    }
-
-    auto R_upper = expression::triangular_view<
-        expression::TriangularMode::Upper>(R_sq);
-    auto solve_result = R_upper.solve(c);
-
-    if (!solve_result) {
-      return Result{std::unexpected(std::move(solve_result.error()))};
-    }
-
-    return Result{std::move(*solve_result)};
-  }
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -219,110 +218,99 @@ template <typename T, index_type M, index_type N> struct QRFullResult {
 ///
 /// The algorithm applies p = min(m, n) Householder reflections to reduce A to
 /// upper triangular form, accumulating the reflections into Q.
-template <concepts::Matrix Derived> auto qr(const Derived &A) {
-  using AType = std::decay_t<Derived>;
-  using T = typename AType::value_type;
-  constexpr index_type M = AType::extents_type::static_extent(0);
-  constexpr index_type N = AType::extents_type::static_extent(1);
-  constexpr index_type P = extents::min(M, N);
-  using Vec = Vector<T, M>;
+template <concepts::Matrix Derived>
+auto qr(const Derived &A) {
+    using AType = std::decay_t<Derived>;
+    using T = typename AType::value_type;
+    constexpr index_type M = AType::extents_type::static_extent(0);
+    constexpr index_type N = AType::extents_type::static_extent(1);
+    constexpr index_type P = extents::min(M, N);
+    using Vec = Vector<T, M>;
 
-  const index_type m = A.extent(0);
-  const index_type n = A.extent(1);
-  const index_type p = std::min(m, n);
+    const index_type m = A.extent(0);
+    const index_type n = A.extent(1);
+    const index_type p = std::min(m, n);
 
-  // Work on a copy of A that will be transformed into R.
-  // We only need a p x n result for R, but it's easier to work on an m x n
-  // copy and then extract the top p rows at the end.
-  Matrix<T, M, N> R_work(A);
+    // Work on a copy of A that will be transformed into R.
+    // We only need a p x n result for R, but it's easier to work on an m x n
+    // copy and then extract the top p rows at the end.
+    Matrix<T, M, N> R_work(A);
 
-  // Q_full accumulates the Householder reflections.  Start as identity.
-  // For the reduced QR we only need the first p columns, but we accumulate
-  // into m x m and extract afterwards.
-  Matrix<T, M, M> Q_full(m, m);
-  Q_full = expression::nullary::Identity<T, M, M>(Q_full.extents());
+    // Q_full accumulates the Householder reflections.  Start as identity.
+    // For the reduced QR we only need the first p columns, but we accumulate
+    // into m x m and extract afterwards.
+    Matrix<T, M, M> Q_full(m, m);
+    Q_full = expression::nullary::Identity<T, M, M>(Q_full.extents());
 
-  for (index_type k = 0; k < p; ++k) {
-    // Extract the sub-column R_work(k:m-1, k) into a temporary vector.
-    // We work with a full-length vector but only the entries k..m-1 are
-    // non-zero in the Householder vector.
-    Vec v(m);
-    v = expression::nullary::Constant(T{0}, v.extents());
+    for (index_type k = 0; k < p; ++k) {
+        // Extract the sub-column R_work(k:m-1, k) into a temporary vector.
+        // We work with a full-length vector but only the entries k..m-1 are
+        // non-zero in the Householder vector.
+        Vec v(m);
+        v = expression::nullary::Constant(T{0}, v.extents());
 
-    T norm_sub = T{0};
-    for (index_type i = k; i < m; ++i) {
-      v(i) = R_work(i, k);
-      norm_sub += v(i) * v(i);
+        T norm_sub = T{0};
+        for (index_type i = k; i < m; ++i) {
+            v(i) = R_work(i, k);
+            norm_sub += v(i) * v(i);
+        }
+        norm_sub = std::sqrt(norm_sub);
+
+        if (norm_sub < std::numeric_limits<T>::min()) {
+            // Column is already zero below the diagonal — skip this reflection.
+            continue;
+        }
+
+        // Choose the sign to avoid cancellation: v(k) += sign(v(k)) * ||x||.
+        // If v(k) >= 0, add norm_sub; if v(k) < 0, subtract norm_sub.
+        if (v(k) >= T{0}) {
+            v(k) += norm_sub;
+        } else {
+            v(k) -= norm_sub;
+        }
+
+        // Normalise v so that the reflection is H = I - 2*v*v^T.
+        T v_norm = T{0};
+        for (index_type i = k; i < m; ++i) { v_norm += v(i) * v(i); }
+        v_norm = std::sqrt(v_norm);
+        for (index_type i = k; i < m; ++i) { v(i) /= v_norm; }
+
+        // Apply H to R_work: R_work := R_work - 2 * v * (v^T * R_work)
+        // For each column j of R_work, compute dot = v^T * R_work(:, j),
+        // then R_work(i, j) -= 2 * v(i) * dot.
+        for (index_type j = k; j < n; ++j) {
+            T dot = T{0};
+            for (index_type i = k; i < m; ++i) { dot += v(i) * R_work(i, j); }
+            for (index_type i = k; i < m; ++i) {
+                R_work(i, j) -= T{2} * v(i) * dot;
+            }
+        }
+
+        // Apply H to Q_full: Q_full := Q_full - 2 * (Q_full * v) * v^T
+        // For each row i of Q_full, compute dot = Q_full(i, :) . v,
+        // then Q_full(i, j) -= 2 * dot * v(j).
+        for (index_type i = 0; i < m; ++i) {
+            T dot = T{0};
+            for (index_type j = k; j < m; ++j) { dot += Q_full(i, j) * v(j); }
+            for (index_type j = k; j < m; ++j) {
+                Q_full(i, j) -= T{2} * dot * v(j);
+            }
+        }
     }
-    norm_sub = std::sqrt(norm_sub);
 
-    if (norm_sub < std::numeric_limits<T>::min()) {
-      // Column is already zero below the diagonal — skip this reflection.
-      continue;
-    }
+    // Extract the reduced Q (first p columns) and R (top p rows).
+    Matrix<T, M, P> Q(m, p);
+    Matrix<T, P, N> R(p, n);
 
-    // Choose the sign to avoid cancellation: v(k) += sign(v(k)) * ||x||.
-    // If v(k) >= 0, add norm_sub; if v(k) < 0, subtract norm_sub.
-    if (v(k) >= T{0}) {
-      v(k) += norm_sub;
-    } else {
-      v(k) -= norm_sub;
-    }
-
-    // Normalise v so that the reflection is H = I - 2*v*v^T.
-    T v_norm = T{0};
-    for (index_type i = k; i < m; ++i) {
-      v_norm += v(i) * v(i);
-    }
-    v_norm = std::sqrt(v_norm);
-    for (index_type i = k; i < m; ++i) {
-      v(i) /= v_norm;
-    }
-
-    // Apply H to R_work: R_work := R_work - 2 * v * (v^T * R_work)
-    // For each column j of R_work, compute dot = v^T * R_work(:, j),
-    // then R_work(i, j) -= 2 * v(i) * dot.
-    for (index_type j = k; j < n; ++j) {
-      T dot = T{0};
-      for (index_type i = k; i < m; ++i) {
-        dot += v(i) * R_work(i, j);
-      }
-      for (index_type i = k; i < m; ++i) {
-        R_work(i, j) -= T{2} * v(i) * dot;
-      }
-    }
-
-    // Apply H to Q_full: Q_full := Q_full - 2 * (Q_full * v) * v^T
-    // For each row i of Q_full, compute dot = Q_full(i, :) . v,
-    // then Q_full(i, j) -= 2 * dot * v(j).
     for (index_type i = 0; i < m; ++i) {
-      T dot = T{0};
-      for (index_type j = k; j < m; ++j) {
-        dot += Q_full(i, j) * v(j);
-      }
-      for (index_type j = k; j < m; ++j) {
-        Q_full(i, j) -= T{2} * dot * v(j);
-      }
+        for (index_type j = 0; j < p; ++j) { Q(i, j) = Q_full(i, j); }
     }
-  }
 
-  // Extract the reduced Q (first p columns) and R (top p rows).
-  Matrix<T, M, P> Q(m, p);
-  Matrix<T, P, N> R(p, n);
-
-  for (index_type i = 0; i < m; ++i) {
-    for (index_type j = 0; j < p; ++j) {
-      Q(i, j) = Q_full(i, j);
+    for (index_type i = 0; i < p; ++i) {
+        for (index_type j = 0; j < n; ++j) { R(i, j) = R_work(i, j); }
     }
-  }
 
-  for (index_type i = 0; i < p; ++i) {
-    for (index_type j = 0; j < n; ++j) {
-      R(i, j) = R_work(i, j);
-    }
-  }
-
-  return QRReducedResult<T, M, N>{.Q = std::move(Q), .R = std::move(R)};
+    return QRReducedResult<T, M, N>{.Q = std::move(Q), .R = std::move(R)};
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -338,78 +326,65 @@ template <concepts::Matrix Derived> auto qr(const Derived &A) {
 /// This is the same algorithm as the reduced QR, but Q is returned in full
 /// (m x m) rather than truncated to the first min(m,n) columns, and R is
 /// m x n rather than min(m,n) x n.
-template <concepts::Matrix Derived> auto qr_full(const Derived &A) {
-  using AType = std::decay_t<Derived>;
-  using T = typename AType::value_type;
-  constexpr index_type M = AType::extents_type::static_extent(0);
-  constexpr index_type N = AType::extents_type::static_extent(1);
-  using Vec = Vector<T, M>;
+template <concepts::Matrix Derived>
+auto qr_full(const Derived &A) {
+    using AType = std::decay_t<Derived>;
+    using T = typename AType::value_type;
+    constexpr index_type M = AType::extents_type::static_extent(0);
+    constexpr index_type N = AType::extents_type::static_extent(1);
+    using Vec = Vector<T, M>;
 
-  const index_type m = A.extent(0);
-  const index_type n = A.extent(1);
-  const index_type p = std::min(m, n);
+    const index_type m = A.extent(0);
+    const index_type n = A.extent(1);
+    const index_type p = std::min(m, n);
 
-  // Work copy of A → becomes R.
-  Matrix<T, M, N> R(A);
+    // Work copy of A → becomes R.
+    Matrix<T, M, N> R(A);
 
-  // Accumulate Q starting from identity.
-  Matrix<T, M, M> Q(m, m);
-  Q = expression::nullary::Identity<T, M, M>(Q.extents());
+    // Accumulate Q starting from identity.
+    Matrix<T, M, M> Q(m, m);
+    Q = expression::nullary::Identity<T, M, M>(Q.extents());
 
-  for (index_type k = 0; k < p; ++k) {
-    Vec v(m);
-    v = expression::nullary::Constant(T{0}, v.extents());
+    for (index_type k = 0; k < p; ++k) {
+        Vec v(m);
+        v = expression::nullary::Constant(T{0}, v.extents());
 
-    T norm_sub = T{0};
-    for (index_type i = k; i < m; ++i) {
-      v(i) = R(i, k);
-      norm_sub += v(i) * v(i);
+        T norm_sub = T{0};
+        for (index_type i = k; i < m; ++i) {
+            v(i) = R(i, k);
+            norm_sub += v(i) * v(i);
+        }
+        norm_sub = std::sqrt(norm_sub);
+
+        if (norm_sub < std::numeric_limits<T>::min()) { continue; }
+
+        if (v(k) >= T{0}) {
+            v(k) += norm_sub;
+        } else {
+            v(k) -= norm_sub;
+        }
+
+        T v_norm = T{0};
+        for (index_type i = k; i < m; ++i) { v_norm += v(i) * v(i); }
+        v_norm = std::sqrt(v_norm);
+        for (index_type i = k; i < m; ++i) { v(i) /= v_norm; }
+
+        // Apply reflection to R.
+        for (index_type j = k; j < n; ++j) {
+            T dot = T{0};
+            for (index_type i = k; i < m; ++i) { dot += v(i) * R(i, j); }
+            for (index_type i = k; i < m; ++i) { R(i, j) -= T{2} * v(i) * dot; }
+        }
+
+        // Apply reflection to Q.
+        for (index_type i = 0; i < m; ++i) {
+            T dot = T{0};
+            for (index_type j = k; j < m; ++j) { dot += Q(i, j) * v(j); }
+            for (index_type j = k; j < m; ++j) { Q(i, j) -= T{2} * dot * v(j); }
+        }
     }
-    norm_sub = std::sqrt(norm_sub);
 
-    if (norm_sub < std::numeric_limits<T>::min()) {
-      continue;
-    }
-
-    if (v(k) >= T{0}) {
-      v(k) += norm_sub;
-    } else {
-      v(k) -= norm_sub;
-    }
-
-    T v_norm = T{0};
-    for (index_type i = k; i < m; ++i) {
-      v_norm += v(i) * v(i);
-    }
-    v_norm = std::sqrt(v_norm);
-    for (index_type i = k; i < m; ++i) {
-      v(i) /= v_norm;
-    }
-
-    // Apply reflection to R.
-    for (index_type j = k; j < n; ++j) {
-      T dot = T{0};
-      for (index_type i = k; i < m; ++i) {
-        dot += v(i) * R(i, j);
-      }
-      for (index_type i = k; i < m; ++i) {
-        R(i, j) -= T{2} * v(i) * dot;
-      }
-    }
-
-    // Apply reflection to Q.
-    for (index_type i = 0; i < m; ++i) {
-      T dot = T{0};
-      for (index_type j = k; j < m; ++j) {
-        dot += Q(i, j) * v(j);
-      }
-      for (index_type j = k; j < m; ++j) {
-        Q(i, j) -= T{2} * dot * v(j);
-      }
-    }
-  }
-
-  return QRFullResult<T, M, N>{.Q = std::move(Q), .R = std::move(R)};
+    return QRFullResult<T, M, N>{.Q = std::move(Q), .R = std::move(R)};
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -428,34 +403,24 @@ template <concepts::Matrix Derived> auto qr_full(const Derived &A) {
 ///
 /// This variant is simpler than Householder but less numerically stable.
 /// For well-conditioned matrices the results are essentially identical.
-template <concepts::Matrix Derived> auto qr_gram_schmidt(const Derived &A) {
-  using AType = std::decay_t<Derived>;
-  using T = typename AType::value_type;
-  constexpr index_type M = AType::extents_type::static_extent(0);
-  constexpr index_type N = AType::extents_type::static_extent(1);
+template <concepts::Matrix Derived>
+auto qr_gram_schmidt(const Derived &A) {
+    using AType = std::decay_t<Derived>;
+    using T = typename AType::value_type;
+    constexpr index_type M = AType::extents_type::static_extent(0);
+    constexpr index_type N = AType::extents_type::static_extent(1);
 
-  const index_type m = A.extent(0);
-  const index_type n = A.extent(1);
+    const index_type m = A.extent(0);
+    const index_type n = A.extent(1);
 
-  // Q = orthonormalised columns of A.
-  Matrix<T, M, N> Q = utils::orthogonalization::gram_schmidt(A);
+    // Q = orthonormalised columns of A.
+    Matrix<T, M, N> Q = utils::orthogonalization::gram_schmidt(A);
 
-  // R = Q^T * A, computed element-by-element.
-  // R(i, j) = sum_k Q(k, i) * A(k, j)   for i in [0, n), j in [0, n).
-  Matrix<T, N, N> R(n, n);
-  R = expression::nullary::Constant(T{0}, R.extents());
+    // R = Q^T * A.
+    Matrix<T, N, N> R(n, n);
+    R = Q.transpose() * A;
 
-  for (index_type i = 0; i < n; ++i) {
-    for (index_type j = 0; j < n; ++j) {
-      T sum = T{0};
-      for (index_type k = 0; k < m; ++k) {
-        sum += Q(k, i) * A(k, j);
-      }
-      R(i, j) = sum;
-    }
-  }
-
-  return QRReducedResult<T, M, N>{.Q = std::move(Q), .R = std::move(R)};
+    return QRReducedResult<T, M, N>{.Q = std::move(Q), .R = std::move(R)};
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -478,8 +443,8 @@ template <concepts::Matrix Derived> auto qr_gram_schmidt(const Derived &A) {
 ///           success, or a breakdown error if R has a zero pivot.
 template <concepts::Matrix ADerived, concepts::Vector BDerived>
 auto qr_solve(const ADerived &A, const BDerived &b) {
-  auto result = qr(A);
-  return result.solve(b);
+    auto result = qr(A);
+    return result.solve(b);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -503,8 +468,214 @@ auto qr_solve(const ADerived &A, const BDerived &b) {
 ///           success, or a breakdown error if R has a zero pivot.
 template <concepts::Matrix ADerived, concepts::Vector BDerived>
 auto qr_solve_full(const ADerived &A, const BDerived &b) {
-  auto result = qr_full(A);
-  return result.solve(b);
+    auto result = qr_full(A);
+    return result.solve(b);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Column-pivoted QR result type
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Result of a column-pivoted QR decomposition.
+///
+/// Given an m x n matrix A, produces:
+///   A * P = Q * R
+/// equivalently:
+///   A = Q * R * P^T
+///
+/// where Q (m x p, p = min(m,n)) has orthonormal columns, R (p x n) is upper
+/// triangular, and P is a column permutation matrix.  Column pivoting selects,
+/// at each step, the remaining column with the largest 2-norm, guaranteeing
+/// that the diagonal entries of R are in non-increasing magnitude:
+///   |R(0,0)| >= |R(1,1)| >= ... >= |R(p-1,p-1)|
+///
+/// This ordering makes the factorisation suitable for reliable numerical rank
+/// determination: the rank is the number of leading diagonal entries that
+/// exceed a tolerance.
+template <typename T, index_type M, index_type N>
+struct QRColPivotResult {
+    /// Scalar type of the decomposition.
+    using value_type = T;
+
+    static constexpr index_type P = extents::min(M, N);
+
+    /// Orthonormal matrix Q (m x p, p = min(m,n)).
+    Matrix<T, M, P> Q;
+    /// Upper triangular matrix R (p x n).
+    Matrix<T, P, N> R;
+    /// Column permutation: col_perm(j) = original column index at position j.
+    DataArray<index_type, N> col_perm;
+
+    /// @brief Compute the numerical rank from the R diagonal.
+    ///
+    /// Returns the number of leading diagonal entries of R whose absolute value
+    /// exceeds `tol * |R(0,0)|`.  If no tolerance is provided, a default based
+    /// on machine epsilon and the matrix dimensions is used.
+    ///
+    /// @param tol_override  Optional explicit tolerance multiplier.
+    /// @return  The numerical rank.
+    auto rank(T tol_override = T{-1}) const -> index_type {
+        const index_type m = Q.extent(0);
+        const index_type n = R.extent(1);
+        const index_type p = std::min(m, n);
+
+        if (p == 0) return 0;
+
+        // Default tolerance: eps * max(m, n).
+        T tol = tol_override;
+        if (tol < T{0}) {
+            tol = std::numeric_limits<T>::epsilon()
+                  * static_cast<T>(std::max(m, n));
+        }
+
+        const T threshold = tol * std::abs(R(0, 0));
+
+        index_type r = 0;
+        for (index_type i = 0; i < p; ++i) {
+            if (std::abs(R(i, i)) > threshold)
+                ++r;
+            else
+                break; // Diagonal is non-increasing, so all subsequent are <=
+                       // this.
+        }
+        return r;
+    }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Column-pivoted Householder QR
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// @brief Column-pivoted QR decomposition via Householder reflections.
+///
+/// At each step k, the algorithm selects the remaining column (index >= k) with
+/// the largest 2-norm and swaps it into position k before applying the
+/// Householder reflection.  This guarantees |R(k,k)| is non-increasing.
+///
+/// @param A  An m x n matrix.
+/// @return   A `QRColPivotResult` with Q (m x p), R (p x n), and col_perm.
+template <concepts::Matrix Derived>
+auto qr_col_pivot(const Derived &A) {
+    using AType = std::decay_t<Derived>;
+    using T = typename AType::value_type;
+    constexpr index_type M = AType::extents_type::static_extent(0);
+    constexpr index_type N = AType::extents_type::static_extent(1);
+    constexpr index_type P = extents::min(M, N);
+    using Vec = Vector<T, M>;
+
+    const index_type m = A.extent(0);
+    const index_type n = A.extent(1);
+    const index_type p = std::min(m, n);
+
+    // Work on a copy of A that will be transformed into R.
+    Matrix<T, M, N> R_work(A);
+
+    // Accumulate Q starting from identity (m x m), extract first p cols later.
+    Matrix<T, M, M> Q_full(m, m);
+    Q_full = expression::nullary::Identity<T, M, M>(Q_full.extents());
+
+    // Column permutation (identity initially).
+    DataArray<index_type, N> col_perm(n);
+    std::iota(col_perm.begin(), col_perm.end(), index_type{0});
+
+    // Precompute column norms squared (diagonal of the Gram matrix A^T A)
+    // for efficient pivot selection via Businger-Golub norm downdating.
+    Vector<T, N> col_norms_sq(R_work.colwise().template norm_powered<2>());
+
+    for (index_type k = 0; k < p; ++k) {
+        // ── Column pivoting: find the column (>= k) with largest remaining
+        // norm.
+        index_type max_col = k;
+        T max_norm = col_norms_sq(k);
+        for (index_type j = k + 1; j < n; ++j) {
+            if (col_norms_sq(j) > max_norm) {
+                max_norm = col_norms_sq(j);
+                max_col = j;
+            }
+        }
+
+        // Swap columns k and max_col in R_work, col_perm, and col_norms_sq.
+        if (max_col != k) {
+            std::swap(col_perm(k), col_perm(max_col));
+            std::swap(col_norms_sq(k), col_norms_sq(max_col));
+            for (index_type i = 0; i < m; ++i) {
+                std::swap(R_work(i, k), R_work(i, max_col));
+            }
+        }
+
+        // ── Householder reflection (same as unpivoted qr).
+        Vec v(m);
+        v = expression::nullary::Constant(T{0}, v.extents());
+
+        for (index_type i = k; i < m; ++i) { v(i) = R_work(i, k); }
+        // v is zero for indices 0..k-1, so the full-vector norm equals
+        // the norm of the sub-column R_work(k:m-1, k).
+        T norm_sub = v.norm();
+
+        if (norm_sub < std::numeric_limits<T>::min()) { continue; }
+
+        if (v(k) >= T{0}) {
+            v(k) += norm_sub;
+        } else {
+            v(k) -= norm_sub;
+        }
+
+        // Normalise v so that the reflection is H = I - 2*v*v^T.
+        // (Zero entries at 0..k-1 are unaffected by division.)
+        v.normalize();
+
+        // Apply H to R_work.
+        for (index_type j = k; j < n; ++j) {
+            T dot = T{0};
+            for (index_type i = k; i < m; ++i) { dot += v(i) * R_work(i, j); }
+            for (index_type i = k; i < m; ++i) {
+                R_work(i, j) -= T{2} * v(i) * dot;
+            }
+        }
+
+        // Apply H to Q_full.
+        for (index_type i = 0; i < m; ++i) {
+            T dot = T{0};
+            for (index_type j = k; j < m; ++j) { dot += Q_full(i, j) * v(j); }
+            for (index_type j = k; j < m; ++j) {
+                Q_full(i, j) -= T{2} * dot * v(j);
+            }
+        }
+
+        // ── Update column norms for remaining columns (downdate).
+        // After the reflection, R_work(k, j) for j > k has changed.
+        // The remaining norm squared of column j (rows k+1..m-1) is
+        // col_norms_sq(j) - R_work(k, j)^2.  This avoids recomputing from
+        // scratch and is the standard technique (Businger-Golub).
+        for (index_type j = k + 1; j < n; ++j) {
+            col_norms_sq(j) -= R_work(k, j) * R_work(k, j);
+            // Guard against negative due to rounding.
+            if (col_norms_sq(j) < T{0}) col_norms_sq(j) = T{0};
+        }
+    }
+
+    // Extract the reduced Q (first p columns) and R (top p rows).
+    Matrix<T, M, P> Q(Q_full.leftCols(p));
+    Matrix<T, P, N> R(R_work.topRows(p));
+
+    return QRColPivotResult<T, M, N>{
+        .Q = std::move(Q), .R = std::move(R), .col_perm = std::move(col_perm)};
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Rank via column-pivoted QR
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// @brief Compute the numerical rank of a matrix via column-pivoted QR.
+///
+/// This is a convenience function that performs a column-pivoted QR
+/// decomposition and returns the rank.
+///
+/// @param A  An m x n matrix.
+/// @return   The numerical rank.
+template <concepts::Matrix Derived>
+auto rank(const Derived &A) -> index_type {
+    return qr_col_pivot(A).rank();
 }
 
 } // namespace zipper::utils::decomposition

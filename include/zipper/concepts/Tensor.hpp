@@ -34,7 +34,7 @@ struct IsZipperBase<TensorBase<T>> : std::true_type {};
 } // namespace detail
 //
 template <typename T>
-concept Tensor = detail::IsTensor<T>::value || detail::IsTensorBase<T>::value;
+concept Tensor = detail::IsTensor<std::decay_t<T>>::value || detail::IsTensorBase<std::decay_t<T>>::value;
 
 /// Anything derived from expression can be treated like a tensor
 template <typename T>

@@ -82,6 +82,9 @@ struct detail::ExpressionTraits<binary::MatrixVectorProduct<A, B>>
     using extents_type = extents<_Detail::ATraits::extents_type::static_extent(0)>;
     constexpr static bool is_coefficient_consistent = false;
     constexpr static bool is_value_based = false;
+
+    /// Matrix-vector product produces a rank-1 result — no layout preference.
+    using preferred_layout = zipper::detail::NoLayoutPreference;
 };
 
 namespace binary {
@@ -121,7 +124,7 @@ class MatrixVectorProduct
         return extents_traits::make_extents_from(*this);
     }
     value_type coeff(index_type a) const {
-        value_type v = 0;
+        std::remove_const_t<value_type> v = 0;
         using zipper::expression::detail::HasIndexSet;
         using zipper::expression::detail::HasForEach;
         constexpr bool lhs_has_zeros = HasIndexSet<std::decay_t<A>>;

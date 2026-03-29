@@ -1,16 +1,20 @@
-#include <algorithm>
 #if !defined(ZIPPER_STORAGE_SPARSECOORDINATEACCESSOR_HPP)
 #define ZIPPER_STORAGE_SPARSECOORDINATEACCESSOR_HPP
 
-#include "zipper/detail/assert.hpp"
+#include <algorithm>
 #include <format>
-
 #include <ranges>
+#include <sstream>
+
+#include "zipper/detail/assert.hpp"
 #include <vector>
 
 #include "zipper/detail/ExtentsTraits.hpp"
 #include "zipper/detail/pack_index.hpp"
 #include "zipper/expression/ExpressionBase.hpp"
+#include "zipper/expression/detail/IndexSet.hpp"
+#include "zipper/expression/detail/SparseAssignHelper.hpp"
+#include "zipper/utils/extents/assignable_extents.hpp"
 namespace zipper::storage {
 template <typename ValueType, typename Extents> class SparseCoordinateAccessor;
 
@@ -40,13 +44,6 @@ public:
   [[nodiscard]] auto index() const -> size_t { return m_index; }
   auto multiindex() const { return m_acc.get_multiindex(index()); }
   auto value() const -> ValueType { return m_acc.m_data.at(index()); }
-  /*
-ValueType& value()
-  requires(!is_const)
-{
-  return m_acc.m_data.at(index());
-}
-*/
   auto operator=(const SparseCoordinateAccessor_iterator &N)
       -> SparseCoordinateAccessor_iterator & {
     ZIPPER_ASSERT(&m_acc == &N.m_acc);
@@ -70,19 +67,30 @@ ValueType& value()
   }
   auto operator*() const -> const auto & { return *this; }
   auto operator*() -> auto & { return *this; }
-  auto operator<=>(const auto &t) const -> std::strong_ordering {
-    ZIPPER_ASSERT(m_acc.m_compressed);
-    if constexpr (std::is_same_v<SparseCoordinateAccessor_iterator<
-                                     ValueType, Extents, is_const>,
-                                 std::decay_t<decltype(t)>>) {
-      return index() <=> t.index();
-      // return multiindex() <=> t.multiindex();
-    } else {
-      ZIPPER_ASSERT(index() != m_acc.size());
-      return multiindex() <=> t;
-    }
+  /// Iterator-to-iterator comparison (by storage index). Works in both
+  /// compressed and uncompressed states — used by range-for in find().
+  auto operator<=>(const SparseCoordinateAccessor_iterator &t) const
+      -> std::strong_ordering {
+    return index() <=> t.index();
   }
-  auto operator==(const auto &o) const -> bool {
+  auto operator==(const SparseCoordinateAccessor_iterator &o) const -> bool {
+    return index() == o.index();
+  }
+
+  /// Iterator-to-multiindex comparison (lexicographic). Only valid when
+  /// the underlying data is compressed and sorted.
+  template <typename T>
+    requires(!std::is_same_v<std::decay_t<T>,
+                             SparseCoordinateAccessor_iterator>)
+  auto operator<=>(const T &t) const -> std::strong_ordering {
+    ZIPPER_ASSERT(m_acc.m_compressed);
+    ZIPPER_ASSERT(index() != m_acc.size());
+    return multiindex() <=> t;
+  }
+  template <typename T>
+    requires(!std::is_same_v<std::decay_t<T>,
+                             SparseCoordinateAccessor_iterator>)
+  auto operator==(const T &o) const -> bool {
     return std::is_eq(*this <=> o);
   }
   auto operator<(const auto &o) const -> bool {
@@ -101,15 +109,6 @@ class SparseCoordinateAccessor
     : public expression::ExpressionBase<
           SparseCoordinateAccessor<ValueType, Extents>>,
       public Extents {
-  // template <typename T>
-  // struct _detail;
-  // template <rank_type... Index>
-  // struct _detail<std::integer_sequence<rank_type, Index...>> {
-  //     // storage_type
-  // };
-
-  // using detail =
-  //     _detail<std::make_integer_sequence<rank_type, Extents::rank()>>;
 
 public:
   template <typename VT, typename E, bool is_const>
@@ -117,6 +116,7 @@ public:
   using ParentType = expression::ExpressionBase<
       SparseCoordinateAccessor<ValueType, Extents>>;
   using value_type = ValueType;
+  using element_type = std::remove_const_t<ValueType>;
   using extents_type = Extents;
   using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
   constexpr static auto rank() -> rank_type { return extents_type::rank(); }
@@ -143,15 +143,6 @@ public:
     requires(!IsStatic)
       : extents_type(extents_) {}
 
-  // template <zipper::concepts::Extents E2>
-  // void resize(const E2& e)
-  //     requires(extents_traits::template is_convertable_from<E2>() &&
-  //              !IsStatic)
-  //{
-  //     static_assert(E2::rank() != 0);
-  //     this->resize_extents(e);
-  // }
-
   [[nodiscard]] auto is_compressed() const -> bool { return m_compressed; }
 
 private:
@@ -161,7 +152,7 @@ private:
   auto get_multiindex(std::integer_sequence<size_t, N...>, size_t a) const {
     return std::tie(m_indices[N][a]...);
   }
-  template <size_t... N> auto get_multiindex(size_t a) const {
+  auto get_multiindex(size_t a) const {
     return get_multiindex(std::make_integer_sequence<size_t, rank()>{}, a);
   }
 
@@ -205,6 +196,35 @@ public:
   }
   auto cend() const -> const_iterator_type {
     return const_iterator_type{*this, data_size()};
+  }
+
+  /// Remove all stored entries, resetting to an empty sparse container.
+  void clear() {
+    m_data.clear();
+    for (auto &idx_vec : m_indices) {
+      idx_vec.clear();
+    }
+    m_compressed = true;
+  }
+
+  /// Reserve capacity for at least `n` entries to avoid reallocations
+  /// during bulk emplacement.
+  void reserve(size_t n) {
+    m_data.reserve(n);
+    for (auto &idx_vec : m_indices) {
+      idx_vec.reserve(n);
+    }
+  }
+
+  /// Assign from an arbitrary expression.  Clears existing entries and
+  /// emplaces only nonzero values from the source.
+  template <zipper::concepts::Expression V>
+  void assign(const V &v)
+    requires(!std::is_const_v<ValueType> &&
+             zipper::utils::extents::assignable_extents_v<
+                typename V::extents_type, extents_type>)
+  {
+    expression::detail::SparseAssignHelper::assign(v, *this);
   }
 
   void compress() {
@@ -282,14 +302,18 @@ public:
     }
   }
   template <typename... Indices>
-  auto coeff_ref(Indices &&...indices) -> value_type & {
+  auto coeff_ref(Indices &&...indices) -> value_type &
+    requires(!std::is_const_v<ValueType>)
+  {
     index_type idx = get_index(std::forward<Indices>(indices)...);
     if (idx != data_size()) {
       return m_data.at(idx);
     } else {
-      throw std::invalid_argument(std::format(
-          "Index {} did not have a value in SparseCoordinateStorage",
-          std::tie(indices...)));
+      std::ostringstream oss;
+      ((oss << indices << ' '), ...);
+      throw std::invalid_argument(
+          "Index (" + oss.str() +
+          ") did not have a value in SparseCoordinateAccessor");
     }
   }
 
@@ -299,15 +323,72 @@ public:
     if (idx != data_size()) {
       return m_data.at(idx);
     } else {
-      throw std::invalid_argument(std::format(
-          "Index {} did not have a value in SparseCoordinateStorage",
-          std::tie(indices...)));
+      std::ostringstream oss;
+      ((oss << indices << ' '), ...);
+      throw std::invalid_argument(
+          "Index (" + oss.str() +
+          ") did not have a value in SparseCoordinateAccessor");
     }
   }
   template <typename... Indices>
     requires(sizeof...(Indices) == rank())
   auto emplace(Indices... indices) -> value_type & {
     return emplace(std::make_integer_sequence<rank_type, rank()>{}, indices...);
+  }
+
+  // ── index_set: rank-1 (no argument, returns all stored indices) ──────────
+  template <rank_type D>
+    requires(D == 0 && rank() == 1)
+  auto index_set() const -> expression::detail::SpanSparseIndexSet {
+    ZIPPER_ASSERT(m_compressed);
+    return {std::span<const index_type>(m_indices[0])};
+  }
+
+  // ── index_set: rank-2 (returns indices along dimension D for other_idx) ──
+  template <rank_type D>
+    requires(D < rank() && rank() == 2)
+  auto index_set(index_type other_idx) const {
+    ZIPPER_ASSERT(m_compressed);
+    if constexpr (D == 1) {
+      // Column indices for a given row — contiguous after compression
+      auto lo = std::lower_bound(m_indices[0].begin(), m_indices[0].end(),
+                                 other_idx);
+      auto hi = std::upper_bound(lo, m_indices[0].end(), other_idx);
+      auto lo_off =
+          static_cast<size_t>(std::distance(m_indices[0].begin(), lo));
+      auto count = static_cast<size_t>(std::distance(lo, hi));
+      return expression::detail::SpanSparseIndexSet{
+          std::span<const index_type>(m_indices[1].data() + lo_off, count)};
+    } else {
+      // Row indices for a given column — must scan all entries
+      std::vector<index_type> result;
+      for (size_t i = 0; i < data_size(); ++i) {
+        if (m_indices[1][i] == other_idx) {
+          result.push_back(m_indices[0][i]);
+        }
+      }
+      return expression::detail::DynamicSparseIndexSet{std::move(result)};
+    }
+  }
+
+  // ── rank-1 convenience ───────────────────────────────────────────────────
+  auto nonzero_segment() const
+    requires(rank() == 1)
+  {
+    return index_set<0>();
+  }
+
+  // ── rank-2 convenience ───────────────────────────────────────────────────
+  auto col_range_for_row(index_type row) const
+    requires(rank() == 2)
+  {
+    return index_set<1>(row);
+  }
+
+  auto row_range_for_col(index_type col) const
+    requires(rank() == 2)
+  {
+    return index_set<0>(col);
   }
 
 private:
@@ -328,8 +409,14 @@ struct detail::ExpressionTraits<
           ValueType, Extents,
           zipper::detail::AccessFeatures{
               .is_const = std::is_const_v<ValueType>,
-              .is_reference = true},
-          zipper::detail::ShapeFeatures{.is_resizable = false}> {};
+              .is_reference = false},
+          zipper::detail::ShapeFeatures{.is_resizable = false}> {
+  constexpr static bool has_index_set = true;
+  constexpr static bool has_known_zeros = has_index_set;
+
+  /// COO has no compressed layout bias → no preference.
+  using preferred_layout = zipper::detail::NoLayoutPreference;
+};
 
 } // namespace zipper::expression
 

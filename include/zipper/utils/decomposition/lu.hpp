@@ -16,7 +16,7 @@
 /// and the upper triangle (including the diagonal) holds U.  This matches the
 /// standard LAPACK convention.
 ///
-/// The permutation is stored as a vector `perm` where `perm[i]` is the
+/// The permutation is stored as a DataArray `perm` where `perm(i)` is the
 /// original row index of the row currently in position i after all swaps.
 /// A sign integer tracks the parity of the permutation (for computing
 /// determinants).
@@ -45,8 +45,8 @@
 #include <expected>
 #include <limits>
 #include <numeric>
-#include <vector>
 
+#include <zipper/DataArray.hpp>
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
 #include <zipper/expression/unary/TriangularView.hpp>
@@ -74,14 +74,31 @@ template <typename T, index_type N> struct PLUResult {
   /// Combined LU matrix (lower triangle = L multipliers, upper triangle = U).
   Matrix<T, N, N> LU;
   /// Row permutation: perm[i] = original row index at position i.
-  std::vector<index_type> perm;
+  DataArray<index_type, N> perm;
   /// Sign of the permutation (+1 or -1).
   int sign;
+
+  /// @brief Unit lower triangular factor L.
+  ///
+  /// Returns a read-only TriangularView of the combined LU matrix with
+  /// UnitLower mode: the strict lower triangle contains the L multipliers,
+  /// and the diagonal is implicitly 1.
+  auto L() const {
+    return LU.template as_triangular<expression::TriangularMode::UnitLower>();
+  }
+
+  /// @brief Upper triangular factor U.
+  ///
+  /// Returns a read-only TriangularView of the combined LU matrix with
+  /// Upper mode: the upper triangle (including the diagonal) contains U.
+  auto U() const {
+    return LU.template as_triangular<expression::TriangularMode::Upper>();
+  }
 
   /// @brief Solve A*x = b using the stored PLU factors.
   ///
   /// Performs:
-  ///   1. Apply permutation to b:  Pb(i) = b(perm[i])
+  ///   1. Apply permutation to b:  Pb(i) = b(perm(i))
   ///   2. Forward substitution:    L * y = Pb  (unit lower triangular)
   ///   3. Back substitution:       U * x = y   (upper triangular)
   ///
@@ -96,25 +113,21 @@ template <typename T, index_type N> struct PLUResult {
 
     const index_type n = LU.rows();
 
-    // 1. Apply permutation: Pb(i) = b(perm[i]).
+    // 1. Apply permutation: Pb(i) = b(perm(i)).
     ResultVec Pb(n);
     for (index_type i = 0; i < n; ++i) {
-      Pb(i) = b(perm[i]);
+      Pb(i) = b(perm(i));
     }
 
     // 2. Forward substitution: L * y = Pb  (L is unit lower triangular).
-    auto L_lower =
-        LU.template as_triangular<expression::TriangularMode::UnitLower>();
-    auto y_result = L_lower.solve(Pb);
+    auto y_result = L().solve(Pb);
 
     if (!y_result) {
       return Result{std::unexpected(std::move(y_result.error()))};
     }
 
     // 3. Back substitution: U * x = y  (U is upper triangular).
-    auto U_upper =
-        LU.template as_triangular<expression::TriangularMode::Upper>();
-    auto x_result = U_upper.solve(*y_result);
+    auto x_result = U().solve(*y_result);
 
     if (!x_result) {
       return Result{std::unexpected(std::move(x_result.error()))};
@@ -166,7 +179,7 @@ auto plu(const Derived &A)
   Matrix<T, N, N> LU(A);
 
   // Initialise the permutation vector to the identity.
-  std::vector<index_type> perm(n);
+  DataArray<index_type, N> perm(n);
   std::iota(perm.begin(), perm.end(), index_type{0});
   int sign = 1;
 
@@ -199,7 +212,7 @@ auto plu(const Derived &A)
       Vector<T, N> tmp(LU.row(k));
       LU.row(k) = LU.row(max_row);
       LU.row(max_row) = tmp;
-      std::swap(perm[k], perm[max_row]);
+      std::swap(perm(k), perm(max_row));
       sign = -sign;
     }
 
