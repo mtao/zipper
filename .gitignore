@@ -47,4 +47,11 @@ build*
 
 # meson wrap likes to add this file
 .meson-subproject-wrap-hash.txt
+
+# Ignore auto-promoted wrap-redirect files from subprojects.
+# Only directly-needed wraps are whitelisted below.
+subprojects/*.wrap
+!subprojects/catch2.wrap
+!subprojects/mdspan.wrap
+
 docs/
