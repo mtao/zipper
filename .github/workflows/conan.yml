@@ -65,6 +65,8 @@ jobs:
           sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
           sudo apt-get update
           sudo apt-get install -y gcc-15 g++-15 ccache
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-15 100
+          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-15 100
 
       - name: Install ccache (macOS)
         if: runner.os == 'macOS'
@@ -97,7 +99,11 @@ jobs:
         shell: bash
         run: |
           PROFILE_PATH=$(conan profile path default)
-          echo "compiler.cppstd=23" >> "$PROFILE_PATH"
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            echo "compiler.cppstd=26" >> "$PROFILE_PATH"
+          else
+            echo "compiler.cppstd=23" >> "$PROFILE_PATH"
+          fi
           echo "build_type=${{ matrix.build_type }}" >> "$PROFILE_PATH"
           conan profile show
 
