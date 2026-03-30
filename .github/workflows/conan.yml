@@ -99,7 +99,11 @@ jobs:
         shell: bash
         run: |
           PROFILE_PATH=$(conan profile path default)
-          echo "compiler.cppstd=26" >> "$PROFILE_PATH"
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            echo "compiler.cppstd=26" >> "$PROFILE_PATH"
+          else
+            echo "compiler.cppstd=23" >> "$PROFILE_PATH"
+          fi
           echo "build_type=${{ matrix.build_type }}" >> "$PROFILE_PATH"
           conan profile show
 
