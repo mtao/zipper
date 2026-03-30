@@ -2,7 +2,7 @@
 #define ZIPPER_expression_UNARY_SCALAROPERATIONVIEW_HPP
 
 #include "UnaryExpressionBase.hpp"
-#include "ZeroPreserving.hpp"
+#include "detail/ZeroPreserving.hpp"
 #include "zipper/expression/detail/IndexSet.hpp"
 
 namespace zipper::expression {

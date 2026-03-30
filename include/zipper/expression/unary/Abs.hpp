@@ -2,7 +2,7 @@
 #define ZIPPER_EXPRESSION_UNARY_ABS_HPP
 
 #include "CoefficientWiseOperation.hpp"
-#include "ZeroPreserving.hpp"
+#include "detail/ZeroPreserving.hpp"
 #include <cmath>
 
 namespace zipper::expression::unary {

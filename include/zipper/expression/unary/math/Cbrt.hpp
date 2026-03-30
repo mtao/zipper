@@ -2,7 +2,7 @@
 #define ZIPPER_EXPRESSION_UNARY_MATH_CBRT_HPP
 
 #include "../CoefficientWiseOperation.hpp"
-#include "../ZeroPreserving.hpp"
+#include "../detail/ZeroPreserving.hpp"
 #include <cmath>
 
 namespace zipper::expression::unary {
