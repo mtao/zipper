@@ -1,4 +1,5 @@
-#pragma once
+#if !defined(ZIPPER_EXPRESSION_DETAIL_INDEXSET_HPP)
+#define ZIPPER_EXPRESSION_DETAIL_INDEXSET_HPP
 
 /// @file IndexSet.hpp
 /// @brief Lightweight range types for describing non-zero index patterns.
@@ -1356,3 +1357,4 @@ concept ZeroPreservingScalarOp =
     is_zero_preserving_scalar_op<Op, ScalarOnRight>::value;
 
 }  // namespace zipper::expression::detail
+#endif

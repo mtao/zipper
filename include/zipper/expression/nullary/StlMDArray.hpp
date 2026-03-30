@@ -1,4 +1,5 @@
-#pragma once
+#if !defined(ZIPPER_EXPRESSION_NULLARY_STLMDARRAY_HPP)
+#define ZIPPER_EXPRESSION_NULLARY_STLMDARRAY_HPP
 #include "zipper/expression/ExpressionBase.hpp"
 #include "zipper/expression/detail/AssignHelper.hpp"
 #include "zipper/storage/StlStorageInfo.hpp"
@@ -121,3 +122,4 @@ struct detail::ExpressionTraits<zipper::expression::nullary::StlMDArray<S, Polic
   constexpr static bool stores_references = std::is_reference_v<S>;
 };
 } // namespace zipper::expression
+#endif

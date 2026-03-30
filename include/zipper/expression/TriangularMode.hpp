@@ -7,7 +7,8 @@
 ///
 /// @see zipper::expression::unary::TriangularView
 
-#pragma once
+#if !defined(ZIPPER_EXPRESSION_TRIANGULARMODE_HPP)
+#define ZIPPER_EXPRESSION_TRIANGULARMODE_HPP
 
 namespace zipper::expression {
 
@@ -78,3 +79,4 @@ consteval auto is_valid_triangular_mode() -> bool {
 }
 
 } // namespace zipper::expression
+#endif
