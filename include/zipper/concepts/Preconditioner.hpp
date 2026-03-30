@@ -13,7 +13,8 @@
 /// @see zipper::utils::solver::SSORPreconditioner
 /// @see zipper::utils::solver::preconditioned_conjugate_gradient
 
-#pragma once
+#if !defined(ZIPPER_CONCEPTS_PRECONDITIONER_HPP)
+#define ZIPPER_CONCEPTS_PRECONDITIONER_HPP
 
 #include <type_traits>
 
@@ -50,3 +51,4 @@ concept Preconditioner = requires {
 } && preconditioner_detail::HasApplyMethod<P>::value;
 
 } // namespace zipper::concepts
+#endif

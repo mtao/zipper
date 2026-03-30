@@ -33,7 +33,8 @@
 ///      intersection semantics (multiplication), complementing the union
 ///      semantics used here for addition/subtraction.
 
-#pragma once
+#if !defined(ZIPPER_EXPRESSION_BINARY_ZEROAWAREOPERATION_HPP)
+#define ZIPPER_EXPRESSION_BINARY_ZEROAWAREOPERATION_HPP
 
 #include "BinaryExpressionBase.hpp"
 #include "detail/CoeffWiseTraits.hpp"
@@ -343,3 +344,4 @@ using ZeroAwareMinus = ZeroAwareOperation<
 }  // namespace binary
 
 }  // namespace zipper::expression
+#endif

@@ -374,7 +374,7 @@ mapping. All types follow right-handed coordinate conventions (OpenGL style).
 ### Transform Types
 
 ```cpp
-#include <zipper/transform/transform.hpp>  // umbrella header
+#include <zipper/transform/all.hpp>  // umbrella header
 using namespace zipper::transform;
 
 // General matrix-backed transform (4x4 for 3D)

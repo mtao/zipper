@@ -1,4 +1,5 @@
-#pragma once
+#if !defined(ZIPPER_DETAIL_MEMBER_CHILD_STORAGE_HPP)
+#define ZIPPER_DETAIL_MEMBER_CHILD_STORAGE_HPP
 
 #include "ViewPropagating.hpp"
 
@@ -31,3 +32,4 @@ using member_child_storage_t = std::conditional_t<
     >>;
 
 } // namespace zipper::detail
+#endif

@@ -36,15 +36,12 @@ namespace zipper::utils::suitesparse {
 // ═══════════════════════════════════════════════════════════════════════
 
 struct CholmodFactorDeleter {
-  cholmod_common *cc;
-  void operator()(cholmod_factor *p) const {
-    if (p) {
-      cholmod_l_free_factor(&p, cc);
+    cholmod_common *cc;
+    void operator()(cholmod_factor *p) const {
+        if (p) { cholmod_l_free_factor(&p, cc); }
     }
-  }
 };
-using CholmodFactorPtr =
-    std::unique_ptr<cholmod_factor, CholmodFactorDeleter>;
+using CholmodFactorPtr = std::unique_ptr<cholmod_factor, CholmodFactorDeleter>;
 
 // ═══════════════════════════════════════════════════════════════════════
 // CholmodResult — factorization result with solve capability
@@ -57,47 +54,48 @@ using CholmodFactorPtr =
 ///
 /// @tparam N  Static dimension of the matrix (rows/cols), or
 ///            `dynamic_extent` for runtime-sized.
-template <index_type N = dynamic_extent> struct CholmodResult {
-  /// Scalar type of the decomposition.
-  using value_type = double;
+template <index_type N = dynamic_extent>
+struct CholmodResult {
+    /// Scalar type of the decomposition.
+    using value_type = double;
 
-  /// CHOLMOD common struct (must outlive the factor).
-  std::shared_ptr<CholmodCommon> common;
-  /// CHOLMOD factorization handle.
-  CholmodFactorPtr factor;
-  /// Matrix dimension (number of rows = number of columns).
-  index_type dim;
+    /// CHOLMOD common struct (must outlive the factor).
+    std::shared_ptr<CholmodCommon> common;
+    /// CHOLMOD factorization handle.
+    CholmodFactorPtr factor;
+    /// Matrix dimension (number of rows = number of columns).
+    index_type dim;
 
-  /// @brief Solve Ax = b using the stored Cholesky factors.
-  ///
-  /// @param b  Right-hand side vector of length `dim`.
-  /// @return   `std::expected<Vector<double,N>, SolverError>` — the
-  ///           solution on success, or a breakdown error on failure.
-  template <concepts::Vector BDerived>
-  auto solve(const BDerived &b) const
-      -> std::expected<Vector<double, N>, solver::SolverError> {
-    using Result = std::expected<Vector<double, N>, solver::SolverError>;
-    auto *cc = common->get();
+    /// @brief Solve Ax = b using the stored Cholesky factors.
+    ///
+    /// @param b  Right-hand side vector of length `dim`.
+    /// @return   `std::expected<Vector<double,N>, SolverError>` — the
+    ///           solution on success, or a breakdown error on failure.
+    template <concepts::Vector BDerived>
+    auto solve(const BDerived &b) const
+        -> std::expected<Vector<double, N>, solver::SolverError> {
+        using Result = std::expected<Vector<double, N>, solver::SolverError>;
+        auto *cc = common->get();
 
-    // Convert RHS to CHOLMOD dense.
-    auto B = make_cholmod_dense_ptr(to_cholmod_dense(b, cc), cc);
-    if (!B) {
-      return Result{std::unexpected(solver::SolverError{
-          .kind = solver::SolverError::Kind::breakdown,
-          .message = "CHOLMOD: failed to allocate dense RHS"})};
+        // Convert RHS to CHOLMOD dense.
+        auto B = make_cholmod_dense_ptr(to_cholmod_dense(b, cc), cc);
+        if (!B) {
+            return Result{std::unexpected(solver::SolverError{
+                .kind = solver::SolverError::Kind::breakdown,
+                .message = "CHOLMOD: failed to allocate dense RHS"})};
+        }
+
+        // Solve.
+        auto X = make_cholmod_dense_ptr(
+            cholmod_l_solve(CHOLMOD_A, factor.get(), B.get(), cc), cc);
+        if (!X) {
+            return Result{std::unexpected(solver::SolverError{
+                .kind = solver::SolverError::Kind::breakdown,
+                .message = "CHOLMOD: solve failed"})};
+        }
+
+        return Result{from_cholmod_dense<N>(X.get())};
     }
-
-    // Solve.
-    auto X = make_cholmod_dense_ptr(
-        cholmod_l_solve(CHOLMOD_A, factor.get(), B.get(), cc), cc);
-    if (!X) {
-      return Result{std::unexpected(solver::SolverError{
-          .kind = solver::SolverError::Kind::breakdown,
-          .message = "CHOLMOD: solve failed"})};
-    }
-
-    return Result{from_cholmod_dense<N>(X.get())};
-  }
 };
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -115,45 +113,44 @@ template <typename T, index_type R, index_type C>
 auto cholmod_factor(const CSMatrix<T, R, C, storage::layout_left> &A,
                     int stype = 1)
     -> std::expected<CholmodResult<R>, solver::SolverError> {
-  constexpr index_type N = R;
-  using Result = std::expected<CholmodResult<N>, solver::SolverError>;
+    constexpr index_type N = R;
+    using Result = std::expected<CholmodResult<N>, solver::SolverError>;
 
-  try {
+    try {
+        auto common = std::make_shared<CholmodCommon>();
+        auto *cc = common->get();
 
-  auto common = std::make_shared<CholmodCommon>();
-  auto *cc = common->get();
+        // Create non-owning view of A.
+        auto cs = to_cholmod_sparse(A, stype);
 
-  // Create non-owning view of A.
-  auto cs = to_cholmod_sparse(A, stype);
+        // Analyze (symbolic factorization).
+        ::cholmod_factor *L_raw = cholmod_l_analyze(&cs, cc);
+        if (!L_raw) {
+            return Result{std::unexpected(solver::SolverError{
+                .kind = solver::SolverError::Kind::breakdown,
+                .message = "CHOLMOD: symbolic analysis failed"})};
+        }
+        CholmodFactorPtr L(L_raw, CholmodFactorDeleter{cc});
 
-  // Analyze (symbolic factorization).
-  cholmod_factor *L_raw = cholmod_l_analyze(&cs, cc);
-  if (!L_raw) {
-    return Result{std::unexpected(solver::SolverError{
-        .kind = solver::SolverError::Kind::breakdown,
-        .message = "CHOLMOD: symbolic analysis failed"})};
-  }
-  CholmodFactorPtr L(L_raw, CholmodFactorDeleter{cc});
+        // Numeric factorization.
+        int ok = cholmod_l_factorize(&cs, L.get(), cc);
+        if (!ok || cc->status == CHOLMOD_NOT_POSDEF) {
+            return Result{std::unexpected(solver::SolverError{
+                .kind = solver::SolverError::Kind::breakdown,
+                .message = "CHOLMOD: matrix is not positive definite"})};
+        }
 
-  // Numeric factorization.
-  int ok = cholmod_l_factorize(&cs, L.get(), cc);
-  if (!ok || cc->status == CHOLMOD_NOT_POSDEF) {
-    return Result{std::unexpected(solver::SolverError{
-        .kind = solver::SolverError::Kind::breakdown,
-        .message = "CHOLMOD: matrix is not positive definite"})};
-  }
+        return Result{CholmodResult<N>{
+            .common = std::move(common),
+            .factor = std::move(L),
+            .dim = static_cast<index_type>(A.rows()),
+        }};
 
-  return Result{CholmodResult<N>{
-      .common = std::move(common),
-      .factor = std::move(L),
-      .dim = static_cast<index_type>(A.rows()),
-  }};
-
-  } catch (const std::overflow_error &e) {
-    return Result{std::unexpected(solver::SolverError{
-        .kind = solver::SolverError::Kind::breakdown,
-        .message = e.what()})};
-  }
+    } catch (const std::overflow_error &e) {
+        return Result{std::unexpected(
+            solver::SolverError{.kind = solver::SolverError::Kind::breakdown,
+                                .message = e.what()})};
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -168,13 +165,12 @@ auto cholmod_factor(const CSMatrix<T, R, C, storage::layout_left> &A,
 /// @return       `std::expected<Vector<double,N>, SolverError>`.
 template <typename T, index_type R, index_type C, concepts::Vector BDerived>
 auto cholmod_solve(const CSMatrix<T, R, C, storage::layout_left> &A,
-                   const BDerived &b, int stype = 1)
+                   const BDerived &b,
+                   int stype = 1)
     -> std::expected<Vector<double, R>, solver::SolverError> {
-  auto result = cholmod_factor(A, stype);
-  if (!result) {
-    return std::unexpected(std::move(result.error()));
-  }
-  return result->solve(b);
+    auto result = cholmod_factor(A, stype);
+    if (!result) { return std::unexpected(std::move(result.error())); }
+    return result->solve(b);
 }
 
 } // namespace zipper::utils::suitesparse

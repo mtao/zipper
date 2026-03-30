@@ -1,4 +1,5 @@
-#pragma once
+#if !defined(ZIPPER_UTILS_EXTENTS_FOR_EACH_INDEX_HPP)
+#define ZIPPER_UTILS_EXTENTS_FOR_EACH_INDEX_HPP
 #include "zipper/detail/LayoutPreference.hpp"
 #include "zipper/types.hpp"
 #include <array>
@@ -113,3 +114,4 @@ void for_each_index(const Extents &ext, Fn &&fn) {
 }
 
 } // namespace zipper::utils::extents
+#endif

@@ -7,7 +7,8 @@
 ///
 /// @see zipper::expression::unary::TriangularView::solve
 
-#pragma once
+#if !defined(ZIPPER_UTILS_SOLVER_DETAIL_TRIANGULAR_SUBSTITUTE_HPP)
+#define ZIPPER_UTILS_SOLVER_DETAIL_TRIANGULAR_SUBSTITUTE_HPP
 
 #include <cmath>
 #include <expected>
@@ -133,3 +134,4 @@ auto back_substitute_inplace(const TriExpr &U,
 }
 
 } // namespace zipper::utils::solver::detail
+#endif

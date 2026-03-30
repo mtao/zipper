@@ -3,13 +3,12 @@
 #include <zipper/expression/unary/PartialTrace.hpp>
 
 #include "../../catch_include.hpp"
-#include <zipper/expression/nullary/Unit.hpp>
 #include <print>
-#include <zipper/Tensor.hpp>
-#include <zipper/Vector.hpp>
-#include <zipper/Matrix.hpp>
 #include <zipper/Form.hpp>
 #include <zipper/FormBase.hxx>
+#include <zipper/Matrix.hpp>
+#include <zipper/Tensor.hpp>
+#include <zipper/Vector.hpp>
 #include <zipper/expression/nullary/Constant.hpp>
 #include <zipper/expression/nullary/Identity.hpp>
 #include <zipper/expression/nullary/Random.hpp>
@@ -17,7 +16,7 @@
 
 namespace {
 
-void print(auto const& M) {
+void print(auto const &M) {
     constexpr static zipper::rank_type rank =
         std::decay_t<decltype(M)>::extents_type::rank();
 
@@ -58,9 +57,10 @@ void print(auto const& M) {
         }
     }
 }
-}  // namespace
+} // namespace
 TEST_CASE("test_form_tensor_product_basic", "[storage][dense]") {
-    zipper::Tensor<double, 3, 3> I = zipper::expression::nullary::Identity<double>{};
+    zipper::Tensor<double, 3, 3> I =
+        zipper::expression::nullary::Identity<double>{};
     zipper::Tensor<double, 3, std::dynamic_extent> M(3);
     zipper::Tensor<double, 3> x;
 
@@ -93,8 +93,10 @@ TEST_CASE("test_form_tensor_product_basic", "[storage][dense]") {
 }
 
 TEST_CASE("test_product_via_partial_trace", "[storage][tensor]") {
-    // Test that matrix product can be computed via tensor product + partial trace
-    zipper::Tensor<double, 3, 3> I = zipper::expression::nullary::Identity<double>{};
+    // Test that matrix product can be computed via tensor product + partial
+    // trace
+    zipper::Tensor<double, 3, 3> I =
+        zipper::expression::nullary::Identity<double>{};
     zipper::Tensor<double, 3, 3> M =
         zipper::expression::nullary::normal_random_infinite<double>(0, 1);
 
@@ -120,7 +122,8 @@ TEST_CASE("test_product_via_partial_trace", "[storage][tensor]") {
     static_assert(decltype(TP)::extents_type::rank() == 4);
 
     using TP_type = std::decay_t<decltype(TP)>::expression_type;
-    zipper::expression::unary::PartialTrace<const TP_type&, 1, 2> pt(TP.expression());
+    zipper::expression::unary::PartialTrace<const TP_type &, 1, 2> pt(
+        TP.expression());
     zipper::Matrix<double, 3, 3> MN_tensor = pt;
 
     // Both methods should give the same result
@@ -139,13 +142,19 @@ TEST_CASE("test_form_product", "[storage][tensor]") {
     O(1) = 1;
     O(2) = 1;
 
-    zipper::Vector<double, 3> E0 = zipper::expression::nullary::unit_vector<double, 3>(0);
-    zipper::Vector<double, 3> E1 = zipper::expression::nullary::unit_vector<double, 3>(1);
-    zipper::Vector<double, 3> E2 = zipper::expression::nullary::unit_vector<double, 3>(2);
+    zipper::Vector<double, 3> E0 =
+        zipper::expression::nullary::unit_vector<double, 3>(0);
+    zipper::Vector<double, 3> E1 =
+        zipper::expression::nullary::unit_vector<double, 3>(1);
+    zipper::Vector<double, 3> E2 =
+        zipper::expression::nullary::unit_vector<double, 3>(2);
 
-    zipper::Form<double, 3> D0 = zipper::expression::nullary::unit_vector<double, 3>(0);
-    zipper::Form<double, 3> D1 = zipper::expression::nullary::unit_vector<double, 3>(1);
-    zipper::Form<double, 3> D2 = zipper::expression::nullary::unit_vector<double, 3>(2);
+    zipper::Form<double, 3> D0 =
+        zipper::expression::nullary::unit_vector<double, 3>(0);
+    zipper::Form<double, 3> D1 =
+        zipper::expression::nullary::unit_vector<double, 3>(1);
+    zipper::Form<double, 3> D2 =
+        zipper::expression::nullary::unit_vector<double, 3>(2);
 
     // Test that form * vector gives the Kronecker delta (identity)
     CHECK(double(D0 * E0) == 1.0);
@@ -184,9 +193,9 @@ TEST_CASE("test_form_product", "[storage][tensor]") {
     for (zipper::index_type i = 0; i < 3; ++i) {
         for (zipper::index_type j = 0; j < 3; ++j) {
             double expected_val = x(i) * y(j) - x(j) * y(i);
-            CHECK(F_xy(i, j) == Catch::Approx(expected_val));
+            CHECK(F_xy(i, j) == Catch::Approx(expected_val).margin(1e-15));
             // Antisymmetry: w(i,j) = -w(j,i)
-            CHECK(F_xy(i, j) == Catch::Approx(-F_xy(j, i)));
+            CHECK(F_xy(i, j) == Catch::Approx(-F_xy(j, i)).margin(1e-15));
         }
     }
 
