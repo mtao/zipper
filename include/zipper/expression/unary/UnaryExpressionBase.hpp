@@ -180,10 +180,7 @@ class UnaryExpressionBase : public expression::ExpressionBase<Derived> {
     }
 
   private:
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpadded"
     storage_type m_expression;
-#pragma GCC diagnostic pop
 };
 
 } // namespace zipper::expression::unary
