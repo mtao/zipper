@@ -31,10 +31,12 @@
 ///
 /// **Zero-aware sparsity:**  Unit has `has_index_set = true` in its
 /// ExpressionTraits.  Its `index_set<0>()` returns a
-/// `SingleIndexRange{m_index}`, enabling zero-aware matrix-vector products
-/// to skip all but one element.
+/// `SingleIndexSet<IndexType>{m_index}`, enabling zero-aware matrix-vector
+/// products to skip all but one element.  When IndexType is
+/// `std::integral_constant`, the returned SingleIndexSet carries the index
+/// at compile time (zero storage).
 ///
-/// @see zipper::expression::detail::SingleIndexRange — the range type returned
+/// @see zipper::expression::detail::SingleIndexSet — the range type returned
 ///      by Unit::index_set (exactly one non-zero).
 /// @see zipper::expression::detail::IndexSet — concept satisfied by all
 ///      range types in the sparsity protocol.
@@ -116,31 +118,35 @@ public:
 
   // ── Index set queries ─────────────────────────────────────────
   // Unit has exactly one non-zero at m_index.
-  // For rank-1: index_set<0>() returns SingleIndexRange{m_index}.
+  // For rank-1: index_set<0>() returns SingleIndexSet<IndexType>{m_index},
+  // preserving compile-time index information when IndexType is
+  // std::integral_constant.
   // The overload takes no arguments (rank-1 has only one dimension,
   // and there's no "other" index to condition on).
 
   /// @brief Returns the index set along dimension @p D.
   ///
   /// For a unit vector, there is exactly one non-zero element.
+  /// When IndexType is std::integral_constant, the returned
+  /// SingleIndexSet carries the index at compile time.
   template <rank_type D>
       requires(D == 0)
   auto index_set() const
-      -> zipper::expression::detail::SingleIndexRange {
-      return {static_cast<index_type>(m_index)};
+      -> zipper::expression::detail::SingleIndexSet<IndexType> {
+      return {m_index};
   }
 
   /// @brief Backward-compatible wrapper for index_set.
   template <rank_type D>
       requires(D == 0)
   auto nonzero_range() const
-      -> zipper::expression::detail::SingleIndexRange {
+      -> zipper::expression::detail::SingleIndexSet<IndexType> {
       return index_set<D>();
   }
 
   /// @brief Convenience alias: returns the non-zero segment (rank-1).
   auto nonzero_segment() const
-      -> zipper::expression::detail::SingleIndexRange {
+      -> zipper::expression::detail::SingleIndexSet<IndexType> {
       return index_set<0>();
   }
 
