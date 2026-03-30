@@ -5,7 +5,6 @@
 #include "zipper/detail/assert.hpp"
 #include "zipper/expression/detail/AssignStrategy.hpp"
 #include "zipper/expression/detail/ExpressionTraits.hpp"
-#include "zipper/utils/extents/all_extents_indices.hpp"
 #include "zipper/utils/extents/for_each_index.hpp"
 #include <tuple>
 
