@@ -21,5 +21,8 @@ test('unary_views', test_unary_views)
 test_anti_slice = executable('test_anti_slice', 'anti_slice.cpp', dependencies: [zipper_test_dep])
 test('anti_slice', test_anti_slice)
 
+test_math_functions = executable('test_math_functions', 'math_functions.cpp', dependencies: [zipper_test_dep])
+test('math_functions', test_math_functions)
+
 test_extent_view = executable('test_extent_view', 'extent_view.cpp', dependencies: [zipper_test_dep])
 test('extent_view', test_extent_view)
