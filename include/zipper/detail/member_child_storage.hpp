@@ -1,6 +1,8 @@
 #if !defined(ZIPPER_DETAIL_MEMBER_CHILD_STORAGE_HPP)
 #define ZIPPER_DETAIL_MEMBER_CHILD_STORAGE_HPP
 
+#include "ViewPropagating.hpp"
+
 #include <type_traits>
 
 namespace zipper::detail {
@@ -12,16 +14,17 @@ namespace zipper::detail {
 /// expression type stored in the wrapper, this trait selects:
 ///
 ///   - `ExprType`          when Self is an rvalue  → store by value (safe to return)
+///   - `ExprType`          when ExprType is view-propagating → store by value
+///                         (copying is cheap — just copies a reference wrapper)
 ///   - `const ExprType &`  when Self is a const lvalue  → store by const ref
 ///   - `ExprType &`        when Self is a mutable lvalue → store by mutable ref
 ///
-/// This ensures that expression views built from temporaries own their
-/// children (preventing dangling references), while views built from
-/// named objects store lightweight references as before.
+/// The view-propagating case enables derived views (head, tail, row, etc.)
+/// to be Returnable when the source was wrapped with ref().
 template <typename Self, typename ExprType>
 using member_child_storage_t = std::conditional_t<
-    !std::is_lvalue_reference_v<Self>,
-    ExprType,                                            // rvalue → by value
+    !std::is_lvalue_reference_v<Self> || ViewPropagating<ExprType>,
+    ExprType,                                            // rvalue or view-propagating → by value
     std::conditional_t<
         std::is_const_v<std::remove_reference_t<Self>>,
         const ExprType &,                                // const lvalue → const ref

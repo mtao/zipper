@@ -53,6 +53,7 @@ public:
   constexpr static bool is_const_valued = access_features.is_const;
   constexpr static bool is_assignable = traits::is_assignable();
   constexpr static bool stores_references = traits::stores_references;
+  constexpr static bool is_view_propagating = traits::is_view_propagating;
   constexpr static rank_type rank = extents_type::rank();
 
   using array_type = std::array<index_type, rank>;

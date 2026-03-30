@@ -16,16 +16,25 @@ namespace unary {
 /// data outlives all copies of this expression.  Prefer to_owned() when
 /// the lifetime guarantee cannot be made.
 ///
+/// When ViewPropagating is true, `is_view_propagating` is set in the
+/// traits.  This causes `member_child_storage_t` and
+/// `expression_storage_t` to store this expression by value even from
+/// lvalue context, so that derived views (head, tail, row, etc.) are
+/// also Returnable without extra `.unsafe()` calls.
+///
 /// Usage:
 ///   auto v = some_expr.unsafe();       // v can be returned / stored
-template <zipper::concepts::QualifiedExpression Child>
+///   auto r = some_expr.ref();          // r AND derived views returnable
+template <zipper::concepts::QualifiedExpression Child,
+          bool ViewPropagating = false>
 class UnsafeRef;
 
 } // namespace unary
 
 // ── Traits specialization ──────────────────────────────────────────────
-template <zipper::concepts::QualifiedExpression Child>
-struct detail::ExpressionTraits<unary::UnsafeRef<Child>>
+template <zipper::concepts::QualifiedExpression Child,
+          bool ViewPropagating>
+struct detail::ExpressionTraits<unary::UnsafeRef<Child, ViewPropagating>>
     : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<
           Child> {
   using child_traits =
@@ -40,6 +49,10 @@ struct detail::ExpressionTraits<unary::UnsafeRef<Child>>
   constexpr static bool is_value_based = false;
   constexpr static bool is_coefficient_consistent = false;
 
+  /// When ViewPropagating is true, derived views store this expression
+  /// by value even from lvalue context, making them Returnable too.
+  constexpr static bool is_view_propagating = ViewPropagating;
+
   /// Propagate has_index_set from child — UnsafeRef is transparent.
   constexpr static bool has_index_set = child_traits::has_index_set;
 
@@ -50,11 +63,12 @@ struct detail::ExpressionTraits<unary::UnsafeRef<Child>>
 // ── Class definition ───────────────────────────────────────────────────
 namespace unary {
 
-template <zipper::concepts::QualifiedExpression Child>
+template <zipper::concepts::QualifiedExpression Child,
+          bool ViewPropagating>
 class UnsafeRef
-    : public UnaryExpressionBase<UnsafeRef<Child>, Child> {
+    : public UnaryExpressionBase<UnsafeRef<Child, ViewPropagating>, Child> {
  public:
-  using self_type = UnsafeRef<Child>;
+  using self_type = UnsafeRef<Child, ViewPropagating>;
   using traits = zipper::expression::detail::ExpressionTraits<self_type>;
   using extents_type = typename traits::extents_type;
   using value_type = typename traits::value_type;
@@ -152,12 +166,12 @@ class UnsafeRef
   }
 };
 
-// Deduction guides
+// Deduction guides (default to ViewPropagating = false for backward compat)
 template <zipper::concepts::Expression ExprType>
-UnsafeRef(const ExprType &) -> UnsafeRef<const ExprType &>;
+UnsafeRef(const ExprType &) -> UnsafeRef<const ExprType &, false>;
 
 template <zipper::concepts::Expression ExprType>
-UnsafeRef(ExprType &) -> UnsafeRef<ExprType &>;
+UnsafeRef(ExprType &) -> UnsafeRef<ExprType &, false>;
 
 } // namespace unary
 } // namespace zipper::expression

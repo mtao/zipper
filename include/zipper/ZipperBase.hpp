@@ -257,6 +257,25 @@ public:
     return DerivedT<V>(std::in_place, std::move(expression()));
   }
 
+  /// Returns a view-propagating wrapper.  Like unsafe(), the caller asserts
+  /// that the referenced data outlives all copies.  Unlike unsafe(), views
+  /// derived from a ref() result (head, tail, row, transpose, etc.) are
+  /// also Returnable — the view-propagating flag causes child storage to
+  /// copy the lightweight UnsafeRef by value instead of by reference.
+  ///
+  /// Usage:
+  ///   auto r = x.ref();       // r is Returnable
+  ///   auto h = r.head<3>();   // h is also Returnable (unlike x.unsafe())
+  auto ref() const & -> DerivedT<expression::unary::UnsafeRef<const expression_type &, true>> {
+    using V = expression::unary::UnsafeRef<const expression_type &, true>;
+    return DerivedT<V>(std::in_place, expression());
+  }
+  auto ref() & -> DerivedT<expression::unary::UnsafeRef<expression_type &, true>> {
+    using V = expression::unary::UnsafeRef<expression_type &, true>;
+    return DerivedT<V>(std::in_place, expression());
+  }
+  auto ref() && = delete;  // rvalue ref() is nonsensical — no lvalue to bind
+
   template <typename OpType, typename Self>
     requires(expression::unary::concepts::ScalarOperation<value_type, OpType>)
   auto unary_expr(this Self&& self, const OpType &op) {
