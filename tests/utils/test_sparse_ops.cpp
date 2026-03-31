@@ -7,10 +7,7 @@
 #include <zipper/CSRMatrix.hpp>
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
-#include <zipper/utils/sparse/add.hpp>
 #include <zipper/utils/sparse/diagonal.hpp>
-#include <zipper/utils/sparse/multiply.hpp>
-#include <zipper/utils/sparse/transpose.hpp>
 
 #include "../catch_include.hpp"
 
@@ -52,17 +49,17 @@ static auto make_test_csr_3x3_b()
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Transpose tests
+// Transpose tests (via .transpose().eval())
 // ═══════════════════════════════════════════════════════════════════════════
 
 TEST_CASE("sparse_transpose_csr_roundtrip", "[sparse][transpose]") {
     auto A = make_test_csr_3x3();
 
-    // CSR -> CSC transpose.
-    auto At = utils::sparse::transpose(A);
+    // CSR.transpose().eval() -> CSC
+    auto At = A.transpose().eval();
 
-    // CSC -> CSR transpose (should recover original).
-    auto Att = utils::sparse::transpose(At);
+    // CSC.transpose().eval() -> CSR (should recover original)
+    auto Att = At.transpose().eval();
 
     // Verify dimensions.
     CHECK(At.extent(0) == 3);
@@ -80,7 +77,7 @@ TEST_CASE("sparse_transpose_csr_roundtrip", "[sparse][transpose]") {
 
 TEST_CASE("sparse_transpose_values", "[sparse][transpose]") {
     auto A = make_test_csr_3x3();
-    auto At = utils::sparse::transpose(A);
+    auto At = A.transpose().eval();
 
     // A = [[1,0,2],[0,3,0],[4,0,5]]
     // A^T = [[1,0,4],[0,3,0],[2,0,5]]
@@ -104,7 +101,7 @@ TEST_CASE("sparse_transpose_rectangular", "[sparse][transpose]") {
     coo.compress();
     auto A = coo.to_csr();
 
-    auto At = utils::sparse::transpose(A);
+    auto At = A.transpose().eval();
     CHECK(At.extent(0) == 3);
     CHECK(At.extent(1) == 2);
 
@@ -122,22 +119,20 @@ TEST_CASE("sparse_transpose_empty", "[sparse][transpose]") {
     coo.compress();
     auto A = coo.to_csr();
 
-    auto At = utils::sparse::transpose(A);
+    auto At = A.transpose().eval();
     CHECK(At.extent(0) == 4);
     CHECK(At.extent(1) == 3);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Addition tests
+// Addition tests (via operator+)
 // ═══════════════════════════════════════════════════════════════════════════
 
 TEST_CASE("sparse_add_same_pattern", "[sparse][add]") {
     auto A = make_test_csr_3x3();
 
     // A + A = 2*A
-    auto C_result = utils::sparse::add(A, A);
-    REQUIRE(C_result.has_value());
-    auto C = std::move(C_result).value();
+    CSRMatrix<double, dynamic_extent, dynamic_extent> C = (A + A).eval();
     for (index_type i = 0; i < 3; ++i) {
         for (index_type j = 0; j < 3; ++j) {
             CHECK(C(i, j) == Catch::Approx(2.0 * A(i, j)));
@@ -150,9 +145,7 @@ TEST_CASE("sparse_add_disjoint_patterns", "[sparse][add]") {
     auto B = make_test_csr_3x3_b();
 
     // A and B have completely disjoint sparsity patterns.
-    auto C_result = utils::sparse::add(A, B);
-    REQUIRE(C_result.has_value());
-    auto C = std::move(C_result).value();
+    CSRMatrix<double, dynamic_extent, dynamic_extent> C = (A + B).eval();
 
     // C should be:
     // [[1, 6, 2],
@@ -169,28 +162,11 @@ TEST_CASE("sparse_add_disjoint_patterns", "[sparse][add]") {
     CHECK(C(2, 2) == Catch::Approx(5.0));
 }
 
-TEST_CASE("sparse_add_with_scalars", "[sparse][add]") {
-    auto A = make_test_csr_3x3();
-    auto B = make_test_csr_3x3();
-
-    // 2*A - A = A
-    auto C_result = utils::sparse::add(A, B, 2.0, -1.0);
-    REQUIRE(C_result.has_value());
-    auto C = std::move(C_result).value();
-    for (index_type i = 0; i < 3; ++i) {
-        for (index_type j = 0; j < 3; ++j) {
-            CHECK(C(i, j) == Catch::Approx(A(i, j)));
-        }
-    }
-}
-
-TEST_CASE("sparse_add_cancellation", "[sparse][add]") {
+TEST_CASE("sparse_add_subtraction", "[sparse][add]") {
     auto A = make_test_csr_3x3();
 
     // A - A = 0
-    auto C_result = utils::sparse::add(A, A, 1.0, -1.0);
-    REQUIRE(C_result.has_value());
-    auto C = std::move(C_result).value();
+    CSRMatrix<double, dynamic_extent, dynamic_extent> C = (A - A).eval();
     for (index_type i = 0; i < 3; ++i) {
         for (index_type j = 0; j < 3; ++j) {
             CHECK(C(i, j) == Catch::Approx(0.0));
@@ -199,16 +175,14 @@ TEST_CASE("sparse_add_cancellation", "[sparse][add]") {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// SpGEMM tests
+// SpGEMM tests (via operator*)
 // ═══════════════════════════════════════════════════════════════════════════
 
 TEST_CASE("spgemm_identity_left", "[sparse][multiply]") {
     auto I = utils::sparse::sparse_identity<double>(3);
     auto A = make_test_csr_3x3();
 
-    auto C_result = utils::sparse::spgemm(I, A);
-    REQUIRE(C_result.has_value());
-    auto C = std::move(C_result).value();
+    CSRMatrix<double, dynamic_extent, dynamic_extent> C = (I * A).eval();
     CHECK(C.extent(0) == 3);
     CHECK(C.extent(1) == 3);
 
@@ -223,9 +197,7 @@ TEST_CASE("spgemm_identity_right", "[sparse][multiply]") {
     auto A = make_test_csr_3x3();
     auto I = utils::sparse::sparse_identity<double>(3);
 
-    auto C_result = utils::sparse::spgemm(A, I);
-    REQUIRE(C_result.has_value());
-    auto C = std::move(C_result).value();
+    CSRMatrix<double, dynamic_extent, dynamic_extent> C = (A * I).eval();
     for (index_type i = 0; i < 3; ++i) {
         for (index_type j = 0; j < 3; ++j) {
             CHECK(C(i, j) == Catch::Approx(A(i, j)));
@@ -240,9 +212,7 @@ TEST_CASE("spgemm_known_product", "[sparse][multiply]") {
     // A = [[1,0,2],[0,3,0],[4,0,5]]
     // A^2 = [[1*1+2*4, 0, 1*2+2*5], [0, 9, 0], [4*1+5*4, 0, 4*2+5*5]]
     //     = [[9, 0, 12], [0, 9, 0], [24, 0, 33]]
-    auto C_result = utils::sparse::spgemm(A, A);
-    REQUIRE(C_result.has_value());
-    auto C = std::move(C_result).value();
+    CSRMatrix<double, dynamic_extent, dynamic_extent> C = (A * A).eval();
 
     CHECK(C(0, 0) == Catch::Approx(9.0));
     CHECK(C(0, 1) == Catch::Approx(0.0));
@@ -272,9 +242,7 @@ TEST_CASE("spgemm_rectangular", "[sparse][multiply]") {
     auto B = coo_b.to_csr();
 
     // C = A * B = [[1*4+2*6, 0], [0, 3*5]] = [[16, 0], [0, 15]]
-    auto C_result = utils::sparse::spgemm(A, B);
-    REQUIRE(C_result.has_value());
-    auto C = std::move(C_result).value();
+    CSRMatrix<double, dynamic_extent, dynamic_extent> C = (A * B).eval();
     CHECK(C.extent(0) == 2);
     CHECK(C.extent(1) == 2);
     CHECK(C(0, 0) == Catch::Approx(16.0));
@@ -288,9 +256,7 @@ TEST_CASE("spgemm_vs_dense", "[sparse][multiply]") {
     auto A = make_test_csr_3x3();
     auto B = make_test_csr_3x3_b();
 
-    auto C_sparse_result = utils::sparse::spgemm(A, B);
-    REQUIRE(C_sparse_result.has_value());
-    auto C_sparse = std::move(C_sparse_result).value();
+    CSRMatrix<double, dynamic_extent, dynamic_extent> C_sparse = (A * B).eval();
 
     // Dense reference: A_dense * B_dense.
     Matrix<double, 3, 3> A_dense{{{1, 0, 2}, {0, 3, 0}, {4, 0, 5}}};
@@ -305,7 +271,7 @@ TEST_CASE("spgemm_vs_dense", "[sparse][multiply]") {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Diagonal tests
+// Diagonal tests (unchanged — diagonal.hpp is kept)
 // ═══════════════════════════════════════════════════════════════════════════
 
 TEST_CASE("sparse_extract_diagonal", "[sparse][diagonal]") {
@@ -323,9 +289,7 @@ TEST_CASE("sparse_extract_diagonal_identity", "[sparse][diagonal]") {
     auto I = utils::sparse::sparse_identity<double>(4);
     auto diag = utils::sparse::extract_diagonal(I);
     REQUIRE(diag.extent(0) == 4);
-    for (index_type i = 0; i < 4; ++i) {
-        CHECK(diag(i) == Catch::Approx(1.0));
-    }
+    for (index_type i = 0; i < 4; ++i) { CHECK(diag(i) == Catch::Approx(1.0)); }
 }
 
 TEST_CASE("sparse_extract_diagonal_missing", "[sparse][diagonal]") {
@@ -367,9 +331,7 @@ TEST_CASE("sparse_from_diagonal_roundtrip", "[sparse][diagonal]") {
     auto d2 = utils::sparse::extract_diagonal(D);
 
     REQUIRE(d2.extent(0) == 4);
-    for (index_type i = 0; i < 4; ++i) {
-        CHECK(d2(i) == Catch::Approx(d(i)));
-    }
+    for (index_type i = 0; i < 4; ++i) { CHECK(d2(i) == Catch::Approx(d(i))); }
 }
 
 TEST_CASE("sparse_identity", "[sparse][diagonal]") {
