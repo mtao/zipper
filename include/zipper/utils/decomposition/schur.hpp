@@ -37,6 +37,8 @@
 #include <zipper/Vector.hpp>
 #include <zipper/expression/nullary/Constant.hpp>
 #include <zipper/expression/nullary/Identity.hpp>
+#include <zipper/utils/decomposition/detail/givens.hpp>
+#include <zipper/utils/decomposition/detail/householder.hpp>
 #include <zipper/utils/solver/result.hpp>
 
 namespace zipper::utils::decomposition {
@@ -61,136 +63,42 @@ struct SchurResult {
 // Internal helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-namespace detail {
+namespace schur_detail {
 
-/// @brief Apply a Householder reflection P = I - 2 v v^T to a matrix from
-///        the left: H[r0:r0+len, c0:c1) -= 2 * v * (v^T * H[...]).
-template <typename T>
-auto apply_householder_left(
-    Matrix<T, dynamic_extent, dynamic_extent> &H,
-    const Vector<T, dynamic_extent> &v,
-    index_type r0, index_type len, index_type c0, index_type c1) -> void {
-    for (index_type j = c0; j < c1; ++j) {
-        T dot = T{0};
-        for (index_type i = 0; i < len; ++i) {
-            dot += v(i) * H(r0 + i, j);
-        }
-        dot *= T{2};
-        for (index_type i = 0; i < len; ++i) {
-            H(r0 + i, j) -= dot * v(i);
-        }
-    }
-}
+    /// @brief Reduce a square matrix to upper Hessenberg form using Householder
+    ///        reflections.
+    ///
+    /// On exit, H is upper Hessenberg (H(i,j) = 0 for i > j+1) and Q is
+    /// orthogonal such that A = Q * H * Q^T.
+    template <typename T>
+    auto hessenberg_reduce(Matrix<T, dynamic_extent, dynamic_extent> &H,
+                           Matrix<T, dynamic_extent, dynamic_extent> &Q)
+        -> void {
+        const index_type n = H.extent(0);
 
-/// @brief Apply a Householder reflection from the right:
-///        H[r0:r1, c0:c0+len) -= 2 * (H[...] * v) * v^T.
-template <typename T>
-auto apply_householder_right(
-    Matrix<T, dynamic_extent, dynamic_extent> &H,
-    const Vector<T, dynamic_extent> &v,
-    index_type r0, index_type r1, index_type c0, index_type len) -> void {
-    for (index_type i = r0; i < r1; ++i) {
-        T dot = T{0};
-        for (index_type j = 0; j < len; ++j) {
-            dot += H(i, c0 + j) * v(j);
-        }
-        dot *= T{2};
-        for (index_type j = 0; j < len; ++j) {
-            H(i, c0 + j) -= dot * v(j);
+        Q = expression::nullary::Identity<T, dynamic_extent, dynamic_extent>(n,
+                                                                             n);
+
+        for (index_type k = 0; k < n - 2; ++k) {
+            const index_type m = n - k - 1; // length of the sub-column
+
+            // Extract the sub-column H(k+1:n, k) into an owning vector.
+            Vector<T, dynamic_extent> v(H.col(k).segment(k + 1, m));
+
+            // Compute the Householder vector.
+            auto hh = detail::householder_vector(v);
+            if (!hh) { continue; }
+
+            // H <- P H P  where P = I - 2 v v^T acts on rows k+1:n.
+            detail::apply_householder_left(H, hh->v, k + 1, k, n);
+            detail::apply_householder_right(H, hh->v, 0, n, k + 1);
+
+            // Accumulate: Q <- Q P
+            detail::apply_householder_right(Q, hh->v, 0, n, k + 1);
         }
     }
-}
 
-/// @brief Reduce a square matrix to upper Hessenberg form using Householder
-///        reflections.
-///
-/// On exit, H is upper Hessenberg (H(i,j) = 0 for i > j+1) and Q is
-/// orthogonal such that A = Q * H * Q^T.
-template <typename T>
-auto hessenberg_reduce(
-    Matrix<T, dynamic_extent, dynamic_extent> &H,
-    Matrix<T, dynamic_extent, dynamic_extent> &Q) -> void {
-    const index_type n = H.extent(0);
-
-    Q = expression::nullary::Identity<T, dynamic_extent, dynamic_extent>(n, n);
-
-    for (index_type k = 0; k < n - 2; ++k) {
-        const index_type m = n - k - 1;  // length of the sub-column
-
-        // Extract the sub-column H(k+1:n, k).
-        Vector<T, dynamic_extent> v(m);
-        for (index_type i = 0; i < m; ++i) {
-            v(i) = H(k + 1 + i, k);
-        }
-
-        T sigma = v.norm();
-        if (sigma < std::numeric_limits<T>::epsilon()) {
-            continue;
-        }
-
-        if (v(0) >= T{0}) { sigma = -sigma; }
-
-        v(0) -= sigma;
-        T v_norm = v.norm();
-        if (v_norm < std::numeric_limits<T>::min()) { continue; }
-        for (index_type i = 0; i < m; ++i) { v(i) /= v_norm; }
-
-        // H <- P H P  where P = I - 2 v v^T acts on rows k+1:n.
-        apply_householder_left(H, v, k + 1, m, k, n);
-        apply_householder_right(H, v, 0, n, k + 1, m);
-
-        // Accumulate: Q <- Q P
-        apply_householder_right(Q, v, 0, n, k + 1, m);
-    }
-}
-
-/// @brief Apply a 2x2 Givens rotation G to rows p and q of H,
-///        for columns c0..c1-1, and accumulate into U.
-///
-///   G = [c  s]   so  [H(p,:)] <- [ c  s] [H(p,:)]
-///       [-s c]       [H(q,:)]    [-s  c] [H(q,:)]
-template <typename T>
-auto givens_rotate_rows(
-    Matrix<T, dynamic_extent, dynamic_extent> &H,
-    index_type p, index_type q,
-    T c, T s,
-    index_type c0, index_type c1) -> void {
-    for (index_type j = c0; j < c1; ++j) {
-        T hp = H(p, j);
-        T hq = H(q, j);
-        H(p, j) = c * hp + s * hq;
-        H(q, j) = -s * hp + c * hq;
-    }
-}
-
-/// @brief Apply a 2x2 Givens rotation G from the right to columns p and q
-///        of H, for rows r0..r1-1.
-template <typename T>
-auto givens_rotate_cols(
-    Matrix<T, dynamic_extent, dynamic_extent> &H,
-    index_type p, index_type q,
-    T c, T s,
-    index_type r0, index_type r1) -> void {
-    for (index_type i = r0; i < r1; ++i) {
-        T hp = H(i, p);
-        T hq = H(i, q);
-        H(i, p) = c * hp + s * hq;
-        H(i, q) = -s * hp + c * hq;
-    }
-}
-
-/// @brief Compute Givens rotation parameters to zero out b in [a, b].
-///        Returns (c, s) such that [c s; -s c] [a; b] = [r; 0].
-template <typename T>
-auto givens_params(T a, T b) -> std::pair<T, T> {
-    if (b == T{0}) {
-        return {T{1}, T{0}};
-    }
-    T r = std::sqrt(a * a + b * b);
-    return {a / r, b / r};
-}
-
-} // namespace detail
+} // namespace schur_detail
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Public API
@@ -206,19 +114,18 @@ auto givens_params(T a, T b) -> std::pair<T, T> {
 /// @return          On success, `SchurResult{U, T_mat}`.
 ///                  On failure (did not converge), a `SolverError`.
 template <concepts::Matrix Derived>
-auto schur(const Derived &A, index_type max_iter = 0)
-    -> std::expected<
-        SchurResult<typename std::decay_t<Derived>::value_type, dynamic_extent>,
-        solver::SolverError> {
+auto schur(const Derived &A, index_type max_iter = 0) -> std::expected<
+    SchurResult<typename std::decay_t<Derived>::value_type, dynamic_extent>,
+    solver::SolverError> {
     using AType = std::decay_t<Derived>;
     using T = typename AType::value_type;
 
     const index_type n = A.extent(0);
 
     if (n != A.extent(1)) {
-        return std::unexpected(solver::SolverError{
-            .kind = solver::SolverError::Kind::breakdown,
-            .message = "schur: matrix must be square"});
+        return std::unexpected(
+            solver::SolverError{.kind = solver::SolverError::Kind::breakdown,
+                                .message = "schur: matrix must be square"});
     }
 
     if (max_iter == 0) { max_iter = 200 * std::max(n, index_type{1}); }
@@ -227,8 +134,8 @@ auto schur(const Derived &A, index_type max_iter = 0)
     if (n == 0) {
         Matrix<T, dynamic_extent, dynamic_extent> U_r(0, 0);
         Matrix<T, dynamic_extent, dynamic_extent> T_r(0, 0);
-        return SchurResult<T, dynamic_extent>{
-            .U = std::move(U_r), .T_mat = std::move(T_r)};
+        return SchurResult<T, dynamic_extent>{.U = std::move(U_r),
+                                              .T_mat = std::move(T_r)};
     }
     if (n == 1) {
         Matrix<T, dynamic_extent, dynamic_extent> U_r(
@@ -236,20 +143,18 @@ auto schur(const Derived &A, index_type max_iter = 0)
                 1, 1));
         Matrix<T, dynamic_extent, dynamic_extent> T_r(1, 1);
         T_r(0, 0) = A(0, 0);
-        return SchurResult<T, dynamic_extent>{
-            .U = std::move(U_r), .T_mat = std::move(T_r)};
+        return SchurResult<T, dynamic_extent>{.U = std::move(U_r),
+                                              .T_mat = std::move(T_r)};
     }
 
     // Phase 1: Hessenberg reduction.
     Matrix<T, dynamic_extent, dynamic_extent> H(A);
     Matrix<T, dynamic_extent, dynamic_extent> U_acc(n, n);
-    detail::hessenberg_reduce(H, U_acc);
+    schur_detail::hessenberg_reduce(H, U_acc);
 
     // Clean up numerical noise below the sub-diagonal.
     for (index_type i = 2; i < n; ++i) {
-        for (index_type j = 0; j < i - 1; ++j) {
-            H(i, j) = T{0};
-        }
+        for (index_type j = 0; j < i - 1; ++j) { H(i, j) = T{0}; }
     }
 
     // Phase 2: Implicit QR iteration with Wilkinson (single) shift.
@@ -259,7 +164,7 @@ auto schur(const Derived &A, index_type max_iter = 0)
     // 2x2 block at the bottom will not deflate further, which is correct for
     // real Schur form.
     const T eps = std::numeric_limits<T>::epsilon();
-    index_type p = n;  // active sub-matrix is H[0:p, 0:p]
+    index_type p = n; // active sub-matrix is H[0:p, 0:p]
     index_type total_iter = 0;
 
     while (p > 2) {
@@ -270,8 +175,8 @@ auto schur(const Derived &A, index_type max_iter = 0)
         }
 
         // Check for deflation at the bottom.
-        T threshold = eps * (std::abs(H(p - 2, p - 2)) +
-                             std::abs(H(p - 1, p - 1)));
+        T threshold =
+            eps * (std::abs(H(p - 2, p - 2)) + std::abs(H(p - 1, p - 1)));
         if (threshold == T{0}) { threshold = eps; }
 
         if (std::abs(H(p - 1, p - 2)) <= threshold) {
@@ -285,8 +190,8 @@ auto schur(const Derived &A, index_type max_iter = 0)
         // discriminant < 0. In that case, check if H(p-2, p-3) is negligible
         // to deflate the whole 2x2 block.
         if (p >= 3) {
-            T thresh2 = eps * (std::abs(H(p - 3, p - 3)) +
-                               std::abs(H(p - 2, p - 2)));
+            T thresh2 =
+                eps * (std::abs(H(p - 3, p - 3)) + std::abs(H(p - 2, p - 2)));
             if (thresh2 == T{0}) { thresh2 = eps; }
             if (std::abs(H(p - 2, p - 3)) <= thresh2) {
                 H(p - 2, p - 3) = T{0};
@@ -298,8 +203,7 @@ auto schur(const Derived &A, index_type max_iter = 0)
         // Find the top of the unreduced Hessenberg block.
         index_type q = p - 1;
         while (q > 0) {
-            T thresh_q = eps * (std::abs(H(q - 1, q - 1)) +
-                                std::abs(H(q, q)));
+            T thresh_q = eps * (std::abs(H(q - 1, q - 1)) + std::abs(H(q, q)));
             if (thresh_q == T{0}) { thresh_q = eps; }
             if (std::abs(H(q, q - 1)) <= thresh_q) {
                 H(q, q - 1) = T{0};
@@ -346,11 +250,11 @@ auto schur(const Derived &A, index_type max_iter = 0)
             auto [c, s] = detail::givens_params(x, y);
 
             // Apply G from the left to rows k and k+1.
-            detail::givens_rotate_rows(H, k, k + 1, c, s, 0, n);
+            detail::apply_givens_rows(H, k, k + 1, c, s, 0, n);
             // Apply G^T from the right to columns k and k+1.
-            detail::givens_rotate_cols(H, k, k + 1, c, s, 0, n);
+            detail::apply_givens_cols(H, k, k + 1, c, s, 0, n);
             // Accumulate into U.
-            detail::givens_rotate_cols(U_acc, k, k + 1, c, s, 0, n);
+            detail::apply_givens_cols(U_acc, k, k + 1, c, s, 0, n);
 
             // Prepare for next iteration: the bulge entry.
             if (k + 2 < p) {
@@ -361,9 +265,7 @@ auto schur(const Derived &A, index_type max_iter = 0)
 
         // Clean up sub-sub-diagonal entries created by numerical noise.
         for (index_type i = q + 2; i < p; ++i) {
-            for (index_type j = q; j < i - 1; ++j) {
-                H(i, j) = T{0};
-            }
+            for (index_type j = q; j < i - 1; ++j) { H(i, j) = T{0}; }
         }
 
         ++total_iter;
@@ -371,8 +273,8 @@ auto schur(const Derived &A, index_type max_iter = 0)
 
     // Handle the remaining 2x2 block (p <= 2): already in Schur form.
 
-    return SchurResult<T, dynamic_extent>{
-        .U = std::move(U_acc), .T_mat = std::move(H)};
+    return SchurResult<T, dynamic_extent>{.U = std::move(U_acc),
+                                          .T_mat = std::move(H)};
 }
 
 } // namespace zipper::utils::decomposition

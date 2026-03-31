@@ -18,8 +18,7 @@
 ///   3. `qr_gram_schmidt(A)` — Reduced QR via classical Gram-Schmidt.
 ///      Uses the existing `orthogonalization::gram_schmidt()` to orthonormalise
 ///      the columns of A, producing Q (m x n), then computes R = Q^T * A using
-///      element-level loops (since zipper may not support matrix-matrix
-///      multiplication directly).  Requires m >= n.  This variant is simpler
+///      matrix multiplication.  Requires m >= n.  This variant is simpler
 ///      but less numerically stable than Householder.
 ///
 /// All three return result structs containing Q and R.
@@ -67,6 +66,7 @@
 #include <zipper/expression/nullary/Constant.hpp>
 #include <zipper/expression/nullary/Identity.hpp>
 #include <zipper/expression/unary/TriangularView.hpp>
+#include <zipper/utils/decomposition/detail/householder.hpp>
 #include <zipper/utils/extents/extent_arithmetic.hpp>
 #include <zipper/utils/orthogonalization/gram_schmidt.hpp>
 #include <zipper/utils/solver/result.hpp>
@@ -112,23 +112,16 @@ struct QRReducedResult {
         using ResultVec = Vector<T, P>;
         using Result = std::expected<ResultVec, solver::SolverError>;
 
-        const index_type m = Q.extent(0);
         const index_type p = Q.extent(1);
 
         // 1. Compute c = Q^T * b (p-dimensional vector).
+        //    c(i) = Q.col(i) . b
         ResultVec c(p);
-        for (index_type i = 0; i < p; ++i) {
-            T sum = T{0};
-            for (index_type k = 0; k < m; ++k) { sum += Q(k, i) * b(k); }
-            c(i) = sum;
-        }
+        for (index_type i = 0; i < p; ++i) { c(i) = Q.col(i).dot(b); }
 
         // 2. Solve R * x = c via upper-triangular back substitution.
-        //    Extract the leading p x p block of R into a square matrix.
-        Matrix<T, P, P> R_sq(p, p);
-        for (index_type i = 0; i < p; ++i) {
-            for (index_type j = 0; j < p; ++j) { R_sq(i, j) = R(i, j); }
-        }
+        //    Extract the leading p x p block of R.
+        Matrix<T, P, P> R_sq(R.leftCols(p));
 
         auto R_upper =
             expression::triangular_view<expression::TriangularMode::Upper>(
@@ -176,23 +169,16 @@ struct QRFullResult {
         using ResultVec = Vector<T, P>;
         using Result = std::expected<ResultVec, solver::SolverError>;
 
-        const index_type m = Q.extent(0);
         const index_type n = R.extent(1);
-        const index_type p = std::min(m, n);
+        const index_type p = std::min(Q.extent(0), n);
 
         // 1. Compute c = Q^T * b, but only the first p entries matter.
+        //    c(i) = Q.col(i) . b
         ResultVec c(p);
-        for (index_type i = 0; i < p; ++i) {
-            T sum = T{0};
-            for (index_type k = 0; k < m; ++k) { sum += Q(k, i) * b(k); }
-            c(i) = sum;
-        }
+        for (index_type i = 0; i < p; ++i) { c(i) = Q.col(i).dot(b); }
 
         // 2. Solve R_top * x = c, where R_top is the leading p x p block of R.
-        Matrix<T, P, P> R_sq(p, p);
-        for (index_type i = 0; i < p; ++i) {
-            for (index_type j = 0; j < p; ++j) { R_sq(i, j) = R(i, j); }
-        }
+        Matrix<T, P, P> R_sq(R.topRows(p).leftCols(p));
 
         auto R_upper =
             expression::triangular_view<expression::TriangularMode::Upper>(
@@ -225,90 +211,37 @@ auto qr(const Derived &A) {
     constexpr index_type M = AType::extents_type::static_extent(0);
     constexpr index_type N = AType::extents_type::static_extent(1);
     constexpr index_type P = extents::min(M, N);
-    using Vec = Vector<T, M>;
 
     const index_type m = A.extent(0);
     const index_type n = A.extent(1);
     const index_type p = std::min(m, n);
 
     // Work on a copy of A that will be transformed into R.
-    // We only need a p x n result for R, but it's easier to work on an m x n
-    // copy and then extract the top p rows at the end.
     Matrix<T, M, N> R_work(A);
 
     // Q_full accumulates the Householder reflections.  Start as identity.
-    // For the reduced QR we only need the first p columns, but we accumulate
-    // into m x m and extract afterwards.
     Matrix<T, M, M> Q_full(m, m);
     Q_full = expression::nullary::Identity<T, M, M>(Q_full.extents());
 
     for (index_type k = 0; k < p; ++k) {
-        // Extract the sub-column R_work(k:m-1, k) into a temporary vector.
-        // We work with a full-length vector but only the entries k..m-1 are
-        // non-zero in the Householder vector.
-        Vec v(m);
-        v = expression::nullary::Constant(T{0}, v.extents());
+        const index_type len = m - k;
 
-        T norm_sub = T{0};
-        for (index_type i = k; i < m; ++i) {
-            v(i) = R_work(i, k);
-            norm_sub += v(i) * v(i);
-        }
-        norm_sub = std::sqrt(norm_sub);
+        // Extract the sub-column R_work(k:m-1, k) and compute its
+        // Householder vector.
+        Vector<T, dynamic_extent> sub_col(R_work.col(k).segment(k, len));
+        auto hh = detail::householder_vector(sub_col);
+        if (!hh) { continue; }
 
-        if (norm_sub < std::numeric_limits<T>::min()) {
-            // Column is already zero below the diagonal — skip this reflection.
-            continue;
-        }
+        // Apply H to R_work from the left: rows k..m-1, columns k..n-1.
+        detail::apply_householder_left(R_work, hh->v, k, k, n);
 
-        // Choose the sign to avoid cancellation: v(k) += sign(v(k)) * ||x||.
-        // If v(k) >= 0, add norm_sub; if v(k) < 0, subtract norm_sub.
-        if (v(k) >= T{0}) {
-            v(k) += norm_sub;
-        } else {
-            v(k) -= norm_sub;
-        }
-
-        // Normalise v so that the reflection is H = I - 2*v*v^T.
-        T v_norm = T{0};
-        for (index_type i = k; i < m; ++i) { v_norm += v(i) * v(i); }
-        v_norm = std::sqrt(v_norm);
-        for (index_type i = k; i < m; ++i) { v(i) /= v_norm; }
-
-        // Apply H to R_work: R_work := R_work - 2 * v * (v^T * R_work)
-        // For each column j of R_work, compute dot = v^T * R_work(:, j),
-        // then R_work(i, j) -= 2 * v(i) * dot.
-        for (index_type j = k; j < n; ++j) {
-            T dot = T{0};
-            for (index_type i = k; i < m; ++i) { dot += v(i) * R_work(i, j); }
-            for (index_type i = k; i < m; ++i) {
-                R_work(i, j) -= T{2} * v(i) * dot;
-            }
-        }
-
-        // Apply H to Q_full: Q_full := Q_full - 2 * (Q_full * v) * v^T
-        // For each row i of Q_full, compute dot = Q_full(i, :) . v,
-        // then Q_full(i, j) -= 2 * dot * v(j).
-        for (index_type i = 0; i < m; ++i) {
-            T dot = T{0};
-            for (index_type j = k; j < m; ++j) { dot += Q_full(i, j) * v(j); }
-            for (index_type j = k; j < m; ++j) {
-                Q_full(i, j) -= T{2} * dot * v(j);
-            }
-        }
+        // Apply H to Q_full from the right: rows 0..m-1, columns k..m-1.
+        detail::apply_householder_right(Q_full, hh->v, 0, m, k);
     }
 
     // Extract the reduced Q (first p columns) and R (top p rows).
-    Matrix<T, M, P> Q(m, p);
-    Matrix<T, P, N> R(p, n);
-
-    for (index_type i = 0; i < m; ++i) {
-        for (index_type j = 0; j < p; ++j) { Q(i, j) = Q_full(i, j); }
-    }
-
-    for (index_type i = 0; i < p; ++i) {
-        for (index_type j = 0; j < n; ++j) { R(i, j) = R_work(i, j); }
-    }
+    Matrix<T, M, P> Q(Q_full.leftCols(p));
+    Matrix<T, P, N> R(R_work.topRows(p));
 
     return QRReducedResult<T, M, N>{.Q = std::move(Q), .R = std::move(R)};
 }
@@ -332,7 +265,6 @@ auto qr_full(const Derived &A) {
     using T = typename AType::value_type;
     constexpr index_type M = AType::extents_type::static_extent(0);
     constexpr index_type N = AType::extents_type::static_extent(1);
-    using Vec = Vector<T, M>;
 
     const index_type m = A.extent(0);
     const index_type n = A.extent(1);
@@ -346,42 +278,18 @@ auto qr_full(const Derived &A) {
     Q = expression::nullary::Identity<T, M, M>(Q.extents());
 
     for (index_type k = 0; k < p; ++k) {
-        Vec v(m);
-        v = expression::nullary::Constant(T{0}, v.extents());
+        const index_type len = m - k;
 
-        T norm_sub = T{0};
-        for (index_type i = k; i < m; ++i) {
-            v(i) = R(i, k);
-            norm_sub += v(i) * v(i);
-        }
-        norm_sub = std::sqrt(norm_sub);
+        // Extract sub-column R(k:m-1, k) and compute Householder vector.
+        Vector<T, dynamic_extent> sub_col(R.col(k).segment(k, len));
+        auto hh = detail::householder_vector(sub_col);
+        if (!hh) { continue; }
 
-        if (norm_sub < std::numeric_limits<T>::min()) { continue; }
+        // Apply H to R from the left: rows k..m-1, columns k..n-1.
+        detail::apply_householder_left(R, hh->v, k, k, n);
 
-        if (v(k) >= T{0}) {
-            v(k) += norm_sub;
-        } else {
-            v(k) -= norm_sub;
-        }
-
-        T v_norm = T{0};
-        for (index_type i = k; i < m; ++i) { v_norm += v(i) * v(i); }
-        v_norm = std::sqrt(v_norm);
-        for (index_type i = k; i < m; ++i) { v(i) /= v_norm; }
-
-        // Apply reflection to R.
-        for (index_type j = k; j < n; ++j) {
-            T dot = T{0};
-            for (index_type i = k; i < m; ++i) { dot += v(i) * R(i, j); }
-            for (index_type i = k; i < m; ++i) { R(i, j) -= T{2} * v(i) * dot; }
-        }
-
-        // Apply reflection to Q.
-        for (index_type i = 0; i < m; ++i) {
-            T dot = T{0};
-            for (index_type j = k; j < m; ++j) { dot += Q(i, j) * v(j); }
-            for (index_type j = k; j < m; ++j) { Q(i, j) -= T{2} * dot * v(j); }
-        }
+        // Apply H to Q from the right: rows 0..m-1, columns k..m-1.
+        detail::apply_householder_right(Q, hh->v, 0, m, k);
     }
 
     return QRFullResult<T, M, N>{.Q = std::move(Q), .R = std::move(R)};
@@ -398,8 +306,7 @@ auto qr_full(const Derived &A) {
 ///           R (n x n, upper triangular).
 ///
 /// Q is computed by applying `orthogonalization::gram_schmidt()` to the
-/// columns of A.  R is then computed as R = Q^T * A via element-level loops
-/// (since zipper may not support general matrix-matrix multiplication).
+/// columns of A.  R is then computed as R = Q^T * A via matrix multiplication.
 ///
 /// This variant is simpler than Householder but less numerically stable.
 /// For well-conditioned matrices the results are essentially identical.
@@ -410,15 +317,11 @@ auto qr_gram_schmidt(const Derived &A) {
     constexpr index_type M = AType::extents_type::static_extent(0);
     constexpr index_type N = AType::extents_type::static_extent(1);
 
-    const index_type m = A.extent(0);
-    const index_type n = A.extent(1);
-
     // Q = orthonormalised columns of A.
     Matrix<T, M, N> Q = utils::orthogonalization::gram_schmidt(A);
 
     // R = Q^T * A.
-    Matrix<T, N, N> R(n, n);
-    R = Q.transpose() * A;
+    Matrix<T, N, N> R(Q.transpose() * A);
 
     return QRReducedResult<T, M, N>{.Q = std::move(Q), .R = std::move(R)};
 }
@@ -561,7 +464,6 @@ auto qr_col_pivot(const Derived &A) {
     constexpr index_type M = AType::extents_type::static_extent(0);
     constexpr index_type N = AType::extents_type::static_extent(1);
     constexpr index_type P = extents::min(M, N);
-    using Vec = Vector<T, M>;
 
     const index_type m = A.extent(0);
     const index_type n = A.extent(1);
@@ -603,44 +505,17 @@ auto qr_col_pivot(const Derived &A) {
             }
         }
 
-        // ── Householder reflection (same as unpivoted qr).
-        Vec v(m);
-        v = expression::nullary::Constant(T{0}, v.extents());
+        // ── Householder reflection.
+        const index_type len = m - k;
+        Vector<T, dynamic_extent> sub_col(R_work.col(k).segment(k, len));
+        auto hh = detail::householder_vector(sub_col);
+        if (!hh) { continue; }
 
-        for (index_type i = k; i < m; ++i) { v(i) = R_work(i, k); }
-        // v is zero for indices 0..k-1, so the full-vector norm equals
-        // the norm of the sub-column R_work(k:m-1, k).
-        T norm_sub = v.norm();
+        // Apply H to R_work from the left.
+        detail::apply_householder_left(R_work, hh->v, k, k, n);
 
-        if (norm_sub < std::numeric_limits<T>::min()) { continue; }
-
-        if (v(k) >= T{0}) {
-            v(k) += norm_sub;
-        } else {
-            v(k) -= norm_sub;
-        }
-
-        // Normalise v so that the reflection is H = I - 2*v*v^T.
-        // (Zero entries at 0..k-1 are unaffected by division.)
-        v.normalize();
-
-        // Apply H to R_work.
-        for (index_type j = k; j < n; ++j) {
-            T dot = T{0};
-            for (index_type i = k; i < m; ++i) { dot += v(i) * R_work(i, j); }
-            for (index_type i = k; i < m; ++i) {
-                R_work(i, j) -= T{2} * v(i) * dot;
-            }
-        }
-
-        // Apply H to Q_full.
-        for (index_type i = 0; i < m; ++i) {
-            T dot = T{0};
-            for (index_type j = k; j < m; ++j) { dot += Q_full(i, j) * v(j); }
-            for (index_type j = k; j < m; ++j) {
-                Q_full(i, j) -= T{2} * dot * v(j);
-            }
-        }
+        // Apply H to Q_full from the right.
+        detail::apply_householder_right(Q_full, hh->v, 0, m, k);
 
         // ── Update column norms for remaining columns (downdate).
         // After the reflection, R_work(k, j) for j > k has changed.
