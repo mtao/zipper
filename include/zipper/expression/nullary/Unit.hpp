@@ -177,9 +177,8 @@ template <typename T, index_type Extent, typename IndexType>
 struct detail::ExpressionTraits<nullary::Unit<T, Extent, IndexType>>
     : public BasicExpressionTraits<
           T, zipper::extents<Extent>,
-          expression::detail::AccessFeatures{
-              .is_const = false, .is_reference = false},
-          expression::detail::ShapeFeatures{.is_resizable = false}> {
+          expression::detail::AccessFeatures::mutable_value(),
+          expression::detail::ShapeFeatures::fixed()> {
 
   constexpr static bool is_value_based = false;
 

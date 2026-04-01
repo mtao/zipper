@@ -233,8 +233,8 @@ struct detail::ExpressionTraits<
   : public detail::BasicExpressionTraits<
         typename detail::ExpressionTraits<std::decay_t<LessExpr>>::value_type,
         zipper::dextents<0>,
-        detail::AccessFeatures{.is_const = true, .is_reference = false},
-        detail::ShapeFeatures{.is_resizable = false}> {
+        detail::AccessFeatures::const_value(),
+        detail::ShapeFeatures::fixed()> {
     using _Detail = detail::ExpressionDetail<
         ternary::OrderingSelect<Condition, LessExpr, EqualExpr, GreaterExpr>>;
     using extents_type = typename _Detail::merged_extents_type;

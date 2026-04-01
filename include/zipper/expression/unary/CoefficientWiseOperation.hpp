@@ -17,8 +17,7 @@ struct expression::detail::ExpressionTraits<
     unary::CoefficientWiseOperation<Child, Op>>
   : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<
         Child,
-        zipper::detail::AccessFeatures{.is_const = true,
-                                       .is_reference = false}> {
+        zipper::detail::AccessFeatures::const_value()> {
     using child_traits = ExpressionTraits<std::decay_t<Child>>;
     using value_type = std::decay_t<decltype(std::declval<Op>()(
         std::declval<typename child_traits::value_type>()))>;

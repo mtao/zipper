@@ -297,6 +297,11 @@ struct StaticSparseIndexSet {
     constexpr auto end() const { return indices.end(); }
 };
 
+/// Forward declaration — needed so SpanSparseIndexSet::to_owned() can name
+/// the return type without the elaborated-type-specifier 'struct' (which
+/// MSVC incorrectly resolves as a nested class declaration).
+struct DynamicSparseIndexSet;
+
 /// @brief Non-owning sparse index set backed by std::span.
 ///
 /// Borrows a sorted index buffer from the caller.  Use when the lifetime
@@ -318,7 +323,7 @@ struct SpanSparseIndexSet {
     auto end() const { return indices.end(); }
 
     /// @brief Create an owning copy of this span's data.
-    inline auto to_owned() const -> struct DynamicSparseIndexSet;
+    inline auto to_owned() const -> DynamicSparseIndexSet;
 };
 
 /// @brief Owning sparse index set backed by std::vector.
