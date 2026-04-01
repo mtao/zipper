@@ -22,8 +22,7 @@ struct detail::ExpressionTraits<
     unary::ScalarOperation<Child, Operation, Scalar, ScalarOnRight>>
   : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<
         Child,
-        zipper::detail::AccessFeatures{.is_const = true,
-                                       .is_reference = false}> {
+        zipper::detail::AccessFeatures::const_value()> {
     using ChildTraits = ExpressionTraits<std::decay_t<Child>>;
     using value_type = decltype(std::declval<Operation>()(
         std::declval<typename ChildTraits::value_type>(),

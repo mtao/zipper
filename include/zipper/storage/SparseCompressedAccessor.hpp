@@ -355,10 +355,9 @@ struct detail::ExpressionTraits<
     : public detail::BasicExpressionTraits<
           ValueType, Extents,
           zipper::detail::AccessFeatures{
-              .is_const = std::is_const_v<ValueType>,
-              .is_reference =
-                  zipper::storage::detail::is_span_storage_v<StoragePolicy>},
-          zipper::detail::ShapeFeatures{.is_resizable = false}> {
+              std::is_const_v<ValueType>,
+              zipper::storage::detail::is_span_storage_v<StoragePolicy>},
+          zipper::detail::ShapeFeatures::fixed()> {
   constexpr static bool has_index_set = true;
   constexpr static bool has_known_zeros = has_index_set;
 

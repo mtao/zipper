@@ -138,9 +138,8 @@ struct detail::ExpressionTraits<
     nullary::Random<Distribution, Generator, Extents>>
     : public BasicExpressionTraits<
           typename Distribution::result_type, Extents,
-          expression::detail::AccessFeatures{
-              .is_const = false, .is_reference = false},
-          expression::detail::ShapeFeatures{.is_resizable = true}> {};
+          expression::detail::AccessFeatures::mutable_value(),
+          expression::detail::ShapeFeatures::resizable()> {};
 
 } // namespace zipper::expression
 #endif

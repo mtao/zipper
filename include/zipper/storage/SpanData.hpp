@@ -70,8 +70,7 @@ class SpanData : public std::span<ElementType, N> {
 template <typename ElementType, std::size_t N>
 struct LinearAccessorTraits<SpanData<ElementType, N>>
   : public BasicLinearAccessorTraits<
-        AccessFeatures{.is_const = std::is_const_v<ElementType>,
-                       .is_reference = true},
-        ShapeFeatures{.is_resizable = false}> {};
+        AccessFeatures{std::is_const_v<ElementType>, true},
+        ShapeFeatures::fixed()> {};
 } // namespace zipper::storage
 #endif

@@ -59,12 +59,20 @@ struct ExtentsSwizzler {
     constexpr static std::array<index_type, size> swizzle_indices = {
         {SwizzleIndices == std::dynamic_extent ? 1 : SwizzleIndices...}};
 #endif
+    // Helper to compute a single swizzled extent value, avoiding nested
+    // pack expansion that MSVC cannot parse (C3546).
+    template <index_type SwizzleIdx, typename SourceExtents>
+    struct swizzled_extent_value {
+        static constexpr index_type value =
+            SwizzleIdx == std::dynamic_extent
+                ? 1
+                : SourceExtents::static_extent(SwizzleIdx);
+    };
+
     template <index_type... Indices>
     using swizzled_extents_type =
-        zipper::extents<SwizzleIndices == std::dynamic_extent
-                            ? 1
-                            : zipper::extents<Indices...>::static_extent(
-                                  SwizzleIndices)...>;
+        zipper::extents<swizzled_extent_value<SwizzleIndices,
+                            zipper::extents<Indices...>>::value...>;
 
     template <typename T>
     struct extents_type_swizzler {};
