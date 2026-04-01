@@ -257,6 +257,10 @@ public:
         requires(D < 2)
     auto index_set(index_type other_idx) const {
         using CR = zipper::expression::detail::ContiguousIndexRange;
+        // Contiguous range starting at compile-time 0 (zero storage for
+        // the lower bound thanks to [[no_unique_address]]).
+        using CR0 = zipper::expression::detail::ContiguousIndexSet<
+            static_index_t<0>, index_type>;
 
         if constexpr (D == 1) {
             // Column range for a given row
@@ -265,18 +269,18 @@ public:
             if constexpr (has_flag(Mode, TriangularMode::Lower) &&
                           has_flag(Mode, TriangularMode::Upper)) {
                 // OffDiagonal: [0, row) ∪ [row+1, ncols)
-                return zipper::expression::detail::DisjointRange<CR, CR>{
+                return zipper::expression::detail::DisjointRange<CR0, CR>{
                     std::tuple{
-                        CR{index_type{0}, other_idx},
+                        CR0{static_index_t<0>{}, other_idx},
                         CR{std::min(other_idx + 1, ncols), ncols}}};
             } else if constexpr (has_flag(Mode, TriangularMode::Lower)) {
                 if constexpr (has_flag(Mode, TriangularMode::ZeroDiag)) {
                     // StrictlyLower: cols [0, row)
-                    return CR{index_type{0}, other_idx};
+                    return CR0{static_index_t<0>{}, other_idx};
                 } else {
                     // Lower or UnitLower: cols [0, row+1)
-                    return CR{index_type{0},
-                              std::min(other_idx + 1, ncols)};
+                    return CR0{static_index_t<0>{},
+                               std::min(other_idx + 1, ncols)};
                 }
             } else {
                 if constexpr (has_flag(Mode, TriangularMode::ZeroDiag)) {
@@ -294,9 +298,9 @@ public:
             if constexpr (has_flag(Mode, TriangularMode::Lower) &&
                           has_flag(Mode, TriangularMode::Upper)) {
                 // OffDiagonal: [0, col) ∪ [col+1, nrows)
-                return zipper::expression::detail::DisjointRange<CR, CR>{
+                return zipper::expression::detail::DisjointRange<CR0, CR>{
                     std::tuple{
-                        CR{index_type{0}, other_idx},
+                        CR0{static_index_t<0>{}, other_idx},
                         CR{std::min(other_idx + 1, nrows), nrows}}};
             } else if constexpr (has_flag(Mode, TriangularMode::Lower)) {
                 if constexpr (has_flag(Mode, TriangularMode::ZeroDiag)) {
@@ -309,11 +313,11 @@ public:
             } else {
                 if constexpr (has_flag(Mode, TriangularMode::ZeroDiag)) {
                     // StrictlyUpper: rows [0, col)
-                    return CR{index_type{0}, other_idx};
+                    return CR0{static_index_t<0>{}, other_idx};
                 } else {
                     // Upper or UnitUpper: rows [0, col+1)
-                    return CR{index_type{0},
-                              std::min(other_idx + 1, nrows)};
+                    return CR0{static_index_t<0>{},
+                               std::min(other_idx + 1, nrows)};
                 }
             }
         }

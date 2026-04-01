@@ -1037,23 +1037,26 @@ constexpr auto to_index_set(static_index_t<N>,
 /// with first=offset, last=offset+(count-1)*stride+1 (exclusive upper
 /// bound), stride=stride.
 ///
-/// When stride is 1, the result is a ContiguousIndexSet (via the type
+/// The StrideType is preserved in the result type so that compile-time
+/// stride information is not erased.  In particular, when StrideType is
+/// static_index_t<1> the result is a ContiguousIndexSet (via the type
 /// alias, since StridedIndexSet<..., static_index_t<1>> = ContiguousIndexSet).
 template <typename OffsetType, typename ExtentType, typename StrideType>
 constexpr auto
     to_index_set(const strided_slice<OffsetType, ExtentType, StrideType> &s,
-                 [[maybe_unused]] index_type extent) {
+                 [[maybe_unused]] index_type extent)
+    -> StridedIndexSet<index_type, index_type, StrideType> {
     const auto o = index_type(s.offset);
     const auto e = index_type(s.extent);
     const auto st = index_type(s.stride);
     if (e == 0 || st == 0) {
-        return StridedIndexRange{index_type{0}, index_type{0}, st};
+        return {index_type{0}, index_type{0}, s.stride};
     }
     // Number of output elements: ceil(e / st)
     const auto count = 1 + (e - 1) / st;
     // last = one past the last accessed child index
     const auto last = o + (count - 1) * st + 1;
-    return StridedIndexRange{o, last, st};
+    return {o, last, s.stride};
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
