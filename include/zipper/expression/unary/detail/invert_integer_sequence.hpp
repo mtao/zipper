@@ -42,7 +42,9 @@ struct invert_integer_sequence {
         std::array<rank_type, sizeof...(M)> A = {{Inds[M]...}};
         std::array<rank_type, sizeof...(M)> B = {{Inds[size - M]...}};
 
-        return std::array{{A,B}};
+        // Explicit type — MSVC cannot deduce std::array from nested
+        // brace-enclosed arrays (CTAD fails with C2641).
+        return std::array<std::array<rank_type, sizeof...(M)>, 2>{A, B};
     }
     constexpr static std::array<std::array<rank_type, sizeof...(Indices)>,2> paired_indices = make_paired_indices(
             std::make_integer_sequence<rank_type, sizeof...(Indices) / 2>{}
@@ -102,7 +104,7 @@ struct invert_integer_sequence {
 
     template <template <rank_type...> typename rank_vartype,
               std::array<index_type, total_rank> Arr>
-    using assign_types = assign_types_i<
+    using assign_types = typename assign_types_i<
         rank_vartype, Arr,
         decltype(std::make_integer_sequence<
                  rank_type, total_rank - sizeof...(Indices)>{})>::type;
