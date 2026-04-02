@@ -49,4 +49,7 @@ test('multigrid', test_multigrid)
 test_suitesparse = executable('test_suitesparse', 'suitesparse.cpp', dependencies: [zipper_test_dep])
 test('suitesparse', test_suitesparse)
 
+test_sparse_ops = executable('test_sparse_ops', 'test_sparse_ops.cpp', dependencies: [zipper_test_dep])
+test('sparse_ops', test_sparse_ops)
+
 subdir('extents')
