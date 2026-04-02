@@ -52,4 +52,7 @@ test('suitesparse', test_suitesparse)
 test_matrix_utils = executable('test_matrix_utils', 'test_matrix_utils.cpp', dependencies: [zipper_test_dep])
 test('matrix_utils', test_matrix_utils)
 
+test_sparse_ops = executable('test_sparse_ops', 'test_sparse_ops.cpp', dependencies: [zipper_test_dep])
+test('sparse_ops', test_sparse_ops)
+
 subdir('extents')

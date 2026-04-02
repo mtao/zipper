@@ -64,8 +64,7 @@ struct detail::ExpressionTraits<
     unary::PartialTransform<ExprType, Fn, Indices...>>
   : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<
         ExprType,
-        zipper::detail::AccessFeatures{.is_const = true,
-                                       .is_reference = false}> {
+        zipper::detail::AccessFeatures::const_value()> {
     using _Detail = detail::ExpressionDetail<
         unary::PartialTransform<ExprType, Fn, Indices...>>;
 

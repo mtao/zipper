@@ -159,8 +159,13 @@ auto ldlt(const Derived &A) -> std::expected<
 
     for (index_type j = 0; j < n; ++j) {
         // Compute D(j) = A(j,j) - sum_{k<j} L(j,k)^2 * D(k).
-        T sum = T{0};
-        for (index_type k = 0; k < j; ++k) { sum += L(j, k) * L(j, k) * D(k); }
+        //   = A(j,j) - ||L(j, 0:j)||^2_D   (D-weighted squared norm)
+        auto Lj_seg = L.row(j).segment(0, j);
+        auto D_seg = D.segment(0, j);
+        T sum = (j > 0)
+                    ? (Lj_seg.as_array() * Lj_seg.as_array() * D_seg.as_array())
+                          .sum()
+                    : T{0};
         D(j) = A(j, j) - sum;
 
         // Set the unit diagonal.
@@ -181,12 +186,12 @@ auto ldlt(const Derived &A) -> std::expected<
         }
 
         // Compute sub-diagonal entries L(i,j) for i > j.
-        //   L(i,j) = ( A(i,j) - sum_{k<j} L(i,k)*L(j,k)*D(k) ) / D(j)
+        //   L(i,j) = ( A(i,j) - L(i, 0:j) . (L(j, 0:j) .* D(0:j)) ) / D(j)
         for (index_type i = j + 1; i < n; ++i) {
-            T s = T{0};
-            for (index_type k = 0; k < j; ++k) {
-                s += L(i, k) * L(j, k) * D(k);
-            }
+            T s = (j > 0) ? (L.row(i).segment(0, j).as_array()
+                             * Lj_seg.as_array() * D_seg.as_array())
+                                .sum()
+                          : T{0};
             L(i, j) = (A(i, j) - s) / D(j);
         }
     }

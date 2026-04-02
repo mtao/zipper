@@ -26,8 +26,7 @@ template <zipper::concepts::QualifiedExpression ExprType>
 struct detail::ExpressionTraits<unary::Cofactor<ExprType>>
     : public unary::detail::DefaultUnaryExpressionTraits<
           ExprType,
-          zipper::detail::AccessFeatures{.is_const = true,
-                                         .is_reference = false}> {
+          zipper::detail::AccessFeatures::const_value()> {
   using child_traits = detail::ExpressionTraits<std::decay_t<ExprType>>;
   using value_type = typename child_traits::value_type;
   using extents_type = typename child_traits::extents_type;

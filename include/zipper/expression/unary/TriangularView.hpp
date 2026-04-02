@@ -81,13 +81,11 @@ template <TriangularMode Mode,
 struct detail::ExpressionTraits<unary::TriangularView<Mode, ExpressionType>>
     : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<
           ExpressionType,
-          zipper::detail::AccessFeatures{.is_const = true,
-                                         .is_reference = false}> {
+          zipper::detail::AccessFeatures::const_value()> {
     using Base =
         zipper::expression::unary::detail::DefaultUnaryExpressionTraits<
             ExpressionType,
-            zipper::detail::AccessFeatures{.is_const = true,
-                                           .is_reference = false}>;
+            zipper::detail::AccessFeatures::const_value()>;
 
     /// Override: position-dependent, not value-based.
     constexpr static bool is_value_based = false;
