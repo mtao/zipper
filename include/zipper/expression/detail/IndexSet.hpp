@@ -533,14 +533,24 @@ concept IsDisjointRange = is_disjoint_range<std::remove_cvref_t<T>>::value;
 /// @brief Convert any IndexSet to a ContiguousIndexRange (bounding box).
 ///
 /// Used by range_union and other utilities that need a uniform type.
-///   - ContiguousIndexRange → identity
-///   - SingleIndexRange     → [value, value+1)
-///   - FullRange            → [0, extent)
-///   - SparseIndexRange     → bounding interval
+/// All overloads return ContiguousIndexRange (fully-runtime) to enable
+/// storage in uniform arrays and consistent dispatch in range_union.
+///
+///   - ContiguousIndexSet<FT,LT> → {first, last} (erases static types)
+///   - EmptyIndexRange           → {0, 0}
+///   - SingleIndexSet<VT>        → [value, value+1)
+///   - FullIndexSet<ET>          → [0, extent)
+///   - SparseIndexRange          → bounding interval
 // ─────────────────────────────────────────────────────────────────────────────
-constexpr auto to_contiguous_range(const ContiguousIndexRange &r)
+
+/// @brief Any ContiguousIndexSet → ContiguousIndexRange.
+///
+/// Handles all ContiguousIndexSet<FT, LT> specializations, including
+/// the exact ContiguousIndexRange alias and mixed static/dynamic types.
+template <typename FT, typename LT>
+constexpr auto to_contiguous_range(const ContiguousIndexSet<FT, LT> &r)
     -> ContiguousIndexRange {
-    return r;
+    return {index_type(r.first), index_type(r.last)};
 }
 
 constexpr auto to_contiguous_range([[maybe_unused]] const EmptyIndexRange &)
@@ -548,13 +558,18 @@ constexpr auto to_contiguous_range([[maybe_unused]] const EmptyIndexRange &)
     return {index_type{0}, index_type{0}};
 }
 
-constexpr auto to_contiguous_range(const SingleIndexRange &r)
+/// @brief Any SingleIndexSet → ContiguousIndexRange [value, value+1).
+template <typename VT>
+constexpr auto to_contiguous_range(const SingleIndexSet<VT> &r)
     -> ContiguousIndexRange {
-    return {r.value, r.value + 1};
+    return {index_type(r.value), index_type(r.value) + 1};
 }
 
-constexpr auto to_contiguous_range(const FullRange &r) -> ContiguousIndexRange {
-    return {index_type{0}, r.extent};
+/// @brief Any FullIndexSet → ContiguousIndexRange [0, extent).
+template <typename ET>
+constexpr auto to_contiguous_range(const FullIndexSet<ET> &r)
+    -> ContiguousIndexRange {
+    return {index_type{0}, index_type(r.extent)};
 }
 
 /// @brief Bounding box of a StridedIndexSet: [first, first + (size-1)*stride +
@@ -1008,6 +1023,17 @@ constexpr auto to_index_set(index_type idx, [[maybe_unused]] index_type extent)
     return SingleIndexRange{idx};
 }
 
+/// @brief Convert a compile-time index (static_index_t) to a static SingleIndexSet.
+///
+/// Preserves compile-time information: the returned SingleIndexSet has
+/// zero storage since its value field is std::integral_constant.
+template <index_type N>
+constexpr auto to_index_set(static_index_t<N>,
+                            [[maybe_unused]] index_type extent)
+    -> SingleIndexSet<static_index_t<N>> {
+    return {};
+}
+
 /// @brief Convert a strided_slice to a StridedIndexSet.
 ///
 /// A strided_slice{offset, extent, stride} accesses child indices:
@@ -1016,23 +1042,26 @@ constexpr auto to_index_set(index_type idx, [[maybe_unused]] index_type extent)
 /// with first=offset, last=offset+(count-1)*stride+1 (exclusive upper
 /// bound), stride=stride.
 ///
-/// When stride is 1, the result is a ContiguousIndexSet (via the type
+/// The StrideType is preserved in the result type so that compile-time
+/// stride information is not erased.  In particular, when StrideType is
+/// static_index_t<1> the result is a ContiguousIndexSet (via the type
 /// alias, since StridedIndexSet<..., static_index_t<1>> = ContiguousIndexSet).
 template <typename OffsetType, typename ExtentType, typename StrideType>
 constexpr auto
     to_index_set(const strided_slice<OffsetType, ExtentType, StrideType> &s,
-                 [[maybe_unused]] index_type extent) {
+                 [[maybe_unused]] index_type extent)
+    -> StridedIndexSet<index_type, index_type, StrideType> {
     const auto o = index_type(s.offset);
     const auto e = index_type(s.extent);
     const auto st = index_type(s.stride);
     if (e == 0 || st == 0) {
-        return StridedIndexRange{index_type{0}, index_type{0}, st};
+        return {index_type{0}, index_type{0}, s.stride};
     }
     // Number of output elements: ceil(e / st)
     const auto count = 1 + (e - 1) / st;
     // last = one past the last accessed child index
     const auto last = o + (count - 1) * st + 1;
-    return StridedIndexRange{o, last, st};
+    return {o, last, s.stride};
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
