@@ -211,3 +211,63 @@ TEST_CASE("sizeof DataArray", "[sizeof][user_types]") {
   STATIC_REQUIRE(sizeof(zipper::DataArray<float, 3>) == sizeof(float) * 3);
   STATIC_REQUIRE(sizeof(zipper::DataArray<double, 3>) == sizeof(double) * 3);
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Layer 5: Trivial Copyability
+//
+// Static-extent owning types store only a std::array<T,N> (via DenseData).
+// With all special member functions defaulted, the compiler generates
+// memberwise copy/move which is trivial for std::array.  This enables
+// memcpy-based optimisation and is required for use in certain contexts
+// (e.g. GPU upload, placement-new, type-erased storage).
+//
+// Dynamic-extent types (VectorX, MatrixXX, etc.) are NOT trivially
+// copyable because they contain std::vector — this is correct behaviour.
+// ═══════════════════════════════════════════════════════════════════════════
+
+TEST_CASE("trivially_copyable static-extent types",
+          "[trivially_copyable][user_types]") {
+  // Vector
+  STATIC_REQUIRE(std::is_trivially_copyable_v<zipper::Vector<float, 1>>);
+  STATIC_REQUIRE(std::is_trivially_copyable_v<zipper::Vector<float, 3>>);
+  STATIC_REQUIRE(std::is_trivially_copyable_v<zipper::Vector<double, 3>>);
+  STATIC_REQUIRE(std::is_trivially_copyable_v<zipper::Vector<double, 4>>);
+
+  // Matrix
+  STATIC_REQUIRE(std::is_trivially_copyable_v<zipper::Matrix<float, 2, 2>>);
+  STATIC_REQUIRE(std::is_trivially_copyable_v<zipper::Matrix<float, 3, 3>>);
+  STATIC_REQUIRE(std::is_trivially_copyable_v<zipper::Matrix<double, 3, 3>>);
+  STATIC_REQUIRE(std::is_trivially_copyable_v<zipper::Matrix<double, 4, 4>>);
+  STATIC_REQUIRE(
+      std::is_trivially_copyable_v<zipper::Matrix<float, 3, 3, false>>);
+
+  // Array
+  STATIC_REQUIRE(std::is_trivially_copyable_v<zipper::Array<float, 3>>);
+  STATIC_REQUIRE(std::is_trivially_copyable_v<zipper::Array<double, 3>>);
+  STATIC_REQUIRE(std::is_trivially_copyable_v<zipper::Array<float, 3, 3>>);
+
+  // Form
+  STATIC_REQUIRE(std::is_trivially_copyable_v<zipper::Form<float, 3>>);
+  STATIC_REQUIRE(std::is_trivially_copyable_v<zipper::Form<double, 3>>);
+
+  // Tensor
+  STATIC_REQUIRE(std::is_trivially_copyable_v<zipper::Tensor<float, 3>>);
+  STATIC_REQUIRE(std::is_trivially_copyable_v<zipper::Tensor<float, 3, 3>>);
+  STATIC_REQUIRE(
+      std::is_trivially_copyable_v<zipper::Tensor<double, 2, 3, 4>>);
+
+  // Quaternion
+  STATIC_REQUIRE(std::is_trivially_copyable_v<zipper::Quaternion<float>>);
+  STATIC_REQUIRE(std::is_trivially_copyable_v<zipper::Quaternion<double>>);
+
+  // DataArray
+  STATIC_REQUIRE(std::is_trivially_copyable_v<zipper::DataArray<float, 3>>);
+  STATIC_REQUIRE(std::is_trivially_copyable_v<zipper::DataArray<double, 3>>);
+}
+
+TEST_CASE("dynamic-extent types are NOT trivially copyable",
+          "[trivially_copyable][user_types]") {
+  // Dynamic types contain std::vector — they should not be trivially copyable.
+  STATIC_REQUIRE_FALSE(
+      std::is_trivially_copyable_v<zipper::VectorX<double>>);
+}

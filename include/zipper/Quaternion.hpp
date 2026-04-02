@@ -57,10 +57,7 @@ public:
   Quaternion(const Quaternion &o) = default;
   Quaternion &operator=(const Quaternion &o) = default;
   Quaternion(Quaternion &&o) = default;
-  Quaternion &operator=(Quaternion &&o) {
-    expression().operator=(std::move(o.expression()));
-    return *this;
-  }
+  Quaternion &operator=(Quaternion &&o) = default;
 
   /// @brief Return the identity quaternion (1, 0, 0, 0).
   static Quaternion identity() { return Quaternion(value_type(1), value_type(0), value_type(0), value_type(0)); }
