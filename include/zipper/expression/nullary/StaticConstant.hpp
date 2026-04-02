@@ -134,9 +134,8 @@ template <typename T, int Value, index_type... Indices>
 struct detail::ExpressionTraits<nullary::StaticConstant<T, Value, Indices...>>
     : public BasicExpressionTraits<
           T, zipper::extents<Indices...>,
-          expression::detail::AccessFeatures{.is_const = true,
-                                             .is_reference = false},
-          expression::detail::ShapeFeatures{.is_resizable = true}> {
+          expression::detail::AccessFeatures::const_value(),
+          expression::detail::ShapeFeatures::resizable()> {
 
   /// Zero expressions have structurally known zero regions (everything is
   /// zero).

@@ -59,21 +59,41 @@ struct ExtentsSwizzler {
     constexpr static std::array<index_type, size> swizzle_indices = {
         {SwizzleIndices == std::dynamic_extent ? 1 : SwizzleIndices...}};
 #endif
+    // MSVC (C3546) cannot expand two independent parameter packs in an
+    // alias template.  We work around this by computing the swizzled
+    // extents inside a helper struct that captures *both* packs as
+    // template parameters, so each pack is expanded exactly once.
+    // The alias template `swizzled_extents_type` is intentionally
+    // avoided — even forwarding SwizzleIndices... through an alias
+    // triggers C3546 on MSVC.  Use the struct ::type directly.
+    template <typename SourceExtents, index_type... SI>
+    struct swizzled_extents_impl;
+
+    template <index_type... Indices, index_type... SI>
+    struct swizzled_extents_impl<zipper::extents<Indices...>, SI...> {
+        using type = zipper::extents<(SI == std::dynamic_extent
+                         ? 1
+                         : zipper::extents<Indices...>::static_extent(SI))...>;
+    };
+
+    // Convenience: compute swizzled extents from an extents type.
+    // Avoids alias templates that expand two packs (MSVC C3546).
     template <index_type... Indices>
     using swizzled_extents_type =
-        zipper::extents<SwizzleIndices == std::dynamic_extent
-                            ? 1
-                            : zipper::extents<Indices...>::static_extent(
-                                  SwizzleIndices)...>;
+        typename swizzled_extents_impl<zipper::extents<Indices...>,
+                                       SwizzleIndices...>::type;
 
     template <typename T>
     struct extents_type_swizzler {};
     template <index_type... Indices>
     struct extents_type_swizzler<zipper::extents<Indices...>> {
-        using type = swizzled_extents_type<Indices...>;
+        // Directly use swizzled_extents_impl to avoid MSVC C3546
+        // on alias templates that reference SwizzleIndices...
+        using type = typename swizzled_extents_impl<
+            zipper::extents<Indices...>, SwizzleIndices...>::type;
     };
     template <typename T>
-    using extents_type_swizzler_t = extents_type_swizzler<T>::type;
+    using extents_type_swizzler_t = typename extents_type_swizzler<T>::type;
 
     // dim I,J,K with 0,2,1 is sent to I,K,J
     // say K is dynamic

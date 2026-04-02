@@ -35,8 +35,7 @@ template <zipper::concepts::QualifiedExpression ExprType, rank_type... Indices>
 struct detail::ExpressionTraits<unary::PartialTrace<ExprType, Indices...>>
     : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<
           ExprType,
-          zipper::detail::AccessFeatures{.is_const = true,
-                                         .is_reference = false}> {
+          zipper::detail::AccessFeatures::const_value()> {
     using _Detail = detail::ExpressionDetail<unary::PartialTrace<ExprType, Indices...>>;
     using extents_type = typename _Detail::index_remover::template assign_types<
         zipper::extents, zipper::detail::extents::static_extents_to_array_v<
