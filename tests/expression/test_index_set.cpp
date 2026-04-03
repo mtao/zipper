@@ -347,6 +347,80 @@ TEST_CASE("TriangularView index_set consistency with coeff",
     }
 }
 
+// Verify that index_set returns use static_index_t<0> for zero-origin ranges
+TEST_CASE("TriangularView index_set uses static first=0",
+          "[index_set][triangular_view][static_zero]") {
+    using CR0 = ContiguousIndexSet<zipper::static_index_t<0>, index_type>;
+
+    auto M = make_4x4();
+
+    SECTION("Lower col_range_for_row returns CR0") {
+        auto L = triangular_view<TriangularMode::Lower>(M);
+        auto r = L.col_range_for_row(2);
+        static_assert(std::is_same_v<decltype(r), CR0>);
+        CHECK(r.first == 0);
+        CHECK(r.last == 3);
+    }
+
+    SECTION("StrictlyLower col_range_for_row returns CR0") {
+        auto SL = triangular_view<TriangularMode::StrictlyLower>(M);
+        auto r = SL.col_range_for_row(3);
+        static_assert(std::is_same_v<decltype(r), CR0>);
+        CHECK(r.first == 0);
+        CHECK(r.last == 3);
+    }
+
+    SECTION("UnitLower col_range_for_row returns CR0") {
+        auto UL = triangular_view<TriangularMode::UnitLower>(M);
+        auto r = UL.col_range_for_row(2);
+        static_assert(std::is_same_v<decltype(r), CR0>);
+        CHECK(r.first == 0);
+        CHECK(r.last == 3);
+    }
+
+    SECTION("Upper row_range_for_col returns CR0") {
+        auto U = triangular_view<TriangularMode::Upper>(M);
+        auto r = U.row_range_for_col(3);
+        static_assert(std::is_same_v<decltype(r), CR0>);
+        CHECK(r.first == 0);
+        CHECK(r.last == 4);
+    }
+
+    SECTION("StrictlyUpper row_range_for_col returns CR0") {
+        auto SU = triangular_view<TriangularMode::StrictlyUpper>(M);
+        auto r = SU.row_range_for_col(3);
+        static_assert(std::is_same_v<decltype(r), CR0>);
+        CHECK(r.first == 0);
+        CHECK(r.last == 3);
+    }
+
+    SECTION("UnitUpper row_range_for_col returns CR0") {
+        auto UU = triangular_view<TriangularMode::UnitUpper>(M);
+        auto r = UU.row_range_for_col(2);
+        static_assert(std::is_same_v<decltype(r), CR0>);
+        CHECK(r.first == 0);
+        CHECK(r.last == 3);
+    }
+
+    SECTION("Upper col_range_for_row returns CR (not CR0)") {
+        // Upper col range starts at row, not 0
+        auto U = triangular_view<TriangularMode::Upper>(M);
+        auto r = U.col_range_for_row(2);
+        static_assert(std::is_same_v<decltype(r), ContiguousIndexRange>);
+        CHECK(r.first == 2);
+        CHECK(r.last == 4);
+    }
+
+    SECTION("Lower row_range_for_col returns CR (not CR0)") {
+        // Lower row range starts at col, not 0
+        auto L = triangular_view<TriangularMode::Lower>(M);
+        auto r = L.row_range_for_col(2);
+        static_assert(std::is_same_v<decltype(r), ContiguousIndexRange>);
+        CHECK(r.first == 2);
+        CHECK(r.last == 4);
+    }
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Identity index_set tests
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -2068,6 +2142,57 @@ TEST_CASE("to_index_set: strided_slice", "[index_set][to_index_set]") {
         CHECK(r.size() == 1);
         auto v = to_vec(r);
         CHECK(v == std::vector<index_type>{7});
+    }
+}
+
+TEST_CASE("to_index_set: strided_slice preserves stride type",
+          "[index_set][to_index_set]") {
+    using zipper::static_index_t;
+
+    SECTION("static stride=1 yields ContiguousIndexSet") {
+        zipper::strided_slice<index_type, index_type, static_index_t<1>> s{
+            2, 5, {}};
+        auto r = to_index_set(s, 10);
+        // Result should be StridedIndexSet<index_type, index_type,
+        // static_index_t<1>> which is ContiguousIndexSet<index_type,
+        // index_type> == ContiguousIndexRange.
+        static_assert(std::is_same_v<decltype(r), ContiguousIndexRange>);
+        CHECK(r.first == 2);
+        CHECK(r.last == 7);
+        CHECK(r.size() == 5);
+    }
+
+    SECTION("static stride=2 yields StridedIndexSet with static stride") {
+        zipper::strided_slice<index_type, index_type, static_index_t<2>> s{
+            1, 10, {}};
+        auto r = to_index_set(s, 20);
+        static_assert(
+            std::is_same_v<decltype(r),
+                           StridedIndexSet<index_type, index_type,
+                                           static_index_t<2>>>);
+        // ceil(10/2) = 5 elements: {1, 3, 5, 7, 9}
+        // last = 1 + (5-1)*2 + 1 = 10
+        CHECK(r.first == 1);
+        CHECK(r.last == 10);
+        CHECK(r.size() == 5);
+        auto v = to_vec(r);
+        CHECK(v == std::vector<index_type>{1, 3, 5, 7, 9});
+    }
+
+    SECTION("runtime stride yields StridedIndexRange") {
+        zipper::strided_slice<index_type, index_type, index_type> s{0, 6, 3};
+        auto r = to_index_set(s, 10);
+        static_assert(std::is_same_v<decltype(r), StridedIndexRange>);
+        CHECK(r.size() == 2);
+    }
+
+    SECTION("empty slice with static stride preserves type") {
+        zipper::strided_slice<index_type, index_type, static_index_t<1>> s{
+            3, 0, {}};
+        auto r = to_index_set(s, 10);
+        static_assert(std::is_same_v<decltype(r), ContiguousIndexRange>);
+        CHECK(r.empty());
+        CHECK(r.size() == 0);
     }
 }
 

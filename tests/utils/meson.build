@@ -58,4 +58,7 @@ test('lanczos', test_lanczos)
 test_eigenvalue = executable('test_eigenvalue', 'test_eigenvalue.cpp', dependencies: [zipper_test_dep])
 test('eigenvalue', test_eigenvalue)
 
+test_sparse_ops = executable('test_sparse_ops', 'test_sparse_ops.cpp', dependencies: [zipper_test_dep])
+test('sparse_ops', test_sparse_ops)
+
 subdir('extents')

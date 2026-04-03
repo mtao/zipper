@@ -120,9 +120,10 @@ namespace unary {
             constexpr index_type child_dim = swizzle_map[D];
             // Inserted dimensions (dynamic_extent) have no child mapping;
             // they have extent 1 and are always "nonzero" at index 0.
+            // Use static_index_t<0> to preserve the compile-time knowledge.
             if constexpr (child_dim == std::dynamic_extent) {
-                return zipper::expression::detail::SingleIndexRange{
-                    index_type{0}};
+                return zipper::expression::detail::SingleIndexSet<
+                    static_index_t<0>>{};
             } else {
                 return expression().template index_set<child_dim>(other_idx);
             }

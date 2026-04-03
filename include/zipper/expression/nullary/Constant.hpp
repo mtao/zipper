@@ -54,9 +54,8 @@ template <typename T, index_type... Indices>
 struct detail::ExpressionTraits<nullary::Constant<T, Indices...>>
     : public BasicExpressionTraits<
           T, zipper::extents<Indices...>,
-          expression::detail::AccessFeatures{
-              .is_const = false, .is_reference = false},
-          expression::detail::ShapeFeatures{.is_resizable = true}> {};
+          expression::detail::AccessFeatures::mutable_value(),
+          expression::detail::ShapeFeatures::resizable()> {};
 
 } // namespace zipper::expression
 #endif
