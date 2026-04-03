@@ -53,7 +53,8 @@ struct TridiagonalEigenResult {
 template <concepts::Matrix Derived>
 auto tridiagonal_qr_eigen(const Derived &T_in, index_type max_iter = 0)
     -> std::expected<
-        TridiagonalEigenResult<typename std::decay_t<Derived>::value_type, dynamic_extent>,
+        TridiagonalEigenResult<typename std::decay_t<Derived>::value_type,
+                               dynamic_extent>,
         solver::SolverError> {
     using AType = std::decay_t<Derived>;
     using T = typename AType::value_type;
@@ -78,21 +79,16 @@ auto tridiagonal_qr_eigen(const Derived &T_in, index_type max_iter = 0)
         Vector<T, dynamic_extent> evals(1);
         evals(0) = T_in(0, 0);
         Matrix<T, dynamic_extent, dynamic_extent> evecs(
-            expression::nullary::Identity<T, dynamic_extent, dynamic_extent>(1, 1));
+            expression::nullary::Identity<T, dynamic_extent, dynamic_extent>(
+                1, 1));
         return TridiagonalEigenResult<T, dynamic_extent>{
-            .eigenvalues = std::move(evals),
-            .eigenvectors = std::move(evecs)};
+            .eigenvalues = std::move(evals), .eigenvectors = std::move(evecs)};
     }
 
     // Extract diagonal (d) and sub-diagonal (e) into working arrays.
-    VectorX<T> d(n);
-    VectorX<T> e(n);  // e[0..n-2] are the sub-diagonal, e[n-1] = 0
-    for (index_type i = 0; i < n; ++i) {
-        d(i) = T_in(i, i);
-    }
-    for (index_type i = 0; i + 1 < n; ++i) {
-        e(i) = T_in(i + 1, i);
-    }
+    VectorX<T> d(T_in.diagonal());
+    VectorX<T> e(n); // e[0..n-2] are the sub-diagonal, e[n-1] = 0
+    for (index_type i = 0; i + 1 < n; ++i) { e(i) = T_in(i + 1, i); }
     e(n - 1) = T{0};
 
     // Eigenvector accumulation.
@@ -113,9 +109,7 @@ auto tridiagonal_qr_eigen(const Derived &T_in, index_type max_iter = 0)
             while (m + 1 < n) {
                 T dd = std::abs(d(m)) + std::abs(d(m + 1));
                 if (dd == T{0}) { dd = T{1}; }
-                if (std::abs(e(m)) <= eps * dd) {
-                    break;
-                }
+                if (std::abs(e(m)) <= eps * dd) { break; }
                 ++m;
             }
 
@@ -125,7 +119,8 @@ auto tridiagonal_qr_eigen(const Derived &T_in, index_type max_iter = 0)
             if (iter >= max_iter) {
                 return std::unexpected(solver::SolverError{
                     .kind = solver::SolverError::Kind::diverged,
-                    .message = "tridiagonal_qr_eigen: QL iteration did not converge"});
+                    .message =
+                        "tridiagonal_qr_eigen: QL iteration did not converge"});
             }
             ++iter;
 
@@ -182,23 +177,18 @@ auto tridiagonal_qr_eigen(const Derived &T_in, index_type max_iter = 0)
         }
     }
 
-    // Build eigenvalue vector.
-    Vector<T, dynamic_extent> eigenvalues(n);
-    for (index_type i = 0; i < n; ++i) {
-        eigenvalues(i) = d(i);
-    }
-
-    // Sort eigenvalues in ascending order and permute eigenvectors.
+    // d already contains the eigenvalues; sort in ascending order and
+    // permute eigenvectors accordingly.
     std::vector<index_type> perm(n);
     std::iota(perm.begin(), perm.end(), index_type{0});
     std::sort(perm.begin(), perm.end(), [&](index_type a, index_type b) {
-        return eigenvalues(a) < eigenvalues(b);
+        return d(a) < d(b);
     });
 
     Vector<T, dynamic_extent> sorted_evals(n);
     Matrix<T, dynamic_extent, dynamic_extent> sorted_evecs(n, n);
     for (index_type i = 0; i < n; ++i) {
-        sorted_evals(i) = eigenvalues(perm[i]);
+        sorted_evals(i) = d(perm[i]);
         sorted_evecs.col(i) = Z.col(perm[i]);
     }
 

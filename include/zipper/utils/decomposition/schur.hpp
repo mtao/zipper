@@ -50,6 +50,7 @@
 #include <zipper/expression/nullary/Identity.hpp>
 #include <zipper/utils/decomposition/detail/givens.hpp>
 #include <zipper/utils/decomposition/detail/householder.hpp>
+#include <zipper/utils/determinant.hpp>
 #include <zipper/utils/solver/result.hpp>
 
 namespace zipper::utils::decomposition {
@@ -200,20 +201,21 @@ namespace schur_detail {
             // Shifts are the eigenvalues of the trailing 2x2 block H(p-2:p,
             // p-2:p). We only need their sum (s) and product (t) which are
             // always real.
-            T s = H(p - 2, p - 2) + H(p - 1, p - 1); // trace
-            T t = H(p - 2, p - 2) * H(p - 1, p - 1)
-                  - H(p - 2, p - 1) * H(p - 1, p - 2); // determinant
+            auto trailing = H.slice(zipper::slice(p - 2, index_type{2}),
+                                    zipper::slice(p - 2, index_type{2}));
+            T s = trailing.trace();
+            T t = utils::determinant(trailing);
 
             // First column of M = H^2 - s*H + t*I (only first 3 entries are
             // non-zero because H is upper Hessenberg).
-            T h00 = H(q, q);
-            T h10 = H(q + 1, q);
-            T h01 = H(q, q + 1);
-            T h11 = H(q + 1, q + 1);
+            auto leading = H.slice(zipper::slice(q, index_type{2}),
+                                   zipper::slice(q, index_type{2}));
+            T h10 = leading(1, 0);
             T h21 = (q + 2 < n) ? H(q + 2, q + 1) : T{0};
 
-            T x = h00 * h00 + h01 * h10 - s * h00 + t;
-            T y = h10 * (h00 + h11 - s);
+            T x = leading(0, 0) * leading(0, 0) + leading(0, 1) * h10
+                  - s * leading(0, 0) + t;
+            T y = h10 * (leading.trace() - s);
             T z = h10 * h21;
 
             // Chase the bulge from q to p-3 using 3x3 Householder reflectors,
@@ -357,13 +359,12 @@ namespace schur_detail {
 
             // Wilkinson shift: eigenvalue of the bottom-right 2x2 block
             // closest to H(p-1, p-1).
-            T a11 = H(p - 2, p - 2);
-            T a12 = H(p - 2, p - 1);
-            T a21 = H(p - 1, p - 2);
-            T a22 = H(p - 1, p - 1);
+            auto trailing = H.slice(zipper::slice(p - 2, index_type{2}),
+                                    zipper::slice(p - 2, index_type{2}));
+            T a22 = trailing(1, 1);
 
-            T trace = a11 + a22;
-            T det = a11 * a22 - a12 * a21;
+            T trace = trailing.trace();
+            T det = utils::determinant(trailing);
             T disc = trace * trace - T{4} * det;
 
             T shift;

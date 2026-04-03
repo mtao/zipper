@@ -91,14 +91,9 @@ namespace detail {
             //        T_out * v)*v*v^T
 
             // Compute p = T_out(k+1:n, k+1:n) * v
-            Vector<T, dynamic_extent> p(m);
-            for (index_type i = 0; i < m; ++i) {
-                T sum = T{0};
-                for (index_type j = 0; j < m; ++j) {
-                    sum += T_out(k + 1 + i, k + 1 + j) * hv(j);
-                }
-                p(i) = sum;
-            }
+            auto sub =
+                T_out.slice(zipper::slice(k + 1, m), zipper::slice(k + 1, m));
+            Vector<T, dynamic_extent> p(sub * hv);
 
             // Compute K = v^T * p
             T K = utils::detail::dot(hv, p);
@@ -109,7 +104,7 @@ namespace detail {
 
             for (index_type i = 0; i < m; ++i) {
                 for (index_type j = 0; j < m; ++j) {
-                    T_out(k + 1 + i, k + 1 + j) -= hv(i) * q(j) + q(i) * hv(j);
+                    sub(i, j) -= hv(i) * q(j) + q(i) * hv(j);
                 }
             }
 

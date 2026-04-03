@@ -23,6 +23,7 @@
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
 #include <zipper/utils/decomposition/schur.hpp>
+#include <zipper/utils/determinant.hpp>
 #include <zipper/utils/solver/result.hpp>
 
 namespace zipper::utils::eigenvalue {
@@ -56,23 +57,24 @@ auto extract_eigenvalues_from_schur(
 
     index_type i = 0;
     while (i < n) {
-        if (i + 1 < n &&
-            std::abs(T_mat(i + 1, i)) > eps * (std::abs(T_mat(i, i)) +
-                                                 std::abs(T_mat(i + 1, i + 1)))) {
+        if (i + 1 < n
+            && std::abs(T_mat(i + 1, i))
+                   > eps
+                         * (std::abs(T_mat(i, i))
+                            + std::abs(T_mat(i + 1, i + 1)))) {
             // 2x2 block: eigenvalues of [[a, b], [c, d]]
-            T a = T_mat(i, i);
-            T b = T_mat(i, i + 1);
-            T c = T_mat(i + 1, i);
-            T d = T_mat(i + 1, i + 1);
+            auto block = T_mat.slice(zipper::slice(i, index_type{2}),
+                                     zipper::slice(i, index_type{2}));
 
-            T trace = a + d;
-            T det = a * d - b * c;
+            T trace = block.trace();
+            T det = utils::determinant(block);
             T disc = trace * trace - T{4} * det;
 
             if (disc >= T{0}) {
                 T sqrt_disc = std::sqrt(disc);
                 evals(i) = std::complex<T>((trace + sqrt_disc) / T{2}, T{0});
-                evals(i + 1) = std::complex<T>((trace - sqrt_disc) / T{2}, T{0});
+                evals(i + 1) =
+                    std::complex<T>((trace - sqrt_disc) / T{2}, T{0});
             } else {
                 T real_part = trace / T{2};
                 T imag_part = std::sqrt(-disc) / T{2};
@@ -109,9 +111,7 @@ auto hessenberg_qr_eigen(const Derived &A, index_type max_iter = 0)
     using T = typename AType::value_type;
 
     auto schur_result = decomposition::schur(A, max_iter);
-    if (!schur_result) {
-        return std::unexpected(schur_result.error());
-    }
+    if (!schur_result) { return std::unexpected(schur_result.error()); }
 
     auto eigenvalues = extract_eigenvalues_from_schur(schur_result->T_mat);
 
