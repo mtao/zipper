@@ -128,14 +128,27 @@ auto arnoldi(const Derived &M, const BDerived &b, auto n_param) {
     auto q = Q.col(j);
     v = M * q;
 
-    // Orthogonalise v against all existing basis vectors (classical
-    // Gram-Schmidt).  The projection coefficients are stored in column j
-    // of H, building the upper Hessenberg structure.
+    // Orthogonalise v against all existing basis vectors using modified
+    // Gram-Schmidt (MGS).  Unlike classical GS, MGS subtracts each
+    // projection immediately so that subsequent inner products use the
+    // already-deflated vector, giving better numerical orthogonality.
+    // The projection coefficients are stored in column j of H, building
+    // the upper Hessenberg structure.
     for (index_type k = 0; k <= j; ++k) {
       auto l = Q.col(k);
-      const T s = utils::detail::dot(l, v);
+      const T s = utils::detail::dot(Vec(v), Vec(l));
       H(k, j) = s;
       v -= s * l;
+    }
+
+    // Re-orthogonalisation pass (one step of iterative refinement).
+    // Even MGS can lose orthogonality for ill-conditioned problems;
+    // one extra pass is usually sufficient.
+    for (index_type k = 0; k <= j; ++k) {
+      auto l = Q.col(k);
+      const T s2 = utils::detail::dot(Vec(v), Vec(l));
+      H(k, j) += s2;
+      v -= s2 * l;
     }
 
     // The sub-diagonal entry H(j+1, j) is the norm of the residual.

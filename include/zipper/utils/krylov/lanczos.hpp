@@ -180,10 +180,19 @@ auto lanczos(const Derived &M, const BDerived &v1, auto n_param) {
 
     // Three-term recurrence: remove components along v_j and v_{j-1}.
     // In exact arithmetic this is sufficient because M is symmetric, so w
-    // is already orthogonal to v_0 ... v_{j-2}.  In floating-point this
-    // can lose orthogonality; full re-orthogonalisation or selective
-    // re-orthogonalisation can be added if needed for high accuracy.
+    // is already orthogonal to v_0 ... v_{j-2}.
     w -= a * vj + b * vjm;
+
+    // Full re-orthogonalisation against all previous Lanczos vectors.
+    // In floating-point the three-term recurrence loses orthogonality
+    // progressively; this pass restores it at the cost of O(m*j) work
+    // per step (same asymptotic cost as Arnoldi).  This is critical for
+    // eigenvalue solvers that rely on the orthogonality of V.
+    for (index_type k = 0; k <= j; ++k) {
+      auto vk = V.col(k);
+      const Scalar proj = utils::detail::dot(Vec(w), Vec(vk));
+      w -= proj * vk;
+    }
   }
 
   return Result{

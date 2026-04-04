@@ -52,6 +52,12 @@ test('suitesparse', test_suitesparse)
 test_matrix_utils = executable('test_matrix_utils', 'test_matrix_utils.cpp', dependencies: [zipper_test_dep])
 test('matrix_utils', test_matrix_utils)
 
+test_lanczos = executable('test_lanczos', 'test_lanczos.cpp', dependencies: [zipper_test_dep])
+test('lanczos', test_lanczos)
+
+test_eigenvalue = executable('test_eigenvalue', 'test_eigenvalue.cpp', dependencies: [zipper_test_dep])
+test('eigenvalue', test_eigenvalue)
+
 test_sparse_ops = executable('test_sparse_ops', 'test_sparse_ops.cpp', dependencies: [zipper_test_dep])
 test('sparse_ops', test_sparse_ops)
 
