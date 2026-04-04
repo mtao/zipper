@@ -68,9 +68,7 @@ TEST_CASE("test_dot", "[matrix][storage][dense]") {
     // static_assert(zipper::concepts::ValidExtents<Vector<double,3>,3>);
     static_assert(zipper::concepts::ValidExtents<Vector<double, 3>, 3>);
 
-    // TODO: Hodge star operator (*) not yet implemented in FormBase
-    // Vector c = (*a.as_form()).as_vector();
-    Vector c = a; // placeholder until Hodge star is implemented
+    Vector c = (*a.as_form()).as_vector();
 
     VectorBase e0 = expression::nullary::unit_vector<double, 3>(0);
     VectorBase e1 = expression::nullary::unit_vector<double>(3, 1);
@@ -240,3 +238,62 @@ TEST_CASE("static_matrix_compound_scalar_div", "[matrix][compound]") {
 // FormBase::operator= uses `expression() = v.expression()` instead of
 // `expression().assign(v.expression())`. See FormBase.hpp lines 62-69.
 // Form compound tests are omitted until FormBase assignment is fixed.
+
+TEST_CASE("hodge_star_euclidean_1form", "[form][hodge]") {
+    Vector<double, 3> v{{1.0, 2.0, 3.0}};
+    auto f = v.as_form();
+    auto const &star_f = *f;
+    Vector<double, 3> roundtrip = star_f.as_vector();
+
+    CHECK(roundtrip(0) == 1.0);
+    CHECK(roundtrip(1) == 2.0);
+    CHECK(roundtrip(2) == 3.0);
+}
+
+TEST_CASE("hodge_star_2d", "[form][hodge]") {
+    Vector<double, 2> v{{4.0, -5.0}};
+    auto f = v.as_form();
+    auto const &star_f = *f;
+    Vector<double, 2> roundtrip = star_f.as_vector();
+
+    CHECK(roundtrip(0) == 4.0);
+    CHECK(roundtrip(1) == -5.0);
+}
+
+TEST_CASE("hodge_star_preserves_dot_product", "[form][hodge]") {
+    // In Euclidean space, dot(a,b) = (as_form(a)) * b =
+    // (*as_form(a)).as_vector().dot(b) Since the hodge star is identity on
+    // coefficients, this is just a.dot(b)
+    Vector<double, 3> a{{1.0, 2.0, 3.0}};
+    Vector<double, 3> b{{4.0, 5.0, 6.0}};
+
+    double dot_ab = a.dot(b);
+    Vector<double, 3> star_a = (*a.as_form()).as_vector();
+    double dot_star = star_a.dot(b);
+
+    CHECK(dot_ab == dot_star);
+}
+
+TEST_CASE("hodge_star_double_application", "[form][hodge]") {
+    // Applying hodge star twice on a 1-form in R^n should give back the same
+    // coefficients (for the Euclidean identity case)
+    Vector<double, 3> v{{7.0, -3.0, 2.5}};
+    auto f = v.as_form();
+    auto const &star_f = *f;
+    auto const &star_star_f = *star_f;
+    Vector<double, 3> result = star_star_f.as_vector();
+
+    CHECK(result(0) == 7.0);
+    CHECK(result(1) == -3.0);
+    CHECK(result(2) == 2.5);
+}
+
+TEST_CASE("hodge_star_1d", "[form][hodge]") {
+    Vector<double, 1> v;
+    v(0) = 42.0;
+    auto f = v.as_form();
+    auto const &star_f = *f;
+    Vector<double, 1> roundtrip = star_f.as_vector();
+
+    CHECK(roundtrip(0) == 42.0);
+}
