@@ -46,7 +46,7 @@ struct invert_integer_sequence {
         // brace-enclosed arrays (CTAD fails with C2641).
         return std::array<std::array<rank_type, sizeof...(M)>, 2>{A, B};
     }
-    constexpr static std::array<std::array<rank_type, sizeof...(Indices)>,2> paired_indices = make_paired_indices(
+    constexpr static std::array<std::array<rank_type, sizeof...(Indices) / 2>,2> paired_indices = make_paired_indices(
             std::make_integer_sequence<rank_type, sizeof...(Indices) / 2>{}
             );
 
