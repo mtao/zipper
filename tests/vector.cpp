@@ -66,7 +66,7 @@ TEST_CASE("test_dot", "[matrix][storage][dense]") {
     Vector<double, 3> b{{1, 3, 5}};
 
     // static_assert(zipper::concepts::ValidExtents<Vector<double,3>,3>);
-    static_assert(zipper::concepts::ValidExtents<Vector<double, 3>, 3>);
+    STATIC_CHECK(zipper::concepts::ValidExtents<Vector<double, 3>, 3>);
 
     // TODO: Hodge star operator (*) not yet implemented in FormBase
     // Vector c = (*a.as_form()).as_vector();
@@ -116,7 +116,7 @@ TEST_CASE("test_vector_span", "[vector][storage][dense][span]") {
 
     CHECK((v == v2));
 
-    static_assert(v.static_extent(0) == 2);
+    STATIC_CHECK(v.static_extent(0) == 2);
     REQUIRE(v.extent(0) == 2);
     CHECK(v(0) == 2);
     CHECK(v(1) == 3);

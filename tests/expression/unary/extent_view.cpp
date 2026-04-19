@@ -16,8 +16,8 @@ TEST_CASE("as_dynamic_vector", "[expression][unary][extent_view]") {
 
   // Extents should now be fully dynamic
   using dyn_extents = typename std::decay_t<decltype(dyn)>::extents_type;
-  static_assert(dyn_extents::rank() == 1);
-  static_assert(dyn_extents::rank_dynamic() == 1);
+  STATIC_CHECK(dyn_extents::rank() == 1);
+  STATIC_CHECK(dyn_extents::rank_dynamic() == 1);
 
   // Runtime sizes preserved
   CHECK(dyn.extent(0) == 3);
@@ -34,8 +34,8 @@ TEST_CASE("as_dynamic_matrix", "[expression][unary][extent_view]") {
   auto dyn = as_dynamic(m.expression());
 
   using dyn_extents = typename std::decay_t<decltype(dyn)>::extents_type;
-  static_assert(dyn_extents::rank() == 2);
-  static_assert(dyn_extents::rank_dynamic() == 2);
+  STATIC_CHECK(dyn_extents::rank() == 2);
+  STATIC_CHECK(dyn_extents::rank_dynamic() == 2);
 
   CHECK(dyn.extent(0) == 2);
   CHECK(dyn.extent(1) == 3);
@@ -52,8 +52,8 @@ TEST_CASE("as_dynamic_already_dynamic", "[expression][unary][extent_view]") {
   auto dyn = as_dynamic(v.expression());
 
   using dyn_extents = typename std::decay_t<decltype(dyn)>::extents_type;
-  static_assert(dyn_extents::rank() == 1);
-  static_assert(dyn_extents::rank_dynamic() == 1);
+  STATIC_CHECK(dyn_extents::rank() == 1);
+  STATIC_CHECK(dyn_extents::rank_dynamic() == 1);
 
   CHECK(dyn.extent(0) == 2);
   CHECK(dyn.coeff(0) == 10.0);
@@ -71,9 +71,9 @@ TEST_CASE("as_extents_dynamic_to_static_vector",
   auto stat = as_extents<extents<3>>(v.expression());
 
   using stat_extents = typename std::decay_t<decltype(stat)>::extents_type;
-  static_assert(stat_extents::rank() == 1);
-  static_assert(stat_extents::rank_dynamic() == 0);
-  static_assert(stat_extents::static_extent(0) == 3);
+  STATIC_CHECK(stat_extents::rank() == 1);
+  STATIC_CHECK(stat_extents::rank_dynamic() == 0);
+  STATIC_CHECK(stat_extents::static_extent(0) == 3);
 
   CHECK(stat.extent(0) == 3);
   CHECK(stat.coeff(0) == 1.0);
@@ -94,10 +94,10 @@ TEST_CASE("as_extents_dynamic_to_static_matrix",
   auto stat = as_extents<extents<2, 3>>(m.expression());
 
   using stat_extents = typename std::decay_t<decltype(stat)>::extents_type;
-  static_assert(stat_extents::rank() == 2);
-  static_assert(stat_extents::rank_dynamic() == 0);
-  static_assert(stat_extents::static_extent(0) == 2);
-  static_assert(stat_extents::static_extent(1) == 3);
+  STATIC_CHECK(stat_extents::rank() == 2);
+  STATIC_CHECK(stat_extents::rank_dynamic() == 0);
+  STATIC_CHECK(stat_extents::static_extent(0) == 2);
+  STATIC_CHECK(stat_extents::static_extent(1) == 3);
 
   CHECK(stat.coeff(0, 0) == 1);
   CHECK(stat.coeff(1, 2) == 6);
@@ -112,10 +112,10 @@ TEST_CASE("as_extents_mixed", "[expression][unary][extent_view]") {
   auto mixed = as_extents<extents<3, dynamic_extent>>(m.expression());
 
   using mixed_extents = typename std::decay_t<decltype(mixed)>::extents_type;
-  static_assert(mixed_extents::rank() == 2);
-  static_assert(mixed_extents::rank_dynamic() == 1);
-  static_assert(mixed_extents::static_extent(0) == 3);
-  static_assert(mixed_extents::static_extent(1) == dynamic_extent);
+  STATIC_CHECK(mixed_extents::rank() == 2);
+  STATIC_CHECK(mixed_extents::rank_dynamic() == 1);
+  STATIC_CHECK(mixed_extents::static_extent(0) == 3);
+  STATIC_CHECK(mixed_extents::static_extent(1) == dynamic_extent);
 
   CHECK(mixed.extent(0) == 3);
   CHECK(mixed.extent(1) == 4);
@@ -130,9 +130,9 @@ TEST_CASE("as_extents_static_to_static_identity",
   auto same = as_extents<extents<4>>(v.expression());
 
   using same_extents = typename std::decay_t<decltype(same)>::extents_type;
-  static_assert(same_extents::rank() == 1);
-  static_assert(same_extents::rank_dynamic() == 0);
-  static_assert(same_extents::static_extent(0) == 4);
+  STATIC_CHECK(same_extents::rank() == 1);
+  STATIC_CHECK(same_extents::rank_dynamic() == 0);
+  STATIC_CHECK(same_extents::static_extent(0) == 4);
 
   CHECK(same.coeff(0) == 10);
   CHECK(same.coeff(3) == 40);
@@ -148,12 +148,12 @@ TEST_CASE("round_trip_static_dynamic_static",
 
   // Erase to dynamic
   auto dyn = as_dynamic(m.expression());
-  static_assert(
+  STATIC_CHECK(
       std::decay_t<decltype(dyn)>::extents_type::rank_dynamic() == 2);
 
   // Restore to static
   auto stat = as_extents<extents<3, 3>>(dyn);
-  static_assert(
+  STATIC_CHECK(
       std::decay_t<decltype(stat)>::extents_type::rank_dynamic() == 0);
 
   CHECK(stat.coeff(0, 0) == 1);
@@ -197,7 +197,7 @@ TEST_CASE("extent_view_const_correctness", "[expression][unary][extent_view]") {
   //  the const qualification is propagated through the traits.)
   using dyn_traits =
       expression::detail::ExpressionTraits<std::decay_t<decltype(dyn)>>;
-  static_assert(dyn_traits::access_features.is_const);
+  STATIC_CHECK(dyn_traits::access_features.is_const);
 }
 
 // ════════════════════════════════════════════════════════════════════════

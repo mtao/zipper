@@ -74,7 +74,7 @@ TEST_CASE("test_storage", "[storage][dense]") {
     }
 
     // MatrixProduct: a * a
-    static_assert(zipper::concepts::MatrixExpression<decltype(a)>);
+    STATIC_CHECK(zipper::concepts::MatrixExpression<decltype(a)>);
     binary::MatrixProduct mv(a, a);
 
     for (zipper::index_type j = 0; j < mv.extent(0); ++j) {

@@ -25,10 +25,10 @@ TEST_CASE("contract replaces manual PartialTrace",
 
     // contract<1,2> on rank-4 tensor product → rank-2 (matrix product)
     auto TP = I * M;
-    static_assert(decltype(TP)::extents_type::rank() == 4);
+    STATIC_CHECK(decltype(TP)::extents_type::rank() == 4);
 
     auto contracted = zipper::contract<1, 2>(TP);
-    static_assert(decltype(contracted)::extents_type::rank() == 2);
+    STATIC_CHECK(decltype(contracted)::extents_type::rank() == 2);
 
     // Should equal I * M = M
     zipper::Tensor<double, 3, 3> result = contracted;
@@ -50,7 +50,7 @@ TEST_CASE("contract on rank-2 gives trace",
     // which is just a scalar accessor.  The TensorBase wrapper around it
     // should still work.
     auto contracted = zipper::contract<0, 1>(I);
-    static_assert(decltype(contracted)::extents_type::rank() == 0);
+    STATIC_CHECK(decltype(contracted)::extents_type::rank() == 0);
 
     // The trace of a 3x3 identity is 3
     CHECK(contracted() == Catch::Approx(3.0));
@@ -91,8 +91,8 @@ TEST_CASE("tensor_product matches operator*",
     auto tp_named = zipper::tensor_product(A, v);
     auto tp_op = A * v;
 
-    static_assert(decltype(tp_named)::extents_type::rank() == 3);
-    static_assert(decltype(tp_op)::extents_type::rank() == 3);
+    STATIC_CHECK(decltype(tp_named)::extents_type::rank() == 3);
+    STATIC_CHECK(decltype(tp_op)::extents_type::rank() == 3);
 
     for (zipper::index_type i = 0; i < 2; ++i) {
         for (zipper::index_type j = 0; j < 2; ++j) {
@@ -127,7 +127,7 @@ TEST_CASE("full_contract on rank-4 identity tensor",
 
     // I * I gives rank-4: (I*I)(i,j,k,l) = I(i,j) * I(k,l) = delta(i,j)*delta(k,l)
     auto T = I * I;
-    static_assert(decltype(T)::extents_type::rank() == 4);
+    STATIC_CHECK(decltype(T)::extents_type::rank() == 4);
 
     // full_contract sums T(i,j,j,i) = delta(i,j)*delta(j,i)
     // = delta(i,j)*delta(i,j)
@@ -194,12 +194,12 @@ TEST_CASE("tensor_product then contract gives matrix product",
 
     // tensor_product gives rank-4: (A*B)(i,j,k,l) = A(i,j) * B(k,l)
     auto TP = zipper::tensor_product(A, B);
-    static_assert(decltype(TP)::extents_type::rank() == 4);
+    STATIC_CHECK(decltype(TP)::extents_type::rank() == 4);
 
     // contract<1,2> traces over j,k (the inner dimensions) → rank-2 result
     // result(i,l) = sum_j A(i,j) * B(j,l)  → matrix product
     auto result = zipper::contract<1, 2>(TP);
-    static_assert(decltype(result)::extents_type::rank() == 2);
+    STATIC_CHECK(decltype(result)::extents_type::rank() == 2);
 
     // Compute matrix product manually
     zipper::Matrix<double, 2, 4> expected;

@@ -68,22 +68,22 @@ TEST_CASE("test_partial_trace_matrix", "[matrix][storage][dense]") {
     zipper::MatrixBase empty_partial_trace =
         zipper::expression::unary::PartialTrace<
             std::decay_t<decltype(N.expression())>>(N.expression());
-    static_assert(
+    STATIC_CHECK(
         std::decay_t<decltype(empty_partial_trace.extents())>::rank() == 2);
     using reducer = zipper::expression::detail::ExpressionDetail<std::decay_t<
         decltype(empty_partial_trace.expression())>>::index_remover;
     constexpr static auto f2r = reducer::full_rank_to_reduced_indices;
     constexpr static auto r2f = reducer::reduced_rank_to_full_indices;
-    static_assert(f2r.size() == 2);
-    static_assert(r2f.size() == 2);
-    static_assert(f2r[0] == 0);
-    static_assert(f2r[1] == 1);
-    static_assert(r2f[0] == 0);
-    static_assert(f2r[1] == 1);
-    static_assert(
+    STATIC_CHECK(f2r.size() == 2);
+    STATIC_CHECK(r2f.size() == 2);
+    STATIC_CHECK(f2r[0] == 0);
+    STATIC_CHECK(f2r[1] == 1);
+    STATIC_CHECK(r2f[0] == 0);
+    STATIC_CHECK(f2r[1] == 1);
+    STATIC_CHECK(
         std::decay_t<decltype(empty_partial_trace.extents())>::static_extent(
             0) == 3);
-    static_assert(
+    STATIC_CHECK(
         std::decay_t<decltype(empty_partial_trace.extents())>::static_extent(
             1) == 3);
     CHECK(empty_partial_trace == N);

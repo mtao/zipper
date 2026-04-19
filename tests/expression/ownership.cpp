@@ -493,7 +493,7 @@ TEST_CASE("unsafe_col_read_through", "[ownership][unsafe][col]") {
     auto c = M.col(zipper::index_type(1)).unsafe();
 
     // unsafe should NOT report stores_references
-    static_assert(!decltype(c)::stores_references);
+    STATIC_CHECK_FALSE(decltype(c)::stores_references);
 
     CHECK(c(0) == 2.0);
     CHECK(c(1) == 5.0);
@@ -527,7 +527,7 @@ TEST_CASE("unsafe_row_write_through", "[ownership][unsafe][row]") {
     zipper::Matrix<double, 2, 3> M{{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}};
 
     auto r = M.row(zipper::index_type(0)).unsafe();
-    static_assert(!decltype(r)::stores_references);
+    STATIC_CHECK_FALSE(decltype(r)::stores_references);
 
     r(0) = 10.0;
     r(1) = 20.0;
@@ -544,7 +544,7 @@ TEST_CASE("unsafe_const_col", "[ownership][unsafe][col]") {
 
     // const version — read only
     auto c = M.col(zipper::index_type(1)).unsafe();
-    static_assert(!decltype(c)::stores_references);
+    STATIC_CHECK_FALSE(decltype(c)::stores_references);
     CHECK(c(0) == 2.0);
     CHECK(c(1) == 4.0);
 }
@@ -555,7 +555,7 @@ TEST_CASE("unsafe_diagonal_write_through",
         {1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}, {7.0, 8.0, 9.0}};
 
     auto d = M.diagonal().unsafe();
-    static_assert(!decltype(d)::stores_references);
+    STATIC_CHECK_FALSE(decltype(d)::stores_references);
 
     d(0) = 10.0;
     d(1) = 50.0;
@@ -572,7 +572,7 @@ TEST_CASE("unsafe_vector_head_write_through",
     zipper::Vector<double, 4> x{1.0, 2.0, 3.0, 4.0};
 
     auto h = x.head<2>().unsafe();
-    static_assert(!decltype(h)::stores_references);
+    STATIC_CHECK_FALSE(decltype(h)::stores_references);
 
     h(0) = 10.0;
     h(1) = 20.0;
@@ -604,7 +604,7 @@ TEST_CASE("unsafe_transpose_write_through",
     zipper::Matrix<double, 2, 3> M{{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}};
 
     auto Mt = M.transpose().unsafe();
-    static_assert(!decltype(Mt)::stores_references);
+    STATIC_CHECK_FALSE(decltype(Mt)::stores_references);
 
     Mt(0, 1) = 99.0;
     CHECK(M(1, 0) == 99.0);
@@ -616,7 +616,7 @@ TEST_CASE("unsafe_lvalue_stores_reference",
 
     // Lvalue unsafe — stores a reference to M's expression
     auto uref = M.unsafe();
-    static_assert(!decltype(uref)::stores_references);
+    STATIC_CHECK_FALSE(decltype(uref)::stores_references);
 
     CHECK(uref(0, 0) == 1.0);
     M(0, 0) = 42.0;
@@ -647,11 +647,11 @@ TEST_CASE("to_owned_produces_independent_copy",
 
     auto sum = a + b;
     // sum stores references (lvalue operands)
-    static_assert(decltype(sum)::stores_references);
+    STATIC_CHECK(decltype(sum)::stores_references);
 
     auto owned = sum.to_owned();
     // owned should NOT store references
-    static_assert(!decltype(owned)::stores_references);
+    STATIC_CHECK_FALSE(decltype(owned)::stores_references);
 
     a(0) = 999.0;
     // sum sees the mutation, owned does not
@@ -675,8 +675,7 @@ TEST_CASE("slice_with_expression_index_stores_references",
     // s is a Slice<const MDArray<double,5>&, MDArray<index_type,2>>
     // The main child is by reference → stores_references == true
     using slice_t = std::decay_t<decltype(s)>;
-    static_assert(slice_t::stores_references,
-        "Slice with lvalue main child should store references");
+    STATIC_CHECK(slice_t::stores_references);
 
     CHECK(s(0) == 20.0);
     CHECK(s(1) == 40.0);
@@ -697,8 +696,7 @@ TEST_CASE("slice_make_owned_with_expression_index",
 
     // make_owned should deep-copy both the main child AND the index slice
     auto owned = s.make_owned();
-    static_assert(!decltype(owned)::stores_references,
-        "Owned slice should not store references");
+    STATIC_CHECK_FALSE(decltype(owned)::stores_references);
 
     CHECK(owned(0) == 20.0);
     CHECK(owned(1) == 40.0);
@@ -717,12 +715,11 @@ TEST_CASE("slice_to_owned_produces_no_references",
     // data(idx) returns a raw Slice expression (not wrapped)
     auto s = data(idx);
     using slice_t = std::decay_t<decltype(s)>;
-    static_assert(slice_t::stores_references);
+    STATIC_CHECK(slice_t::stores_references);
 
     // make_owned should produce a Slice with stores_references == false
     auto owned = s.make_owned();
-    static_assert(!std::decay_t<decltype(owned)>::stores_references,
-        "make_owned() should produce a slice with no dangling references");
+    STATIC_CHECK_FALSE(std::decay_t<decltype(owned)>::stores_references);
 
     CHECK(owned(0) == 1.0);
     CHECK(owned(1) == 3.0);

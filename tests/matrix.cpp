@@ -101,10 +101,10 @@ TEST_CASE("test_matrix_eval", "[matrix][storage][dense]") {
 
     auto x = (N * 2).eval();
     auto v = N.as_array();
-    static_assert(std::is_same_v<std::decay_t<decltype(v)>::extents_type,
+    STATIC_CHECK(std::is_same_v<std::decay_t<decltype(v)>::extents_type,
                                  decltype(N)::extents_type>);
-    static_assert(std::is_same_v<decltype(v.extents()), decltype(N.extents())>);
-    static_assert(std::decay_t<decltype(v)>::extents_type::rank() == 2);
+    STATIC_CHECK(std::is_same_v<decltype(v.extents()), decltype(N.extents())>);
+    STATIC_CHECK(std::decay_t<decltype(v)>::extents_type::rank() == 2);
     // auto y = N.as_array().eval();
     print(x);
 }
@@ -138,10 +138,10 @@ TEST_CASE("test_matrix_span", "[matrix][storage][dense][span]") {
     zipper::Matrix<int, std::dynamic_extent, std::dynamic_extent>::span_type Md(
       std::span<int>(vec), zipper::create_dextents(2, 2));
 
-    static_assert(M.static_extent(0) == 2);
-    static_assert(M.static_extent(1) == 2);
-    static_assert(Md.static_extent(0) == std::dynamic_extent);
-    static_assert(Md.static_extent(1) == std::dynamic_extent);
+    STATIC_CHECK(M.static_extent(0) == 2);
+    STATIC_CHECK(M.static_extent(1) == 2);
+    STATIC_CHECK(Md.static_extent(0) == std::dynamic_extent);
+    STATIC_CHECK(Md.static_extent(1) == std::dynamic_extent);
     REQUIRE(M.extent(0) == 2);
     REQUIRE(M.extent(1) == 2);
     REQUIRE(Md.extent(0) == 2);
@@ -363,8 +363,8 @@ TEST_CASE("matrix_product_nonsquare", "[matrix][product]") {
     B(2, 1) = 2.0;
 
     auto C = A * B;
-    static_assert(std::decay_t<decltype(C)>::extents_type::static_extent(0) == 2);
-    static_assert(std::decay_t<decltype(C)>::extents_type::static_extent(1) == 2);
+    STATIC_CHECK(std::decay_t<decltype(C)>::extents_type::static_extent(0) == 2);
+    STATIC_CHECK(std::decay_t<decltype(C)>::extents_type::static_extent(1) == 2);
     CHECK(C(0, 0) == 14.0);
     CHECK(C(0, 1) == 8.0);
     CHECK(C(1, 0) == 32.0);
@@ -387,7 +387,7 @@ TEST_CASE("matrix_vector_product", "[matrix][product]") {
     zipper::Vector<double, 2> x{ 5.0, 6.0 };
 
     auto y = M * x;
-    static_assert(std::decay_t<decltype(y)>::extents_type::rank() == 1);
+    STATIC_CHECK(std::decay_t<decltype(y)>::extents_type::rank() == 1);
     CHECK(y(0) == 17.0);
     CHECK(y(1) == 39.0);
 }
@@ -407,7 +407,7 @@ TEST_CASE("matrix_vector_product_nonsquare", "[matrix][product]") {
     zipper::Vector<double, 3> x{ 1.0, 2.0, 3.0 };
 
     auto y = M * x;
-    static_assert(std::decay_t<decltype(y)>::extents_type::static_extent(0) == 2);
+    STATIC_CHECK(std::decay_t<decltype(y)>::extents_type::static_extent(0) == 2);
     CHECK(y(0) == 14.0);
     CHECK(y(1) == 32.0);
 }
@@ -446,8 +446,8 @@ TEST_CASE("matrix_transpose", "[matrix][unary]") {
     M(1, 2) = 6.0;
 
     auto T = M.transpose();
-    static_assert(std::decay_t<decltype(T)>::extents_type::static_extent(0) == 3);
-    static_assert(std::decay_t<decltype(T)>::extents_type::static_extent(1) == 2);
+    STATIC_CHECK(std::decay_t<decltype(T)>::extents_type::static_extent(0) == 3);
+    STATIC_CHECK(std::decay_t<decltype(T)>::extents_type::static_extent(1) == 2);
     CHECK(T(0, 0) == 1.0);
     CHECK(T(1, 0) == 2.0);
     CHECK(T(2, 0) == 3.0);
@@ -587,7 +587,7 @@ TEST_CASE("block_topRows_template", "[matrix][block]") {
             M(j, k) = static_cast<int>(j);
 
     auto T = M.template topRows<3>();
-    static_assert(std::decay_t<decltype(T)>::extents_type::static_extent(0) == 3);
+    STATIC_CHECK(std::decay_t<decltype(T)>::extents_type::static_extent(0) == 3);
     REQUIRE(T.extent(0) == 3);
     REQUIRE(T.extent(1) == 4);
     for (zipper::index_type j = 0; j < 3; ++j)
@@ -619,7 +619,7 @@ TEST_CASE("block_bottomRows_template", "[matrix][block]") {
             M(j, k) = static_cast<int>(j);
 
     auto B = M.template bottomRows<3>();
-    static_assert(std::decay_t<decltype(B)>::extents_type::static_extent(0) == 3);
+    STATIC_CHECK(std::decay_t<decltype(B)>::extents_type::static_extent(0) == 3);
     REQUIRE(B.extent(0) == 3);
     REQUIRE(B.extent(1) == 4);
     // Bottom 3 rows of a 6-row matrix: rows 3,4,5
@@ -682,7 +682,7 @@ TEST_CASE("block_leftCols_template", "[matrix][block]") {
             M(j, k) = static_cast<int>(k);
 
     auto L = M.template leftCols<4>();
-    static_assert(std::decay_t<decltype(L)>::extents_type::static_extent(1) == 4);
+    STATIC_CHECK(std::decay_t<decltype(L)>::extents_type::static_extent(1) == 4);
     REQUIRE(L.extent(0) == 3);
     REQUIRE(L.extent(1) == 4);
     for (zipper::index_type j = 0; j < 3; ++j)
@@ -714,7 +714,7 @@ TEST_CASE("block_rightCols_template", "[matrix][block]") {
             M(j, k) = static_cast<int>(k);
 
     auto R = M.template rightCols<4>();
-    static_assert(std::decay_t<decltype(R)>::extents_type::static_extent(1) == 4);
+    STATIC_CHECK(std::decay_t<decltype(R)>::extents_type::static_extent(1) == 4);
     REQUIRE(R.extent(0) == 3);
     REQUIRE(R.extent(1) == 4);
     // Right 4 cols of a 6-col matrix: cols 2,3,4,5
@@ -832,7 +832,7 @@ TEST_CASE("test_span_view", "[vector][storage][dense][span]") {
     {
         zipper::Vector<double, std::dynamic_extent> x = { 1, 2, 3 };
 
-        static_assert(std::decay_t<decltype(x)>::extents_type::rank() == 1);
+        STATIC_CHECK(std::decay_t<decltype(x)>::extents_type::rank() == 1);
 
         VectorBase y = x.expression().as_span();
         CHECK(x == y);

@@ -62,8 +62,7 @@ TEST_CASE("readme_col_is_nonreturnable", "[readme]") {
     // "auto s2 = s" should NOT compile (copy deleted).
     // We verify this via type trait: s should not be copy constructible.
     using S_type = decltype(s);
-    static_assert(!std::is_copy_constructible_v<S_type>,
-                  "col() view should be NonReturnable (copy deleted)");
+    STATIC_CHECK_FALSE(std::is_copy_constructible_v<S_type>);
 }
 
 // ============================================================
@@ -119,7 +118,7 @@ TEST_CASE("readme_to_owned", "[readme]") {
     auto expr = 2.0 * a + 3.0 * b;     // lazy, references a and b
     auto owned = expr.to_owned();       // deep copy -- no references remain
 
-    static_assert(!decltype(owned)::stores_references);
+    STATIC_CHECK_FALSE(decltype(owned)::stores_references);
 
     // 2*{1,2,3} + 3*{10,20,30} = {2,4,6} + {30,60,90} = {32,64,96}
     CHECK(owned(0) == 32.0);
@@ -139,11 +138,9 @@ TEST_CASE("readme_unsafe_copy_and_return", "[readme]") {
     CHECK(s(0) == 2.0);
 
     // But copying requires unsafe()
-    static_assert(!std::is_copy_constructible_v<decltype(s)>,
-                  "col() view should not be copyable");
+    STATIC_CHECK_FALSE(std::is_copy_constructible_v<decltype(s)>);
     auto s2 = s.unsafe();
-    static_assert(std::is_copy_constructible_v<decltype(s2)>,
-                  "unsafe() result should be copyable");
+    STATIC_CHECK(std::is_copy_constructible_v<decltype(s2)>);
     s2(0) = 42.0;                    // writes through to M(0,1)
     CHECK(M(0, 1) == 42.0);
 

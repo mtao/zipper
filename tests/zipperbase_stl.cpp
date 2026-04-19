@@ -19,8 +19,7 @@ TEST_CASE("stl_deduction_vector_rvalue_vector", "[stl_deduction]") {
   auto V = zipper::VectorBase(std::vector<double>{1.0, 2.0, 3.0});
 
   // Should be owning: StlMDArray<std::vector<double>> (no reference)
-  static_assert(!std::decay_t<decltype(V)>::stores_references,
-                "rvalue STL should produce owning (non-reference) storage");
+  STATIC_CHECK_FALSE(std::decay_t<decltype(V)>::stores_references);
 
   CHECK(V(0) == 1.0);
   CHECK(V(1) == 2.0);
@@ -36,8 +35,7 @@ TEST_CASE("stl_deduction_vector_lvalue_vector", "[stl_deduction]") {
   std::vector<double> data = {4.0, 5.0, 6.0};
   auto V = zipper::VectorBase(data);
 
-  static_assert(std::decay_t<decltype(V)>::stores_references,
-                "lvalue STL should produce borrowing (reference) storage");
+  STATIC_CHECK(std::decay_t<decltype(V)>::stores_references);
 
   CHECK(V(0) == 4.0);
   CHECK(V(1) == 5.0);
@@ -56,8 +54,7 @@ TEST_CASE("stl_deduction_vector_rvalue_array", "[stl_deduction]") {
   // rvalue std::array → owning StlMDArray<std::array<double,3>>
   auto V = zipper::VectorBase(std::array<double, 3>{{7.0, 8.0, 9.0}});
 
-  static_assert(!std::decay_t<decltype(V)>::stores_references,
-                "rvalue std::array should produce owning storage");
+  STATIC_CHECK_FALSE(std::decay_t<decltype(V)>::stores_references);
 
   CHECK(V(0) == 7.0);
   CHECK(V(1) == 8.0);
@@ -69,8 +66,7 @@ TEST_CASE("stl_deduction_vector_lvalue_array", "[stl_deduction]") {
   std::array<double, 3> data{{10.0, 11.0, 12.0}};
   auto V = zipper::VectorBase(data);
 
-  static_assert(std::decay_t<decltype(V)>::stores_references,
-                "lvalue std::array should produce borrowing storage");
+  STATIC_CHECK(std::decay_t<decltype(V)>::stores_references);
 
   CHECK(V(0) == 10.0);
   CHECK(V(1) == 11.0);
@@ -88,8 +84,7 @@ TEST_CASE("stl_deduction_matrix_rvalue", "[stl_deduction]") {
   auto M = zipper::MatrixBase(
       std::vector<std::array<double, 3>>{{1, 2, 3}, {4, 5, 6}});
 
-  static_assert(!std::decay_t<decltype(M)>::stores_references,
-                "rvalue rank-2 STL should produce owning storage");
+  STATIC_CHECK_FALSE(std::decay_t<decltype(M)>::stores_references);
 
   CHECK(M(0, 0) == 1);
   CHECK(M(0, 1) == 2);
@@ -104,8 +99,7 @@ TEST_CASE("stl_deduction_matrix_lvalue", "[stl_deduction]") {
   std::vector<std::array<double, 3>> data = {{1, 2, 3}, {4, 5, 6}};
   auto M = zipper::MatrixBase(data);
 
-  static_assert(std::decay_t<decltype(M)>::stores_references,
-                "lvalue rank-2 STL should produce borrowing storage");
+  STATIC_CHECK(std::decay_t<decltype(M)>::stores_references);
 
   CHECK(M(0, 0) == 1);
   CHECK(M(1, 2) == 6);
@@ -120,7 +114,7 @@ TEST_CASE("stl_deduction_matrix_array_of_arrays", "[stl_deduction]") {
   auto M = zipper::MatrixBase(
       std::array<std::array<double, 3>, 2>{{{1, 2, 3}, {4, 5, 6}}});
 
-  static_assert(!std::decay_t<decltype(M)>::stores_references);
+  STATIC_CHECK_FALSE(std::decay_t<decltype(M)>::stores_references);
   CHECK(M(0, 0) == 1);
   CHECK(M(0, 2) == 3);
   CHECK(M(1, 0) == 4);
@@ -132,7 +126,7 @@ TEST_CASE("stl_deduction_matrix_array_of_arrays", "[stl_deduction]") {
 TEST_CASE("stl_deduction_tensor_rvalue_rank1", "[stl_deduction]") {
   auto T = zipper::TensorBase(std::vector<double>{1.0, 2.0, 3.0});
 
-  static_assert(!std::decay_t<decltype(T)>::stores_references);
+  STATIC_CHECK_FALSE(std::decay_t<decltype(T)>::stores_references);
   CHECK(T(0) == 1.0);
   CHECK(T(1) == 2.0);
   CHECK(T(2) == 3.0);
@@ -142,7 +136,7 @@ TEST_CASE("stl_deduction_tensor_lvalue_rank2", "[stl_deduction]") {
   std::vector<std::array<double, 2>> data = {{1, 2}, {3, 4}, {5, 6}};
   auto T = zipper::TensorBase(data);
 
-  static_assert(std::decay_t<decltype(T)>::stores_references);
+  STATIC_CHECK(std::decay_t<decltype(T)>::stores_references);
   CHECK(T(0, 0) == 1);
   CHECK(T(2, 1) == 6);
 
@@ -156,7 +150,7 @@ TEST_CASE("stl_deduction_tensor_lvalue_rank2", "[stl_deduction]") {
 TEST_CASE("stl_deduction_array_rvalue", "[stl_deduction]") {
   auto A = zipper::ArrayBase(std::array<double, 4>{{10, 20, 30, 40}});
 
-  static_assert(!std::decay_t<decltype(A)>::stores_references);
+  STATIC_CHECK_FALSE(std::decay_t<decltype(A)>::stores_references);
   CHECK(A(0) == 10);
   CHECK(A(3) == 40);
 }
@@ -165,7 +159,7 @@ TEST_CASE("stl_deduction_array_lvalue", "[stl_deduction]") {
   std::array<double, 4> data{{10, 20, 30, 40}};
   auto A = zipper::ArrayBase(data);
 
-  static_assert(std::decay_t<decltype(A)>::stores_references);
+  STATIC_CHECK(std::decay_t<decltype(A)>::stores_references);
   CHECK(A(0) == 10);
   CHECK(A(3) == 40);
 
@@ -178,7 +172,7 @@ TEST_CASE("stl_deduction_array_lvalue", "[stl_deduction]") {
 TEST_CASE("stl_deduction_form_rvalue", "[stl_deduction]") {
   auto F = zipper::FormBase(std::vector<double>{2.0, 4.0, 6.0});
 
-  static_assert(!std::decay_t<decltype(F)>::stores_references);
+  STATIC_CHECK_FALSE(std::decay_t<decltype(F)>::stores_references);
   CHECK(F(0) == 2.0);
   CHECK(F(1) == 4.0);
   CHECK(F(2) == 6.0);
@@ -188,7 +182,7 @@ TEST_CASE("stl_deduction_form_lvalue", "[stl_deduction]") {
   std::vector<double> data = {2.0, 4.0, 6.0};
   auto F = zipper::FormBase(data);
 
-  static_assert(std::decay_t<decltype(F)>::stores_references);
+  STATIC_CHECK(std::decay_t<decltype(F)>::stores_references);
   CHECK(F(0) == 2.0);
 
   F(1) = 40.0;
@@ -202,19 +196,19 @@ TEST_CASE("stl_deduction_stores_references_trait", "[stl_deduction]") {
   {
     using OwningVec = zipper::VectorBase<
         zipper::expression::nullary::StlMDArray<std::vector<double>>>;
-    static_assert(!OwningVec::stores_references);
+    STATIC_CHECK_FALSE(OwningVec::stores_references);
   }
   // Borrowing (lvalue ref) → stores_references == true
   {
     using BorrowVec = zipper::VectorBase<
         zipper::expression::nullary::StlMDArray<std::vector<double> &>>;
-    static_assert(BorrowVec::stores_references);
+    STATIC_CHECK(BorrowVec::stores_references);
   }
   // Const borrowing → stores_references == true
   {
     using ConstBorrowVec = zipper::VectorBase<
         zipper::expression::nullary::StlMDArray<const std::vector<double> &>>;
-    static_assert(ConstBorrowVec::stores_references);
+    STATIC_CHECK(ConstBorrowVec::stores_references);
   }
 }
 
@@ -256,8 +250,8 @@ TEST_CASE("stl_storage_zipper_bases", "[data]") {
     using traits =
         zipper::expression::detail::ExpressionTraits<expression_type>;
 
-    static_assert(!traits::access_features.is_const);
-    static_assert(traits::is_writable);
+    STATIC_CHECK_FALSE(traits::access_features.is_const);
+    STATIC_CHECK(traits::is_writable);
   }
 
   // Vector span wrapping a std::array via span_type (static extent)
