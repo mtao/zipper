@@ -90,12 +90,14 @@ auto module_add(const V& a, const V& b) {
 
 template <zipper::concepts::inner_product_space V>
 auto ip_dot(const V& a, const V& b) {
-    return a.dot(b);
+    using zipper::dot;
+    return dot(a, b);
 }
 
 template <zipper::concepts::normed_space V>
 auto ns_norm(const V& v) {
-    return v.norm();
+    using zipper::norm;
+    return norm(v);
 }
 
 } // namespace
