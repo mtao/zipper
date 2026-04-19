@@ -3,7 +3,10 @@
 #include <zipper/Matrix.hpp>
 #include <zipper/Tensor.hpp>
 #include <zipper/Vector.hpp>
+#include <zipper/concepts/Algebraic.hpp>
 #include <zipper/concepts/DirectSolver.hpp>
+#include <zipper/concepts/InnerProductSpace.hpp>
+#include <zipper/concepts/Module.hpp>
 #include <zipper/concepts/Preconditioner.hpp>
 #include <zipper/concepts/Zipper.hpp>
 #include <zipper/expression/unary/TriangularView.hpp>
@@ -185,6 +188,78 @@ static_assert(!zipper::concepts::Preconditioner<double>);
 static_assert(!zipper::concepts::Preconditioner<zipper::Matrix<double, 3, 3>>);
 
 // -----------------------------------------------------------------------
+// Algebraic scalar concepts: ring and field
+// -----------------------------------------------------------------------
+
+// Signed and unsigned integer types are rings but not fields
+static_assert(zipper::concepts::ring<int>);
+static_assert(zipper::concepts::ring<unsigned>);
+static_assert(zipper::concepts::ring<int64_t>);
+static_assert(!zipper::concepts::field<int>);
+static_assert(!zipper::concepts::field<unsigned>);
+static_assert(!zipper::concepts::field<int64_t>);
+
+// Floating-point types are both rings and fields
+static_assert(zipper::concepts::ring<float>);
+static_assert(zipper::concepts::ring<double>);
+static_assert(zipper::concepts::field<float>);
+static_assert(zipper::concepts::field<double>);
+
+// Non-arithmetic types are neither by default
+static_assert(!zipper::concepts::ring<std::string>);
+static_assert(!zipper::concepts::field<std::string>);
+
+// -----------------------------------------------------------------------
+// Module and vector_space concepts
+// -----------------------------------------------------------------------
+
+// Integer vectors are modules but not vector spaces
+static_assert(zipper::concepts::module<zipper::Vector<int, 3>>);
+static_assert(!zipper::concepts::vector_space<zipper::Vector<int, 3>>);
+
+// Floating-point vectors are both modules and vector spaces
+static_assert(zipper::concepts::module<zipper::Vector<double, 3>>);
+static_assert(zipper::concepts::vector_space<zipper::Vector<double, 3>>);
+
+// Matrices are modules (and vector spaces when over a field)
+static_assert(zipper::concepts::module<zipper::Matrix<int, 3, 3>>);
+static_assert(!zipper::concepts::vector_space<zipper::Matrix<int, 3, 3>>);
+static_assert(zipper::concepts::module<zipper::Matrix<double, 3, 3>>);
+static_assert(zipper::concepts::vector_space<zipper::Matrix<double, 3, 3>>);
+
+// Forms are modules
+static_assert(zipper::concepts::module<zipper::Form<double, 3>>);
+static_assert(zipper::concepts::vector_space<zipper::Form<double, 3>>);
+static_assert(zipper::concepts::module<zipper::Form<int, 3>>);
+static_assert(!zipper::concepts::vector_space<zipper::Form<int, 3>>);
+
+// cv-ref qualified types still satisfy the concepts
+static_assert(zipper::concepts::module<const zipper::Vector<double, 3>>);
+static_assert(zipper::concepts::module<zipper::Vector<double, 3>&>);
+static_assert(zipper::concepts::module<const zipper::Vector<double, 3>&>);
+
+// -----------------------------------------------------------------------
+// Inner product space and normed space concepts
+// -----------------------------------------------------------------------
+
+// Floating-point vectors have dot and norm — satisfy both
+static_assert(zipper::concepts::inner_product_space<zipper::Vector<double, 3>>);
+static_assert(zipper::concepts::normed_space<zipper::Vector<double, 3>>);
+
+// Matrices do NOT have dot() — not inner product spaces
+static_assert(!zipper::concepts::inner_product_space<zipper::Matrix<double, 3, 3>>);
+
+// Integer vectors are not vector spaces, so they are not inner product
+// spaces or normed spaces (even if the operations would syntactically
+// compile, the concept hierarchy requires vector_space first)
+static_assert(!zipper::concepts::inner_product_space<zipper::Vector<int, 3>>);
+static_assert(!zipper::concepts::normed_space<zipper::Vector<int, 3>>);
+
+// Scalars are not modules (no value_type member)
+static_assert(!zipper::concepts::module<int>);
+static_assert(!zipper::concepts::module<double>);
+
+// -----------------------------------------------------------------------
 // Runtime tests (Catch2) — instantiate objects and confirm concepts work
 // at template-constrained call sites.
 // -----------------------------------------------------------------------
@@ -204,6 +279,22 @@ auto vector_size(const V& v) -> zipper::index_type {
 template <zipper::concepts::Matrix M>
 auto matrix_rows(const M& m) -> zipper::index_type {
     return m.extent(0);
+}
+
+// Algebraic concept constrained functions
+template <zipper::concepts::module V>
+auto module_add(const V& a, const V& b) {
+    return (a + b).eval();
+}
+
+template <zipper::concepts::inner_product_space V>
+auto ip_dot(const V& a, const V& b) {
+    return a.dot(b);
+}
+
+template <zipper::concepts::normed_space V>
+auto ns_norm(const V& v) {
+    return v.norm();
 }
 
 } // namespace
@@ -241,4 +332,37 @@ TEST_CASE("Zipper concept on Array", "[concepts]") {
 TEST_CASE("Zipper concept on Form", "[concepts]") {
     Form1 f;
     REQUIRE(zipper_rank(f) == 1);
+}
+
+TEST_CASE("module concept constrains function accepting integer vectors", "[concepts][algebraic]") {
+    zipper::Vector<int, 3> a{1, 2, 3};
+    zipper::Vector<int, 3> b{4, 5, 6};
+
+    auto c = module_add(a, b);
+    CHECK(c(0) == 5);
+    CHECK(c(1) == 7);
+    CHECK(c(2) == 9);
+}
+
+TEST_CASE("module concept constrains function accepting double vectors", "[concepts][algebraic]") {
+    zipper::Vector<double, 3> a{1.0, 2.0, 3.0};
+    zipper::Vector<double, 3> b{0.5, 1.5, 2.5};
+
+    auto c = module_add(a, b);
+    CHECK(c(0) == Catch::Approx(1.5));
+    CHECK(c(1) == Catch::Approx(3.5));
+    CHECK(c(2) == Catch::Approx(5.5));
+}
+
+TEST_CASE("inner_product_space concept constrains dot product", "[concepts][algebraic]") {
+    zipper::Vector<double, 3> a{1.0, 2.0, 3.0};
+    zipper::Vector<double, 3> b{4.0, 5.0, 6.0};
+
+    CHECK(ip_dot(a, b) == Catch::Approx(32.0));
+}
+
+TEST_CASE("normed_space concept constrains norm", "[concepts][algebraic]") {
+    zipper::Vector<double, 3> v{3.0, 4.0, 0.0};
+
+    CHECK(ns_norm(v) == Catch::Approx(5.0));
 }
