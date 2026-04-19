@@ -10,21 +10,21 @@ TEST_CASE("stl_storage_basic_types", "[data]") {
   {
     using T = double;
     using InfoType = zipper::storage::detail::StlStorageInfo<T>;
-    static_assert(InfoType::rank == 0);
-    static_assert(std::is_same_v<double, InfoType::value_type>);
+    STATIC_CHECK(InfoType::rank == 0);
+    STATIC_CHECK(std::is_same_v<double, InfoType::value_type>);
   }
 
   {
     using T = std::vector<double>;
     using InfoType = zipper::storage::detail::StlStorageInfo<T>;
-    static_assert(InfoType::rank == 1);
-    static_assert(std::is_same_v<double, InfoType::value_type>);
-    static_assert(InfoType::static_extent<0>() == zipper::dynamic_extent);
+    STATIC_CHECK(InfoType::rank == 1);
+    STATIC_CHECK(std::is_same_v<double, InfoType::value_type>);
+    STATIC_CHECK(InfoType::static_extent<0>() == zipper::dynamic_extent);
 
     std::vector<double> x = {0, 1, 2};
     zipper::expression::nullary::StlMDArray storage(x);
     auto e = storage.extents();
-    static_assert(e.static_extent(0) == std::dynamic_extent);
+    STATIC_CHECK(e.static_extent(0) == std::dynamic_extent);
     CHECK(e.extent(0) == 3);
 
     CHECK(storage.coeff(0) == 0);
@@ -48,14 +48,14 @@ TEST_CASE("stl_storage_basic_types", "[data]") {
   {
     using T = std::array<double, 5>;
     using InfoType = zipper::storage::detail::StlStorageInfo<T>;
-    static_assert(InfoType::rank == 1);
-    static_assert(std::is_same_v<double, InfoType::value_type>);
-    static_assert(InfoType::static_extent<0>() == 5);
+    STATIC_CHECK(InfoType::rank == 1);
+    STATIC_CHECK(std::is_same_v<double, InfoType::value_type>);
+    STATIC_CHECK(InfoType::static_extent<0>() == 5);
 
     std::array<double, 3> x{{0, 1, 2}};
     zipper::expression::nullary::StlMDArray storage(x);
     auto e = storage.extents();
-    static_assert(e.static_extent(0) == 3);
+    STATIC_CHECK(e.static_extent(0) == 3);
     CHECK(e.extent(0) == 3);
 
     CHECK(storage.coeff(0) == 0);
@@ -78,18 +78,18 @@ TEST_CASE("stl_storage_basic_types", "[data]") {
   {
     using T = std::vector<std::array<double, 5>>;
     using InfoType = zipper::storage::detail::StlStorageInfo<T>;
-    static_assert(InfoType::rank == 2);
-    static_assert(std::is_same_v<double, InfoType::value_type>);
+    STATIC_CHECK(InfoType::rank == 2);
+    STATIC_CHECK(std::is_same_v<double, InfoType::value_type>);
 
-    static_assert(InfoType::static_extent<0>() == 5);
-    static_assert(InfoType::static_extent<1>() == zipper::dynamic_extent);
+    STATIC_CHECK(InfoType::static_extent<0>() == 5);
+    STATIC_CHECK(InfoType::static_extent<1>() == zipper::dynamic_extent);
 
     std::vector<std::array<double, 3>> x{{0, 1, 2}, {3, 4, 5}};
 
     zipper::expression::nullary::StlMDArray storage(x);
     auto e = storage.extents();
-    static_assert(decltype(e)::static_extent(0) == std::dynamic_extent);
-    static_assert(decltype(e)::static_extent(1) == 3);
+    STATIC_CHECK(decltype(e)::static_extent(0) == std::dynamic_extent);
+    STATIC_CHECK(decltype(e)::static_extent(1) == 3);
     CHECK(e.extent(0) == 2);
     CHECK(e.extent(1) == 3);
 
@@ -130,18 +130,18 @@ TEST_CASE("stl_storage_basic_types", "[data]") {
   {
     using T = std::array<std::vector<double>, 5>;
     using InfoType = zipper::storage::detail::StlStorageInfo<T>;
-    static_assert(InfoType::rank == 2);
-    static_assert(std::is_same_v<double, InfoType::value_type>);
+    STATIC_CHECK(InfoType::rank == 2);
+    STATIC_CHECK(std::is_same_v<double, InfoType::value_type>);
 
-    static_assert(InfoType::static_extent<0>() == zipper::dynamic_extent);
-    static_assert(InfoType::static_extent<1>() == 5);
+    STATIC_CHECK(InfoType::static_extent<0>() == zipper::dynamic_extent);
+    STATIC_CHECK(InfoType::static_extent<1>() == 5);
 
     std::array<std::vector<double>, 2> x{{{0, 1, 2}, {3, 4, 5}}};
 
     zipper::expression::nullary::StlMDArray storage(x);
     auto e = storage.extents();
-    static_assert(decltype(e)::static_extent(0) == 2);
-    static_assert(decltype(e)::static_extent(1) == std::dynamic_extent);
+    STATIC_CHECK(decltype(e)::static_extent(0) == 2);
+    STATIC_CHECK(decltype(e)::static_extent(1) == std::dynamic_extent);
     CHECK(e.extent(0) == 2);
     CHECK(e.extent(1) == 3);
 
@@ -184,7 +184,7 @@ TEST_CASE("stl_storage_non_owning", "[data]") {
     std::vector<double> x = {0, 1, 2};
     auto storage = zipper::expression::nullary::get_non_owning_stl_storage(x);
     auto e = storage.extents();
-    static_assert(e.static_extent(0) == std::dynamic_extent);
+    STATIC_CHECK(e.static_extent(0) == std::dynamic_extent);
     CHECK(e.extent(0) == 3);
 
     CHECK(storage.coeff(0) == 0);
@@ -212,7 +212,7 @@ TEST_CASE("stl_storage_non_owning", "[data]") {
     std::array<double, 3> x{{0, 1, 2}};
     auto storage = zipper::expression::nullary::get_non_owning_stl_storage(x);
     auto e = storage.extents();
-    static_assert(e.static_extent(0) == 3);
+    STATIC_CHECK(e.static_extent(0) == 3);
     CHECK(e.extent(0) == 3);
 
     CHECK(storage.coeff(0) == 0);
@@ -241,8 +241,8 @@ TEST_CASE("stl_storage_non_owning", "[data]") {
 
     auto storage = zipper::expression::nullary::get_non_owning_stl_storage(x);
     auto e = storage.extents();
-    static_assert(decltype(e)::static_extent(0) == std::dynamic_extent);
-    static_assert(decltype(e)::static_extent(1) == 3);
+    STATIC_CHECK(decltype(e)::static_extent(0) == std::dynamic_extent);
+    STATIC_CHECK(decltype(e)::static_extent(1) == 3);
     CHECK(e.extent(0) == 2);
     CHECK(e.extent(1) == 3);
 
@@ -292,8 +292,8 @@ TEST_CASE("stl_storage_non_owning", "[data]") {
 
     auto storage = zipper::expression::nullary::get_non_owning_stl_storage(x);
     auto e = storage.extents();
-    static_assert(decltype(e)::static_extent(0) == 2);
-    static_assert(decltype(e)::static_extent(1) == std::dynamic_extent);
+    STATIC_CHECK(decltype(e)::static_extent(0) == 2);
+    STATIC_CHECK(decltype(e)::static_extent(1) == std::dynamic_extent);
     CHECK(e.extent(0) == 2);
     CHECK(e.extent(1) == 3);
 
@@ -349,16 +349,16 @@ TEST_CASE("stl_mdarray_traits_consistency", "[storage][stl]") {
     using traits = zipper::expression::detail::ExpressionTraits<T>;
 
     // access_features should indicate writable
-    static_assert(!traits::access_features.is_const);
-    static_assert(traits::access_features.is_reference);
+    STATIC_CHECK_FALSE(traits::access_features.is_const);
+    STATIC_CHECK(traits::access_features.is_reference);
 
     // derived bools must agree
-    static_assert(traits::is_writable);
-    static_assert(zipper::expression::detail::get_is_coefficient_consistent<traits>());
+    STATIC_CHECK(traits::is_writable);
+    STATIC_CHECK(zipper::expression::detail::get_is_coefficient_consistent<traits>());
 
     // dynamic extent → resizable
-    static_assert(traits::shape_features.is_resizable);
-    static_assert(traits::is_resizable());
+    STATIC_CHECK(traits::shape_features.is_resizable);
+    STATIC_CHECK(traits::is_resizable());
   }
 
   // Const non-owning reference
@@ -366,9 +366,9 @@ TEST_CASE("stl_mdarray_traits_consistency", "[storage][stl]") {
     using T = zipper::expression::nullary::StlMDArray<const std::vector<double> &>;
     using traits = zipper::expression::detail::ExpressionTraits<T>;
 
-    static_assert(traits::access_features.is_const);
-    static_assert(!traits::is_writable);
-    static_assert(!traits::is_assignable());
+    STATIC_CHECK(traits::access_features.is_const);
+    STATIC_CHECK_FALSE(traits::is_writable);
+    STATIC_CHECK_FALSE(traits::is_assignable());
   }
 
   // Static extent → not resizable
@@ -376,8 +376,8 @@ TEST_CASE("stl_mdarray_traits_consistency", "[storage][stl]") {
     using T = zipper::expression::nullary::StlMDArray<std::array<double, 3>>;
     using traits = zipper::expression::detail::ExpressionTraits<T>;
 
-    static_assert(!traits::shape_features.is_resizable);
-    static_assert(!traits::is_resizable());
+    STATIC_CHECK_FALSE(traits::shape_features.is_resizable);
+    STATIC_CHECK_FALSE(traits::is_resizable());
   }
 
   // Dynamic 2D (vector<array>) → resizable
@@ -386,10 +386,10 @@ TEST_CASE("stl_mdarray_traits_consistency", "[storage][stl]") {
         std::vector<std::array<double, 3>>>;
     using traits = zipper::expression::detail::ExpressionTraits<T>;
 
-    static_assert(traits::shape_features.is_resizable);
-    static_assert(traits::is_resizable());
-    static_assert(traits::is_writable);
-    static_assert(zipper::expression::detail::get_is_coefficient_consistent<traits>());
+    STATIC_CHECK(traits::shape_features.is_resizable);
+    STATIC_CHECK(traits::is_resizable());
+    STATIC_CHECK(traits::is_writable);
+    STATIC_CHECK(zipper::expression::detail::get_is_coefficient_consistent<traits>());
   }
 }
 
@@ -519,52 +519,52 @@ TEST_CASE("stl_storage_unwrap_zipper_static_asserts", "[storage][stl][unwrap]") 
 
   SECTION("NoUnwrap: array of Vec3 is rank 1 with value_type=Vec3") {
     using Info = zipper::storage::StlStorageInfo<std::array<Vec3, 4>>;
-    static_assert(Info::rank == 1);
-    static_assert(std::is_same_v<Info::value_type, Vec3>);
-    static_assert(Info::extents_type::rank() == 1);
-    static_assert(Info::extents_type::static_extent(0) == 4);
+    STATIC_CHECK(Info::rank == 1);
+    STATIC_CHECK(std::is_same_v<Info::value_type, Vec3>);
+    STATIC_CHECK(Info::extents_type::rank() == 1);
+    STATIC_CHECK(Info::extents_type::static_extent(0) == 4);
   }
 
   SECTION("UnwrapZipper: array of Vec3 is rank 2 with value_type=double") {
     using Info = zipper::storage::StlStorageInfo<std::array<Vec3, 4>,
                                                   zipper::storage::UnwrapZipper>;
-    static_assert(Info::rank == 2);
-    static_assert(std::is_same_v<Info::value_type, double>);
-    static_assert(Info::extents_type::rank() == 2);
+    STATIC_CHECK(Info::rank == 2);
+    STATIC_CHECK(std::is_same_v<Info::value_type, double>);
+    STATIC_CHECK(Info::extents_type::rank() == 2);
     // extents should be <4, 3>: 4 from array, 3 from Vec3
-    static_assert(Info::extents_type::static_extent(0) == 4);
-    static_assert(Info::extents_type::static_extent(1) == 3);
+    STATIC_CHECK(Info::extents_type::static_extent(0) == 4);
+    STATIC_CHECK(Info::extents_type::static_extent(1) == 3);
   }
 
   SECTION("UnwrapZipper: vector of Vec3 is rank 2, dynamic x 3") {
     using Info = zipper::storage::StlStorageInfo<std::vector<Vec3>,
                                                   zipper::storage::UnwrapZipper>;
-    static_assert(Info::rank == 2);
-    static_assert(std::is_same_v<Info::value_type, double>);
-    static_assert(Info::extents_type::rank() == 2);
-    static_assert(Info::extents_type::static_extent(0) == std::dynamic_extent);
-    static_assert(Info::extents_type::static_extent(1) == 3);
+    STATIC_CHECK(Info::rank == 2);
+    STATIC_CHECK(std::is_same_v<Info::value_type, double>);
+    STATIC_CHECK(Info::extents_type::rank() == 2);
+    STATIC_CHECK(Info::extents_type::static_extent(0) == std::dynamic_extent);
+    STATIC_CHECK(Info::extents_type::static_extent(1) == 3);
   }
 
   SECTION("UnwrapZipper: array of Matrix is rank 3") {
     using Mat23 = zipper::Matrix<double, 2, 3>;
     using Info = zipper::storage::StlStorageInfo<std::array<Mat23, 5>,
                                                   zipper::storage::UnwrapZipper>;
-    static_assert(Info::rank == 3);
-    static_assert(std::is_same_v<Info::value_type, double>);
-    static_assert(Info::extents_type::rank() == 3);
+    STATIC_CHECK(Info::rank == 3);
+    STATIC_CHECK(std::is_same_v<Info::value_type, double>);
+    STATIC_CHECK(Info::extents_type::rank() == 3);
     // extents should be <5, 2, 3>: 5 from array, 2 rows and 3 cols from Matrix
-    static_assert(Info::extents_type::static_extent(0) == 5);
-    static_assert(Info::extents_type::static_extent(1) == 2);
-    static_assert(Info::extents_type::static_extent(2) == 3);
+    STATIC_CHECK(Info::extents_type::static_extent(0) == 5);
+    STATIC_CHECK(Info::extents_type::static_extent(1) == 2);
+    STATIC_CHECK(Info::extents_type::static_extent(2) == 3);
   }
 
   SECTION("HasZipperInterface concept checks") {
-    static_assert(zipper::storage::detail::HasZipperInterface<Vec3>);
-    static_assert(zipper::storage::detail::HasZipperInterface<zipper::Matrix<double, 2, 3>>);
-    static_assert(!zipper::storage::detail::HasZipperInterface<double>);
-    static_assert(!zipper::storage::detail::HasZipperInterface<int>);
-    static_assert(!zipper::storage::detail::HasZipperInterface<std::array<double, 3>>);
+    STATIC_CHECK(zipper::storage::detail::HasZipperInterface<Vec3>);
+    STATIC_CHECK(zipper::storage::detail::HasZipperInterface<zipper::Matrix<double, 2, 3>>);
+    STATIC_CHECK_FALSE(zipper::storage::detail::HasZipperInterface<double>);
+    STATIC_CHECK_FALSE(zipper::storage::detail::HasZipperInterface<int>);
+    STATIC_CHECK_FALSE(zipper::storage::detail::HasZipperInterface<std::array<double, 3>>);
   }
 }
 

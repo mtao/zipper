@@ -146,14 +146,14 @@ TEST_CASE("FullRange", "[index_set][range_types]") {
 TEST_CASE("HasIndexSet concept", "[index_set][concept]") {
     // TriangularView has known zeros
     using IdentityExpr = nullary::Identity<double, 3, 3>;
-    static_assert(HasIndexSet<IdentityExpr>);
+    STATIC_CHECK(HasIndexSet<IdentityExpr>);
 
     using UnitExpr = nullary::Unit<double, 5, index_type>;
-    static_assert(HasIndexSet<UnitExpr>);
+    STATIC_CHECK(HasIndexSet<UnitExpr>);
 
     // MDArray (dense) does NOT have known zeros
     using DenseExpr = nullary::MDArray<double, zipper::extents<3, 3>>;
-    static_assert(!HasIndexSet<DenseExpr>);
+    STATIC_CHECK_FALSE(HasIndexSet<DenseExpr>);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -357,7 +357,7 @@ TEST_CASE("TriangularView index_set uses static first=0",
     SECTION("Lower col_range_for_row returns CR0") {
         auto L = triangular_view<TriangularMode::Lower>(M);
         auto r = L.col_range_for_row(2);
-        static_assert(std::is_same_v<decltype(r), CR0>);
+        STATIC_CHECK(std::is_same_v<decltype(r), CR0>);
         CHECK(r.first == 0);
         CHECK(r.last == 3);
     }
@@ -365,7 +365,7 @@ TEST_CASE("TriangularView index_set uses static first=0",
     SECTION("StrictlyLower col_range_for_row returns CR0") {
         auto SL = triangular_view<TriangularMode::StrictlyLower>(M);
         auto r = SL.col_range_for_row(3);
-        static_assert(std::is_same_v<decltype(r), CR0>);
+        STATIC_CHECK(std::is_same_v<decltype(r), CR0>);
         CHECK(r.first == 0);
         CHECK(r.last == 3);
     }
@@ -373,7 +373,7 @@ TEST_CASE("TriangularView index_set uses static first=0",
     SECTION("UnitLower col_range_for_row returns CR0") {
         auto UL = triangular_view<TriangularMode::UnitLower>(M);
         auto r = UL.col_range_for_row(2);
-        static_assert(std::is_same_v<decltype(r), CR0>);
+        STATIC_CHECK(std::is_same_v<decltype(r), CR0>);
         CHECK(r.first == 0);
         CHECK(r.last == 3);
     }
@@ -381,7 +381,7 @@ TEST_CASE("TriangularView index_set uses static first=0",
     SECTION("Upper row_range_for_col returns CR0") {
         auto U = triangular_view<TriangularMode::Upper>(M);
         auto r = U.row_range_for_col(3);
-        static_assert(std::is_same_v<decltype(r), CR0>);
+        STATIC_CHECK(std::is_same_v<decltype(r), CR0>);
         CHECK(r.first == 0);
         CHECK(r.last == 4);
     }
@@ -389,7 +389,7 @@ TEST_CASE("TriangularView index_set uses static first=0",
     SECTION("StrictlyUpper row_range_for_col returns CR0") {
         auto SU = triangular_view<TriangularMode::StrictlyUpper>(M);
         auto r = SU.row_range_for_col(3);
-        static_assert(std::is_same_v<decltype(r), CR0>);
+        STATIC_CHECK(std::is_same_v<decltype(r), CR0>);
         CHECK(r.first == 0);
         CHECK(r.last == 3);
     }
@@ -397,7 +397,7 @@ TEST_CASE("TriangularView index_set uses static first=0",
     SECTION("UnitUpper row_range_for_col returns CR0") {
         auto UU = triangular_view<TriangularMode::UnitUpper>(M);
         auto r = UU.row_range_for_col(2);
-        static_assert(std::is_same_v<decltype(r), CR0>);
+        STATIC_CHECK(std::is_same_v<decltype(r), CR0>);
         CHECK(r.first == 0);
         CHECK(r.last == 3);
     }
@@ -406,7 +406,7 @@ TEST_CASE("TriangularView index_set uses static first=0",
         // Upper col range starts at row, not 0
         auto U = triangular_view<TriangularMode::Upper>(M);
         auto r = U.col_range_for_row(2);
-        static_assert(std::is_same_v<decltype(r), ContiguousIndexRange>);
+        STATIC_CHECK(std::is_same_v<decltype(r), ContiguousIndexRange>);
         CHECK(r.first == 2);
         CHECK(r.last == 4);
     }
@@ -415,7 +415,7 @@ TEST_CASE("TriangularView index_set uses static first=0",
         // Lower row range starts at col, not 0
         auto L = triangular_view<TriangularMode::Lower>(M);
         auto r = L.row_range_for_col(2);
-        static_assert(std::is_same_v<decltype(r), ContiguousIndexRange>);
+        STATIC_CHECK(std::is_same_v<decltype(r), ContiguousIndexRange>);
         CHECK(r.first == 2);
         CHECK(r.last == 4);
     }
@@ -533,34 +533,34 @@ TEST_CASE("ZeroPreservingUnaryOp concept", "[index_set][traits]") {
     using namespace zipper::expression::detail;
 
     // negate is zero-preserving
-    static_assert(ZeroPreservingUnaryOp<std::negate<double>>);
-    static_assert(ZeroPreservingUnaryOp<std::negate<int>>);
+    STATIC_CHECK(ZeroPreservingUnaryOp<std::negate<double>>);
+    STATIC_CHECK(ZeroPreservingUnaryOp<std::negate<int>>);
 
     // logical_not is NOT zero-preserving: !0 == true
-    static_assert(!ZeroPreservingUnaryOp<std::logical_not<double>>);
+    STATIC_CHECK_FALSE(ZeroPreservingUnaryOp<std::logical_not<double>>);
 
     // bit_not is NOT zero-preserving: ~0 != 0
-    static_assert(!ZeroPreservingUnaryOp<std::bit_not<int>>);
+    STATIC_CHECK_FALSE(ZeroPreservingUnaryOp<std::bit_not<int>>);
 }
 
 TEST_CASE("ZeroPreservingScalarOp concept", "[index_set][traits]") {
     using namespace zipper::expression::detail;
 
     // multiplies: 0*s == 0 and s*0 == 0
-    static_assert(ZeroPreservingScalarOp<std::multiplies<double>, true>);
-    static_assert(ZeroPreservingScalarOp<std::multiplies<double>, false>);
+    STATIC_CHECK(ZeroPreservingScalarOp<std::multiplies<double>, true>);
+    STATIC_CHECK(ZeroPreservingScalarOp<std::multiplies<double>, false>);
 
     // divides: 0/s == 0 (scalar on right only)
-    static_assert(ZeroPreservingScalarOp<std::divides<double>, true>);
-    static_assert(!ZeroPreservingScalarOp<std::divides<double>, false>);
+    STATIC_CHECK(ZeroPreservingScalarOp<std::divides<double>, true>);
+    STATIC_CHECK_FALSE(ZeroPreservingScalarOp<std::divides<double>, false>);
 
     // plus: 0+s != 0 in general
-    static_assert(!ZeroPreservingScalarOp<std::plus<double>, true>);
-    static_assert(!ZeroPreservingScalarOp<std::plus<double>, false>);
+    STATIC_CHECK_FALSE(ZeroPreservingScalarOp<std::plus<double>, true>);
+    STATIC_CHECK_FALSE(ZeroPreservingScalarOp<std::plus<double>, false>);
 
     // minus: 0-s != 0 in general
-    static_assert(!ZeroPreservingScalarOp<std::minus<double>, true>);
-    static_assert(!ZeroPreservingScalarOp<std::minus<double>, false>);
+    STATIC_CHECK_FALSE(ZeroPreservingScalarOp<std::minus<double>, true>);
+    STATIC_CHECK_FALSE(ZeroPreservingScalarOp<std::minus<double>, false>);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -577,7 +577,7 @@ TEST_CASE("UnsafeRef propagates has_index_set",
     using uref_type = decltype(uref);
     using uref_traits = zipper::expression::detail::ExpressionTraits<
         std::decay_t<uref_type>>;
-    static_assert(uref_traits::has_index_set);
+    STATIC_CHECK(uref_traits::has_index_set);
 
     SECTION("col_range_for_row matches child") {
         for (index_type row = 0; row < 4; ++row) {
@@ -601,7 +601,7 @@ TEST_CASE("UnsafeRef propagates has_index_set",
         using DenseExpr = nullary::MDArray<double, zipper::extents<3, 3>>;
         using URefDense = unary::UnsafeRef<const DenseExpr &>;
         using dense_traits = zipper::expression::detail::ExpressionTraits<URefDense>;
-        static_assert(!dense_traits::has_index_set);
+        STATIC_CHECK_FALSE(dense_traits::has_index_set);
     }
 }
 
@@ -619,7 +619,7 @@ TEST_CASE("Swizzle/Transpose propagates has_index_set",
     using lt_type = decltype(LT);
     using lt_traits = zipper::expression::detail::ExpressionTraits<
         std::decay_t<lt_type>>;
-    static_assert(lt_traits::has_index_set);
+    STATIC_CHECK(lt_traits::has_index_set);
 
     SECTION("transposed col_range_for_row swaps to row_range_for_col") {
         // LT.col_range_for_row(r) should == L.row_range_for_col(r)
@@ -656,7 +656,7 @@ TEST_CASE("Swizzle/Transpose propagates has_index_set",
         using DenseExpr = nullary::MDArray<double, zipper::extents<3, 3>>;
         using SwDense = unary::Swizzle<const DenseExpr &, 1, 0>;
         using sw_traits = zipper::expression::detail::ExpressionTraits<SwDense>;
-        static_assert(!sw_traits::has_index_set);
+        STATIC_CHECK_FALSE(sw_traits::has_index_set);
     }
 }
 
@@ -674,7 +674,7 @@ TEST_CASE("Negate propagates has_index_set",
     using neg_type = decltype(negU);
     using neg_traits = zipper::expression::detail::ExpressionTraits<
         std::decay_t<neg_type>>;
-    static_assert(neg_traits::has_index_set);
+    STATIC_CHECK(neg_traits::has_index_set);
 
     SECTION("ranges match child") {
         for (index_type row = 0; row < 4; ++row) {
@@ -700,7 +700,7 @@ TEST_CASE("Negate propagates has_index_set",
         using LNotType = unary::LogicalNot<decltype(U)>;
         using lnot_traits = zipper::expression::detail::ExpressionTraits<
             std::decay_t<LNotType>>;
-        static_assert(!lnot_traits::has_index_set);
+        STATIC_CHECK_FALSE(lnot_traits::has_index_set);
     }
 }
 
@@ -717,13 +717,13 @@ TEST_CASE("ScalarMultiplies propagates has_index_set",
     using MulRight = unary::ScalarMultiplies<double, decltype(L), true>;
     using mul_right_traits = zipper::expression::detail::ExpressionTraits<
         std::decay_t<MulRight>>;
-    static_assert(mul_right_traits::has_index_set);
+    STATIC_CHECK(mul_right_traits::has_index_set);
 
     // scalar * expr (ScalarOnRight = false)
     using MulLeft = unary::ScalarMultiplies<double, decltype(L), false>;
     using mul_left_traits = zipper::expression::detail::ExpressionTraits<
         std::decay_t<MulLeft>>;
-    static_assert(mul_left_traits::has_index_set);
+    STATIC_CHECK(mul_left_traits::has_index_set);
 
     auto scaled = MulRight(L, 3.0);
     SECTION("ranges match child after scaling") {
@@ -745,13 +745,13 @@ TEST_CASE("ScalarDivides propagates only when ScalarOnRight",
     using DivRight = unary::ScalarDivides<double, decltype(L), true>;
     using div_right_traits = zipper::expression::detail::ExpressionTraits<
         std::decay_t<DivRight>>;
-    static_assert(div_right_traits::has_index_set);
+    STATIC_CHECK(div_right_traits::has_index_set);
 
     // scalar / expr (ScalarOnRight = false): s/0 is undefined, not zero
     using DivLeft = unary::ScalarDivides<double, decltype(L), false>;
     using div_left_traits = zipper::expression::detail::ExpressionTraits<
         std::decay_t<DivLeft>>;
-    static_assert(!div_left_traits::has_index_set);
+    STATIC_CHECK_FALSE(div_left_traits::has_index_set);
 }
 
 TEST_CASE("ScalarPlus does NOT propagate has_index_set",
@@ -763,7 +763,7 @@ TEST_CASE("ScalarPlus does NOT propagate has_index_set",
     using PlusRight = unary::ScalarPlus<double, decltype(L), true>;
     using plus_traits = zipper::expression::detail::ExpressionTraits<
         std::decay_t<PlusRight>>;
-    static_assert(!plus_traits::has_index_set);
+    STATIC_CHECK_FALSE(plus_traits::has_index_set);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -781,7 +781,7 @@ TEST_CASE("Slice propagates has_index_set from TriangularView",
         using sl_type = decltype(sl);
         using sl_traits = zipper::expression::detail::ExpressionTraits<
             std::decay_t<sl_type>>;
-        static_assert(sl_traits::has_index_set);
+        STATIC_CHECK(sl_traits::has_index_set);
 
         for (index_type row = 0; row < 4; ++row) {
             auto sr = sl.col_range_for_row(row);
@@ -799,7 +799,7 @@ TEST_CASE("Slice propagates has_index_set from TriangularView",
         using rs_type = decltype(row_slice);
         using rs_traits = zipper::expression::detail::ExpressionTraits<
             std::decay_t<rs_type>>;
-        static_assert(rs_traits::has_index_set);
+        STATIC_CHECK(rs_traits::has_index_set);
 
         // For a rank-1 slice, index_set<0>() queries along
         // the only output dimension (cols). The child dimension for
@@ -825,7 +825,7 @@ TEST_CASE("Slice propagates has_index_set from TriangularView",
         using sub_type = decltype(sub);
         using sub_traits = zipper::expression::detail::ExpressionTraits<
             std::decay_t<sub_type>>;
-        static_assert(sub_traits::has_index_set);
+        STATIC_CHECK(sub_traits::has_index_set);
 
         // Output row 0 maps to child row 1.
         // L.index_set<1>(1) = [0, 2)
@@ -860,7 +860,7 @@ TEST_CASE("Slice propagates has_index_set from TriangularView",
         using sub_type = decltype(sub);
         using sub_traits = zipper::expression::detail::ExpressionTraits<
             std::decay_t<sub_type>>;
-        static_assert(sub_traits::has_index_set);
+        STATIC_CHECK(sub_traits::has_index_set);
 
         // Output col 0 maps to child col 1.
         // U.index_set<0>(1) = [0, 2) (rows with non-zeros in child col 1)
@@ -894,7 +894,7 @@ TEST_CASE("Chained transitivity: Negate(Transpose(TriangularView))",
 
     using neg_traits = zipper::expression::detail::ExpressionTraits<
         std::decay_t<decltype(negLT)>>;
-    static_assert(neg_traits::has_index_set);
+    STATIC_CHECK(neg_traits::has_index_set);
 
     // The col_range_for_row should match Upper pattern
     SECTION("ranges match Upper pattern") {
@@ -1032,13 +1032,13 @@ TEST_CASE("DisjointRange: for_each compile-time unrolled iteration",
 TEST_CASE("DisjointRange: HasForEach concept satisfied",
           "[index_set][disjoint_range]") {
     using CR = ContiguousIndexRange;
-    static_assert(HasForEach<DisjointRange<CR, CR>>);
-    static_assert(HasForEach<DisjointRange<CR>>);
+    STATIC_CHECK(HasForEach<DisjointRange<CR, CR>>);
+    STATIC_CHECK(HasForEach<DisjointRange<CR>>);
 
     // ContiguousIndexRange itself does NOT have for_each
-    static_assert(!HasForEach<CR>);
-    static_assert(!HasForEach<SingleIndexRange>);
-    static_assert(!HasForEach<FullRange>);
+    STATIC_CHECK_FALSE(HasForEach<CR>);
+    STATIC_CHECK_FALSE(HasForEach<SingleIndexRange>);
+    STATIC_CHECK_FALSE(HasForEach<FullRange>);
 }
 
 TEST_CASE("DisjointRange: to_contiguous_range bounding box",
@@ -1077,19 +1077,19 @@ TEST_CASE("DisjointRange: to_contiguous_range bounding box",
 TEST_CASE("DisjointRange: IndexSet concept satisfied",
           "[index_set][disjoint_range]") {
     using CR = ContiguousIndexRange;
-    static_assert(IndexSet<DisjointRange<CR>>);
-    static_assert(IndexSet<DisjointRange<CR, CR>>);
-    static_assert(IndexSet<DisjointRange<CR, CR, CR>>);
+    STATIC_CHECK(IndexSet<DisjointRange<CR>>);
+    STATIC_CHECK(IndexSet<DisjointRange<CR, CR>>);
+    STATIC_CHECK(IndexSet<DisjointRange<CR, CR, CR>>);
 }
 
 TEST_CASE("DisjointRange: IsDisjointRange concept",
           "[index_set][disjoint_range]") {
     using CR = ContiguousIndexRange;
-    static_assert(IsDisjointRange<DisjointRange<CR>>);
-    static_assert(IsDisjointRange<DisjointRange<CR, CR>>);
-    static_assert(!IsDisjointRange<CR>);
-    static_assert(!IsDisjointRange<SingleIndexRange>);
-    static_assert(!IsDisjointRange<FullRange>);
+    STATIC_CHECK(IsDisjointRange<DisjointRange<CR>>);
+    STATIC_CHECK(IsDisjointRange<DisjointRange<CR, CR>>);
+    STATIC_CHECK_FALSE(IsDisjointRange<CR>);
+    STATIC_CHECK_FALSE(IsDisjointRange<SingleIndexRange>);
+    STATIC_CHECK_FALSE(IsDisjointRange<FullRange>);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1100,7 +1100,7 @@ TEST_CASE("range_union: two non-overlapping CRs",
           "[index_set][range_union]") {
     using CR = ContiguousIndexRange;
     auto result = range_union(CR{1, 3}, CR{5, 8});
-    static_assert(IsDisjointRange<decltype(result)>);
+    STATIC_CHECK(IsDisjointRange<decltype(result)>);
 
     // Should have two distinct segments
     auto bb = to_contiguous_range(result);
@@ -1168,7 +1168,7 @@ TEST_CASE("range_union: SingleIndexRange + CR promotes",
           "[index_set][range_union]") {
     using CR = ContiguousIndexRange;
     auto result = range_union(SingleIndexRange{5}, CR{8, 10});
-    static_assert(IsDisjointRange<decltype(result)>);
+    STATIC_CHECK(IsDisjointRange<decltype(result)>);
 
     CHECK(result.contains(5));
     CHECK_FALSE(result.contains(6));
@@ -1184,7 +1184,7 @@ TEST_CASE("range_union: DR + CR",
     DisjointRange<CR, CR> dr{std::tuple{CR{0, 2}, CR{5, 7}}};
 
     auto result = range_union(dr, CR{3, 4});
-    static_assert(IsDisjointRange<decltype(result)>);
+    STATIC_CHECK(IsDisjointRange<decltype(result)>);
 
     // Should have three non-empty segments: [0,2), [3,4), [5,7)
     CHECK(result.contains(0));
@@ -1204,7 +1204,7 @@ TEST_CASE("range_union: DR + DR",
     DisjointRange<CR, CR> dr2{std::tuple{CR{3, 5}, CR{7, 10}}};
 
     auto result = range_union(dr1, dr2);
-    static_assert(IsDisjointRange<decltype(result)>);
+    STATIC_CHECK(IsDisjointRange<decltype(result)>);
 
     // Expected: [0,2), [3,5), [6,10)
     CHECK(result.contains(0));
@@ -1226,7 +1226,7 @@ TEST_CASE("range_union: DR + DR",
 
 TEST_CASE("OffDiagonal: is valid triangular mode",
           "[index_set][off_diagonal]") {
-    static_assert(is_valid_triangular_mode<TriangularMode::OffDiagonal>());
+    STATIC_CHECK(is_valid_triangular_mode<TriangularMode::OffDiagonal>());
 }
 
 TEST_CASE("OffDiagonal: coeff returns zero on diagonal, child elsewhere",
@@ -1259,7 +1259,7 @@ TEST_CASE("OffDiagonal: index_set returns DisjointRange",
     SECTION("col_range_for_row returns DisjointRange<CR,CR>") {
         // Row 0: [0,0) ∪ [1,4) → empty first seg, second = [1,4)
         auto r0 = OD.col_range_for_row(0);
-        static_assert(IsDisjointRange<decltype(r0)>);
+        STATIC_CHECK(IsDisjointRange<decltype(r0)>);
         CHECK_FALSE(r0.contains(0));
         CHECK(r0.contains(1));
         CHECK(r0.contains(2));
@@ -1286,7 +1286,7 @@ TEST_CASE("OffDiagonal: index_set returns DisjointRange",
     SECTION("row_range_for_col returns DisjointRange<CR,CR>") {
         // Col 0: [0,0) ∪ [1,4) → [1,4)
         auto c0 = OD.row_range_for_col(0);
-        static_assert(IsDisjointRange<decltype(c0)>);
+        STATIC_CHECK(IsDisjointRange<decltype(c0)>);
         CHECK_FALSE(c0.contains(0));
         CHECK(c0.contains(1));
         CHECK(c0.contains(2));
@@ -1357,7 +1357,7 @@ TEST_CASE("Slice of OffDiagonal: full_extent preserves DisjointRange",
     auto sl = unary::Slice(OD, full_extent_t{}, full_extent_t{});
     using sl_traits = zipper::expression::detail::ExpressionTraits<
         std::decay_t<decltype(sl)>>;
-    static_assert(sl_traits::has_index_set);
+    STATIC_CHECK(sl_traits::has_index_set);
 
     for (index_type row = 0; row < 4; ++row) {
         auto sr = sl.col_range_for_row(row);
@@ -1393,7 +1393,7 @@ TEST_CASE("Slice of OffDiagonal: row extraction preserves disjoint structure",
     auto row_slice = unary::Slice(OD, index_type{2}, full_extent_t{});
     using rs_traits = zipper::expression::detail::ExpressionTraits<
         std::decay_t<decltype(row_slice)>>;
-    static_assert(rs_traits::has_index_set);
+    STATIC_CHECK(rs_traits::has_index_set);
 
     // Verify coefficient correctness
     for (index_type col = 0; col < 4; ++col) {
@@ -1413,7 +1413,7 @@ TEST_CASE("Slice of OffDiagonal: sub-block slice",
         full_extent_t{});
     using sub_traits = zipper::expression::detail::ExpressionTraits<
         std::decay_t<decltype(sub)>>;
-    static_assert(sub_traits::has_index_set);
+    STATIC_CHECK(sub_traits::has_index_set);
 
     // Output row 0 = child row 1. OffDiag col range for row 1 = [0,1) ∪ [2,4)
     // Output row 1 = child row 2. OffDiag col range for row 2 = [0,2) ∪ [3,4)
@@ -1556,18 +1556,18 @@ TEST_CASE("StridedIndexSet: CTAD",
           "[index_set][strided_index_set][ctad]") {
     SECTION("three integral args → runtime StridedIndexSet") {
         auto r = StridedIndexSet{0, 10, 3};
-        static_assert(IsStridedIndexSet<decltype(r)>);
+        STATIC_CHECK(IsStridedIndexSet<decltype(r)>);
         // All fields should be runtime index_type
-        static_assert(std::is_same_v<decltype(r.first), index_type>);
-        static_assert(std::is_same_v<decltype(r.last), index_type>);
-        static_assert(std::is_same_v<decltype(r.stride), index_type>);
+        STATIC_CHECK(std::is_same_v<decltype(r.first), index_type>);
+        STATIC_CHECK(std::is_same_v<decltype(r.last), index_type>);
+        STATIC_CHECK(std::is_same_v<decltype(r.stride), index_type>);
         CHECK(r.size() == 4);  // 0, 3, 6, 9
     }
 
     SECTION("two integral args → contiguous (stride = static 1)") {
         auto r = StridedIndexSet{2, 7};
-        static_assert(IsContiguousIndexSet<decltype(r)>);
-        static_assert(std::is_same_v<decltype(r.stride), static_index_t<1>>);
+        STATIC_CHECK(IsContiguousIndexSet<decltype(r)>);
+        STATIC_CHECK(std::is_same_v<decltype(r.stride), static_index_t<1>>);
         CHECK(r.size() == 5);
         CHECK(r.contains(2));
         CHECK(r.contains(6));
@@ -1577,17 +1577,17 @@ TEST_CASE("StridedIndexSet: CTAD",
     SECTION("integral_constant args preserved") {
         auto r = StridedIndexSet{static_index_t<0>{}, static_index_t<12>{},
                                   static_index_t<3>{}};
-        static_assert(std::is_same_v<decltype(r.first), static_index_t<0>>);
-        static_assert(std::is_same_v<decltype(r.last), static_index_t<12>>);
-        static_assert(std::is_same_v<decltype(r.stride), static_index_t<3>>);
+        STATIC_CHECK(std::is_same_v<decltype(r.first), static_index_t<0>>);
+        STATIC_CHECK(std::is_same_v<decltype(r.last), static_index_t<12>>);
+        STATIC_CHECK(std::is_same_v<decltype(r.stride), static_index_t<3>>);
         CHECK(r.size() == 4);
     }
 
     SECTION("mixed: runtime first/last, compile-time stride") {
         auto r = StridedIndexSet{0, 10, static_index_t<2>{}};
-        static_assert(std::is_same_v<decltype(r.first), index_type>);
-        static_assert(std::is_same_v<decltype(r.last), index_type>);
-        static_assert(std::is_same_v<decltype(r.stride), static_index_t<2>>);
+        STATIC_CHECK(std::is_same_v<decltype(r.first), index_type>);
+        STATIC_CHECK(std::is_same_v<decltype(r.last), index_type>);
+        STATIC_CHECK(std::is_same_v<decltype(r.stride), static_index_t<2>>);
         CHECK(r.size() == 5);
     }
 }
@@ -1602,7 +1602,7 @@ TEST_CASE("StridedIndexSet: contiguous alias backward compat",
     CHECK(!cr.contains(5));
 
     // Should be able to access .stride field
-    static_assert(decltype(cr.stride)::value == 1);
+    STATIC_CHECK(decltype(cr.stride)::value == 1);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1670,10 +1670,10 @@ TEST_CASE("StaticSparseIndexSet: basic operations",
 
 TEST_CASE("StaticSparseIndexSet: IndexSet concept",
           "[index_set][static_sparse]") {
-    static_assert(IndexSet<StaticSparseIndexSet<0>>);
-    static_assert(IndexSet<StaticSparseIndexSet<1>>);
-    static_assert(IndexSet<StaticSparseIndexSet<5>>);
-    static_assert(IndexSet<StaticSparseIndexSet<10>>);
+    STATIC_CHECK(IndexSet<StaticSparseIndexSet<0>>);
+    STATIC_CHECK(IndexSet<StaticSparseIndexSet<1>>);
+    STATIC_CHECK(IndexSet<StaticSparseIndexSet<5>>);
+    STATIC_CHECK(IndexSet<StaticSparseIndexSet<10>>);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1718,7 +1718,7 @@ TEST_CASE("SpanSparseIndexSet: to_owned() creates DynamicSparseIndexSet",
     SpanSparseIndexSet span_r{std::span<const index_type>(data)};
 
     auto owned = span_r.to_owned();
-    static_assert(IsDynamicSparseIndexSet<decltype(owned)>);
+    STATIC_CHECK(IsDynamicSparseIndexSet<decltype(owned)>);
 
     // owned should have same contents
     CHECK(owned.size() == 3);
@@ -1771,7 +1771,7 @@ TEST_CASE("DynamicSparseIndexSet: as_span() creates SpanSparseIndexSet",
     DynamicSparseIndexSet owned{{2, 5, 8}};
 
     auto span_r = owned.as_span();
-    static_assert(IsSpanSparseIndexSet<decltype(span_r)>);
+    STATIC_CHECK(IsSpanSparseIndexSet<decltype(span_r)>);
 
     CHECK(span_r.size() == 3);
     CHECK(span_r.contains(2));
@@ -1784,7 +1784,7 @@ TEST_CASE("DynamicSparseIndexSet: as_span() creates SpanSparseIndexSet",
 TEST_CASE("DynamicSparseIndexSet: SparseIndexRange backward compat alias",
           "[index_set][dynamic_sparse]") {
     // SparseIndexRange is DynamicSparseIndexSet
-    static_assert(std::is_same_v<SparseIndexRange, DynamicSparseIndexSet>);
+    STATIC_CHECK(std::is_same_v<SparseIndexRange, DynamicSparseIndexSet>);
     SparseIndexRange r{{1, 3, 7, 10}};
     CHECK(r.size() == 4);
     CHECK(r.contains(3));
@@ -1846,13 +1846,13 @@ TEST_CASE("SingleIndexSet: CTAD",
           "[index_set][compile_time][ctad]") {
     SECTION("integral → index_type") {
         auto r = SingleIndexSet{5};
-        static_assert(std::is_same_v<decltype(r.value), index_type>);
+        STATIC_CHECK(std::is_same_v<decltype(r.value), index_type>);
         CHECK(r.contains(5));
     }
 
     SECTION("integral_constant → preserved") {
         auto r = SingleIndexSet{static_index_t<7>{}};
-        static_assert(std::is_same_v<decltype(r.value), static_index_t<7>>);
+        STATIC_CHECK(std::is_same_v<decltype(r.value), static_index_t<7>>);
         CHECK(r.contains(7));
     }
 }
@@ -1861,13 +1861,13 @@ TEST_CASE("FullIndexSet: CTAD",
           "[index_set][compile_time][ctad]") {
     SECTION("integral → index_type") {
         auto r = FullIndexSet{10};
-        static_assert(std::is_same_v<decltype(r.extent), index_type>);
+        STATIC_CHECK(std::is_same_v<decltype(r.extent), index_type>);
         CHECK(r.size() == 10);
     }
 
     SECTION("integral_constant → preserved") {
         auto r = FullIndexSet{static_index_t<8>{}};
-        static_assert(std::is_same_v<decltype(r.extent), static_index_t<8>>);
+        STATIC_CHECK(std::is_same_v<decltype(r.extent), static_index_t<8>>);
         CHECK(r.size() == 8);
     }
 }
@@ -1878,75 +1878,75 @@ TEST_CASE("FullIndexSet: CTAD",
 
 TEST_CASE("Detection traits: IsContiguousIndexSet",
           "[index_set][traits]") {
-    static_assert(IsContiguousIndexSet<ContiguousIndexRange>);
-    static_assert(IsContiguousIndexSet<ContiguousIndexSet<static_index_t<0>,
+    STATIC_CHECK(IsContiguousIndexSet<ContiguousIndexRange>);
+    STATIC_CHECK(IsContiguousIndexSet<ContiguousIndexSet<static_index_t<0>,
                                                            static_index_t<5>>>);
     // StridedIndexSet with non-1 stride is NOT contiguous
-    static_assert(!IsContiguousIndexSet<StridedIndexSet<index_type, index_type,
+    STATIC_CHECK_FALSE(IsContiguousIndexSet<StridedIndexSet<index_type, index_type,
                                                          index_type>>);
-    static_assert(!IsContiguousIndexSet<StridedIndexSet<index_type, index_type,
+    STATIC_CHECK_FALSE(IsContiguousIndexSet<StridedIndexSet<index_type, index_type,
                                                          static_index_t<2>>>);
-    static_assert(!IsContiguousIndexSet<SingleIndexRange>);
-    static_assert(!IsContiguousIndexSet<FullRange>);
+    STATIC_CHECK_FALSE(IsContiguousIndexSet<SingleIndexRange>);
+    STATIC_CHECK_FALSE(IsContiguousIndexSet<FullRange>);
 }
 
 TEST_CASE("Detection traits: IsStridedIndexSet",
           "[index_set][traits]") {
     // All StridedIndexSet specializations match, including contiguous
-    static_assert(IsStridedIndexSet<StridedIndexRange>);
-    static_assert(IsStridedIndexSet<ContiguousIndexRange>);
-    static_assert(IsStridedIndexSet<StridedIndexSet<index_type, index_type,
+    STATIC_CHECK(IsStridedIndexSet<StridedIndexRange>);
+    STATIC_CHECK(IsStridedIndexSet<ContiguousIndexRange>);
+    STATIC_CHECK(IsStridedIndexSet<StridedIndexSet<index_type, index_type,
                                                      static_index_t<3>>>);
-    static_assert(IsStridedIndexSet<ContiguousIndexSet<static_index_t<0>,
+    STATIC_CHECK(IsStridedIndexSet<ContiguousIndexSet<static_index_t<0>,
                                                         static_index_t<5>>>);
     // Non-strided types don't match
-    static_assert(!IsStridedIndexSet<SingleIndexRange>);
-    static_assert(!IsStridedIndexSet<FullRange>);
-    static_assert(!IsStridedIndexSet<DynamicSparseIndexSet>);
+    STATIC_CHECK_FALSE(IsStridedIndexSet<SingleIndexRange>);
+    STATIC_CHECK_FALSE(IsStridedIndexSet<FullRange>);
+    STATIC_CHECK_FALSE(IsStridedIndexSet<DynamicSparseIndexSet>);
 }
 
 TEST_CASE("Detection traits: IsSingleIndexSet",
           "[index_set][traits]") {
-    static_assert(IsSingleIndexSet<SingleIndexRange>);
-    static_assert(IsSingleIndexSet<SingleIndexSet<static_index_t<3>>>);
-    static_assert(!IsSingleIndexSet<ContiguousIndexRange>);
-    static_assert(!IsSingleIndexSet<FullRange>);
+    STATIC_CHECK(IsSingleIndexSet<SingleIndexRange>);
+    STATIC_CHECK(IsSingleIndexSet<SingleIndexSet<static_index_t<3>>>);
+    STATIC_CHECK_FALSE(IsSingleIndexSet<ContiguousIndexRange>);
+    STATIC_CHECK_FALSE(IsSingleIndexSet<FullRange>);
 }
 
 TEST_CASE("Detection traits: IsFullIndexSet",
           "[index_set][traits]") {
-    static_assert(IsFullIndexSet<FullRange>);
-    static_assert(IsFullIndexSet<FullIndexSet<static_index_t<10>>>);
-    static_assert(!IsFullIndexSet<ContiguousIndexRange>);
-    static_assert(!IsFullIndexSet<SingleIndexRange>);
+    STATIC_CHECK(IsFullIndexSet<FullRange>);
+    STATIC_CHECK(IsFullIndexSet<FullIndexSet<static_index_t<10>>>);
+    STATIC_CHECK_FALSE(IsFullIndexSet<ContiguousIndexRange>);
+    STATIC_CHECK_FALSE(IsFullIndexSet<SingleIndexRange>);
 }
 
 TEST_CASE("Detection traits: IsSparseIndexSet",
           "[index_set][traits]") {
     // Individual sparse types
-    static_assert(IsStaticSparseIndexSet<StaticSparseIndexSet<3>>);
-    static_assert(IsStaticSparseIndexSet<StaticSparseIndexSet<0>>);
-    static_assert(!IsStaticSparseIndexSet<DynamicSparseIndexSet>);
-    static_assert(!IsStaticSparseIndexSet<SpanSparseIndexSet>);
+    STATIC_CHECK(IsStaticSparseIndexSet<StaticSparseIndexSet<3>>);
+    STATIC_CHECK(IsStaticSparseIndexSet<StaticSparseIndexSet<0>>);
+    STATIC_CHECK_FALSE(IsStaticSparseIndexSet<DynamicSparseIndexSet>);
+    STATIC_CHECK_FALSE(IsStaticSparseIndexSet<SpanSparseIndexSet>);
 
-    static_assert(IsSpanSparseIndexSet<SpanSparseIndexSet>);
-    static_assert(!IsSpanSparseIndexSet<DynamicSparseIndexSet>);
-    static_assert(!IsSpanSparseIndexSet<StaticSparseIndexSet<3>>);
+    STATIC_CHECK(IsSpanSparseIndexSet<SpanSparseIndexSet>);
+    STATIC_CHECK_FALSE(IsSpanSparseIndexSet<DynamicSparseIndexSet>);
+    STATIC_CHECK_FALSE(IsSpanSparseIndexSet<StaticSparseIndexSet<3>>);
 
-    static_assert(IsDynamicSparseIndexSet<DynamicSparseIndexSet>);
-    static_assert(!IsDynamicSparseIndexSet<SpanSparseIndexSet>);
-    static_assert(!IsDynamicSparseIndexSet<StaticSparseIndexSet<3>>);
+    STATIC_CHECK(IsDynamicSparseIndexSet<DynamicSparseIndexSet>);
+    STATIC_CHECK_FALSE(IsDynamicSparseIndexSet<SpanSparseIndexSet>);
+    STATIC_CHECK_FALSE(IsDynamicSparseIndexSet<StaticSparseIndexSet<3>>);
 
     // Union concept
-    static_assert(IsSparseIndexSet<StaticSparseIndexSet<3>>);
-    static_assert(IsSparseIndexSet<SpanSparseIndexSet>);
-    static_assert(IsSparseIndexSet<DynamicSparseIndexSet>);
+    STATIC_CHECK(IsSparseIndexSet<StaticSparseIndexSet<3>>);
+    STATIC_CHECK(IsSparseIndexSet<SpanSparseIndexSet>);
+    STATIC_CHECK(IsSparseIndexSet<DynamicSparseIndexSet>);
 
     // Non-sparse types
-    static_assert(!IsSparseIndexSet<ContiguousIndexRange>);
-    static_assert(!IsSparseIndexSet<SingleIndexRange>);
-    static_assert(!IsSparseIndexSet<FullRange>);
-    static_assert(!IsSparseIndexSet<StridedIndexRange>);
+    STATIC_CHECK_FALSE(IsSparseIndexSet<ContiguousIndexRange>);
+    STATIC_CHECK_FALSE(IsSparseIndexSet<SingleIndexRange>);
+    STATIC_CHECK_FALSE(IsSparseIndexSet<FullRange>);
+    STATIC_CHECK_FALSE(IsSparseIndexSet<StridedIndexRange>);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -2069,7 +2069,7 @@ TEST_CASE("Ownership round-trip: Dynamic → Span → Dynamic",
 
 TEST_CASE("to_index_set: full_extent_t", "[index_set][to_index_set]") {
     auto r = to_index_set(full_extent_t{}, 10);
-    static_assert(std::is_same_v<decltype(r), FullRange>);
+    STATIC_CHECK(std::is_same_v<decltype(r), FullRange>);
     CHECK(r.extent == 10);
     CHECK(r.size() == 10);
     CHECK(r.contains(0));
@@ -2078,7 +2078,7 @@ TEST_CASE("to_index_set: full_extent_t", "[index_set][to_index_set]") {
 
 TEST_CASE("to_index_set: integer index", "[index_set][to_index_set]") {
     auto r = to_index_set(index_type{5}, 10);
-    static_assert(std::is_same_v<decltype(r), SingleIndexRange>);
+    STATIC_CHECK(std::is_same_v<decltype(r), SingleIndexRange>);
     CHECK(r.value == 5);
     CHECK(r.size() == 1);
     CHECK(r.contains(5));
@@ -2156,7 +2156,7 @@ TEST_CASE("to_index_set: strided_slice preserves stride type",
         // Result should be StridedIndexSet<index_type, index_type,
         // static_index_t<1>> which is ContiguousIndexSet<index_type,
         // index_type> == ContiguousIndexRange.
-        static_assert(std::is_same_v<decltype(r), ContiguousIndexRange>);
+        STATIC_CHECK(std::is_same_v<decltype(r), ContiguousIndexRange>);
         CHECK(r.first == 2);
         CHECK(r.last == 7);
         CHECK(r.size() == 5);
@@ -2166,7 +2166,7 @@ TEST_CASE("to_index_set: strided_slice preserves stride type",
         zipper::strided_slice<index_type, index_type, static_index_t<2>> s{
             1, 10, {}};
         auto r = to_index_set(s, 20);
-        static_assert(
+        STATIC_CHECK(
             std::is_same_v<decltype(r),
                            StridedIndexSet<index_type, index_type,
                                            static_index_t<2>>>);
@@ -2182,7 +2182,7 @@ TEST_CASE("to_index_set: strided_slice preserves stride type",
     SECTION("runtime stride yields StridedIndexRange") {
         zipper::strided_slice<index_type, index_type, index_type> s{0, 6, 3};
         auto r = to_index_set(s, 10);
-        static_assert(std::is_same_v<decltype(r), StridedIndexRange>);
+        STATIC_CHECK(std::is_same_v<decltype(r), StridedIndexRange>);
         CHECK(r.size() == 2);
     }
 
@@ -2190,7 +2190,7 @@ TEST_CASE("to_index_set: strided_slice preserves stride type",
         zipper::strided_slice<index_type, index_type, static_index_t<1>> s{
             3, 0, {}};
         auto r = to_index_set(s, 10);
-        static_assert(std::is_same_v<decltype(r), ContiguousIndexRange>);
+        STATIC_CHECK(std::is_same_v<decltype(r), ContiguousIndexRange>);
         CHECK(r.empty());
         CHECK(r.size() == 0);
     }
@@ -2207,7 +2207,7 @@ TEST_CASE("range_intersection: Full ∩ Full",
     FullRange a{10};
     FullRange b{7};
     auto r = range_intersection(a, b);
-    static_assert(std::is_same_v<decltype(r), ContiguousIndexRange>);
+    STATIC_CHECK(std::is_same_v<decltype(r), ContiguousIndexRange>);
     CHECK(r.first == 0);
     CHECK(r.last == 7);
     CHECK(r.size() == 7);
@@ -2521,7 +2521,7 @@ TEST_CASE("range_intersection: Strided ∩ Strided (generic fallback)",
     StridedIndexRange b{0, 20, 5};  // {0, 5, 10, 15}
 
     auto r = range_intersection(a, b);
-    static_assert(std::is_same_v<decltype(r), DynamicSparseIndexSet>);
+    STATIC_CHECK(std::is_same_v<decltype(r), DynamicSparseIndexSet>);
     auto v = r.indices;
     // Common: {0, 15}
     CHECK(v == std::vector<index_type>{0, 15});

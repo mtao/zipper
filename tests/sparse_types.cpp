@@ -322,17 +322,17 @@ TEST_CASE("csr_matrix_times_dense_vector", "[sparse][csr][spmv]") {
 
 TEST_CASE("sparse_type_concepts", "[sparse][concepts]") {
     using namespace zipper;
-    static_assert(concepts::Matrix<COOMatrix<double, 3, 3>>);
-    static_assert(concepts::Matrix<CSRMatrix<double, 3, 3>>);
-    static_assert(concepts::Vector<COOVector<double, 5>>);
-    static_assert(concepts::Vector<CSRVector<double, 5>>);
+    STATIC_CHECK(concepts::Matrix<COOMatrix<double, 3, 3>>);
+    STATIC_CHECK(concepts::Matrix<CSRMatrix<double, 3, 3>>);
+    STATIC_CHECK(concepts::Vector<COOVector<double, 5>>);
+    STATIC_CHECK(concepts::Vector<CSRVector<double, 5>>);
 
     // Dynamic extents
     constexpr auto dyn = dynamic_extent;
-    static_assert(concepts::Matrix<COOMatrix<double, dyn, dyn>>);
-    static_assert(concepts::Matrix<CSRMatrix<double, dyn, dyn>>);
-    static_assert(concepts::Vector<COOVector<double, dyn>>);
-    static_assert(concepts::Vector<CSRVector<double, dyn>>);
+    STATIC_CHECK(concepts::Matrix<COOMatrix<double, dyn, dyn>>);
+    STATIC_CHECK(concepts::Matrix<CSRMatrix<double, dyn, dyn>>);
+    STATIC_CHECK(concepts::Vector<COOVector<double, dyn>>);
+    STATIC_CHECK(concepts::Vector<CSRVector<double, dyn>>);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -812,8 +812,8 @@ TEST_CASE("csmatrix_as_csr_as_csc", "[sparse][csmatrix][conversion]") {
 
     SECTION("as_csc converts CSR to CSC") {
         auto csc = csr.as_csc();
-        static_assert(std::is_same_v<decltype(csc)::layout_policy,
-                                     zipper::storage::layout_left>);
+        STATIC_CHECK(std::is_same_v<decltype(csc)::layout_policy,
+                                    zipper::storage::layout_left>);
         CHECK(csc(0, 0) == 1.0);
         CHECK(csc(0, 2) == 2.0);
         CHECK(csc(1, 1) == 3.0);
@@ -824,8 +824,8 @@ TEST_CASE("csmatrix_as_csr_as_csc", "[sparse][csmatrix][conversion]") {
 
     SECTION("as_csr on CSR is identity") {
         auto csr2 = csr.as_csr();
-        static_assert(std::is_same_v<decltype(csr2)::layout_policy,
-                                     zipper::storage::layout_right>);
+        STATIC_CHECK(std::is_same_v<decltype(csr2)::layout_policy,
+                                    zipper::storage::layout_right>);
         CHECK(csr2(0, 0) == 1.0);
         CHECK(csr2(2, 2) == 5.0);
     }
@@ -833,8 +833,8 @@ TEST_CASE("csmatrix_as_csr_as_csc", "[sparse][csmatrix][conversion]") {
     SECTION("CSC → as_csr roundtrip") {
         auto csc = csr.as_csc();
         auto csr_back = csc.as_csr();
-        static_assert(std::is_same_v<decltype(csr_back)::layout_policy,
-                                     zipper::storage::layout_right>);
+        STATIC_CHECK(std::is_same_v<decltype(csr_back)::layout_policy,
+                                    zipper::storage::layout_right>);
         for (const auto &e : entries) {
             CHECK(csr_back(e.indices[0], e.indices[1]) == e.value);
         }
@@ -909,23 +909,23 @@ TEST_CASE("csmatrix_csvector_concepts",
     using namespace zipper;
 
     // CSMatrix with CSR layout
-    static_assert(concepts::Matrix<CSMatrix<double, 3, 3>>);
-    static_assert(
+    STATIC_CHECK(concepts::Matrix<CSMatrix<double, 3, 3>>);
+    STATIC_CHECK(
         concepts::Matrix<CSMatrix<double, 3, 3, storage::layout_right>>);
 
     // CSMatrix with CSC layout
-    static_assert(
+    STATIC_CHECK(
         concepts::Matrix<CSMatrix<double, 3, 3, storage::layout_left>>);
 
     // CSVector
-    static_assert(concepts::Vector<CSVector<double, 5>>);
+    STATIC_CHECK(concepts::Vector<CSVector<double, 5>>);
 
     // Dynamic extents
     constexpr auto dyn = dynamic_extent;
-    static_assert(concepts::Matrix<CSMatrix<double, dyn, dyn>>);
-    static_assert(
+    STATIC_CHECK(concepts::Matrix<CSMatrix<double, dyn, dyn>>);
+    STATIC_CHECK(
         concepts::Matrix<CSMatrix<double, dyn, dyn, storage::layout_left>>);
-    static_assert(concepts::Vector<CSVector<double, dyn>>);
+    STATIC_CHECK(concepts::Vector<CSVector<double, dyn>>);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -968,63 +968,73 @@ using pref = typename zipper::expression::detail::ExpressionTraits<
 template <typename Wrapper>
 using expr_of = typename Wrapper::expression_type;
 
-// ── Leaf preferences ─────────────────────────────────────────────────────
-
-// Dense row-major Matrix → DenseLayoutPreference<layout_right>
-static_assert(lp::is_dense_layout_preference_v<
-              pref<expr_of<zipper::Matrix<double, 3, 3>>>>);
-static_assert(std::is_same_v<pref<expr_of<zipper::Matrix<double, 3, 3>>>,
-                             lp::PreferRowMajor>);
-
-// Dense col-major Matrix → DenseLayoutPreference<layout_left>
-static_assert(std::is_same_v<pref<expr_of<zipper::Matrix<double, 3, 3, false>>>,
-                             lp::PreferColMajor>);
-
-// CSR matrix → SparseLayoutPreference<layout_right>
-static_assert(lp::is_sparse_layout_preference_v<
-              pref<expr_of<zipper::CSRMatrix<double, 3, 3>>>>);
-static_assert(std::is_same_v<pref<expr_of<zipper::CSRMatrix<double, 3, 3>>>,
-                             lp::PreferCSR>);
-
-// CSC matrix → SparseLayoutPreference<layout_left>
-static_assert(
-    std::is_same_v<
-        pref<expr_of<
-            zipper::CSMatrix<double, 3, 3, zipper::storage::layout_left>>>,
-        lp::PreferCSC>);
-
-// COO matrix → NoLayoutPreference
-static_assert(lp::is_no_layout_preference_v<
-              pref<expr_of<zipper::COOMatrix<double, 3, 3>>>>);
-
-// ── Transpose flipping ──────────────────────────────────────────────────
+// ── Transpose type aliases ──────────────────────────────────────────────
 
 // CSR.transpose() → PreferCSC
 using CSR33Expr = expr_of<zipper::CSRMatrix<double, 3, 3>>;
 using TransposedCSR =
     zipper::expression::unary::Swizzle<const CSR33Expr &, 1, 0>;
-static_assert(std::is_same_v<pref<TransposedCSR>, lp::PreferCSC>);
 
 // CSC.transpose() → PreferCSR
 using CSC33Expr =
     expr_of<zipper::CSMatrix<double, 3, 3, zipper::storage::layout_left>>;
 using TransposedCSC =
     zipper::expression::unary::Swizzle<const CSC33Expr &, 1, 0>;
-static_assert(std::is_same_v<pref<TransposedCSC>, lp::PreferCSR>);
 
 // Dense row-major.transpose() → PreferColMajor
 using DenseRMExpr = expr_of<zipper::Matrix<double, 3, 3>>;
 using TransposedDenseRM =
     zipper::expression::unary::Swizzle<const DenseRMExpr &, 1, 0>;
-static_assert(std::is_same_v<pref<TransposedDenseRM>, lp::PreferColMajor>);
 
 // Dense col-major.transpose() → PreferRowMajor
 using DenseCMExpr = expr_of<zipper::Matrix<double, 3, 3, false>>;
 using TransposedDenseCM =
     zipper::expression::unary::Swizzle<const DenseCMExpr &, 1, 0>;
-static_assert(std::is_same_v<pref<TransposedDenseCM>, lp::PreferRowMajor>);
 
 } // anonymous namespace
+
+TEST_CASE("preferred_layout_leaf_preferences", "[sparse][layout][preferences]") {
+    // Dense row-major Matrix → DenseLayoutPreference<layout_right>
+    STATIC_CHECK(lp::is_dense_layout_preference_v<
+                 pref<expr_of<zipper::Matrix<double, 3, 3>>>>);
+    STATIC_CHECK(std::is_same_v<pref<expr_of<zipper::Matrix<double, 3, 3>>>,
+                                lp::PreferRowMajor>);
+
+    // Dense col-major Matrix → DenseLayoutPreference<layout_left>
+    STATIC_CHECK(std::is_same_v<pref<expr_of<zipper::Matrix<double, 3, 3, false>>>,
+                                lp::PreferColMajor>);
+
+    // CSR matrix → SparseLayoutPreference<layout_right>
+    STATIC_CHECK(lp::is_sparse_layout_preference_v<
+                 pref<expr_of<zipper::CSRMatrix<double, 3, 3>>>>);
+    STATIC_CHECK(std::is_same_v<pref<expr_of<zipper::CSRMatrix<double, 3, 3>>>,
+                                lp::PreferCSR>);
+
+    // CSC matrix → SparseLayoutPreference<layout_left>
+    STATIC_CHECK(
+        std::is_same_v<
+            pref<expr_of<
+                zipper::CSMatrix<double, 3, 3, zipper::storage::layout_left>>>,
+            lp::PreferCSC>);
+
+    // COO matrix → NoLayoutPreference
+    STATIC_CHECK(lp::is_no_layout_preference_v<
+                 pref<expr_of<zipper::COOMatrix<double, 3, 3>>>>);
+}
+
+TEST_CASE("preferred_layout_transpose_flipping", "[sparse][layout][transpose]") {
+    // CSR.transpose() → PreferCSC
+    STATIC_CHECK(std::is_same_v<pref<TransposedCSR>, lp::PreferCSC>);
+
+    // CSC.transpose() → PreferCSR
+    STATIC_CHECK(std::is_same_v<pref<TransposedCSC>, lp::PreferCSR>);
+
+    // Dense row-major.transpose() → PreferColMajor
+    STATIC_CHECK(std::is_same_v<pref<TransposedDenseRM>, lp::PreferColMajor>);
+
+    // Dense col-major.transpose() → PreferRowMajor
+    STATIC_CHECK(std::is_same_v<pref<TransposedDenseCM>, lp::PreferRowMajor>);
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  Runtime: smart eval() dispatch
@@ -1041,7 +1051,7 @@ TEST_CASE("eval_csr_produces_csmatrix_csr", "[sparse][eval]") {
     // eval() on a CSR expression should produce a CSMatrix<..., layout_right>
     auto result = csr.transpose().transpose().eval();
     using result_type = decltype(result);
-    static_assert(
+    STATIC_CHECK(
         std::is_same_v<
             result_type,
             zipper::CSMatrix<double, 3, 3, zipper::storage::layout_right>>);
@@ -1060,7 +1070,7 @@ TEST_CASE("eval_csr_transpose_produces_csc", "[sparse][eval]") {
     // transpose of CSR → eval() should produce CSC
     auto result = csr.transpose().eval();
     using result_type = decltype(result);
-    static_assert(
+    STATIC_CHECK(
         std::is_same_v<
             result_type,
             zipper::CSMatrix<double, 3, 2, zipper::storage::layout_left>>);
@@ -1080,7 +1090,7 @@ TEST_CASE("eval_csc_transpose_produces_csr", "[sparse][eval]") {
     // transpose of CSC → eval() should produce CSR
     auto result = csc.transpose().eval();
     using result_type = decltype(result);
-    static_assert(
+    STATIC_CHECK(
         std::is_same_v<
             result_type,
             zipper::CSMatrix<double, 2, 3, zipper::storage::layout_right>>);
@@ -1095,7 +1105,7 @@ TEST_CASE("eval_dense_still_produces_matrix", "[sparse][eval]") {
     auto result = A.transpose().transpose().eval();
     using result_type = decltype(result);
     // Dense row-major → transpose → transpose → still row-major dense
-    static_assert(std::is_same_v<result_type, zipper::Matrix<double, 2, 2>>);
+    STATIC_CHECK(std::is_same_v<result_type, zipper::Matrix<double, 2, 2>>);
     CHECK(result(0, 0) == 1.0);
     CHECK(result(1, 1) == 4.0);
 }
@@ -1106,7 +1116,7 @@ TEST_CASE("eval_dense_transpose_produces_col_major", "[sparse][eval]") {
     auto result = A.transpose().eval();
     using result_type = decltype(result);
     // Dense row-major transposed → should be col-major dense
-    static_assert(
+    STATIC_CHECK(
         std::is_same_v<result_type, zipper::Matrix<double, 3, 2, false>>);
     CHECK(result(0, 0) == 1.0);
     CHECK(result(0, 1) == 4.0);
@@ -1190,15 +1200,15 @@ TEST_CASE("coo_element_type_alias", "[sparse][coo][audit][fix8]") {
     using COO =
         zipper::storage::SparseCoordinateAccessor<double,
                                                   zipper::extents<3, 3>>;
-    static_assert(std::is_same_v<COO::element_type, double>);
-    static_assert(std::is_same_v<COO::value_type, double>);
+    STATIC_CHECK(std::is_same_v<COO::element_type, double>);
+    STATIC_CHECK(std::is_same_v<COO::value_type, double>);
 
     // Also verify on compressed accessor (supports const ValueType)
     using ConstCS =
         zipper::storage::SparseCompressedAccessor<const double,
                                                   zipper::extents<3, 3>>;
-    static_assert(std::is_same_v<ConstCS::element_type, double>);
-    static_assert(std::is_same_v<ConstCS::value_type, const double>);
+    STATIC_CHECK(std::is_same_v<ConstCS::element_type, double>);
+    STATIC_CHECK(std::is_same_v<ConstCS::value_type, const double>);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1218,7 +1228,7 @@ TEST_CASE("eval_csr_vector_produces_csvector",
     // Vector
     auto result = csr.eval();
     using result_type = decltype(result);
-    static_assert(std::is_same_v<result_type, zipper::CSVector<double, 5>>);
+    STATIC_CHECK(std::is_same_v<result_type, zipper::CSVector<double, 5>>);
     CHECK(result(1) == 3.0);
     CHECK(result(3) == 7.0);
     CHECK(result(0) == 0.0);
@@ -1234,7 +1244,7 @@ TEST_CASE("eval_csvector_produces_csvector",
 
     auto result = sv.eval();
     using result_type = decltype(result);
-    static_assert(std::is_same_v<result_type, zipper::CSVector<double, 5>>);
+    STATIC_CHECK(std::is_same_v<result_type, zipper::CSVector<double, 5>>);
     CHECK(result(2) == 42.0);
     CHECK(result(0) == 0.0);
 }
@@ -1246,7 +1256,7 @@ TEST_CASE("eval_dense_vector_still_produces_vector",
     auto result = v.eval();
     using result_type = decltype(result);
     // Dense vector eval() should still produce a dense Vector
-    static_assert(std::is_same_v<result_type, zipper::Vector<double, 3>>);
+    STATIC_CHECK(std::is_same_v<result_type, zipper::Vector<double, 3>>);
     CHECK(result(0) == 1.0);
     CHECK(result(2) == 3.0);
 }
@@ -1264,7 +1274,7 @@ TEST_CASE("coo_vector_to_cs", "[sparse][coo][vector][audit][fix10]") {
 
     auto sv = coo.to_cs();
     using result_type = decltype(sv);
-    static_assert(std::is_same_v<result_type, zipper::CSVector<double, 5>>);
+    STATIC_CHECK(std::is_same_v<result_type, zipper::CSVector<double, 5>>);
 
     CHECK(sv(0) == 1.0);
     CHECK(sv(1) == 0.0);
@@ -1278,8 +1288,8 @@ TEST_CASE("coo_vector_to_cs", "[sparse][coo][vector][audit][fix10]") {
 // ═══════════════════════════════════════════════════════════════════════════
 
 TEST_CASE("csr_matrix_layout_policy_alias", "[sparse][csr][audit][fix12]") {
-    static_assert(std::is_same_v<zipper::CSRMatrix<double, 3, 3>::layout_policy,
-                                 zipper::storage::layout_right>);
+    STATIC_CHECK(std::is_same_v<zipper::CSRMatrix<double, 3, 3>::layout_policy,
+                                zipper::storage::layout_right>);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1345,7 +1355,7 @@ TEST_CASE("compressed_const_coeff_ref_on_const_value_type",
 
     // const_coeff_ref should compile even for const ValueType
     // (previously gated on !is_const_v<ValueType>)
-    static_assert(requires(const ConstCSR &a) { a.const_coeff_ref(0, 0); });
+    STATIC_CHECK(requires(const ConstCSR &a) { a.const_coeff_ref(0, 0); });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1484,7 +1494,7 @@ TEST_CASE("coo_matrix_to_cs_csr", "[sparse][coo][matrix][audit][fix10]") {
 
     auto csr = coo.to_cs<zipper::storage::layout_right>();
     using result_type = decltype(csr);
-    static_assert(
+    STATIC_CHECK(
         std::is_same_v<
             result_type,
             zipper::CSMatrix<double, 3, 3, zipper::storage::layout_right>>);
@@ -1502,7 +1512,7 @@ TEST_CASE("coo_matrix_to_cs_csc", "[sparse][coo][matrix][audit][fix10]") {
 
     auto csc = coo.to_cs<zipper::storage::layout_left>();
     using result_type = decltype(csc);
-    static_assert(
+    STATIC_CHECK(
         std::is_same_v<
             result_type,
             zipper::CSMatrix<double, 3, 3, zipper::storage::layout_left>>);

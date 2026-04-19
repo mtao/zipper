@@ -43,7 +43,7 @@ TEST_CASE("test_span_construction", "[vector][storage][dense]") {
     zipper::Array<double, 3>::span_type A{sp};
 
     REQUIRE(v.extent(0) == data.size());
-    static_assert(std::decay_t<decltype(v.extents())>::static_extent(0) ==
+    STATIC_CHECK(std::decay_t<decltype(v.extents())>::static_extent(0) ==
                   data.size());
     CHECK(&data[0] == &v(0));
     CHECK(&data[1] == &v(1));

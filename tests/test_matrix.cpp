@@ -113,10 +113,10 @@ TEST_CASE("test_matrix_eval", "[matrix][storage][dense]") {
 
   auto x = (N * 2).eval();
   auto v = N.as_array();
-  static_assert(std::is_same_v<std::decay_t<decltype(v)>::extents_type,
-                               decltype(N)::extents_type>);
-  static_assert(std::is_same_v<decltype(v.extents()), decltype(N.extents())>);
-  static_assert(std::decay_t<decltype(v)>::extents_type::rank() == 2);
+  STATIC_CHECK(std::is_same_v<std::decay_t<decltype(v)>::extents_type,
+                              decltype(N)::extents_type>);
+  STATIC_CHECK(std::is_same_v<decltype(v.extents()), decltype(N.extents())>);
+  STATIC_CHECK(std::decay_t<decltype(v)>::extents_type::rank() == 2);
   // auto y = N.as_array().eval();
   print(x);
 }
@@ -335,22 +335,22 @@ TEST_CASE("test_partial_trace_matrix", "[matrix][storage][dense]") {
     using PT = zipper::expression::unary::PartialTrace<
         std::decay_t<decltype(N.expression())>>;
     zipper::MatrixBase<PT> empty_partial_trace(std::in_place, N.expression());
-    static_assert(
+    STATIC_CHECK(
         std::decay_t<decltype(empty_partial_trace.extents())>::rank() == 2);
     using reducer = std::decay_t<
         decltype(empty_partial_trace.expression())>::traits::index_remover;
     constexpr static auto f2r = reducer::full_rank_to_reduced_indices;
     constexpr static auto r2f = reducer::reduced_rank_to_full_indices;
-    static_assert(f2r.size() == 2);
-    static_assert(r2f.size() == 2);
-    static_assert(f2r[0] == 0);
-    static_assert(f2r[1] == 1);
-    static_assert(r2f[0] == 0);
-    static_assert(f2r[1] == 1);
-    static_assert(
+    STATIC_CHECK(f2r.size() == 2);
+    STATIC_CHECK(r2f.size() == 2);
+    STATIC_CHECK(f2r[0] == 0);
+    STATIC_CHECK(f2r[1] == 1);
+    STATIC_CHECK(r2f[0] == 0);
+    STATIC_CHECK(f2r[1] == 1);
+    STATIC_CHECK(
         std::decay_t<decltype(empty_partial_trace.extents())>::static_extent(
             0) == 3);
-    static_assert(
+    STATIC_CHECK(
         std::decay_t<decltype(empty_partial_trace.extents())>::static_extent(
             1) == 3);
     CHECK(empty_partial_trace == N);
@@ -382,10 +382,10 @@ TEST_CASE("test_blocks", "[matrix][storage][dense]") {
     auto CC = C.topRows(zipper::static_index_t<2>{});
     auto RR = R.topRows(2);
     auto RC = R.topRows(zipper::static_index_t<2>{});
-    static_assert(CC.static_extent(0) == 2);
-    static_assert(CR.static_extent(0) == std::dynamic_extent);
-    static_assert(RC.static_extent(0) == 2);
-    static_assert(RR.static_extent(0) == std::dynamic_extent);
+    STATIC_CHECK(CC.static_extent(0) == 2);
+    STATIC_CHECK(CR.static_extent(0) == std::dynamic_extent);
+    STATIC_CHECK(RC.static_extent(0) == 2);
+    STATIC_CHECK(RR.static_extent(0) == std::dynamic_extent);
     REQUIRE(CR.extents() == zipper::create_dextents(2, 6));
     REQUIRE(CR.extents() == CC.extents());
     REQUIRE(CR.extents() == CC.extents());
@@ -412,10 +412,10 @@ TEST_CASE("test_blocks", "[matrix][storage][dense]") {
     auto CC = C.leftCols(zipper::static_index_t<5>{});
     auto RR = R.leftCols(5);
     auto RC = R.leftCols(zipper::static_index_t<5>{});
-    static_assert(CC.static_extent(1) == 5);
-    static_assert(CR.static_extent(1) == std::dynamic_extent);
-    static_assert(RC.static_extent(1) == 5);
-    static_assert(RR.static_extent(1) == std::dynamic_extent);
+    STATIC_CHECK(CC.static_extent(1) == 5);
+    STATIC_CHECK(CR.static_extent(1) == std::dynamic_extent);
+    STATIC_CHECK(RC.static_extent(1) == 5);
+    STATIC_CHECK(RR.static_extent(1) == std::dynamic_extent);
     REQUIRE(CR.extents() == zipper::create_dextents(3, 5));
     REQUIRE(CR.extents() == CC.extents());
     REQUIRE(CR.extents() == CC.extents());
@@ -448,17 +448,17 @@ TEST_CASE("test_blocks", "[matrix][storage][dense]") {
     using CRT_C =
         CRT::expression_type::traits::extents_helper::single_slice_helper<1>;
 
-    static_assert(
+    STATIC_CHECK(
         std::is_same_v<CRT_R::type,
                        zipper::slice_t<zipper::index_type, zipper::index_type,
                                        zipper::index_type>>);
 
-    static_assert(std::is_same_v<CRT_C::type, zipper::full_extent_t>);
+    STATIC_CHECK(std::is_same_v<CRT_C::type, zipper::full_extent_t>);
     // static_assert(
-    static_assert(CC.static_extent(0) == 2);
-    static_assert(CR.static_extent(0) == std::dynamic_extent);
-    static_assert(RC.static_extent(0) == std::dynamic_extent);
-    static_assert(RR.static_extent(0) == std::dynamic_extent);
+    STATIC_CHECK(CC.static_extent(0) == 2);
+    STATIC_CHECK(CR.static_extent(0) == std::dynamic_extent);
+    STATIC_CHECK(RC.static_extent(0) == std::dynamic_extent);
+    STATIC_CHECK(RR.static_extent(0) == std::dynamic_extent);
     REQUIRE(CR.extents() == zipper::create_dextents(2, 6));
     REQUIRE(CR.extents() == CC.extents());
     REQUIRE(CR.extents() == CC.extents());
@@ -485,10 +485,10 @@ TEST_CASE("test_blocks", "[matrix][storage][dense]") {
     auto CC = C.rightCols(zipper::static_index_t<5>{});
     auto RR = R.rightCols(5);
     auto RC = R.rightCols(zipper::static_index_t<5>{});
-    static_assert(CC.static_extent(1) == 5);
-    static_assert(CR.static_extent(1) == std::dynamic_extent);
-    static_assert(RC.static_extent(1) == std::dynamic_extent);
-    static_assert(RR.static_extent(1) == std::dynamic_extent);
+    STATIC_CHECK(CC.static_extent(1) == 5);
+    STATIC_CHECK(CR.static_extent(1) == std::dynamic_extent);
+    STATIC_CHECK(RC.static_extent(1) == std::dynamic_extent);
+    STATIC_CHECK(RR.static_extent(1) == std::dynamic_extent);
     REQUIRE(CR.extents() == zipper::create_dextents(3, 5));
     REQUIRE(CR.extents() == CC.extents());
     REQUIRE(CR.extents() == CC.extents());
@@ -679,15 +679,15 @@ TEST_CASE("test_matrix_transpose", "[matrix][storage][dense]") {
     const auto &I2sliceview = I2view.expression();
     using slice_extents_type =
         typename std::decay_t<decltype(I2sliceview)>::extents_type;
-    static_assert(slice_extents_type::rank() == 2);
-    static_assert(slice_extents_type::static_extent(0) == 3);
-    static_assert(slice_extents_type::static_extent(1) == 3);
+    STATIC_CHECK(slice_extents_type::rank() == 2);
+    STATIC_CHECK(slice_extents_type::static_extent(0) == 3);
+    STATIC_CHECK(slice_extents_type::static_extent(1) == 3);
 
     using swizzle_extents_type =
         typename std::decay_t<decltype(I2view)>::extents_type;
-    static_assert(swizzle_extents_type::rank() == 2);
-    static_assert(swizzle_extents_type::static_extent(0) == 3);
-    static_assert(swizzle_extents_type::static_extent(1) == 3);
+    STATIC_CHECK(swizzle_extents_type::rank() == 2);
+    STATIC_CHECK(swizzle_extents_type::static_extent(0) == 3);
+    STATIC_CHECK(swizzle_extents_type::static_extent(1) == 3);
 
     using swizzler_type =
         typename std::decay_t<decltype(I2view)>::swizzler_type;
@@ -727,10 +727,10 @@ TEST_CASE("test_matrix_span", "[matrix][storage][dense][span]") {
   zipper::Matrix<int, std::dynamic_extent, std::dynamic_extent>::span_type Md(
       std::span<int>(vec), zipper::create_dextents(2, 2));
 
-  static_assert(M.static_extent(0) == 2);
-  static_assert(M.static_extent(1) == 2);
-  static_assert(Md.static_extent(0) == std::dynamic_extent);
-  static_assert(Md.static_extent(1) == std::dynamic_extent);
+  STATIC_CHECK(M.static_extent(0) == 2);
+  STATIC_CHECK(M.static_extent(1) == 2);
+  STATIC_CHECK(Md.static_extent(0) == std::dynamic_extent);
+  STATIC_CHECK(Md.static_extent(1) == std::dynamic_extent);
   REQUIRE(M.extent(0) == 2);
   REQUIRE(M.extent(1) == 2);
   REQUIRE(Md.extent(0) == 2);
@@ -778,7 +778,7 @@ TEST_CASE("test_span_view", "[vector][storage][dense][span]") {
   {
     zipper::Vector<double, std::dynamic_extent> x = {1, 2, 3};
 
-    static_assert(std::decay_t<decltype(x)>::extents_type::rank() == 1);
+    STATIC_CHECK(std::decay_t<decltype(x)>::extents_type::rank() == 1);
 
     auto y = x.as_span();
     CHECK(x == y);

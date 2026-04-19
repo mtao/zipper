@@ -280,15 +280,15 @@ TEST_CASE("test_matrix_transpose", "[matrix][storage][dense]") {
     const auto &I2sliceview = I2view.expression();
     using slice_extents_type =
         typename std::decay_t<decltype(I2sliceview)>::extents_type;
-    static_assert(slice_extents_type::rank() == 2);
-    static_assert(slice_extents_type::static_extent(0) == 3);
-    static_assert(slice_extents_type::static_extent(1) == 3);
+    STATIC_CHECK(slice_extents_type::rank() == 2);
+    STATIC_CHECK(slice_extents_type::static_extent(0) == 3);
+    STATIC_CHECK(slice_extents_type::static_extent(1) == 3);
 
     using swizzle_extents_type =
         typename std::decay_t<decltype(I2view)>::extents_type;
-    static_assert(swizzle_extents_type::rank() == 2);
-    static_assert(swizzle_extents_type::static_extent(0) == 3);
-    static_assert(swizzle_extents_type::static_extent(1) == 3);
+    STATIC_CHECK(swizzle_extents_type::rank() == 2);
+    STATIC_CHECK(swizzle_extents_type::static_extent(0) == 3);
+    STATIC_CHECK(swizzle_extents_type::static_extent(1) == 3);
 
     using swizzler_type =
         typename std::decay_t<decltype(I2view)>::swizzler_type;
@@ -379,8 +379,7 @@ TEST_CASE("const_matrix_transpose_not_writable", "[swizzle][const]") {
     auto T = M.transpose();
     // T should be read-only since M is const
     using T_type = decltype(T);
-    static_assert(!zipper::expression::concepts::WritableExpression<typename T_type::expression_type>,
-                  "transpose of const matrix should not be writable");
+    STATIC_CHECK_FALSE(zipper::expression::concepts::WritableExpression<typename T_type::expression_type>);
     CHECK(T(0, 0) == 1.0);
     CHECK(T(1, 0) == 2.0);
     CHECK(T(0, 1) == 3.0);
