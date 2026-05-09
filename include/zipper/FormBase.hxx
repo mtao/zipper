@@ -6,8 +6,8 @@
 #include "expression/nullary/MDSpan.hpp"
 #include "zipper/detail/declare_operations.hpp"
 #include "zipper/expression/binary/ArithmeticExpressions.hpp"
+#include "zipper/expression/binary/ExteriorProduct.hpp"
 #include "zipper/expression/binary/FormTensorProduct.hpp"
-#include "zipper/expression/binary/WedgeProduct.hpp"
 #include "zipper/expression/binary/ZeroAwareOperation.hpp"
 #include "zipper/expression/unary/ScalarArithmetic.hpp"
 
@@ -36,7 +36,7 @@ template <typename Expr1, typename Expr2>
 auto operator^(Expr1 &&lhs, Expr2 &&rhs) {
     using A = detail::forwarded_expression_t<Expr1>;
     using B = detail::forwarded_expression_t<Expr2>;
-    using V = expression::binary::WedgeProduct<A, B>;
+    using V = expression::binary::ExteriorProduct<A, B>;
     return FormBase<V>(std::in_place,
                        std::forward<Expr1>(lhs).expression(),
                        std::forward<Expr2>(rhs).expression());

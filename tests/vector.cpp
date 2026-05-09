@@ -3,6 +3,7 @@
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
 #include <zipper/concepts/shapes.hpp>
+#include <zipper/exterior.hpp>
 #include <zipper/expression/nullary/Constant.hpp>
 #include <zipper/expression/nullary/Identity.hpp>
 #include <zipper/expression/nullary/Random.hpp>
@@ -68,9 +69,7 @@ TEST_CASE("test_dot", "[matrix][storage][dense]") {
     // static_assert(zipper::concepts::ValidExtents<Vector<double,3>,3>);
     STATIC_CHECK(zipper::concepts::ValidExtents<Vector<double, 3>, 3>);
 
-    // TODO: Hodge star operator (*) not yet implemented in FormBase
-    // Vector c = (*a.as_form()).as_vector();
-    Vector c = a; // placeholder until Hodge star is implemented
+    Vector c = (*(*a.as_form())).as_vector();
 
     VectorBase e0 = expression::nullary::unit_vector<double, 3>(0);
     VectorBase e1 = expression::nullary::unit_vector<double>(3, 1);
@@ -240,3 +239,65 @@ TEST_CASE("static_matrix_compound_scalar_div", "[matrix][compound]") {
 // FormBase::operator= uses `expression() = v.expression()` instead of
 // `expression().assign(v.expression())`. See FormBase.hpp lines 62-69.
 // Form compound tests are omitted until FormBase assignment is fixed.
+
+TEST_CASE("hodge_star_euclidean_1form", "[form][hodge]") {
+    auto dx = basis_form<3, 1, double>({0});
+    auto star_dx = (*dx).eval();
+
+    CHECK(star_dx.extent(0) == 3);
+    CHECK(star_dx.extent(1) == 3);
+    CHECK(star_dx(1, 2) == Catch::Approx(1.0));
+    CHECK(star_dx(2, 1) == Catch::Approx(-1.0));
+    CHECK(star_dx(0, 1) == Catch::Approx(0.0));
+    CHECK(star_dx(0, 2) == Catch::Approx(0.0));
+}
+
+TEST_CASE("hodge_star_2d", "[form][hodge]") {
+    Vector<double, 2> v{{4.0, -5.0}};
+    auto f = v.as_form();
+    auto star_f = (*f).eval();
+    auto star_star_f = (*star_f).eval();
+    Vector<double, 2> roundtrip = star_star_f.as_vector();
+
+    CHECK(roundtrip(0) == -4.0);
+    CHECK(roundtrip(1) == 5.0);
+}
+
+TEST_CASE("hodge_star_preserves_dot_product", "[form][hodge]") {
+    auto dx = basis_form<3, 1, double>({0});
+    auto dy = basis_form<3, 1, double>({1});
+    auto dx_wedge_dy = wedge(dx, dy).eval();
+    auto star_dx_wedge_dy = (*dx_wedge_dy).eval();
+
+    CHECK(star_dx_wedge_dy.extent(0) == 3);
+    CHECK(star_dx_wedge_dy(2) == Catch::Approx(1.0));
+    CHECK(star_dx_wedge_dy(0) == Catch::Approx(0.0));
+    CHECK(star_dx_wedge_dy(1) == Catch::Approx(0.0));
+}
+
+TEST_CASE("hodge_star_double_application", "[form][hodge]") {
+    auto dx = basis_form<3, 1, double>({0});
+    auto star_dx = (*dx).eval();
+    auto star_star_dx = (*star_dx).eval();
+
+    CHECK(star_star_dx(0) == Catch::Approx(1.0));
+    CHECK(star_star_dx(1) == Catch::Approx(0.0));
+    CHECK(star_star_dx(2) == Catch::Approx(0.0));
+
+    auto dx_wedge_dy = wedge(basis_form<3, 1, double>({0}),
+                             basis_form<3, 1, double>({1})).eval();
+    auto star_2 = (*dx_wedge_dy).eval();
+    auto star_star_2 = (*star_2).eval();
+
+    CHECK(star_star_2(0, 1) == Catch::Approx(dx_wedge_dy(0, 1)));
+    CHECK(star_star_2(1, 0) == Catch::Approx(dx_wedge_dy(1, 0)));
+}
+
+TEST_CASE("hodge_star_1d", "[form][hodge]") {
+    Vector<double, 1> v;
+    v(0) = 42.0;
+    auto f = v.as_form();
+    auto star_f = (*f).eval();
+
+    CHECK(star_f() == 42.0);
+}

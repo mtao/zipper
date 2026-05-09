@@ -24,6 +24,9 @@ test('array', test_array)
 test_vector = executable('test_vector', 'vector.cpp', dependencies: [zipper_test_dep])
 test('vector', test_vector)
 
+test_exterior = executable('test_exterior', 'exterior.cpp', dependencies: [zipper_test_dep])
+test('exterior', test_exterior)
+
 test_matrix = executable('test_matrix', 'matrix.cpp', dependencies: [zipper_test_dep])
 test('matrix', test_matrix)
 

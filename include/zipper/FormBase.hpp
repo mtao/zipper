@@ -94,11 +94,7 @@ public:
     return FormBase<V>(std::in_place, std::forward<Self>(self).expression(), Slices{}...);
   }
 
-  auto operator*() const {
-    // TODO: this needs to be implemented
-    std::unreachable();
-    return *this;
-  }
+  auto operator*() const;
 };
 
 template <concepts::Expression Expr>
