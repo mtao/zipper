@@ -85,10 +85,7 @@ public:
   Vector(const Vector &o) = default;
   Vector &operator=(const Vector &o) = default;
   Vector(Vector &&o) = default;
-  Vector &operator=(Vector &&o) {
-    expression().operator=(std::move(o.expression()));
-    return *this;
-  }
+  Vector &operator=(Vector &&o) = default;
   Vector(index_type size)
     requires(extents_traits::is_dynamic)
       : Base(zipper::extents<Rows>(size)) {}

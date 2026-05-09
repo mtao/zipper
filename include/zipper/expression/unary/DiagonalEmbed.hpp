@@ -62,8 +62,7 @@ template <zipper::concepts::QualifiedExpression ExpressionType>
 struct detail::ExpressionTraits<unary::DiagonalEmbed<ExpressionType>>
     : public unary::detail::DefaultUnaryExpressionTraits<
           ExpressionType,
-          zipper::detail::AccessFeatures{.is_const = true,
-                                          .is_reference = false}> {
+          zipper::detail::AccessFeatures::const_value()> {
   using _Detail =
       detail::ExpressionDetail<unary::DiagonalEmbed<ExpressionType>>;
   using value_type = typename _Detail::value_type;

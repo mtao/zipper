@@ -193,7 +193,7 @@ TEST_CASE("data_array_slice_static", "[data_array][slice]") {
 
   auto s = c.slice<static_slice_t<1, 3>>();
   using slice_extents = typename std::decay_t<decltype(s)>::extents_type;
-  static_assert(slice_extents::static_extent(0) == 3);
+  STATIC_CHECK(slice_extents::static_extent(0) == 3);
   REQUIRE(s.extent(0) == 3);
   CHECK(s(0) == 1.0);
   CHECK(s(1) == 2.0);
@@ -267,7 +267,7 @@ TEST_CASE("data_array_cast", "[data_array][cast]") {
   c(2) = 3;
 
   auto d = c.cast<double>();
-  static_assert(
+  STATIC_CHECK(
       std::is_same_v<typename std::decay_t<decltype(d)>::value_type, double>);
   CHECK(d(0) == 1.0);
   CHECK(d(1) == 2.0);

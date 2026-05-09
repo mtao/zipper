@@ -67,14 +67,8 @@ public:
     expression() = v.expression();
     return *this;
   }
-  auto operator=(const FormBase &v) -> FormBase & {
-    Base::operator=(v.expression());
-    return *this;
-  }
-  auto operator=(FormBase &&v) -> FormBase & {
-    Base::operator=(v.expression());
-    return *this;
-  }
+  auto operator=(const FormBase &v) -> FormBase & = default;
+  auto operator=(FormBase &&v) -> FormBase & = default;
 
   template <concepts::Form Other>
   FormBase(const Other &other)

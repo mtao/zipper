@@ -47,46 +47,46 @@ TEST_CASE("standard_data_are_data_like", "[storage]") {
   {
     using T = zipper::storage::StaticDenseData<index_type, 30>;
     T t;
-    static_assert(std::is_same_v<index_type, std::decay_t<T>::value_type>);
-    static_assert(std::is_same_v<index_type, std::decay_t<T>::element_type>);
-    static_assert(std::is_same_v<decltype(t.coeff(0)), index_type>);
-    static_assert(zipper::storage::concepts::Data<T>);
+    STATIC_CHECK(std::is_same_v<index_type, std::decay_t<T>::value_type>);
+    STATIC_CHECK(std::is_same_v<index_type, std::decay_t<T>::element_type>);
+    STATIC_CHECK(std::is_same_v<decltype(t.coeff(0)), index_type>);
+    STATIC_CHECK(zipper::storage::concepts::Data<T>);
   }
   {
     using T = zipper::storage::DynamicDenseData<index_type>;
     T t(30);
-    static_assert(std::is_same_v<index_type, std::decay_t<T>::value_type>);
-    static_assert(std::is_same_v<index_type, std::decay_t<T>::element_type>);
-    static_assert(std::is_same_v<decltype(t.coeff(0)), index_type>);
-    static_assert(zipper::storage::concepts::Data<T>);
+    STATIC_CHECK(std::is_same_v<index_type, std::decay_t<T>::value_type>);
+    STATIC_CHECK(std::is_same_v<index_type, std::decay_t<T>::element_type>);
+    STATIC_CHECK(std::is_same_v<decltype(t.coeff(0)), index_type>);
+    STATIC_CHECK(zipper::storage::concepts::Data<T>);
   }
   {
     using T = zipper::storage::SpanData<index_type, 5>;
     std::array<index_type, 5> a;
     T t = std::span(a);
-    static_assert(std::is_same_v<index_type, std::decay_t<T>::value_type>);
-    static_assert(std::is_same_v<index_type, std::decay_t<T>::element_type>);
-    static_assert(std::is_same_v<decltype(t.coeff(0)), index_type>);
-    static_assert(zipper::storage::concepts::Data<T>);
+    STATIC_CHECK(std::is_same_v<index_type, std::decay_t<T>::value_type>);
+    STATIC_CHECK(std::is_same_v<index_type, std::decay_t<T>::element_type>);
+    STATIC_CHECK(std::is_same_v<decltype(t.coeff(0)), index_type>);
+    STATIC_CHECK(zipper::storage::concepts::Data<T>);
   }
   {
     using T = zipper::storage::SpanData<index_type, std::dynamic_extent>;
     std::vector<index_type> a(5);
     T t = std::span(a);
-    static_assert(std::is_same_v<index_type, std::decay_t<T>::value_type>);
-    static_assert(std::is_same_v<index_type, std::decay_t<T>::element_type>);
-    static_assert(std::is_same_v<decltype(t.coeff(0)), index_type>);
-    static_assert(zipper::storage::concepts::Data<T>);
+    STATIC_CHECK(std::is_same_v<index_type, std::decay_t<T>::value_type>);
+    STATIC_CHECK(std::is_same_v<index_type, std::decay_t<T>::element_type>);
+    STATIC_CHECK(std::is_same_v<decltype(t.coeff(0)), index_type>);
+    STATIC_CHECK(zipper::storage::concepts::Data<T>);
   }
 
   {
     using T = zipper::storage::StaticDenseData<const index_type, 5>;
     T t = {{0, 1, 2, 3, 4}};
-    static_assert(std::is_same_v<index_type, std::decay_t<T>::value_type>);
-    static_assert(
+    STATIC_CHECK(std::is_same_v<index_type, std::decay_t<T>::value_type>);
+    STATIC_CHECK(
         std::is_same_v<const index_type, std::decay_t<T>::element_type>);
-    static_assert(std::is_same_v<decltype(t.coeff(0)), index_type>);
-    static_assert(zipper::storage::concepts::Data<T>);
+    STATIC_CHECK(std::is_same_v<decltype(t.coeff(0)), index_type>);
+    STATIC_CHECK(zipper::storage::concepts::Data<T>);
   }
 
   // if constexpr (false) {  // NOTE: std::vector cannot take non-const value
@@ -99,21 +99,21 @@ TEST_CASE("standard_data_are_data_like", "[storage]") {
     using T = zipper::storage::SpanData<const index_type, 5>;
     const std::array<index_type, 5> a = {{0, 1, 2, 3, 4}};
     T t = std::span(a);
-    static_assert(std::is_same_v<index_type, std::decay_t<T>::value_type>);
-    static_assert(
+    STATIC_CHECK(std::is_same_v<index_type, std::decay_t<T>::value_type>);
+    STATIC_CHECK(
         std::is_same_v<const index_type, std::decay_t<T>::element_type>);
-    static_assert(std::is_same_v<decltype(t.coeff(0)), index_type>);
-    static_assert(zipper::storage::concepts::Data<T>);
+    STATIC_CHECK(std::is_same_v<decltype(t.coeff(0)), index_type>);
+    STATIC_CHECK(zipper::storage::concepts::Data<T>);
   }
   {
     using T = zipper::storage::SpanData<const index_type, std::dynamic_extent>;
     const std::vector<index_type> a(5);
     T t = std::span(a);
-    static_assert(std::is_same_v<index_type, std::decay_t<T>::value_type>);
-    static_assert(
+    STATIC_CHECK(std::is_same_v<index_type, std::decay_t<T>::value_type>);
+    STATIC_CHECK(
         std::is_same_v<const index_type, std::decay_t<T>::element_type>);
-    static_assert(std::is_same_v<decltype(t.coeff(0)), index_type>);
-    static_assert(zipper::storage::concepts::Data<T>);
+    STATIC_CHECK(std::is_same_v<decltype(t.coeff(0)), index_type>);
+    STATIC_CHECK(zipper::storage::concepts::Data<T>);
   }
 
   //===================================================
@@ -121,24 +121,24 @@ TEST_CASE("standard_data_are_data_like", "[storage]") {
   {
     using T = const zipper::storage::StaticDenseData<index_type, 30>;
     T t = {{0, 1, 2, 3, 4}};
-    static_assert(std::is_same_v<index_type, std::decay_t<T>::value_type>);
-    static_assert(std::is_same_v<index_type, std::decay_t<T>::element_type>);
-    static_assert(std::is_same_v<decltype(t.coeff(0)), index_type>);
+    STATIC_CHECK(std::is_same_v<index_type, std::decay_t<T>::value_type>);
+    STATIC_CHECK(std::is_same_v<index_type, std::decay_t<T>::element_type>);
+    STATIC_CHECK(std::is_same_v<decltype(t.coeff(0)), index_type>);
   }
   {
     using T = const zipper::storage::DynamicDenseData<index_type>;
     T t(30);
-    static_assert(std::is_same_v<index_type, std::decay_t<T>::value_type>);
-    static_assert(std::is_same_v<index_type, std::decay_t<T>::element_type>);
-    static_assert(std::is_same_v<decltype(t.coeff(0)), index_type>);
+    STATIC_CHECK(std::is_same_v<index_type, std::decay_t<T>::value_type>);
+    STATIC_CHECK(std::is_same_v<index_type, std::decay_t<T>::element_type>);
+    STATIC_CHECK(std::is_same_v<decltype(t.coeff(0)), index_type>);
   }
   {
     using T = const zipper::storage::StaticDenseData<const index_type, 30>;
     T t = {{0, 1, 2, 3, 4}};
-    static_assert(std::is_same_v<index_type, std::decay_t<T>::value_type>);
-    static_assert(
+    STATIC_CHECK(std::is_same_v<index_type, std::decay_t<T>::value_type>);
+    STATIC_CHECK(
         std::is_same_v<const index_type, std::decay_t<T>::element_type>);
-    static_assert(std::is_same_v<decltype(t.coeff(0)), index_type>);
+    STATIC_CHECK(std::is_same_v<decltype(t.coeff(0)), index_type>);
   }
   // if constexpr (false) {  // NOTE: std::vector cannot take non-const value
   //     using T = const zipper::storage::DynamicDenseData<const index_type>;

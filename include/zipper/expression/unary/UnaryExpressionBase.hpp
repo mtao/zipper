@@ -19,9 +19,9 @@ namespace detail {
             constexpr auto base = expression::detail::ExpressionTraits<
                 std::decay_t<Child>>::access_features;
             return {
-                .is_const = base.is_const
-                            || std::is_const_v<std::remove_reference_t<Child>>,
-                .is_reference = base.is_reference,
+                base.is_const
+                    || std::is_const_v<std::remove_reference_t<Child>>,
+                base.is_reference,
             };
         }
     } // namespace _dut_detail
@@ -69,7 +69,7 @@ namespace detail {
             typename expression::detail::ExpressionTraits<
                 std::decay_t<Child>>::extents_type,
             AF,
-            expression::detail::ShapeFeatures{.is_resizable = false}> {
+            expression::detail::ShapeFeatures::fixed()> {
         using _Detail = DefaultUnaryExpressionDetail<Child>;
         using base_value_type = typename _Detail::base_value_type;
 

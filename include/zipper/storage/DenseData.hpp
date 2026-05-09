@@ -91,9 +91,8 @@ private:
 template <typename ElementType, std::size_t N>
 struct LinearAccessorTraits<DenseData<ElementType, N>>
     : public BasicLinearAccessorTraits<
-          AccessFeatures{.is_const = std::is_const_v<ElementType>,
-                         .is_reference = true},
-          ShapeFeatures{.is_resizable = N == zipper::dynamic_extent}> {};
+          AccessFeatures{std::is_const_v<ElementType>, true},
+          ShapeFeatures{N == zipper::dynamic_extent}> {};
 } // namespace zipper::storage
 
 #endif

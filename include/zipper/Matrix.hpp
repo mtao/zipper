@@ -188,21 +188,14 @@ public:
   template <concepts::Expression Other>
   Matrix(const Other &other) : Base(other) {}
 
-  Matrix(const Matrix &other) : Base(other.expression()) {}
+  Matrix(const Matrix &other) = default;
 
   template <index_type R2, index_type C2>
   Matrix(const Matrix<value_type, R2, C2> &other) : Base(other.expression()) {}
 
   using Base::operator=;
-  auto operator=(Matrix &&other) -> Matrix & {
-    Base::operator=(std::move(other.expression()));
-    return *this;
-  }
-
-  auto operator=(const Matrix &other) -> Matrix & {
-    Base::operator=(other.expression());
-    return *this;
-  }
+  auto operator=(Matrix &&other) -> Matrix & = default;
+  auto operator=(const Matrix &other) -> Matrix & = default;
   template <index_type R2, index_type C2>
   auto operator=(const Matrix<value_type, R2, C2> &other) -> Matrix & {
     Base::operator=(other.expression());

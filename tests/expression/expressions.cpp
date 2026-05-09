@@ -25,11 +25,11 @@ TEST_CASE("unsafe stores_references flag", "[unsafe]") {
     using UR = expression::unary::UnsafeRef<RefChild>;
 
     // The child reference type normally has stores_references == true
-    static_assert(
+    STATIC_CHECK(
         expression::unary::detail::DefaultUnaryExpressionTraits<RefChild>::stores_references == true);
 
     // UnsafeRef overrides it to false
-    static_assert(
+    STATIC_CHECK(
         expression::detail::ExpressionTraits<UR>::stores_references == false);
 }
 

@@ -407,10 +407,8 @@ struct detail::ExpressionTraits<
     zipper::storage::SparseCoordinateAccessor<ValueType, Extents>>
     : public detail::BasicExpressionTraits<
           ValueType, Extents,
-          zipper::detail::AccessFeatures{
-              .is_const = std::is_const_v<ValueType>,
-              .is_reference = false},
-          zipper::detail::ShapeFeatures{.is_resizable = false}> {
+          zipper::detail::AccessFeatures{std::is_const_v<ValueType>, false},
+          zipper::detail::ShapeFeatures::fixed()> {
   constexpr static bool has_index_set = true;
   constexpr static bool has_known_zeros = has_index_set;
 

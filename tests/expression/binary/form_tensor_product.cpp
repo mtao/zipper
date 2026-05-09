@@ -81,9 +81,9 @@ TEST_CASE("test_form_tensor_product_basic", "[storage][dense]") {
     print(M * x);
     print(I * M);
     auto IM = I * M;
-    static_assert(decltype(I)::extents_type::rank() == 2);
-    static_assert(decltype(M)::extents_type::rank() == 2);
-    static_assert(decltype(IM)::extents_type::rank() == 4);
+    STATIC_CHECK(decltype(I)::extents_type::rank() == 2);
+    STATIC_CHECK(decltype(M)::extents_type::rank() == 2);
+    STATIC_CHECK(decltype(IM)::extents_type::rank() == 4);
 
     // CHECK(IM.slice(std::integral_constant<zipper::rank_type, 0>{},
     //                std::integral_constant<zipper::rank_type, 0>{},
@@ -119,7 +119,7 @@ TEST_CASE("test_product_via_partial_trace", "[storage][tensor]") {
 
     // Matrix product via tensor product + partial trace
     auto TP = M * N;
-    static_assert(decltype(TP)::extents_type::rank() == 4);
+    STATIC_CHECK(decltype(TP)::extents_type::rank() == 4);
 
     using TP_type = std::decay_t<decltype(TP)>::expression_type;
     zipper::expression::unary::PartialTrace<const TP_type &, 1, 2> pt(
@@ -187,7 +187,7 @@ TEST_CASE("test_form_product", "[storage][tensor]") {
 
     // Build a rank-2 form from wedge product: F = x^ ^ y^
     auto F_xy = (x.as_form() ^ y.as_form()).eval();
-    static_assert(decltype(F_xy)::extents_type::rank() == 2);
+    STATIC_CHECK(decltype(F_xy)::extents_type::rank() == 2);
 
     // Test wedge product antisymmetry: (x^ ^ y^)(i,j) = x(i)*y(j) - x(j)*y(i)
     for (zipper::index_type i = 0; i < 3; ++i) {
@@ -202,7 +202,7 @@ TEST_CASE("test_form_product", "[storage][tensor]") {
     // Contract rank-2 form with rank-1 tensor: result is rank-1 form
     // (F_xy * a)(i) = sum_j F_xy(i,j) * a(j)
     auto F_xy_a = (F_xy * a).eval();
-    static_assert(decltype(F_xy_a)::extents_type::rank() == 1);
+    STATIC_CHECK(decltype(F_xy_a)::extents_type::rank() == 1);
 
     for (zipper::index_type i = 0; i < 3; ++i) {
         double expected_val = 0.0;
@@ -227,11 +227,11 @@ TEST_CASE("test_form_product", "[storage][tensor]") {
     // When form_rank < tensor_rank, result is a TensorBase
     // (f * T)(j) = sum_i f(i) * T(i, j)
     auto AB = (a.as_tensor() * b.as_tensor()).eval();
-    static_assert(decltype(AB)::extents_type::rank() == 2);
+    STATIC_CHECK(decltype(AB)::extents_type::rank() == 2);
 
     auto xf = x.as_form();
     auto xf_AB = xf * AB;
-    static_assert(std::decay_t<decltype(xf_AB)>::extents_type::rank() == 1);
+    STATIC_CHECK(std::decay_t<decltype(xf_AB)>::extents_type::rank() == 1);
 
     // (x^ * (a*b))(j) = sum_i x(i) * a(i) * b(j) = (x.a) * b(j)
     double x_dot_a = double(x.as_form() * a);

@@ -56,9 +56,8 @@ namespace detail {
             typename expression::detail::ExpressionTraits<
                 std::decay_t<ChildA>>::value_type,
             zipper::dextents<0>,
-            expression::detail::AccessFeatures{.is_const = true,
-                                               .is_reference = false},
-            expression::detail::ShapeFeatures{.is_resizable = false}> {
+            expression::detail::AccessFeatures::const_value(),
+            expression::detail::ShapeFeatures::fixed()> {
         using _Detail = DefaultBinaryExpressionDetail<ChildA, ChildB>;
         static_assert(
             std::is_convertible_v<typename _Detail::ATraits::value_type,

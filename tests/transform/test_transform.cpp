@@ -44,7 +44,7 @@ TEST_CASE("Isometry default is identity", "[transform][isometry]") {
 
 TEST_CASE("Isometry has correct mode", "[transform][isometry]") {
     Isometry<float> xform;
-    static_assert(std::decay_t<decltype(xform)>::mode == TransformMode::Isometry);
+    STATIC_CHECK(std::decay_t<decltype(xform)>::mode == TransformMode::Isometry);
 }
 
 TEST_CASE("Isometry inverse uses rotation transpose", "[transform][isometry]") {
@@ -87,7 +87,7 @@ TEST_CASE("Isometry * Vector<D> is affine action", "[transform][isometry]") {
 
 TEST_CASE("AffineTransform has correct mode", "[transform][affine]") {
     AffineTransform<float> xform;
-    static_assert(std::decay_t<decltype(xform)>::mode == TransformMode::Affine);
+    STATIC_CHECK(std::decay_t<decltype(xform)>::mode == TransformMode::Affine);
 }
 
 TEST_CASE("AffineTransform inverse uses affine_inverse", "[transform][affine]") {
@@ -115,7 +115,7 @@ TEST_CASE("AffineTransform inverse uses affine_inverse", "[transform][affine]") 
 
 TEST_CASE("ProjectiveTransform has correct mode", "[transform][projective]") {
     ProjectiveTransform<float> xform;
-    static_assert(std::decay_t<decltype(xform)>::mode == TransformMode::Projective);
+    STATIC_CHECK(std::decay_t<decltype(xform)>::mode == TransformMode::Projective);
 }
 
 TEST_CASE("ProjectiveTransform inverse uses full matrix inverse", "[transform][projective]") {
@@ -165,7 +165,7 @@ TEST_CASE("Isometry * Isometry -> Isometry", "[transform][mode][composition]") {
     b(1, 3) = 2.0f;
 
     auto result = a * b;
-    static_assert(std::decay_t<decltype(result)>::mode == TransformMode::Isometry);
+    STATIC_CHECK(std::decay_t<decltype(result)>::mode == TransformMode::Isometry);
 
     CHECK(result(0, 3) == Catch::Approx(1.0f));
     CHECK(result(1, 3) == Catch::Approx(2.0f));
@@ -178,7 +178,7 @@ TEST_CASE("Isometry * AffineTransform -> AffineTransform", "[transform][mode][co
     b(0, 0) = 2.0f;  // scale
 
     auto result = a * b;
-    static_assert(std::decay_t<decltype(result)>::mode == TransformMode::Affine);
+    STATIC_CHECK(std::decay_t<decltype(result)>::mode == TransformMode::Affine);
 }
 
 TEST_CASE("AffineTransform * Isometry -> AffineTransform", "[transform][mode][composition]") {
@@ -188,7 +188,7 @@ TEST_CASE("AffineTransform * Isometry -> AffineTransform", "[transform][mode][co
     b(0, 3) = 1.0f;
 
     auto result = a * b;
-    static_assert(std::decay_t<decltype(result)>::mode == TransformMode::Affine);
+    STATIC_CHECK(std::decay_t<decltype(result)>::mode == TransformMode::Affine);
 }
 
 TEST_CASE("AffineTransform * ProjectiveTransform -> ProjectiveTransform", "[transform][mode][composition]") {
@@ -197,7 +197,7 @@ TEST_CASE("AffineTransform * ProjectiveTransform -> ProjectiveTransform", "[tran
     auto proj = perspective(radians(45.0f), 1.0f, 0.1f, 100.0f);
 
     auto result = a * proj;
-    static_assert(std::decay_t<decltype(result)>::mode == TransformMode::Projective);
+    STATIC_CHECK(std::decay_t<decltype(result)>::mode == TransformMode::Projective);
 }
 
 TEST_CASE("Isometry * ProjectiveTransform -> ProjectiveTransform", "[transform][mode][composition]") {
@@ -206,7 +206,7 @@ TEST_CASE("Isometry * ProjectiveTransform -> ProjectiveTransform", "[transform][
     auto proj = perspective(radians(45.0f), 1.0f, 0.1f, 100.0f);
 
     auto result = a * proj;
-    static_assert(std::decay_t<decltype(result)>::mode == TransformMode::Projective);
+    STATIC_CHECK(std::decay_t<decltype(result)>::mode == TransformMode::Projective);
 }
 
 // ============================================================================
@@ -236,17 +236,17 @@ TEST_CASE("AffineTransform from Isometry", "[transform][conversion]") {
 
 TEST_CASE("translation returns Isometry", "[transform][model][mode]") {
     auto T = translation(Vector<float, 3>({1.0f, 2.0f, 3.0f}));
-    static_assert(std::decay_t<decltype(T)>::mode == TransformMode::Isometry);
+    STATIC_CHECK(std::decay_t<decltype(T)>::mode == TransformMode::Isometry);
 }
 
 TEST_CASE("rotation returns Isometry", "[transform][model][mode]") {
     auto R = rotation(radians(45.0f), Vector<float, 3>({0.0f, 1.0f, 0.0f}));
-    static_assert(std::decay_t<decltype(R)>::mode == TransformMode::Isometry);
+    STATIC_CHECK(std::decay_t<decltype(R)>::mode == TransformMode::Isometry);
 }
 
 TEST_CASE("scaling returns Affine", "[transform][model][mode]") {
     auto S = scaling(Vector<float, 3>({2.0f, 2.0f, 2.0f}));
-    static_assert(std::decay_t<decltype(S)>::mode == TransformMode::Affine);
+    STATIC_CHECK(std::decay_t<decltype(S)>::mode == TransformMode::Affine);
 }
 
 TEST_CASE("translation * rotation * scaling -> Affine", "[transform][model][mode]") {
@@ -255,11 +255,11 @@ TEST_CASE("translation * rotation * scaling -> Affine", "[transform][model][mode
     auto S = scaling(Vector<float, 3>({2.0f, 2.0f, 2.0f}));
 
     auto model = T * R * S;
-    static_assert(std::decay_t<decltype(model)>::mode == TransformMode::Affine);
+    STATIC_CHECK(std::decay_t<decltype(model)>::mode == TransformMode::Affine);
 
     // T * R is Isometry
     auto TR = T * R;
-    static_assert(std::decay_t<decltype(TR)>::mode == TransformMode::Isometry);
+    STATIC_CHECK(std::decay_t<decltype(TR)>::mode == TransformMode::Isometry);
 }
 
 // ============================================================================
@@ -365,24 +365,24 @@ TEST_CASE("ProjectiveTransform * Vector<D+1> is homogeneous multiply (no divisio
 // ============================================================================
 
 TEST_CASE("concepts::Transform matches all modes", "[transform][concepts]") {
-    static_assert(transform::concepts::Transform<Isometry<float>>);
-    static_assert(transform::concepts::Transform<AffineTransform<float>>);
-    static_assert(transform::concepts::Transform<ProjectiveTransform<float>>);
-    static_assert(transform::concepts::Transform<Transform<float>>);
-    static_assert(transform::concepts::Transform<Isometry<float, 2>>);
+    STATIC_CHECK(transform::concepts::Transform<Isometry<float>>);
+    STATIC_CHECK(transform::concepts::Transform<AffineTransform<float>>);
+    STATIC_CHECK(transform::concepts::Transform<ProjectiveTransform<float>>);
+    STATIC_CHECK(transform::concepts::Transform<Transform<float>>);
+    STATIC_CHECK(transform::concepts::Transform<Isometry<float, 2>>);
 }
 
 TEST_CASE("concepts::AffineTransform matches Affine and Isometry only", "[transform][concepts]") {
-    static_assert(transform::concepts::AffineTransform<Isometry<float>>);
-    static_assert(transform::concepts::AffineTransform<AffineTransform<float>>);
-    static_assert(!transform::concepts::AffineTransform<ProjectiveTransform<float>>);
-    static_assert(transform::concepts::AffineTransform<Isometry<float, 2>>);
-    static_assert(transform::concepts::AffineTransform<AffineTransform<float, 2>>);
+    STATIC_CHECK(transform::concepts::AffineTransform<Isometry<float>>);
+    STATIC_CHECK(transform::concepts::AffineTransform<AffineTransform<float>>);
+    STATIC_CHECK_FALSE(transform::concepts::AffineTransform<ProjectiveTransform<float>>);
+    STATIC_CHECK(transform::concepts::AffineTransform<Isometry<float, 2>>);
+    STATIC_CHECK(transform::concepts::AffineTransform<AffineTransform<float, 2>>);
 }
 
 TEST_CASE("concepts::Isometry matches only Isometry mode", "[transform][concepts]") {
-    static_assert(transform::concepts::Isometry<Isometry<float>>);
-    static_assert(!transform::concepts::Isometry<AffineTransform<float>>);
-    static_assert(!transform::concepts::Isometry<ProjectiveTransform<float>>);
-    static_assert(transform::concepts::Isometry<Isometry<float, 2>>);
+    STATIC_CHECK(transform::concepts::Isometry<Isometry<float>>);
+    STATIC_CHECK_FALSE(transform::concepts::Isometry<AffineTransform<float>>);
+    STATIC_CHECK_FALSE(transform::concepts::Isometry<ProjectiveTransform<float>>);
+    STATIC_CHECK(transform::concepts::Isometry<Isometry<float, 2>>);
 }

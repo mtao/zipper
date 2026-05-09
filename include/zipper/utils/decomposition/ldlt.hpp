@@ -62,75 +62,71 @@ namespace zipper::utils::decomposition {
 /// Calling `.solve(b)` performs forward substitution, diagonal solve, and
 /// back substitution using the stored factors to solve A*x = b without
 /// re-factoring.
-template <typename T, index_type N> struct LDLTResult {
-  /// Scalar type of the decomposition.
-  using value_type = T;
+template <typename T, index_type N>
+struct LDLTResult {
+    /// Scalar type of the decomposition.
+    using value_type = T;
 
-  /// Unit lower triangular factor L (n x n, ones on diagonal).
-  Matrix<T, N, N> L;
-  /// Diagonal factor D (n elements).
-  Vector<T, N> D;
+    /// Unit lower triangular factor L (n x n, ones on diagonal).
+    Matrix<T, N, N> L;
+    /// Diagonal factor D (n elements).
+    Vector<T, N> D;
 
-  /// @brief Solve A*x = b using the stored LDLT factors.
-  ///
-  /// Performs:
-  ///   1. Forward substitution:  L * y = b      (unit lower triangular)
-  ///   2. Diagonal solve:        D * z = y      (element-wise division)
-  ///   3. Back substitution:     L^T * x = z    (unit upper triangular)
-  ///
-  /// @param b  Right-hand side vector of length n.
-  /// @return   `std::expected<Vector<T,N>, SolverError>` — the solution on
-  ///           success, or a breakdown error if D contains a zero pivot.
-  template <concepts::Vector BDerived>
-  auto solve(const BDerived &b) const
-      -> std::expected<Vector<T, N>, solver::SolverError> {
-    using ResultVec = Vector<T, N>;
-    using Result = std::expected<ResultVec, solver::SolverError>;
+    /// @brief Solve A*x = b using the stored LDLT factors.
+    ///
+    /// Performs:
+    ///   1. Forward substitution:  L * y = b      (unit lower triangular)
+    ///   2. Diagonal solve:        D * z = y      (element-wise division)
+    ///   3. Back substitution:     L^T * x = z    (unit upper triangular)
+    ///
+    /// @param b  Right-hand side vector of length n.
+    /// @return   `std::expected<Vector<T,N>, SolverError>` — the solution on
+    ///           success, or a breakdown error if D contains a zero pivot.
+    template <concepts::Vector BDerived>
+    auto solve(const BDerived &b) const
+        -> std::expected<Vector<T, N>, solver::SolverError> {
+        using ResultVec = Vector<T, N>;
+        using Result = std::expected<ResultVec, solver::SolverError>;
 
-    const index_type n = L.extent(0);
+        const index_type n = L.extent(0);
 
-    // 1. Forward substitution: L * y = b  (L is unit lower triangular).
-    auto L_lower = expression::triangular_view<
-        expression::TriangularMode::UnitLower>(L);
-    auto y_result = L_lower.solve(b);
+        // 1. Forward substitution: L * y = b  (L is unit lower triangular).
+        auto L_lower =
+            expression::triangular_view<expression::TriangularMode::UnitLower>(
+                L);
+        auto y_result = L_lower.solve(b);
 
-    if (!y_result) {
-      return Result{std::unexpected(std::move(y_result.error()))};
+        if (!y_result) {
+            return Result{std::unexpected(std::move(y_result.error()))};
+        }
+
+        // 2. Diagonal solve: D * z = y  →  z(i) = y(i) / D(i).
+        ResultVec z(n);
+        for (index_type i = 0; i < n; ++i) {
+            if (std::abs(D(i)) <= std::numeric_limits<T>::epsilon()) {
+                return Result{std::unexpected(solver::SolverError{
+                    .kind = solver::SolverError::Kind::breakdown,
+                    .message = "LDLT solve: zero diagonal entry D("
+                               + std::to_string(i)
+                               + ") — matrix is singular"})};
+            }
+            z(i) = (*y_result)(i) / D(i);
+        }
+
+        // 3. Back substitution: L^T * x = z  (L^T is unit upper triangular).
+        Matrix<T, N, N> Lt(L.transpose());
+
+        auto Lt_upper =
+            expression::triangular_view<expression::TriangularMode::UnitUpper>(
+                Lt);
+        auto x_result = Lt_upper.solve(z);
+
+        if (!x_result) {
+            return Result{std::unexpected(std::move(x_result.error()))};
+        }
+
+        return Result{std::move(*x_result)};
     }
-
-    // 2. Diagonal solve: D * z = y  →  z(i) = y(i) / D(i).
-    ResultVec z(n);
-    for (index_type i = 0; i < n; ++i) {
-      if (std::abs(D(i)) <= std::numeric_limits<T>::epsilon()) {
-        return Result{std::unexpected(solver::SolverError{
-            .kind = solver::SolverError::Kind::breakdown,
-            .message = "LDLT solve: zero diagonal entry D(" +
-                       std::to_string(i) + ") — matrix is singular"})};
-      }
-      z(i) = (*y_result)(i) / D(i);
-    }
-
-    // 3. Back substitution: L^T * x = z  (L^T is unit upper triangular).
-    //    Build L^T explicitly since TriangularView masks entries but does
-    //    not transpose.
-    Matrix<T, N, N> Lt(n, n);
-    Lt = expression::nullary::Constant(T{0}, Lt.extents());
-    for (index_type i = 0; i < n; ++i) {
-      for (index_type j = i; j < n; ++j) {
-        Lt(i, j) = L(j, i);
-      }
-    }
-
-    auto Lt_upper = expression::triangular_view<
-        expression::TriangularMode::UnitUpper>(Lt);
-    auto x_result = Lt_upper.solve(z);
-
-    if (!x_result) {
-      return Result{std::unexpected(std::move(x_result.error()))};
-    }
-
-    return Result{std::move(*x_result)};
-  }
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -144,60 +140,63 @@ template <typename T, index_type N> struct LDLTResult {
 ///           and D on success, or a breakdown error if a zero pivot is
 ///           encountered.
 template <concepts::Matrix Derived>
-auto ldlt(const Derived &A)
-    -> std::expected<
-        LDLTResult<typename std::decay_t<Derived>::value_type,
-                   std::decay_t<Derived>::extents_type::static_extent(0)>,
-        solver::SolverError> {
-  using AType = std::decay_t<Derived>;
-  using T = typename AType::value_type;
-  constexpr index_type N = AType::extents_type::static_extent(0);
-  using Result =
-      std::expected<LDLTResult<T, N>, solver::SolverError>;
+auto ldlt(const Derived &A) -> std::expected<
+    LDLTResult<typename std::decay_t<Derived>::value_type,
+               std::decay_t<Derived>::extents_type::static_extent(0)>,
+    solver::SolverError> {
+    using AType = std::decay_t<Derived>;
+    using T = typename AType::value_type;
+    constexpr index_type N = AType::extents_type::static_extent(0);
+    using Result = std::expected<LDLTResult<T, N>, solver::SolverError>;
 
-  const index_type n = A.extent(0);
+    const index_type n = A.extent(0);
 
-  // Initialise L to zero and D to zero.
-  Matrix<T, N, N> L(n, n);
-  L = expression::nullary::Constant(T{0}, L.extents());
-  Vector<T, N> D(n);
-  D = expression::nullary::Constant(T{0}, D.extents());
+    // Initialise L to zero and D to zero.
+    Matrix<T, N, N> L(n, n);
+    L = expression::nullary::Constant(T{0}, L.extents());
+    Vector<T, N> D(n);
+    D = expression::nullary::Constant(T{0}, D.extents());
 
-  for (index_type j = 0; j < n; ++j) {
-    // Compute D(j) = A(j,j) - sum_{k<j} L(j,k)^2 * D(k).
-    T sum = T{0};
-    for (index_type k = 0; k < j; ++k) {
-      sum += L(j, k) * L(j, k) * D(k);
+    for (index_type j = 0; j < n; ++j) {
+        // Compute D(j) = A(j,j) - sum_{k<j} L(j,k)^2 * D(k).
+        //   = A(j,j) - ||L(j, 0:j)||^2_D   (D-weighted squared norm)
+        auto Lj_seg = L.row(j).segment(0, j);
+        auto D_seg = D.segment(0, j);
+        T sum = (j > 0)
+                    ? (Lj_seg.as_array() * Lj_seg.as_array() * D_seg.as_array())
+                          .sum()
+                    : T{0};
+        D(j) = A(j, j) - sum;
+
+        // Set the unit diagonal.
+        L(j, j) = T{1};
+
+        if (std::abs(D(j)) <= std::numeric_limits<T>::epsilon()) {
+            // Zero pivot — cannot compute sub-diagonal entries for this column.
+            // For positive semi-definite matrices, D(j) == 0 means the
+            // remaining sub-diagonal entries in this column should be zero (the
+            // column is in the null space).  We leave them at zero and
+            // continue.
+            //
+            // However, if any A(i,j) - sum != 0 for i > j, the matrix is
+            // indefinite and the factorisation is invalid.  We skip that check
+            // here for simplicity and treat zero pivots as acceptable (the
+            // solve step will detect the singularity when dividing by D(j)).
+            continue;
+        }
+
+        // Compute sub-diagonal entries L(i,j) for i > j.
+        //   L(i,j) = ( A(i,j) - L(i, 0:j) . (L(j, 0:j) .* D(0:j)) ) / D(j)
+        for (index_type i = j + 1; i < n; ++i) {
+            T s = (j > 0) ? (L.row(i).segment(0, j).as_array()
+                             * Lj_seg.as_array() * D_seg.as_array())
+                                .sum()
+                          : T{0};
+            L(i, j) = (A(i, j) - s) / D(j);
+        }
     }
-    D(j) = A(j, j) - sum;
 
-    // Set the unit diagonal.
-    L(j, j) = T{1};
-
-    if (std::abs(D(j)) <= std::numeric_limits<T>::epsilon()) {
-      // Zero pivot — cannot compute sub-diagonal entries for this column.
-      // For positive semi-definite matrices, D(j) == 0 means the remaining
-      // sub-diagonal entries in this column should be zero (the column is
-      // in the null space).  We leave them at zero and continue.
-      //
-      // However, if any A(i,j) - sum != 0 for i > j, the matrix is
-      // indefinite and the factorisation is invalid.  We skip that check
-      // here for simplicity and treat zero pivots as acceptable (the
-      // solve step will detect the singularity when dividing by D(j)).
-      continue;
-    }
-
-    // Compute sub-diagonal entries L(i,j) for i > j.
-    for (index_type i = j + 1; i < n; ++i) {
-      T s = T{0};
-      for (index_type k = 0; k < j; ++k) {
-        s += L(i, k) * L(j, k) * D(k);
-      }
-      L(i, j) = (A(i, j) - s) / D(j);
-    }
-  }
-
-  return Result{LDLTResult<T, N>{.L = std::move(L), .D = std::move(D)}};
+    return Result{LDLTResult<T, N>{.L = std::move(L), .D = std::move(D)}};
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -218,18 +217,18 @@ auto ldlt(const Derived &A)
 ///           contains a zero pivot.
 template <concepts::Matrix ADerived, concepts::Vector BDerived>
 auto ldlt_solve(const ADerived &A, const BDerived &b) {
-  using AType = std::decay_t<ADerived>;
-  using T = typename AType::value_type;
-  constexpr index_type N = AType::extents_type::static_extent(0);
-  using ResultVec = Vector<T, N>;
-  using Result = std::expected<ResultVec, solver::SolverError>;
+    using AType = std::decay_t<ADerived>;
+    using T = typename AType::value_type;
+    constexpr index_type N = AType::extents_type::static_extent(0);
+    using ResultVec = Vector<T, N>;
+    using Result = std::expected<ResultVec, solver::SolverError>;
 
-  auto ldlt_result = ldlt(A);
-  if (!ldlt_result) {
-    return Result{std::unexpected(std::move(ldlt_result.error()))};
-  }
+    auto ldlt_result = ldlt(A);
+    if (!ldlt_result) {
+        return Result{std::unexpected(std::move(ldlt_result.error()))};
+    }
 
-  return ldlt_result->solve(b);
+    return ldlt_result->solve(b);
 }
 
 } // namespace zipper::utils::decomposition

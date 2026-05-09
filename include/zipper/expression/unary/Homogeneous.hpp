@@ -54,8 +54,7 @@ template <unary::HomogeneousMode Mode, zipper::concepts::QualifiedExpression Chi
 struct detail::ExpressionTraits<unary::Homogeneous<Mode, Child>>
     : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<
           Child,
-          zipper::detail::AccessFeatures{.is_const = true,
-                                         .is_reference = false}> {
+          zipper::detail::AccessFeatures::const_value()> {
   using ChildTraits = ExpressionTraits<std::decay_t<Child>>;
   using value_type = typename ChildTraits::value_type;
 

@@ -40,8 +40,7 @@ struct detail::ExpressionTraits<
     unary::PartialReduction<ExprType, Reduction, Indices...>>
     : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<
           ExprType,
-          zipper::detail::AccessFeatures{.is_const = true,
-                                         .is_reference = false}> {
+          zipper::detail::AccessFeatures::const_value()> {
     using _Detail = detail::ExpressionDetail<
         unary::PartialReduction<ExprType, Reduction, Indices...>>;
     using extents_type = typename _Detail::index_remover::template assign_types<

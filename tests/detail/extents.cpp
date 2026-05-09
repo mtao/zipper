@@ -47,12 +47,12 @@ TEST_CASE("test_invert_integer_sequence", "[extents]") {
             zipper::expression::unary::detail::invert_integer_sequence<3, 0, 1,
                                                                   2>::type{});
 
-        static_assert(a.size() == b.size());
+        STATIC_CHECK(a.size() == b.size());
         CHECK(a == b);
 
         using E = zipper::expression::unary::detail::invert_integer_sequence<
             3, 0, 1, 2>::assign_types<zipper::extents, A>;
-        static_assert(std::is_same_v<E, zipper::extents<>>);
+        STATIC_CHECK(std::is_same_v<E, zipper::extents<>>);
     }
     {
         auto a = to_array(std::integer_sequence<rank_type, 0>{});
@@ -60,12 +60,12 @@ TEST_CASE("test_invert_integer_sequence", "[extents]") {
             zipper::expression::unary::detail::invert_integer_sequence<3, 1,
                                                                   2>::type{});
 
-        static_assert(a.size() == b.size());
+        STATIC_CHECK(a.size() == b.size());
         CHECK(a == b);
 
         using E = zipper::expression::unary::detail::invert_integer_sequence<
             3, 1, 2>::assign_types<zipper::extents, A>;
-        static_assert(std::is_same_v<E, zipper::extents<0>>);
+        STATIC_CHECK(std::is_same_v<E, zipper::extents<0>>);
     }
     {
         auto a = to_array(std::integer_sequence<rank_type, 0, 2>{});
@@ -73,7 +73,7 @@ TEST_CASE("test_invert_integer_sequence", "[extents]") {
             zipper::expression::unary::detail::invert_integer_sequence<3,
                                                                   1>::type{});
 
-        static_assert(a.size() == b.size());
+        STATIC_CHECK(a.size() == b.size());
         CHECK(a == b);
     }
     {
@@ -81,12 +81,12 @@ TEST_CASE("test_invert_integer_sequence", "[extents]") {
         auto b = to_array(
             zipper::expression::unary::detail::invert_integer_sequence<3>::type{});
 
-        static_assert(a.size() == b.size());
+        STATIC_CHECK(a.size() == b.size());
         CHECK(a == b);
 
         using E = zipper::expression::unary::detail::invert_integer_sequence<
             3>::assign_types<zipper::extents, A>;
-        static_assert(std::is_same_v<E, zipper::extents<0, 1, 2>>);
+        STATIC_CHECK(std::is_same_v<E, zipper::extents<0, 1, 2>>);
     }
 }
 
@@ -95,21 +95,21 @@ TEST_CASE("test_extents_dynamic_size", "[extents][dense]") {
         zipper::extents<5, std::dynamic_extent> E(19);
         constexpr static auto dyn =
             zipper::detail::extents::dynamic_extents_indices_v<decltype(E)>;
-        static_assert(dyn.size() == 1);
-        static_assert(dyn[0] == 1);
+        STATIC_CHECK(dyn.size() == 1);
+        STATIC_CHECK(dyn[0] == 1);
         auto val = zipper::detail::extents::dynamic_extents(E);
-        static_assert(val.size() == 1);
+        STATIC_CHECK(val.size() == 1);
         CHECK(val[0] == 19);
     }
     {
         zipper::extents<std::dynamic_extent, 5, std::dynamic_extent> E(3, 5);
         constexpr static auto dyn =
             zipper::detail::extents::dynamic_extents_indices_v<decltype(E)>;
-        static_assert(dyn.size() == 2);
-        static_assert(dyn[0] == 0);
-        static_assert(dyn[1] == 2);
+        STATIC_CHECK(dyn.size() == 2);
+        STATIC_CHECK(dyn[0] == 0);
+        STATIC_CHECK(dyn[1] == 2);
         auto val = zipper::detail::extents::dynamic_extents(E);
-        static_assert(val.size() == 2);
+        STATIC_CHECK(val.size() == 2);
         CHECK(val[0] == 3);
         CHECK(val[1] == 5);
     }
@@ -132,8 +132,8 @@ TEST_CASE("test_extents_swizzle", "[extents][dense]") {
 
         auto e3 = zipper::detail::extents::swizzle_extents(
             E, std::integer_sequence<zipper::index_type, 0>{});
-        static_assert(decltype(e3)::rank() == 1);
-        static_assert(decltype(e3)::static_extent(0) == std::dynamic_extent);
+        STATIC_CHECK(decltype(e3)::rank() == 1);
+        STATIC_CHECK(decltype(e3)::static_extent(0) == std::dynamic_extent);
         CHECK(e3.extent(0) == 3);
 
         CHECK(zipper::detail::extents::swizzle_extents(

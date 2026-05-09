@@ -111,12 +111,10 @@ struct detail::ExpressionTraits<zipper::expression::nullary::StlMDArray<S, Polic
           typename zipper::storage::StlStorageInfo<
               std::decay_t<S>, Policy>::extents_type,
           zipper::detail::AccessFeatures{
-              .is_const = std::is_const_v<std::remove_reference_t<S>>,
-              .is_reference = true},
+              std::is_const_v<std::remove_reference_t<S>>, true},
           zipper::detail::ShapeFeatures{
-              .is_resizable =
-                  (zipper::storage::StlStorageInfo<
-                      std::decay_t<S>, Policy>::extents_type::rank_dynamic() > 0)}> {
+              (zipper::storage::StlStorageInfo<
+                  std::decay_t<S>, Policy>::extents_type::rank_dynamic() > 0)}> {
   constexpr static bool is_coefficient_consistent = true;
   /// StlMDArray stores references when S is a reference type (borrowing mode).
   constexpr static bool stores_references = std::is_reference_v<S>;

@@ -54,60 +54,51 @@ namespace zipper::utils::decomposition {
 ///
 /// Calling `.solve(b)` performs forward/back substitution using the stored
 /// factor to solve A*x = b without re-factoring.
-template <typename T, index_type N> struct LLTResult {
-  /// Scalar type of the decomposition.
-  using value_type = T;
+template <typename T, index_type N>
+struct LLTResult {
+    /// Scalar type of the decomposition.
+    using value_type = T;
 
-  /// Lower triangular Cholesky factor L (n x n).
-  Matrix<T, N, N> L;
+    /// Lower triangular Cholesky factor L (n x n).
+    Matrix<T, N, N> L;
 
-  /// @brief Solve A*x = b using the stored Cholesky factor.
-  ///
-  /// Performs:
-  ///   1. Forward substitution:  L * y = b
-  ///   2. Back substitution:     L^T * x = y
-  ///
-  /// @param b  Right-hand side vector of length n.
-  /// @return   `std::expected<Vector<T,N>, SolverError>` — the solution on
-  ///           success, or a breakdown error if a zero pivot is encountered.
-  template <concepts::Vector BDerived>
-  auto solve(const BDerived &b) const
-      -> std::expected<Vector<T, N>, solver::SolverError> {
-    using ResultVec = Vector<T, N>;
-    using Result = std::expected<ResultVec, solver::SolverError>;
+    /// @brief Solve A*x = b using the stored Cholesky factor.
+    ///
+    /// Performs:
+    ///   1. Forward substitution:  L * y = b
+    ///   2. Back substitution:     L^T * x = y
+    ///
+    /// @param b  Right-hand side vector of length n.
+    /// @return   `std::expected<Vector<T,N>, SolverError>` — the solution on
+    ///           success, or a breakdown error if a zero pivot is encountered.
+    template <concepts::Vector BDerived>
+    auto solve(const BDerived &b) const
+        -> std::expected<Vector<T, N>, solver::SolverError> {
+        using ResultVec = Vector<T, N>;
+        using Result = std::expected<ResultVec, solver::SolverError>;
 
-    const index_type n = L.extent(0);
+        // 1. Forward substitution: L * y = b.
+        auto L_lower =
+            expression::triangular_view<expression::TriangularMode::Lower>(L);
+        auto y_result = L_lower.solve(b);
 
-    // 1. Forward substitution: L * y = b.
-    auto L_lower =
-        expression::triangular_view<expression::TriangularMode::Lower>(L);
-    auto y_result = L_lower.solve(b);
+        if (!y_result) {
+            return Result{std::unexpected(std::move(y_result.error()))};
+        }
 
-    if (!y_result) {
-      return Result{std::unexpected(std::move(y_result.error()))};
+        // 2. Back substitution: L^T * x = y.
+        Matrix<T, N, N> Lt(L.transpose());
+
+        auto Lt_upper =
+            expression::triangular_view<expression::TriangularMode::Upper>(Lt);
+        auto x_result = Lt_upper.solve(*y_result);
+
+        if (!x_result) {
+            return Result{std::unexpected(std::move(x_result.error()))};
+        }
+
+        return Result{std::move(*x_result)};
     }
-
-    // 2. Back substitution: L^T * x = y.
-    //    Build L^T explicitly since TriangularView masks entries but does
-    //    not transpose.
-    Matrix<T, N, N> Lt(n, n);
-    Lt = expression::nullary::Constant(T{0}, Lt.extents());
-    for (index_type i = 0; i < n; ++i) {
-      for (index_type j = i; j < n; ++j) {
-        Lt(i, j) = L(j, i);
-      }
-    }
-
-    auto Lt_upper =
-        expression::triangular_view<expression::TriangularMode::Upper>(Lt);
-    auto x_result = Lt_upper.solve(*y_result);
-
-    if (!x_result) {
-      return Result{std::unexpected(std::move(x_result.error()))};
-    }
-
-    return Result{std::move(*x_result)};
-  }
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -121,53 +112,48 @@ template <typename T, index_type N> struct LLTResult {
 /// @return   `std::expected<LLTResult<T,N>, SolverError>` — the factor L on
 ///           success, or a breakdown error if A is not positive definite.
 template <concepts::Matrix Derived>
-auto llt(const Derived &A)
-    -> std::expected<
-        LLTResult<typename std::decay_t<Derived>::value_type,
-                  std::decay_t<Derived>::extents_type::static_extent(0)>,
-        solver::SolverError> {
-  using AType = std::decay_t<Derived>;
-  using T = typename AType::value_type;
-  constexpr index_type N = AType::extents_type::static_extent(0);
-  using Result =
-      std::expected<LLTResult<T, N>, solver::SolverError>;
+auto llt(const Derived &A) -> std::expected<
+    LLTResult<typename std::decay_t<Derived>::value_type,
+              std::decay_t<Derived>::extents_type::static_extent(0)>,
+    solver::SolverError> {
+    using AType = std::decay_t<Derived>;
+    using T = typename AType::value_type;
+    constexpr index_type N = AType::extents_type::static_extent(0);
+    using Result = std::expected<LLTResult<T, N>, solver::SolverError>;
 
-  const index_type n = A.extent(0);
+    const index_type n = A.extent(0);
 
-  // Initialise L to zero.
-  Matrix<T, N, N> L(n, n);
-  L = expression::nullary::Constant(T{0}, L.extents());
+    // Initialise L to zero.
+    Matrix<T, N, N> L(n, n);
+    L = expression::nullary::Constant(T{0}, L.extents());
 
-  for (index_type j = 0; j < n; ++j) {
-    // Compute the diagonal element L(j,j).
-    T sum = T{0};
-    for (index_type k = 0; k < j; ++k) {
-      sum += L(j, k) * L(j, k);
+    for (index_type j = 0; j < n; ++j) {
+        // Compute the diagonal element L(j,j).
+        //   L(j,j) = sqrt( A(j,j) - ||L(j, 0:j)||^2 )
+        T sum =
+            (j > 0) ? L.row(j).segment(0, j).dot(L.row(j).segment(0, j)) : T{0};
+        T diag = A(j, j) - sum;
+
+        if (diag <= T{0}) {
+            return Result{std::unexpected(solver::SolverError{
+                .kind = solver::SolverError::Kind::breakdown,
+                .message = "LLT decomposition: matrix is not positive definite "
+                           "(non-positive diagonal at column "
+                           + std::to_string(j) + ")"})};
+        }
+
+        L(j, j) = std::sqrt(diag);
+
+        // Compute the sub-diagonal elements L(i,j) for i > j.
+        //   L(i,j) = ( A(i,j) - L(i, 0:j) . L(j, 0:j) ) / L(j,j)
+        for (index_type i = j + 1; i < n; ++i) {
+            T s = (j > 0) ? L.row(i).segment(0, j).dot(L.row(j).segment(0, j))
+                          : T{0};
+            L(i, j) = (A(i, j) - s) / L(j, j);
+        }
     }
-    T diag = A(j, j) - sum;
 
-    if (diag <= T{0}) {
-      return Result{std::unexpected(solver::SolverError{
-          .kind = solver::SolverError::Kind::breakdown,
-          .message =
-              "LLT decomposition: matrix is not positive definite "
-              "(non-positive diagonal at column " +
-              std::to_string(j) + ")"})};
-    }
-
-    L(j, j) = std::sqrt(diag);
-
-    // Compute the sub-diagonal elements L(i,j) for i > j.
-    for (index_type i = j + 1; i < n; ++i) {
-      T s = T{0};
-      for (index_type k = 0; k < j; ++k) {
-        s += L(i, k) * L(j, k);
-      }
-      L(i, j) = (A(i, j) - s) / L(j, j);
-    }
-  }
-
-  return Result{LLTResult<T, N>{.L = std::move(L)}};
+    return Result{LLTResult<T, N>{.L = std::move(L)}};
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -187,18 +173,18 @@ auto llt(const Derived &A)
 ///           is encountered during substitution.
 template <concepts::Matrix ADerived, concepts::Vector BDerived>
 auto llt_solve(const ADerived &A, const BDerived &b) {
-  using AType = std::decay_t<ADerived>;
-  using T = typename AType::value_type;
-  constexpr index_type N = AType::extents_type::static_extent(0);
-  using ResultVec = Vector<T, N>;
-  using Result = std::expected<ResultVec, solver::SolverError>;
+    using AType = std::decay_t<ADerived>;
+    using T = typename AType::value_type;
+    constexpr index_type N = AType::extents_type::static_extent(0);
+    using ResultVec = Vector<T, N>;
+    using Result = std::expected<ResultVec, solver::SolverError>;
 
-  auto llt_result = llt(A);
-  if (!llt_result) {
-    return Result{std::unexpected(std::move(llt_result.error()))};
-  }
+    auto llt_result = llt(A);
+    if (!llt_result) {
+        return Result{std::unexpected(std::move(llt_result.error()))};
+    }
 
-  return llt_result->solve(b);
+    return llt_result->solve(b);
 }
 
 } // namespace zipper::utils::decomposition

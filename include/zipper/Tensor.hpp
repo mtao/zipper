@@ -52,10 +52,7 @@ class Tensor_ : public TensorBase<expression::nullary::MDArray<
     Tensor_(Tensor_&&) = default;
     template <index_type... indices>
     Tensor_(const zipper::extents<indices...>& e) : Base(e) {}
-    Tensor_& operator=(Tensor_&& o) {
-        expression().operator=(std::move(o.expression()));
-        return *this;
-    }
+    Tensor_& operator=(Tensor_&& o) = default;
     using Base::operator=;
 };
 template <typename ValueType, index_type... Indxs>

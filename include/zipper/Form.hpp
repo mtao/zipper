@@ -97,10 +97,7 @@ public:
   }
   template <index_type... indices>
   Form_(const zipper::extents<indices...> &e) : Base(e) {}
-  auto operator=(Form_ &&o) -> Form_ & {
-    expression().operator=(std::move(o.expression()));
-    return *this;
-  }
+  auto operator=(Form_ &&o) -> Form_ & = default;
   using Base::operator=;
 };
 } // namespace detail

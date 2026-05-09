@@ -4,6 +4,7 @@
 #include <zipper/concepts/Zipper.hpp>
 
 #include "detail/tuple_to_array.hpp"
+#include "extents/all_extents_indices.hpp"
 namespace zipper::utils {
 
 namespace detail {

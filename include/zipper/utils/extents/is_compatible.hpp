@@ -49,20 +49,37 @@ constexpr bool is_compatible(std::integer_sequence<index_type, Indices...> idxs,
 
 }  // namespace detail
 
-template <index_type... Indices, zipper::concepts::Extents Ext>
+// MSVC cannot deduce a template parameter that follows a parameter pack
+// (C3547).  We restructure the public API so that the Extents type Ext is
+// either deduced from a function parameter, or wrapped inside a helper that
+// carries the pack as an integer_sequence instead of a bare pack after Ext.
+
+/// Compile-time compatibility check (no runtime Ext argument).
+/// Callers write: is_compatible<I0, I1, ...>(ext) — but Ext is deduced from
+/// the function argument, not placed after the pack.
+///
+/// For the zero-argument overload we use a helper so that Ext appears before
+/// the pack.
+namespace detail {
+template <zipper::concepts::Extents Ext, index_type... Indices>
     requires(sizeof...(Indices) == Ext::rank() && Ext::rank_dynamic() == 0)
-constexpr bool is_compatible() {
-    return detail::is_compatible<false, Ext>(
+constexpr bool is_compatible_static() {
+    return is_compatible<false, Ext>(
         std::integer_sequence<index_type, Indices...>{},
         std::make_integer_sequence<rank_type, Ext::rank()>{});
 }
+}  // namespace detail
+
+// The original public API used:
+//   template <index_type... Indices, Extents Ext>
+// MSVC rejects this (C3547).  Instead we provide overloads where Ext is
+// deduced from a function parameter, and delegate the no-arg overload to
+// a helper with reversed parameter order.
 
 template <index_type... Indices, zipper::concepts::Extents Ext>
     requires(sizeof...(Indices) == Ext::rank() && Ext::rank_dynamic() == 0)
 constexpr bool is_compatible(const Ext&) {
-    return detail::is_compatible<false, Ext>(
-        std::integer_sequence<index_type, Indices...>{},
-        std::make_integer_sequence<rank_type, Ext::rank()>{});
+    return detail::is_compatible_static<Ext, Indices...>();
 }
 
 template <index_type... Indices, zipper::concepts::Extents Ext>
@@ -79,9 +96,7 @@ constexpr void throw_if_not_compatible(const Ext& ext) {
     if constexpr (Ext::rank_dynamic() == 0) {
         static_assert(
             Ext::rank_dynamic() == 0 ||
-            detail::is_compatible<false, Ext>(
-                std::integer_sequence<index_type, Indices...>{},
-                std::make_integer_sequence<rank_type, Ext::rank()>{}));
+            detail::is_compatible_static<Ext, Indices...>());
     } else {
         if (!is_compatible<Indices...>(ext)) {
             throw std::invalid_argument("invalid extents");

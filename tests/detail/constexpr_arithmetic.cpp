@@ -20,24 +20,24 @@ void check_binop() {
     {
         auto r = apply_binop<BINO, IC<A>, IC<B>>({}, {});
         using RT = std::decay_t<decltype(r)>;
-        static_assert(std::is_same_v<RT, IC<R>>);
+        STATIC_CHECK(std::is_same_v<RT, IC<R>>);
     }
     {
         auto r = apply_binop<BINO, IR, IC<B>>(A, {});
         using RT = std::decay_t<decltype(r)>;
-        static_assert(std::is_same_v<RT, IR>);
+        STATIC_CHECK(std::is_same_v<RT, IR>);
         CHECK(r == R);
     }
     {
         auto r = apply_binop<BINO, IC<A>, IR>({}, B);
         using RT = std::decay_t<decltype(r)>;
-        static_assert(std::is_same_v<RT, IR>);
+        STATIC_CHECK(std::is_same_v<RT, IR>);
         CHECK(r == R);
     }
     {
         auto r = apply_binop<BINO, IR, IR>(A, B);
         using RT = std::decay_t<decltype(r)>;
-        static_assert(std::is_same_v<RT, IR>);
+        STATIC_CHECK(std::is_same_v<RT, IR>);
         CHECK(r == R);
     }
 }
@@ -85,29 +85,29 @@ TEST_CASE("test_constexpr_arithmetic_runtime",
     CA RD(std::dynamic_extent);
 #endif
 
-    static_assert(std::is_same_v<std::decay_t<decltype(R3)>, CA<IR>>);
-    static_assert(std::is_same_v<std::decay_t<decltype(R4)>, CA<IR>>);
-    static_assert(std::is_same_v<std::decay_t<decltype(R6)>, CA<IR>>);
-    static_assert(std::is_same_v<std::decay_t<decltype(R12)>, CA<IR>>);
+    STATIC_CHECK(std::is_same_v<std::decay_t<decltype(R3)>, CA<IR>>);
+    STATIC_CHECK(std::is_same_v<std::decay_t<decltype(R4)>, CA<IR>>);
+    STATIC_CHECK(std::is_same_v<std::decay_t<decltype(R6)>, CA<IR>>);
+    STATIC_CHECK(std::is_same_v<std::decay_t<decltype(R12)>, CA<IR>>);
 
     auto R7 = R3 + R4;
-    static_assert(std::is_same_v<std::decay_t<decltype(R7)>, CA<IR>>);
+    STATIC_CHECK(std::is_same_v<std::decay_t<decltype(R7)>, CA<IR>>);
     CHECK(IR(R7) == 7);
 
     auto R2 = R6 - R4;
-    static_assert(std::is_same_v<std::decay_t<decltype(R2)>, CA<IR>>);
+    STATIC_CHECK(std::is_same_v<std::decay_t<decltype(R2)>, CA<IR>>);
     CHECK(IR(R2) == 2);
 
     auto R24 = R6 * R4;
-    static_assert(std::is_same_v<std::decay_t<decltype(R24)>, CA<IR>>);
+    STATIC_CHECK(std::is_same_v<std::decay_t<decltype(R24)>, CA<IR>>);
     CHECK(IR(R24) == 24);
 
     auto R8 = R24 / R3;
-    static_assert(std::is_same_v<std::decay_t<decltype(R8)>, CA<IR>>);
+    STATIC_CHECK(std::is_same_v<std::decay_t<decltype(R8)>, CA<IR>>);
     CHECK(IR(R8) == 8);
 
     auto R5 = R12 % R7;
-    static_assert(std::is_same_v<std::decay_t<decltype(R5)>, CA<IR>>);
+    STATIC_CHECK(std::is_same_v<std::decay_t<decltype(R5)>, CA<IR>>);
     CHECK(IR(R5) == 5);
 
     CHECK(IR(R3 + RD) == std::dynamic_extent);
@@ -138,29 +138,29 @@ TEST_CASE("test_constexpr_arithmetic_compiletime",
     CA RD(IC<std::dynamic_extent>{});
 #endif
 
-    static_assert(std::is_same_v<std::decay_t<decltype(R3)>, CA<IC<3>>>);
-    static_assert(std::is_same_v<std::decay_t<decltype(R4)>, CA<IC<4>>>);
-    static_assert(std::is_same_v<std::decay_t<decltype(R6)>, CA<IC<6>>>);
-    static_assert(std::is_same_v<std::decay_t<decltype(R12)>, CA<IC<12>>>);
+    STATIC_CHECK(std::is_same_v<std::decay_t<decltype(R3)>, CA<IC<3>>>);
+    STATIC_CHECK(std::is_same_v<std::decay_t<decltype(R4)>, CA<IC<4>>>);
+    STATIC_CHECK(std::is_same_v<std::decay_t<decltype(R6)>, CA<IC<6>>>);
+    STATIC_CHECK(std::is_same_v<std::decay_t<decltype(R12)>, CA<IC<12>>>);
 
     auto R7 = R3 + R4;
-    static_assert(std::is_same_v<std::decay_t<decltype(R7)>, CA<IC<7>>>);
+    STATIC_CHECK(std::is_same_v<std::decay_t<decltype(R7)>, CA<IC<7>>>);
     CHECK(IR(R7) == 7);
 
     auto R2 = R6 - R4;
-    static_assert(std::is_same_v<std::decay_t<decltype(R2)>, CA<IC<2>>>);
+    STATIC_CHECK(std::is_same_v<std::decay_t<decltype(R2)>, CA<IC<2>>>);
     CHECK(IR(R2) == 2);
 
     auto R24 = R6 * R4;
-    static_assert(std::is_same_v<std::decay_t<decltype(R24)>, CA<IC<24>>>);
+    STATIC_CHECK(std::is_same_v<std::decay_t<decltype(R24)>, CA<IC<24>>>);
     CHECK(IR(R24) == 24);
 
     auto R8 = R24 / R3;
-    static_assert(std::is_same_v<std::decay_t<decltype(R8)>, CA<IC<8>>>);
+    STATIC_CHECK(std::is_same_v<std::decay_t<decltype(R8)>, CA<IC<8>>>);
     CHECK(IR(R8) == 8);
 
     auto R5 = R12 % R7;
-    static_assert(std::is_same_v<std::decay_t<decltype(R5)>, CA<IC<5>>>);
+    STATIC_CHECK(std::is_same_v<std::decay_t<decltype(R5)>, CA<IC<5>>>);
     CHECK(IR(R5) == 5);
     CHECK(IR(R3 + RD) == std::dynamic_extent);
     CHECK(IR(R3 - RD) == std::dynamic_extent);
@@ -202,15 +202,15 @@ TEST_CASE("test_constexpr_arithmetic_mix", "[detail][constexpr_arithmetic]") {
 
     {
         auto R7 = C3 + R4;
-        static_assert(std::is_same_v<std::decay_t<decltype(R7)>, CA<IR>>);
+        STATIC_CHECK(std::is_same_v<std::decay_t<decltype(R7)>, CA<IR>>);
         CHECK(IR(R7) == 7);
 
         auto R2 = C6 - R4;
-        static_assert(std::is_same_v<std::decay_t<decltype(R2)>, CA<IR>>);
+        STATIC_CHECK(std::is_same_v<std::decay_t<decltype(R2)>, CA<IR>>);
         CHECK(IR(R2) == 2);
 
         auto R24 = C6 * R4;
-        static_assert(std::is_same_v<std::decay_t<decltype(R24)>, CA<IR>>);
+        STATIC_CHECK(std::is_same_v<std::decay_t<decltype(R24)>, CA<IR>>);
         CHECK(IR(R24) == 24);
 
 #if defined(ZIPPER_DONT_USE_ALIAS_CTAD)
@@ -219,29 +219,29 @@ TEST_CASE("test_constexpr_arithmetic_mix", "[detail][constexpr_arithmetic]") {
         CA C24(IC<24>{});
 #endif
         auto R8 = C24 / R3;
-        static_assert(std::is_same_v<std::decay_t<decltype(R8)>, CA<IR>>);
+        STATIC_CHECK(std::is_same_v<std::decay_t<decltype(R8)>, CA<IR>>);
         CHECK(IR(R8) == 8);
 
         auto R5 = C12 % R7;
-        static_assert(std::is_same_v<std::decay_t<decltype(R5)>, CA<IR>>);
+        STATIC_CHECK(std::is_same_v<std::decay_t<decltype(R5)>, CA<IR>>);
         CHECK(IR(R5) == 5);
     }
 
     {
         auto R7 = R3 + C4;
-        static_assert(std::is_same_v<std::decay_t<decltype(R7)>, CA<IR>>);
+        STATIC_CHECK(std::is_same_v<std::decay_t<decltype(R7)>, CA<IR>>);
         CHECK(IR(R7) == 7);
 
         auto R2 = R6 - C4;
-        static_assert(std::is_same_v<std::decay_t<decltype(R2)>, CA<IR>>);
+        STATIC_CHECK(std::is_same_v<std::decay_t<decltype(R2)>, CA<IR>>);
         CHECK(IR(R2) == 2);
 
         auto R24 = R6 * C4;
-        static_assert(std::is_same_v<std::decay_t<decltype(R24)>, CA<IR>>);
+        STATIC_CHECK(std::is_same_v<std::decay_t<decltype(R24)>, CA<IR>>);
         CHECK(IR(R24) == 24);
 
         auto R8 = R24 / C3;
-        static_assert(std::is_same_v<std::decay_t<decltype(R8)>, CA<IR>>);
+        STATIC_CHECK(std::is_same_v<std::decay_t<decltype(R8)>, CA<IR>>);
         CHECK(IR(R8) == 8);
 
 #if defined(ZIPPER_DONT_USE_ALIAS_CTAD)
@@ -250,7 +250,7 @@ TEST_CASE("test_constexpr_arithmetic_mix", "[detail][constexpr_arithmetic]") {
         CA C7(IC<7>{});
 #endif
         auto R5 = R12 % C7;
-        static_assert(std::is_same_v<std::decay_t<decltype(R5)>, CA<IR>>);
+        STATIC_CHECK(std::is_same_v<std::decay_t<decltype(R5)>, CA<IR>>);
         CHECK(IR(R5) == 5);
     }
 

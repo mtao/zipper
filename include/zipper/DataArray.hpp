@@ -47,10 +47,7 @@ public:
   DataArray_(const DataArray_ &o) = default;
   DataArray_(DataArray_ &&o) = default;
   auto operator=(const DataArray_ &o) -> DataArray_ & = default;
-  auto operator=(DataArray_ &&o) -> DataArray_ & {
-    expression().operator=(std::move(o.expression()));
-    return *this;
-  }
+  auto operator=(DataArray_ &&o) -> DataArray_ & = default;
 
   template <concepts::Expression Other>
   DataArray_(const Other &other) : Base(other) {}

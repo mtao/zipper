@@ -48,11 +48,11 @@ TEST_CASE("test_matrix_slice_shapes", "[extents][matrix][slice]") {
             MN.slice<zipper::full_extent_t, zipper::full_extent_t>();
 
         using ST = std::decay_t<decltype(full_slice.expression())>;
-        static_assert(ST::actionable_indices.size() == 2);
-        static_assert(ST::actionable_indices[0] == 0);
-        static_assert(ST::actionable_indices[1] == 1);
+        STATIC_CHECK(ST::actionable_indices.size() == 2);
+        STATIC_CHECK(ST::actionable_indices[0] == 0);
+        STATIC_CHECK(ST::actionable_indices[1] == 1);
 
-        static_assert(std::is_same_v<ST::extents_type, zipper::extents<4, 5>>);
+        STATIC_CHECK(std::is_same_v<ST::extents_type, zipper::extents<4, 5>>);
 
         REQUIRE(3 == full_slice.expression().get_index<0>(3, 4));
         REQUIRE(4 == full_slice.expression().get_index<1>(3, 4));
@@ -63,27 +63,27 @@ TEST_CASE("test_matrix_slice_shapes", "[extents][matrix][slice]") {
         using ST = std::decay_t<decltype(slice.expression())>;
         using T = ST::slice_storage_type;
 
-        static_assert(std::is_same_v<zipper::full_extent_t,
+        STATIC_CHECK(std::is_same_v<zipper::full_extent_t,
                                      std::tuple_element_t<1, T>::type>);
 
-        static_assert(
+        STATIC_CHECK(
             std::is_same_v<std::integral_constant<zipper::index_type, 1>,
                            std::tuple_element_t<0, T>::type>);
 
-        static_assert(zipper::concepts::IndexSlice<std::tuple_element_t<0, T>::type>);
-        static_assert(zipper::concepts::IndexSlice<std::tuple_element_t<1, T>::type>);
+        STATIC_CHECK(zipper::concepts::IndexSlice<std::tuple_element_t<0, T>::type>);
+        STATIC_CHECK(zipper::concepts::IndexSlice<std::tuple_element_t<1, T>::type>);
 
-        static_assert(zipper::concepts::Index<std::tuple_element_t<0, T>::type>);
-        static_assert(!zipper::concepts::Index<std::tuple_element_t<1, T>::type>);
+        STATIC_CHECK(zipper::concepts::Index<std::tuple_element_t<0, T>::type>);
+        STATIC_CHECK_FALSE(zipper::concepts::Index<std::tuple_element_t<1, T>::type>);
 
-        static_assert(std::is_same_v<zipper::full_extent_t,
+        STATIC_CHECK(std::is_same_v<zipper::full_extent_t,
                                      std::tuple_element_t<1, T>::type>);
-        static_assert(ST::actionable_indices.size() == 2);
-        static_assert(ST::actionable_indices[0] == std::dynamic_extent);
-        static_assert(ST::actionable_indices[1] == 0);
-        static_assert(ST::extents_type::rank() == 1);
-        static_assert(ST::extents_type::static_extent(0) == 5);
-        static_assert(std::is_same_v<ST::extents_type, zipper::extents<5>>);
+        STATIC_CHECK(ST::actionable_indices.size() == 2);
+        STATIC_CHECK(ST::actionable_indices[0] == std::dynamic_extent);
+        STATIC_CHECK(ST::actionable_indices[1] == 0);
+        STATIC_CHECK(ST::extents_type::rank() == 1);
+        STATIC_CHECK(ST::extents_type::static_extent(0) == 5);
+        STATIC_CHECK(std::is_same_v<ST::extents_type, zipper::extents<5>>);
 
         REQUIRE(1 == slice.expression().get_index<0>(4));
         REQUIRE(4 == slice.expression().get_index<1>(4));
@@ -94,25 +94,25 @@ TEST_CASE("test_matrix_slice_shapes", "[extents][matrix][slice]") {
         using ST = std::decay_t<decltype(slice.expression())>;
         using T = ST::slice_storage_type;
 
-        static_assert(std::is_same_v<zipper::full_extent_t,
+        STATIC_CHECK(std::is_same_v<zipper::full_extent_t,
                                      std::tuple_element_t<0, T>::type>);
 
-        static_assert(
+        STATIC_CHECK(
             std::is_same_v<std::integral_constant<zipper::index_type, 1>,
                            std::tuple_element_t<1, T>::type>);
 
-        static_assert(zipper::concepts::IndexSlice<std::tuple_element_t<0, T>::type>);
-        static_assert(zipper::concepts::IndexSlice<std::tuple_element_t<1, T>::type>);
+        STATIC_CHECK(zipper::concepts::IndexSlice<std::tuple_element_t<0, T>::type>);
+        STATIC_CHECK(zipper::concepts::IndexSlice<std::tuple_element_t<1, T>::type>);
 
-        static_assert(zipper::concepts::Index<std::tuple_element_t<1, T>::type>);
-        static_assert(!zipper::concepts::Index<std::tuple_element_t<0, T>::type>);
+        STATIC_CHECK(zipper::concepts::Index<std::tuple_element_t<1, T>::type>);
+        STATIC_CHECK_FALSE(zipper::concepts::Index<std::tuple_element_t<0, T>::type>);
 
-        static_assert(std::is_same_v<zipper::full_extent_t,
+        STATIC_CHECK(std::is_same_v<zipper::full_extent_t,
                                      std::tuple_element_t<0, T>::type>);
-        static_assert(ST::actionable_indices.size() == 2);
-        static_assert(ST::actionable_indices[1] == std::dynamic_extent);
-        static_assert(ST::actionable_indices[0] == 0);
-        static_assert(std::is_same_v<ST::extents_type, zipper::extents<4>>);
+        STATIC_CHECK(ST::actionable_indices.size() == 2);
+        STATIC_CHECK(ST::actionable_indices[1] == std::dynamic_extent);
+        STATIC_CHECK(ST::actionable_indices[0] == 0);
+        STATIC_CHECK(std::is_same_v<ST::extents_type, zipper::extents<4>>);
 
         REQUIRE(1 == slice.expression().get_index<1>(4));
         REQUIRE(4 == slice.expression().get_index<0>(4));
@@ -157,8 +157,8 @@ TEST_CASE("test_matrix_slicing", "[extents][matrix][slice]") {
         REQUIRE(SD.extents() == S.extents());
         for (const auto& [a, b] :
              zipper::utils::extents::all_extents_indices(S.extents())) {
-            static_assert(std::is_integral_v<std::decay_t<decltype(a)>>);
-            static_assert(std::is_integral_v<std::decay_t<decltype(b)>>);
+            STATIC_CHECK(std::is_integral_v<std::decay_t<decltype(a)>>);
+            STATIC_CHECK(std::is_integral_v<std::decay_t<decltype(b)>>);
             CHECK(S(a, b) == MN(a + 1, b));
             CHECK(SD(a, b) == S(a, b));
     }
@@ -485,10 +485,10 @@ TEST_CASE("test_blocks", "[matrix][storage][dense]") {
     auto CC = C.topRows(zipper::static_index_t<2>{});
     auto RR = R.topRows(2);
     auto RC = R.topRows(zipper::static_index_t<2>{});
-    static_assert(CC.static_extent(0) == 2);
-    static_assert(CR.static_extent(0) == std::dynamic_extent);
-    static_assert(RC.static_extent(0) == 2);
-    static_assert(RR.static_extent(0) == std::dynamic_extent);
+    STATIC_CHECK(CC.static_extent(0) == 2);
+    STATIC_CHECK(CR.static_extent(0) == std::dynamic_extent);
+    STATIC_CHECK(RC.static_extent(0) == 2);
+    STATIC_CHECK(RR.static_extent(0) == std::dynamic_extent);
     REQUIRE(CR.extents() == zipper::create_dextents(2, 6));
     REQUIRE(CR.extents() == CC.extents());
     REQUIRE(CR.extents() == CC.extents());
@@ -515,10 +515,10 @@ TEST_CASE("test_blocks", "[matrix][storage][dense]") {
     auto CC = C.leftCols(zipper::static_index_t<5>{});
     auto RR = R.leftCols(5);
     auto RC = R.leftCols(zipper::static_index_t<5>{});
-    static_assert(CC.static_extent(1) == 5);
-    static_assert(CR.static_extent(1) == std::dynamic_extent);
-    static_assert(RC.static_extent(1) == 5);
-    static_assert(RR.static_extent(1) == std::dynamic_extent);
+    STATIC_CHECK(CC.static_extent(1) == 5);
+    STATIC_CHECK(CR.static_extent(1) == std::dynamic_extent);
+    STATIC_CHECK(RC.static_extent(1) == 5);
+    STATIC_CHECK(RR.static_extent(1) == std::dynamic_extent);
     REQUIRE(CR.extents() == zipper::create_dextents(3, 5));
     REQUIRE(CR.extents() == CC.extents());
     REQUIRE(CR.extents() == CC.extents());
@@ -553,17 +553,17 @@ TEST_CASE("test_blocks", "[matrix][storage][dense]") {
     using CRT_C =
         CRT_Detail::extents_helper::single_slice_helper<1>;
 
-    static_assert(
+    STATIC_CHECK(
         std::is_same_v<CRT_R::type,
                        zipper::slice_t<zipper::index_type, zipper::index_type,
                                        zipper::index_type>>);
 
-    static_assert(std::is_same_v<CRT_C::type, zipper::full_extent_t>);
+    STATIC_CHECK(std::is_same_v<CRT_C::type, zipper::full_extent_t>);
     // static_assert(
-    static_assert(CC.static_extent(0) == 2);
-    static_assert(CR.static_extent(0) == std::dynamic_extent);
-    static_assert(RC.static_extent(0) == std::dynamic_extent);
-    static_assert(RR.static_extent(0) == std::dynamic_extent);
+    STATIC_CHECK(CC.static_extent(0) == 2);
+    STATIC_CHECK(CR.static_extent(0) == std::dynamic_extent);
+    STATIC_CHECK(RC.static_extent(0) == std::dynamic_extent);
+    STATIC_CHECK(RR.static_extent(0) == std::dynamic_extent);
     REQUIRE(CR.extents() == zipper::create_dextents(2, 6));
     REQUIRE(CR.extents() == CC.extents());
     REQUIRE(CR.extents() == CC.extents());
@@ -590,10 +590,10 @@ TEST_CASE("test_blocks", "[matrix][storage][dense]") {
     auto CC = C.rightCols(zipper::static_index_t<5>{});
     auto RR = R.rightCols(5);
     auto RC = R.rightCols(zipper::static_index_t<5>{});
-    static_assert(CC.static_extent(1) == 5);
-    static_assert(CR.static_extent(1) == std::dynamic_extent);
-    static_assert(RC.static_extent(1) == std::dynamic_extent);
-    static_assert(RR.static_extent(1) == std::dynamic_extent);
+    STATIC_CHECK(CC.static_extent(1) == 5);
+    STATIC_CHECK(CR.static_extent(1) == std::dynamic_extent);
+    STATIC_CHECK(RC.static_extent(1) == std::dynamic_extent);
+    STATIC_CHECK(RR.static_extent(1) == std::dynamic_extent);
     REQUIRE(CR.extents() == zipper::create_dextents(3, 5));
     REQUIRE(CR.extents() == CC.extents());
     REQUIRE(CR.extents() == CC.extents());

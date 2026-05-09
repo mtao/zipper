@@ -178,9 +178,8 @@ template <typename T, rank_type D, index_type... Indices>
 struct detail::ExpressionTraits<nullary::Iota<T, D, Indices...>>
     : public BasicExpressionTraits<
           T, zipper::extents<Indices...>,
-          expression::detail::AccessFeatures{.is_const = true,
-                                             .is_reference = false},
-          expression::detail::ShapeFeatures{.is_resizable = true}> {};
+          expression::detail::AccessFeatures::const_value(),
+          expression::detail::ShapeFeatures::resizable()> {};
 
 } // namespace zipper::expression
 

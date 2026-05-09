@@ -72,8 +72,7 @@ template <unary::RepeatMode Mode, rank_type Count,
 struct detail::ExpressionTraits<unary::Repeat<Mode, Count, Child>>
     : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<
           Child,
-          zipper::detail::AccessFeatures{.is_const = true,
-                                         .is_reference = false}> {
+          zipper::detail::AccessFeatures::const_value()> {
     using _Detail = detail::ExpressionDetail<unary::Repeat<Mode, Count, Child>>;
     constexpr static bool is_coefficient_consistent = true;
     constexpr static bool is_value_based = false;

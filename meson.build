@@ -2,7 +2,7 @@ project(
   'zipper',
   'cpp',
   version: '0.1',
-  default_options: ['warning_level=3', 'cpp_std=c++26'],
+  default_options: ['warning_level=3', 'cpp_std=c++26,vc++latest'],
 )
 
 required_deps = []
@@ -99,6 +99,7 @@ zipper_dep = declare_dependency(
   include_directories: include_dirs,
   compile_args: compile_args,
 )
+meson.override_dependency('zipper', zipper_dep)
 
 if get_option('testing')
   subdir('tests')

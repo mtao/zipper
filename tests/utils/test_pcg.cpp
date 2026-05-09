@@ -20,15 +20,17 @@ using JacobiPX = utils::solver::JacobiPreconditioner<double, dynamic_extent>;
 using SSORP3 = utils::solver::SSORPreconditioner<double, 3>;
 using SSORPX = utils::solver::SSORPreconditioner<double, dynamic_extent>;
 
-static_assert(concepts::Preconditioner<JacobiP3>);
-static_assert(concepts::Preconditioner<JacobiPX>);
-static_assert(concepts::Preconditioner<SSORP3>);
-static_assert(concepts::Preconditioner<SSORPX>);
+TEST_CASE("preconditioner_concept_satisfaction", "[solver][pcg][concepts]") {
+    STATIC_CHECK(concepts::Preconditioner<JacobiP3>);
+    STATIC_CHECK(concepts::Preconditioner<JacobiPX>);
+    STATIC_CHECK(concepts::Preconditioner<SSORP3>);
+    STATIC_CHECK(concepts::Preconditioner<SSORPX>);
 
-// Negative: plain types do not satisfy Preconditioner.
-static_assert(!concepts::Preconditioner<int>);
-static_assert(!concepts::Preconditioner<double>);
-static_assert(!concepts::Preconditioner<Matrix<double, 3, 3>>);
+    // Negative: plain types do not satisfy Preconditioner.
+    STATIC_CHECK_FALSE(concepts::Preconditioner<int>);
+    STATIC_CHECK_FALSE(concepts::Preconditioner<double>);
+    STATIC_CHECK_FALSE(concepts::Preconditioner<Matrix<double, 3, 3>>);
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Test systems

@@ -78,9 +78,9 @@ TEST_CASE("test_tensor_product", "[storage][dense]") {
     print(M * x);
     print(I * M);
     auto IM = I * M;
-    static_assert(decltype(I)::extents_type::rank() == 2);
-    static_assert(decltype(M)::extents_type::rank() == 2);
-    static_assert(decltype(IM)::extents_type::rank() == 4);
+    STATIC_CHECK(decltype(I)::extents_type::rank() == 2);
+    STATIC_CHECK(decltype(M)::extents_type::rank() == 2);
+    STATIC_CHECK(decltype(IM)::extents_type::rank() == 4);
 }
 
 TEST_CASE("test_product", "[storage][tensor]") {
@@ -108,7 +108,7 @@ TEST_CASE("test_product", "[storage][tensor]") {
 
     // Matrix product via tensor product + partial trace
     auto TP = M * N;
-    static_assert(decltype(TP)::extents_type::rank() == 4);
+    STATIC_CHECK(decltype(TP)::extents_type::rank() == 4);
 
     using TP_type = std::decay_t<decltype(TP)>::expression_type;
     zipper::expression::unary::PartialTrace<const TP_type&, 1, 2> pt(TP.expression());

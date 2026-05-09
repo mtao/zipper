@@ -57,12 +57,13 @@ namespace zipper::expression::detail {
 // ═════════════════════════════════════════════════════════════════════════════
 
 // ─────────────────────────────────────────────────────────────────────────────
-/// @brief An evenly-strided half-open index set using range(first, last, stride)
+/// @brief An evenly-strided half-open index set using range(first, last,
+/// stride)
 ///        semantics.
 ///
 /// Represents indices {first, first+stride, first+2*stride, ...} where each
-/// index is strictly less than `last`.  Fields use `ZIPPER_NO_UNIQUE_ADDRESS` so
-/// compile-time `std::integral_constant` parameters occupy zero storage.
+/// index is strictly less than `last`.  Fields use `ZIPPER_NO_UNIQUE_ADDRESS`
+/// so compile-time `std::integral_constant` parameters occupy zero storage.
 ///
 /// When StrideType is `std::integral_constant<index_type, 1>` the set is
 /// contiguous: [first, last).  The `contains()` hot path compiles to a simple
@@ -76,12 +77,14 @@ namespace zipper::expression::detail {
 /// @tparam LastType    Type of the exclusive upper bound.
 /// @tparam StrideType  Type of the step size.
 // ─────────────────────────────────────────────────────────────────────────────
-template <typename FirstType = index_type, typename LastType = index_type,
+template <typename FirstType = index_type,
+          typename LastType = index_type,
           typename StrideType = index_type>
 struct StridedIndexSet {
-    ZIPPER_NO_UNIQUE_ADDRESS FirstType first;   ///< Inclusive lower bound.
-    ZIPPER_NO_UNIQUE_ADDRESS LastType last;     ///< Exclusive upper bound.
-    ZIPPER_NO_UNIQUE_ADDRESS StrideType stride; ///< Step between consecutive elements.
+    ZIPPER_NO_UNIQUE_ADDRESS FirstType first; ///< Inclusive lower bound.
+    ZIPPER_NO_UNIQUE_ADDRESS LastType last; ///< Exclusive upper bound.
+    ZIPPER_NO_UNIQUE_ADDRESS StrideType
+        stride; ///< Step between consecutive elements.
 
     /// @brief Test whether @p idx belongs to this strided set.
     ///
@@ -95,7 +98,7 @@ struct StridedIndexSet {
 
         if constexpr (requires { StrideType::value; }) {
             if constexpr (StrideType::value == 1) {
-                return true;  // already checked f <= idx < l
+                return true; // already checked f <= idx < l
             } else {
                 return (idx - f) % s == 0;
             }
@@ -159,26 +162,32 @@ struct StridedIndexSet {
 
 /// CTAD: integral types → index_type, integral_constant → preserved.
 template <typename FT, typename LT, typename ST>
-StridedIndexSet(FT, LT, ST) -> StridedIndexSet<
-    std::conditional_t<std::is_integral_v<std::decay_t<FT>>,
-                       index_type, std::decay_t<FT>>,
-    std::conditional_t<std::is_integral_v<std::decay_t<LT>>,
-                       index_type, std::decay_t<LT>>,
-    std::conditional_t<std::is_integral_v<std::decay_t<ST>>,
-                       index_type, std::decay_t<ST>>>;
+StridedIndexSet(FT, LT, ST)
+    -> StridedIndexSet<std::conditional_t<std::is_integral_v<std::decay_t<FT>>,
+                                          index_type,
+                                          std::decay_t<FT>>,
+                       std::conditional_t<std::is_integral_v<std::decay_t<LT>>,
+                                          index_type,
+                                          std::decay_t<LT>>,
+                       std::conditional_t<std::is_integral_v<std::decay_t<ST>>,
+                                          index_type,
+                                          std::decay_t<ST>>>;
 
 /// Two-argument CTAD: deduces contiguous (stride = static_index_t<1>).
 template <typename FT, typename LT>
-StridedIndexSet(FT, LT) -> StridedIndexSet<
-    std::conditional_t<std::is_integral_v<std::decay_t<FT>>,
-                       index_type, std::decay_t<FT>>,
-    std::conditional_t<std::is_integral_v<std::decay_t<LT>>,
-                       index_type, std::decay_t<LT>>,
-    static_index_t<1>>;
+StridedIndexSet(FT, LT)
+    -> StridedIndexSet<std::conditional_t<std::is_integral_v<std::decay_t<FT>>,
+                                          index_type,
+                                          std::decay_t<FT>>,
+                       std::conditional_t<std::is_integral_v<std::decay_t<LT>>,
+                                          index_type,
+                                          std::decay_t<LT>>,
+                       static_index_t<1>>;
 
 /// Contiguous index set: StridedIndexSet with stride fixed at 1.
 template <typename FirstType = index_type, typename LastType = index_type>
-using ContiguousIndexSet = StridedIndexSet<FirstType, LastType, static_index_t<1>>;
+using ContiguousIndexSet =
+    StridedIndexSet<FirstType, LastType, static_index_t<1>>;
 
 /// Backward-compatible alias: fully-runtime contiguous index range.
 using ContiguousIndexRange = ContiguousIndexSet<>;
@@ -194,7 +203,7 @@ using StridedIndexRange = StridedIndexSet<>;
 // ─────────────────────────────────────────────────────────────────────────────
 template <typename ValueType = index_type>
 struct SingleIndexSet {
-    ZIPPER_NO_UNIQUE_ADDRESS ValueType value;  ///< The single non-zero index.
+    ZIPPER_NO_UNIQUE_ADDRESS ValueType value; ///< The single non-zero index.
 
     /// @brief Test whether @p idx equals the stored value.
     constexpr auto contains(index_type idx) const -> bool {
@@ -205,22 +214,21 @@ struct SingleIndexSet {
     constexpr auto size() const -> index_type { return 1; }
 
     auto begin() const {
-        return std::ranges::iota_view(index_type(value),
-                                       index_type(value) + 1)
+        return std::ranges::iota_view(index_type(value), index_type(value) + 1)
             .begin();
     }
     auto end() const {
-        return std::ranges::iota_view(index_type(value),
-                                       index_type(value) + 1)
+        return std::ranges::iota_view(index_type(value), index_type(value) + 1)
             .end();
     }
 };
 
 /// CTAD for SingleIndexSet.
 template <typename VT>
-SingleIndexSet(VT) -> SingleIndexSet<
-    std::conditional_t<std::is_integral_v<std::decay_t<VT>>,
-                       index_type, std::decay_t<VT>>>;
+SingleIndexSet(VT)
+    -> SingleIndexSet<std::conditional_t<std::is_integral_v<std::decay_t<VT>>,
+                                         index_type,
+                                         std::decay_t<VT>>>;
 
 /// Backward-compatible alias: fully-runtime single index range.
 using SingleIndexRange = SingleIndexSet<>;
@@ -267,14 +275,14 @@ struct EmptyIndexRange {
 /// (e.g., the two off-diagonal entries in a tridiagonal row).
 template <std::size_t N>
 struct StaticSparseIndexSet {
-    std::array<index_type, N> indices;  ///< Sorted ascending.
+    std::array<index_type, N> indices; ///< Sorted ascending.
 
     constexpr auto contains(index_type idx) const -> bool {
         // For small N, linear scan beats binary search.
         if constexpr (N <= 8) {
             for (std::size_t i = 0; i < N; ++i) {
                 if (indices[i] == idx) return true;
-                if (indices[i] > idx) return false;  // sorted, early exit
+                if (indices[i] > idx) return false; // sorted, early exit
             }
             return false;
         } else {
@@ -289,6 +297,11 @@ struct StaticSparseIndexSet {
     constexpr auto end() const { return indices.end(); }
 };
 
+/// Forward declaration — needed so SpanSparseIndexSet::to_owned() can name
+/// the return type without the elaborated-type-specifier 'struct' (which
+/// MSVC incorrectly resolves as a nested class declaration).
+struct DynamicSparseIndexSet;
+
 /// @brief Non-owning sparse index set backed by std::span.
 ///
 /// Borrows a sorted index buffer from the caller.  Use when the lifetime
@@ -297,7 +310,7 @@ struct StaticSparseIndexSet {
 ///
 /// Call `to_owned()` to produce a DynamicSparseIndexSet that owns its data.
 struct SpanSparseIndexSet {
-    std::span<const index_type> indices;  ///< Sorted ascending, non-owning.
+    std::span<const index_type> indices; ///< Sorted ascending, non-owning.
 
     auto contains(index_type idx) const -> bool {
         return std::binary_search(indices.begin(), indices.end(), idx);
@@ -310,7 +323,7 @@ struct SpanSparseIndexSet {
     auto end() const { return indices.end(); }
 
     /// @brief Create an owning copy of this span's data.
-    inline auto to_owned() const -> struct DynamicSparseIndexSet;
+    inline auto to_owned() const -> DynamicSparseIndexSet;
 };
 
 /// @brief Owning sparse index set backed by std::vector.
@@ -318,7 +331,7 @@ struct SpanSparseIndexSet {
 /// The default choice for runtime-constructed sparse index sets.
 /// This is the type that the old `SparseIndexRange` was.
 struct DynamicSparseIndexSet {
-    std::vector<index_type> indices;  ///< Sorted ascending.
+    std::vector<index_type> indices; ///< Sorted ascending.
 
     auto contains(index_type idx) const -> bool {
         return std::binary_search(indices.begin(), indices.end(), idx);
@@ -352,7 +365,7 @@ using SparseIndexRange = DynamicSparseIndexSet;
 // ─────────────────────────────────────────────────────────────────────────────
 template <typename ExtentType = index_type>
 struct FullIndexSet {
-    ZIPPER_NO_UNIQUE_ADDRESS ExtentType extent;  ///< Range is [0, extent).
+    ZIPPER_NO_UNIQUE_ADDRESS ExtentType extent; ///< Range is [0, extent).
 
     /// @brief Always returns true (no known zeros).
     constexpr auto contains([[maybe_unused]] index_type idx) const -> bool {
@@ -367,16 +380,16 @@ struct FullIndexSet {
             .begin();
     }
     auto end() const {
-        return std::ranges::iota_view(index_type{0}, index_type(extent))
-            .end();
+        return std::ranges::iota_view(index_type{0}, index_type(extent)).end();
     }
 };
 
 /// CTAD for FullIndexSet.
 template <typename ET>
-FullIndexSet(ET) -> FullIndexSet<
-    std::conditional_t<std::is_integral_v<std::decay_t<ET>>,
-                       index_type, std::decay_t<ET>>>;
+FullIndexSet(ET)
+    -> FullIndexSet<std::conditional_t<std::is_integral_v<std::decay_t<ET>>,
+                                       index_type,
+                                       std::decay_t<ET>>>;
 
 /// Backward-compatible alias: fully-runtime full range.
 using FullRange = FullIndexSet<>;
@@ -391,15 +404,15 @@ struct is_empty_index_range : std::false_type {};
 template <>
 struct is_empty_index_range<EmptyIndexRange> : std::true_type {};
 template <typename T>
-concept IsEmptyIndexRange =
-    is_empty_index_range<std::remove_cvref_t<T>>::value;
+concept IsEmptyIndexRange = is_empty_index_range<std::remove_cvref_t<T>>::value;
 
-/// @brief Trait to detect any ContiguousIndexSet specialization (stride = static_index_t<1>).
+/// @brief Trait to detect any ContiguousIndexSet specialization (stride =
+/// static_index_t<1>).
 template <typename T>
 struct is_contiguous_index_set : std::false_type {};
 template <typename FT, typename LT>
 struct is_contiguous_index_set<StridedIndexSet<FT, LT, static_index_t<1>>>
-    : std::true_type {};
+  : std::true_type {};
 template <typename T>
 concept IsContiguousIndexSet =
     is_contiguous_index_set<std::remove_cvref_t<T>>::value;
@@ -410,8 +423,7 @@ struct is_single_index_set : std::false_type {};
 template <typename VT>
 struct is_single_index_set<SingleIndexSet<VT>> : std::true_type {};
 template <typename T>
-concept IsSingleIndexSet =
-    is_single_index_set<std::remove_cvref_t<T>>::value;
+concept IsSingleIndexSet = is_single_index_set<std::remove_cvref_t<T>>::value;
 
 /// @brief Trait to detect any FullIndexSet specialization.
 template <typename T>
@@ -419,8 +431,7 @@ struct is_full_index_set : std::false_type {};
 template <typename ET>
 struct is_full_index_set<FullIndexSet<ET>> : std::true_type {};
 template <typename T>
-concept IsFullIndexSet =
-    is_full_index_set<std::remove_cvref_t<T>>::value;
+concept IsFullIndexSet = is_full_index_set<std::remove_cvref_t<T>>::value;
 
 /// @brief Trait to detect any StridedIndexSet specialization.
 template <typename T>
@@ -428,8 +439,7 @@ struct is_strided_index_set : std::false_type {};
 template <typename OT, typename ET, typename ST>
 struct is_strided_index_set<StridedIndexSet<OT, ET, ST>> : std::true_type {};
 template <typename T>
-concept IsStridedIndexSet =
-    is_strided_index_set<std::remove_cvref_t<T>>::value;
+concept IsStridedIndexSet = is_strided_index_set<std::remove_cvref_t<T>>::value;
 
 /// @brief Trait to detect StaticSparseIndexSet<N>.
 template <typename T>
@@ -460,9 +470,8 @@ concept IsDynamicSparseIndexSet =
 
 /// @brief Concept matching any sparse index set type.
 template <typename T>
-concept IsSparseIndexSet =
-    IsStaticSparseIndexSet<T> || IsSpanSparseIndexSet<T> ||
-    IsDynamicSparseIndexSet<T>;
+concept IsSparseIndexSet = IsStaticSparseIndexSet<T> || IsSpanSparseIndexSet<T>
+                           || IsDynamicSparseIndexSet<T>;
 
 // ─────────────────────────────────────────────────────────────────────────────
 /// @brief Concept satisfied by all index set types.
@@ -495,17 +504,14 @@ static_assert(IndexSet<SpanSparseIndexSet>);
 static_assert(IndexSet<DynamicSparseIndexSet>);
 
 // Also verify non-default specializations.
-static_assert(IndexSet<ContiguousIndexSet<
-    std::integral_constant<index_type, 0>,
-    std::integral_constant<index_type, 5>>>);
-static_assert(IndexSet<SingleIndexSet<
-    std::integral_constant<index_type, 3>>>);
-static_assert(IndexSet<FullIndexSet<
-    std::integral_constant<index_type, 10>>>);
-static_assert(IndexSet<StridedIndexSet<
-    std::integral_constant<index_type, 0>,
-    std::integral_constant<index_type, 12>,
-    std::integral_constant<index_type, 3>>>);
+static_assert(
+    IndexSet<ContiguousIndexSet<std::integral_constant<index_type, 0>,
+                                std::integral_constant<index_type, 5>>>);
+static_assert(IndexSet<SingleIndexSet<std::integral_constant<index_type, 3>>>);
+static_assert(IndexSet<FullIndexSet<std::integral_constant<index_type, 10>>>);
+static_assert(IndexSet<StridedIndexSet<std::integral_constant<index_type, 0>,
+                                       std::integral_constant<index_type, 12>,
+                                       std::integral_constant<index_type, 3>>>);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Forward declaration for DisjointRange (needed by concept trait below).
@@ -527,14 +533,24 @@ concept IsDisjointRange = is_disjoint_range<std::remove_cvref_t<T>>::value;
 /// @brief Convert any IndexSet to a ContiguousIndexRange (bounding box).
 ///
 /// Used by range_union and other utilities that need a uniform type.
-///   - ContiguousIndexRange → identity
-///   - SingleIndexRange     → [value, value+1)
-///   - FullRange            → [0, extent)
-///   - SparseIndexRange     → bounding interval
+/// All overloads return ContiguousIndexRange (fully-runtime) to enable
+/// storage in uniform arrays and consistent dispatch in range_union.
+///
+///   - ContiguousIndexSet<FT,LT> → {first, last} (erases static types)
+///   - EmptyIndexRange           → {0, 0}
+///   - SingleIndexSet<VT>        → [value, value+1)
+///   - FullIndexSet<ET>          → [0, extent)
+///   - SparseIndexRange          → bounding interval
 // ─────────────────────────────────────────────────────────────────────────────
-constexpr auto to_contiguous_range(const ContiguousIndexRange &r)
+
+/// @brief Any ContiguousIndexSet → ContiguousIndexRange.
+///
+/// Handles all ContiguousIndexSet<FT, LT> specializations, including
+/// the exact ContiguousIndexRange alias and mixed static/dynamic types.
+template <typename FT, typename LT>
+constexpr auto to_contiguous_range(const ContiguousIndexSet<FT, LT> &r)
     -> ContiguousIndexRange {
-    return r;
+    return {index_type(r.first), index_type(r.last)};
 }
 
 constexpr auto to_contiguous_range([[maybe_unused]] const EmptyIndexRange &)
@@ -542,17 +558,22 @@ constexpr auto to_contiguous_range([[maybe_unused]] const EmptyIndexRange &)
     return {index_type{0}, index_type{0}};
 }
 
-constexpr auto to_contiguous_range(const SingleIndexRange &r)
+/// @brief Any SingleIndexSet → ContiguousIndexRange [value, value+1).
+template <typename VT>
+constexpr auto to_contiguous_range(const SingleIndexSet<VT> &r)
     -> ContiguousIndexRange {
-    return {r.value, r.value + 1};
+    return {index_type(r.value), index_type(r.value) + 1};
 }
 
-constexpr auto to_contiguous_range(const FullRange &r)
+/// @brief Any FullIndexSet → ContiguousIndexRange [0, extent).
+template <typename ET>
+constexpr auto to_contiguous_range(const FullIndexSet<ET> &r)
     -> ContiguousIndexRange {
-    return {index_type{0}, r.extent};
+    return {index_type{0}, index_type(r.extent)};
 }
 
-/// @brief Bounding box of a StridedIndexSet: [first, first + (size-1)*stride + 1).
+/// @brief Bounding box of a StridedIndexSet: [first, first + (size-1)*stride +
+/// 1).
 ///
 /// For contiguous sets (stride=1), this is identity.
 /// For general stride, returns the tightest contiguous range covering all
@@ -574,8 +595,7 @@ constexpr auto to_contiguous_range(const StridedIndexSet<FT, LT, ST> &r)
 /// DynamicSparseIndexSet.  Since indices are sorted, first/last elements
 /// give the bounds directly.
 template <IsSparseIndexSet S>
-inline auto to_contiguous_range(const S &r)
-    -> ContiguousIndexRange {
+inline auto to_contiguous_range(const S &r) -> ContiguousIndexRange {
     if (r.empty()) return {index_type{0}, index_type{0}};
     // Sorted ascending: first element is min, last element is max.
     const auto lo = static_cast<index_type>(*r.begin());
@@ -595,12 +615,13 @@ constexpr auto to_contiguous_range(const DisjointRange<Rs...> &dr)
     index_type hi = 0;
     auto update = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
         (([&] {
-            auto cr = to_contiguous_range(std::get<Is>(dr.segments));
-            if (!cr.empty()) {
-                lo = std::min(lo, cr.first);
-                hi = std::max(hi, cr.last);
-            }
-        }()), ...);
+             auto cr = to_contiguous_range(std::get<Is>(dr.segments));
+             if (!cr.empty()) {
+                 lo = std::min(lo, cr.first);
+                 hi = std::max(hi, cr.last);
+             }
+         }()),
+         ...);
     };
     update(std::index_sequence_for<Rs...>{});
     if (lo == std::dynamic_extent) return {index_type{0}, index_type{0}};
@@ -627,8 +648,8 @@ class DisjointRangeIterator {
     //
     // However, since the iterator types may differ per segment, we use
     // a simpler approach: store the current linear index and segment index.
-    index_type m_value;       ///< Current index value being pointed to.
-    std::size_t m_segment;    ///< Which segment we're currently in.
+    index_type m_value; ///< Current index value being pointed to.
+    std::size_t m_segment; ///< Which segment we're currently in.
 
     // Precomputed segment boundaries for fast advance.
     // segments_first[i] / segments_last[i] give the first/last of
@@ -640,14 +661,13 @@ class DisjointRangeIterator {
     std::array<index_type, N> m_seg_first;
     std::array<index_type, N> m_seg_last;
 
-   public:
+  public:
     using value_type = index_type;
     using difference_type = std::ptrdiff_t;
 
     /// @brief Construct a begin iterator.
-    constexpr DisjointRangeIterator(const ranges_tuple &ranges,
-                                     bool at_end)
-        : m_ranges(&ranges), m_value{0}, m_segment{0} {
+    constexpr DisjointRangeIterator(const ranges_tuple &ranges, bool at_end)
+      : m_ranges(&ranges), m_value{0}, m_segment{0} {
         // Extract bounds from each segment.
         extract_bounds(std::index_sequence_for<Ranges...>{});
 
@@ -658,9 +678,7 @@ class DisjointRangeIterator {
             // Advance to first non-empty segment.
             m_segment = 0;
             skip_empty_segments();
-            if (m_segment < N) {
-                m_value = m_seg_first[m_segment];
-            }
+            if (m_segment < N) { m_value = m_seg_first[m_segment]; }
         }
     }
 
@@ -671,9 +689,7 @@ class DisjointRangeIterator {
         if (m_value >= m_seg_last[m_segment]) {
             ++m_segment;
             skip_empty_segments();
-            if (m_segment < N) {
-                m_value = m_seg_first[m_segment];
-            }
+            if (m_segment < N) { m_value = m_seg_first[m_segment]; }
         }
         return *this;
     }
@@ -695,7 +711,7 @@ class DisjointRangeIterator {
         return !(*this == other);
     }
 
-   private:
+  private:
     template <std::size_t... Is>
     constexpr void extract_bounds(std::index_sequence<Is...>) {
         ((extract_one_bound<Is>()), ...);
@@ -709,8 +725,8 @@ class DisjointRangeIterator {
     }
 
     constexpr void skip_empty_segments() {
-        while (m_segment < N &&
-               m_seg_first[m_segment] >= m_seg_last[m_segment]) {
+        while (m_segment < N
+               && m_seg_first[m_segment] >= m_seg_last[m_segment]) {
             ++m_segment;
         }
     }
@@ -768,10 +784,10 @@ struct DisjointRange {
                       std::index_sequence_for<Ranges...>{});
     }
 
-   private:
+  private:
     template <std::size_t... Is>
     constexpr auto contains_impl(index_type idx,
-                                  std::index_sequence<Is...>) const -> bool {
+                                 std::index_sequence<Is...>) const -> bool {
         return (std::get<Is>(segments).contains(idx) || ...);
     }
 
@@ -786,13 +802,11 @@ struct DisjointRange {
     }
 
     template <typename Fn, std::size_t... Is>
-    constexpr void for_each_impl(Fn &&fn,
-                                  std::index_sequence<Is...>) const {
+    constexpr void for_each_impl(Fn &&fn, std::index_sequence<Is...>) const {
         (([&] {
-            for (auto j : std::get<Is>(segments)) {
-                fn(j);
-            }
-        }()), ...);
+             for (auto j : std::get<Is>(segments)) { fn(j); }
+         }()),
+         ...);
     }
 };
 
@@ -801,8 +815,8 @@ template <IndexSet... Rs>
 DisjointRange(std::tuple<Rs...>) -> DisjointRange<Rs...>;
 
 static_assert(IndexSet<DisjointRange<ContiguousIndexRange>>);
-static_assert(IndexSet<
-    DisjointRange<ContiguousIndexRange, ContiguousIndexRange>>);
+static_assert(
+    IndexSet<DisjointRange<ContiguousIndexRange, ContiguousIndexRange>>);
 
 // ─────────────────────────────────────────────────────────────────────────────
 /// @brief Concept to detect types with a for_each method.
@@ -811,9 +825,7 @@ static_assert(IndexSet<
 /// compile-time-unrolled path when available.
 // ─────────────────────────────────────────────────────────────────────────────
 template <typename R>
-concept HasForEach = requires(const R &r) {
-    r.for_each([](index_type) {});
-};
+concept HasForEach = requires(const R &r) { r.for_each([](index_type) {}); };
 
 // ─────────────────────────────────────────────────────────────────────────────
 /// @brief Merge-sort a fixed-size array of ContiguousIndexRange segments,
@@ -825,8 +837,8 @@ template <std::size_t N>
 constexpr void merge_segments(std::array<ContiguousIndexRange, N> &segs) {
     // Sort by .first (simple insertion sort for small N).
     for (std::size_t i = 1; i < N; ++i) {
-        for (std::size_t j = i;
-             j > 0 && segs[j].first < segs[j - 1].first; --j) {
+        for (std::size_t j = i; j > 0 && segs[j].first < segs[j - 1].first;
+             --j) {
             std::swap(segs[j], segs[j - 1]);
         }
     }
@@ -867,8 +879,8 @@ constexpr auto make_disjoint_from_array(
 }
 
 template <std::size_t N>
-constexpr auto make_disjoint_from_array(
-    const std::array<ContiguousIndexRange, N> &arr) {
+constexpr auto
+    make_disjoint_from_array(const std::array<ContiguousIndexRange, N> &arr) {
     return make_disjoint_from_array(arr, std::make_index_sequence<N>{});
 }
 
@@ -944,27 +956,25 @@ constexpr auto range_union(const DisjointRange<As...> &a,
 ///
 /// Promotes to ContiguousIndexRange first, then dispatches.
 template <IndexSet A, IndexSet B>
-    requires(!std::is_same_v<std::remove_cvref_t<A>, ContiguousIndexRange> ||
-             !std::is_same_v<std::remove_cvref_t<B>, ContiguousIndexRange>) &&
-            (!IsDisjointRange<A>) && (!IsDisjointRange<B>)
+    requires(!std::is_same_v<std::remove_cvref_t<A>, ContiguousIndexRange>
+             || !std::is_same_v<std::remove_cvref_t<B>, ContiguousIndexRange>)
+            && (!IsDisjointRange<A>) && (!IsDisjointRange<B>)
 constexpr auto range_union(const A &a, const B &b) {
     return range_union(to_contiguous_range(a), to_contiguous_range(b));
 }
 
 /// @brief Union of a non-CR/non-DR with a DisjointRange.
 template <IndexSet A, IndexSet... Bs>
-    requires(!std::is_same_v<std::remove_cvref_t<A>,
-                              ContiguousIndexRange>) &&
-            (!IsDisjointRange<A>)
+    requires(!std::is_same_v<std::remove_cvref_t<A>, ContiguousIndexRange>)
+            && (!IsDisjointRange<A>)
 constexpr auto range_union(const A &a, const DisjointRange<Bs...> &b) {
     return range_union(to_contiguous_range(a), b);
 }
 
 /// @brief Union of a DisjointRange with a non-CR/non-DR.
 template <IndexSet... As, IndexSet B>
-    requires(!std::is_same_v<std::remove_cvref_t<B>,
-                              ContiguousIndexRange>) &&
-            (!IsDisjointRange<B>)
+    requires(!std::is_same_v<std::remove_cvref_t<B>, ContiguousIndexRange>)
+            && (!IsDisjointRange<B>)
 constexpr auto range_union(const DisjointRange<As...> &a, const B &b) {
     return range_union(a, to_contiguous_range(b));
 }
@@ -972,21 +982,19 @@ constexpr auto range_union(const DisjointRange<As...> &a, const B &b) {
 // ── Helpers for extracting segments into arrays ──────────────────────────────
 
 template <IndexSet... Rs, std::size_t N, std::size_t... Is>
-constexpr void fill_segments_from_disjoint(
-    const DisjointRange<Rs...> &dr,
-    std::array<ContiguousIndexRange, N> &out,
-    std::index_sequence<Is...>) {
+constexpr void
+    fill_segments_from_disjoint(const DisjointRange<Rs...> &dr,
+                                std::array<ContiguousIndexRange, N> &out,
+                                std::index_sequence<Is...>) {
     ((out[Is] = to_contiguous_range(std::get<Is>(dr.segments))), ...);
 }
 
-template <std::size_t Offset, IndexSet... Rs, std::size_t N,
-          std::size_t... Is>
-constexpr void fill_segments_from_disjoint_offset(
-    const DisjointRange<Rs...> &dr,
-    std::array<ContiguousIndexRange, N> &out,
-    std::index_sequence<Is...>) {
-    ((out[Offset + Is] = to_contiguous_range(std::get<Is>(dr.segments))),
-     ...);
+template <std::size_t Offset, IndexSet... Rs, std::size_t N, std::size_t... Is>
+constexpr void
+    fill_segments_from_disjoint_offset(const DisjointRange<Rs...> &dr,
+                                       std::array<ContiguousIndexRange, N> &out,
+                                       std::index_sequence<Is...>) {
+    ((out[Offset + Is] = to_contiguous_range(std::get<Is>(dr.segments))), ...);
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -1010,10 +1018,20 @@ constexpr auto to_index_set([[maybe_unused]] const full_extent_t &,
 }
 
 /// @brief Convert an integer index to a SingleIndexRange.
-constexpr auto to_index_set(index_type idx,
-                            [[maybe_unused]] index_type extent)
+constexpr auto to_index_set(index_type idx, [[maybe_unused]] index_type extent)
     -> SingleIndexRange {
     return SingleIndexRange{idx};
+}
+
+/// @brief Convert a compile-time index (static_index_t) to a static SingleIndexSet.
+///
+/// Preserves compile-time information: the returned SingleIndexSet has
+/// zero storage since its value field is std::integral_constant.
+template <index_type N>
+constexpr auto to_index_set(static_index_t<N>,
+                            [[maybe_unused]] index_type extent)
+    -> SingleIndexSet<static_index_t<N>> {
+    return {};
 }
 
 /// @brief Convert a strided_slice to a StridedIndexSet.
@@ -1024,23 +1042,26 @@ constexpr auto to_index_set(index_type idx,
 /// with first=offset, last=offset+(count-1)*stride+1 (exclusive upper
 /// bound), stride=stride.
 ///
-/// When stride is 1, the result is a ContiguousIndexSet (via the type
+/// The StrideType is preserved in the result type so that compile-time
+/// stride information is not erased.  In particular, when StrideType is
+/// static_index_t<1> the result is a ContiguousIndexSet (via the type
 /// alias, since StridedIndexSet<..., static_index_t<1>> = ContiguousIndexSet).
 template <typename OffsetType, typename ExtentType, typename StrideType>
-constexpr auto to_index_set(
-    const strided_slice<OffsetType, ExtentType, StrideType> &s,
-    [[maybe_unused]] index_type extent) {
+constexpr auto
+    to_index_set(const strided_slice<OffsetType, ExtentType, StrideType> &s,
+                 [[maybe_unused]] index_type extent)
+    -> StridedIndexSet<index_type, index_type, StrideType> {
     const auto o = index_type(s.offset);
     const auto e = index_type(s.extent);
     const auto st = index_type(s.stride);
     if (e == 0 || st == 0) {
-        return StridedIndexRange{index_type{0}, index_type{0}, st};
+        return {index_type{0}, index_type{0}, s.stride};
     }
     // Number of output elements: ceil(e / st)
     const auto count = 1 + (e - 1) / st;
     // last = one past the last accessed child index
     const auto last = o + (count - 1) * st + 1;
-    return StridedIndexRange{o, last, st};
+    return {o, last, s.stride};
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -1097,16 +1118,14 @@ constexpr auto range_intersection(const FullIndexSet<EA> &a,
 /// @brief Full ∩ R → R (as a contiguous range, preserving the other side).
 template <IsFullIndexSet F, IndexSet R>
     requires(!IsFullIndexSet<R>)
-constexpr auto range_intersection([[maybe_unused]] const F &,
-                                  const R &r) {
+constexpr auto range_intersection([[maybe_unused]] const F &, const R &r) {
     return r;
 }
 
 /// @brief R ∩ Full → R (symmetric).
 template <IndexSet R, IsFullIndexSet F>
     requires(!IsFullIndexSet<R>)
-constexpr auto range_intersection(const R &r,
-                                  [[maybe_unused]] const F &) {
+constexpr auto range_intersection(const R &r, [[maybe_unused]] const F &) {
     return r;
 }
 
@@ -1146,9 +1165,9 @@ constexpr auto range_intersection(const R &r, const S &s)
 
 /// @brief Contiguous ∩ Contiguous → max of firsts, min of lasts.
 template <typename FA, typename LA, typename FB, typename LB>
-constexpr auto range_intersection(
-    const ContiguousIndexSet<FA, LA> &a,
-    const ContiguousIndexSet<FB, LB> &b) -> ContiguousIndexRange {
+constexpr auto range_intersection(const ContiguousIndexSet<FA, LA> &a,
+                                  const ContiguousIndexSet<FB, LB> &b)
+    -> ContiguousIndexRange {
     const auto f = std::max(index_type(a.first), index_type(b.first));
     const auto l = std::min(index_type(a.last), index_type(b.last));
     if (f >= l) return {index_type{0}, index_type{0}};
@@ -1165,9 +1184,9 @@ constexpr auto range_intersection(
 /// Result is StridedIndexRange{new_first, new_last, s}.
 template <typename FT, typename LT, typename ST, typename FA, typename LA>
     requires(!IsContiguousIndexSet<StridedIndexSet<FT, LT, ST>>)
-constexpr auto range_intersection(
-    const StridedIndexSet<FT, LT, ST> &strided,
-    const ContiguousIndexSet<FA, LA> &contig) -> StridedIndexRange {
+constexpr auto range_intersection(const StridedIndexSet<FT, LT, ST> &strided,
+                                  const ContiguousIndexSet<FA, LA> &contig)
+    -> StridedIndexRange {
     const auto f = index_type(strided.first);
     const auto l = index_type(strided.last);
     const auto s = index_type(strided.stride);
@@ -1195,9 +1214,9 @@ constexpr auto range_intersection(
 /// @brief Contiguous ∩ Strided → symmetric.
 template <typename FA, typename LA, typename FT, typename LT, typename ST>
     requires(!IsContiguousIndexSet<StridedIndexSet<FT, LT, ST>>)
-constexpr auto range_intersection(
-    const ContiguousIndexSet<FA, LA> &contig,
-    const StridedIndexSet<FT, LT, ST> &strided) -> StridedIndexRange {
+constexpr auto range_intersection(const ContiguousIndexSet<FA, LA> &contig,
+                                  const StridedIndexSet<FT, LT, ST> &strided)
+    -> StridedIndexRange {
     return range_intersection(strided, contig);
 }
 
@@ -1205,15 +1224,15 @@ constexpr auto range_intersection(
 
 // Forward declaration for the recursive case.
 template <IndexSet A, IndexSet B>
-    requires(!IsFullIndexSet<A>) && (!IsSingleIndexSet<A>) &&
-            (!IsFullIndexSet<B>) && (!IsSingleIndexSet<B>) &&
-            (!IsDisjointRange<A>) && (!IsDisjointRange<B>) &&
+    requires(!IsFullIndexSet<A>) && (!IsSingleIndexSet<A>)
+            && (!IsFullIndexSet<B>) && (!IsSingleIndexSet<B>)
+            && (!IsDisjointRange<A>) && (!IsDisjointRange<B>) &&
             // Exclude the cases already handled by overloads 3 and 4
-            (!(IsContiguousIndexSet<A> && IsContiguousIndexSet<B>)) &&
-            (!((IsStridedIndexSet<A> && !IsContiguousIndexSet<A>) &&
-               IsContiguousIndexSet<B>)) &&
-            (!((IsStridedIndexSet<B> && !IsContiguousIndexSet<B>) &&
-               IsContiguousIndexSet<A>))
+            (!(IsContiguousIndexSet<A> && IsContiguousIndexSet<B>))
+            && (!((IsStridedIndexSet<A> && !IsContiguousIndexSet<A>)
+                  && IsContiguousIndexSet<B>))
+            && (!((IsStridedIndexSet<B> && !IsContiguousIndexSet<B>)
+                  && IsContiguousIndexSet<A>))
 auto range_intersection(const A &a, const B &b) -> DynamicSparseIndexSet;
 
 /// @brief DisjointRange ∩ IndexSet → intersect each segment, collect results.
@@ -1221,20 +1240,19 @@ auto range_intersection(const A &a, const B &b) -> DynamicSparseIndexSet;
 /// Returns a DynamicSparseIndexSet containing the union of per-segment
 /// intersections.
 template <IndexSet... As, IndexSet R>
-    requires(!IsFullIndexSet<R>) && (!IsSingleIndexSet<R>) &&
-            (!IsDisjointRange<R>)
+    requires(!IsFullIndexSet<R>) && (!IsSingleIndexSet<R>)
+            && (!IsDisjointRange<R>)
 auto range_intersection(const DisjointRange<As...> &dr, const R &r)
     -> DynamicSparseIndexSet {
     DynamicSparseIndexSet result{{}};
     auto process = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
         (([&] {
-            auto seg_result =
-                range_intersection(std::get<Is>(dr.segments), r);
-            for (auto it = seg_result.begin(); it != seg_result.end();
-                 ++it) {
-                result.indices.push_back(*it);
-            }
-        }()), ...);
+             auto seg_result = range_intersection(std::get<Is>(dr.segments), r);
+             for (auto it = seg_result.begin(); it != seg_result.end(); ++it) {
+                 result.indices.push_back(*it);
+             }
+         }()),
+         ...);
     };
     process(std::index_sequence_for<As...>{});
     // Result should already be sorted since segments are ordered and
@@ -1246,8 +1264,8 @@ auto range_intersection(const DisjointRange<As...> &dr, const R &r)
 
 /// @brief IndexSet ∩ DisjointRange → symmetric.
 template <IndexSet R, IndexSet... Bs>
-    requires(!IsFullIndexSet<R>) && (!IsSingleIndexSet<R>) &&
-            (!IsDisjointRange<R>)
+    requires(!IsFullIndexSet<R>) && (!IsSingleIndexSet<R>)
+            && (!IsDisjointRange<R>)
 auto range_intersection(const R &r, const DisjointRange<Bs...> &dr)
     -> DynamicSparseIndexSet {
     return range_intersection(dr, r);
@@ -1261,12 +1279,12 @@ auto range_intersection(const DisjointRange<As...> &a,
     DynamicSparseIndexSet result{{}};
     auto process_a = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
         (([&] {
-            auto seg_result =
-                range_intersection(std::get<Is>(a.segments), b);
-            for (auto idx : seg_result.indices) {
-                result.indices.push_back(idx);
-            }
-        }()), ...);
+             auto seg_result = range_intersection(std::get<Is>(a.segments), b);
+             for (auto idx : seg_result.indices) {
+                 result.indices.push_back(idx);
+             }
+         }()),
+         ...);
     };
     process_a(std::index_sequence_for<As...>{});
     // Sort + deduplicate (pairwise intersections preserve segment order
@@ -1284,77 +1302,29 @@ auto range_intersection(const DisjointRange<As...> &a,
 /// This handles any pair of IndexSet types not covered by the
 /// specialized overloads above (e.g., Strided ∩ Strided, Sparse ∩ Strided).
 template <IndexSet A, IndexSet B>
-    requires(!IsFullIndexSet<A>) && (!IsSingleIndexSet<A>) &&
-            (!IsFullIndexSet<B>) && (!IsSingleIndexSet<B>) &&
-            (!IsDisjointRange<A>) && (!IsDisjointRange<B>) &&
+    requires(!IsFullIndexSet<A>) && (!IsSingleIndexSet<A>)
+            && (!IsFullIndexSet<B>) && (!IsSingleIndexSet<B>)
+            && (!IsDisjointRange<A>) && (!IsDisjointRange<B>) &&
             // Exclude the cases already handled by overloads 3 and 4
-            (!(IsContiguousIndexSet<A> && IsContiguousIndexSet<B>)) &&
-            (!((IsStridedIndexSet<A> && !IsContiguousIndexSet<A>) &&
-               IsContiguousIndexSet<B>)) &&
-            (!((IsStridedIndexSet<B> && !IsContiguousIndexSet<B>) &&
-               IsContiguousIndexSet<A>))
+            (!(IsContiguousIndexSet<A> && IsContiguousIndexSet<B>))
+            && (!((IsStridedIndexSet<A> && !IsContiguousIndexSet<A>)
+                  && IsContiguousIndexSet<B>))
+            && (!((IsStridedIndexSet<B> && !IsContiguousIndexSet<B>)
+                  && IsContiguousIndexSet<A>))
 auto range_intersection(const A &a, const B &b) -> DynamicSparseIndexSet {
     DynamicSparseIndexSet result{{}};
     // Iterate over the smaller set, check containment in the larger.
     if (a.size() <= b.size()) {
         for (auto it = a.begin(); it != a.end(); ++it) {
-            if (b.contains(*it)) {
-                result.indices.push_back(*it);
-            }
+            if (b.contains(*it)) { result.indices.push_back(*it); }
         }
     } else {
         for (auto it = b.begin(); it != b.end(); ++it) {
-            if (a.contains(*it)) {
-                result.indices.push_back(*it);
-            }
+            if (a.contains(*it)) { result.indices.push_back(*it); }
         }
     }
     return result;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-/// @brief Trait to mark unary functors that preserve zero: Op(0) == 0.
-///
-/// Specialize `is_zero_preserving_unary_op<Op>` for types where this holds.
-/// By default, `std::negate` is zero-preserving.
-// ─────────────────────────────────────────────────────────────────────────────
-template <typename Op>
-struct is_zero_preserving_unary_op : std::false_type {};
-
-// std::negate preserves zero: -0 == 0
-template <typename T>
-struct is_zero_preserving_unary_op<std::negate<T>> : std::true_type {};
-
-template <typename Op>
-concept ZeroPreservingUnaryOp = is_zero_preserving_unary_op<Op>::value;
-
-// ─────────────────────────────────────────────────────────────────────────────
-/// @brief Trait to mark binary scalar functors that preserve zero when
-///        applied with a fixed scalar: Op(0, s) == 0 or Op(s, 0) == 0.
-///
-/// The template parameters are:
-///   - Op: the binary functor type
-///   - ScalarOnRight: true if the scalar is the second argument
-///
-/// By default, `std::multiplies` and `std::divides` (with scalar on right)
-/// are zero-preserving.
-// ─────────────────────────────────────────────────────────────────────────────
-template <typename Op, bool ScalarOnRight>
-struct is_zero_preserving_scalar_op : std::false_type {};
-
-// multiplies: 0 * s == 0, s * 0 == 0
-template <typename T, bool ScalarOnRight>
-struct is_zero_preserving_scalar_op<std::multiplies<T>, ScalarOnRight>
-    : std::true_type {};
-
-// divides: 0 / s == 0 (scalar on right only)
-template <typename T>
-struct is_zero_preserving_scalar_op<std::divides<T>, /*ScalarOnRight=*/true>
-    : std::true_type {};
-
-template <typename Op, bool ScalarOnRight>
-concept ZeroPreservingScalarOp =
-    is_zero_preserving_scalar_op<Op, ScalarOnRight>::value;
-
-}  // namespace zipper::expression::detail
+} // namespace zipper::expression::detail
 #endif

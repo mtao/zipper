@@ -20,38 +20,38 @@ using namespace zipper::transform;
 // ============================================================================
 
 TEST_CASE("Specialized types satisfy Transform concept", "[transform][specialized][concepts]") {
-    static_assert(transform::concepts::Transform<Translation<float, 3>>);
-    static_assert(transform::concepts::Transform<Scaling<float, 3>>);
-    static_assert(transform::concepts::Transform<Rotation<float, 3>>);
-    static_assert(transform::concepts::Transform<AxisAngleRotation<float>>);
+    STATIC_CHECK(transform::concepts::Transform<Translation<float, 3>>);
+    STATIC_CHECK(transform::concepts::Transform<Scaling<float, 3>>);
+    STATIC_CHECK(transform::concepts::Transform<Rotation<float, 3>>);
+    STATIC_CHECK(transform::concepts::Transform<AxisAngleRotation<float>>);
 
     // Specialized types are NOT MatrixTransforms
-    static_assert(!transform::concepts::MatrixTransform<Translation<float, 3>>);
-    static_assert(!transform::concepts::MatrixTransform<Scaling<float, 3>>);
-    static_assert(!transform::concepts::MatrixTransform<Rotation<float, 3>>);
-    static_assert(!transform::concepts::MatrixTransform<AxisAngleRotation<float>>);
+    STATIC_CHECK_FALSE(transform::concepts::MatrixTransform<Translation<float, 3>>);
+    STATIC_CHECK_FALSE(transform::concepts::MatrixTransform<Scaling<float, 3>>);
+    STATIC_CHECK_FALSE(transform::concepts::MatrixTransform<Rotation<float, 3>>);
+    STATIC_CHECK_FALSE(transform::concepts::MatrixTransform<AxisAngleRotation<float>>);
 }
 
 TEST_CASE("Specialized types satisfy AffineTransform/Isometry concepts", "[transform][specialized][concepts]") {
     // Isometry types
-    static_assert(transform::concepts::AffineTransform<Translation<float, 3>>);
-    static_assert(transform::concepts::Isometry<Translation<float, 3>>);
-    static_assert(transform::concepts::AffineTransform<Rotation<float, 3>>);
-    static_assert(transform::concepts::Isometry<Rotation<float, 3>>);
-    static_assert(transform::concepts::AffineTransform<AxisAngleRotation<float>>);
-    static_assert(transform::concepts::Isometry<AxisAngleRotation<float>>);
+    STATIC_CHECK(transform::concepts::AffineTransform<Translation<float, 3>>);
+    STATIC_CHECK(transform::concepts::Isometry<Translation<float, 3>>);
+    STATIC_CHECK(transform::concepts::AffineTransform<Rotation<float, 3>>);
+    STATIC_CHECK(transform::concepts::Isometry<Rotation<float, 3>>);
+    STATIC_CHECK(transform::concepts::AffineTransform<AxisAngleRotation<float>>);
+    STATIC_CHECK(transform::concepts::Isometry<AxisAngleRotation<float>>);
 
     // Affine but not Isometry
-    static_assert(transform::concepts::AffineTransform<Scaling<float, 3>>);
-    static_assert(!transform::concepts::Isometry<Scaling<float, 3>>);
+    STATIC_CHECK(transform::concepts::AffineTransform<Scaling<float, 3>>);
+    STATIC_CHECK_FALSE(transform::concepts::Isometry<Scaling<float, 3>>);
 }
 
 TEST_CASE("Specialized types expose dim", "[transform][specialized][concepts]") {
-    static_assert(Translation<float, 3>::dim == 3);
-    static_assert(Translation<float, 2>::dim == 2);
-    static_assert(Scaling<float, 3>::dim == 3);
-    static_assert(Rotation<float, 3>::dim == 3);
-    static_assert(AxisAngleRotation<float>::dim == 3);
+    STATIC_CHECK(Translation<float, 3>::dim == 3);
+    STATIC_CHECK(Translation<float, 2>::dim == 2);
+    STATIC_CHECK(Scaling<float, 3>::dim == 3);
+    STATIC_CHECK(Rotation<float, 3>::dim == 3);
+    STATIC_CHECK(AxisAngleRotation<float>::dim == 3);
 }
 
 // ============================================================================

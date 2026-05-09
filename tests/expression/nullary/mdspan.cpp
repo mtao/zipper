@@ -16,12 +16,12 @@ TEST_CASE("test_mdspan_construction", "[mdspan][nullary][dense]") {
     zipper::expression::nullary::MDSpan<double, zipper::extents<3>> aspan(span);
     zipper::expression::nullary::MDSpan<const double, zipper::extents<3>>
         caspan(cspan);
-    static_assert(aspan.rank() == 1);
-    static_assert(aspan.extent(0) == 3);
+    STATIC_CHECK(aspan.rank() == 1);
+    STATIC_CHECK(aspan.extent(0) == 3);
     REQUIRE(aspan.extents() == zipper::extents<3>{});
 
-    static_assert(caspan.rank() == 1);
-    static_assert(caspan.extent(0) == 3);
+    STATIC_CHECK(caspan.rank() == 1);
+    STATIC_CHECK(caspan.extent(0) == 3);
     REQUIRE(caspan.extents() == zipper::extents<3>{});
 
     // check for values first
@@ -36,7 +36,7 @@ TEST_CASE("test_mdspan_construction", "[mdspan][nullary][dense]") {
       CHECK(&caspan.const_coeff_ref(j) == &arr[j]);
       CHECK(&aspan(j) == &arr[j]);
 
-      static_assert(decltype(caspan)::traits::is_referrable());
+      STATIC_CHECK(decltype(caspan)::traits::is_referrable());
       CHECK(&caspan(j) == &arr[j]);
     }
     for (size_t j = 0; j < 3; ++j) {
@@ -59,11 +59,11 @@ TEST_CASE("test_mdspan_construction", "[mdspan][nullary][dense]") {
     zipper::expression::nullary::MDSpan<const double,
                                         zipper::extents<zipper::dynamic_extent>>
         caspan(cspan2, zipper::extents<3>{});
-    static_assert(aspan.rank() == 1);
+    STATIC_CHECK(aspan.rank() == 1);
     REQUIRE(aspan.extent(0) == 3);
     REQUIRE(aspan.extents() == zipper::extents<std::dynamic_extent>(3));
 
-    static_assert(caspan.rank() == 1);
+    STATIC_CHECK(caspan.rank() == 1);
     REQUIRE(caspan.extent(0) == 3);
     REQUIRE(caspan.extents() == zipper::extents<std::dynamic_extent>(3));
 
@@ -79,7 +79,7 @@ TEST_CASE("test_mdspan_construction", "[mdspan][nullary][dense]") {
       CHECK(&caspan.const_coeff_ref(j) == &arr[j]);
       CHECK(&aspan(j) == &arr[j]);
 
-      static_assert(decltype(caspan)::traits::is_referrable());
+      STATIC_CHECK(decltype(caspan)::traits::is_referrable());
       CHECK(&caspan(j) == &arr[j]);
     }
     for (size_t j = 0; j < 3; ++j) {
@@ -99,11 +99,11 @@ TEST_CASE("test_mdspan_construction", "[mdspan][nullary][dense]") {
       zipper::expression::nullary::MDSpan<
           const double, zipper::extents<zipper::dynamic_extent>>
           caspan(cspan, zipper::extents<3>{});
-      static_assert(aspan.rank() == 1);
+      STATIC_CHECK(aspan.rank() == 1);
       REQUIRE(aspan.extent(0) == 3);
       REQUIRE(aspan.extents() == zipper::extents<std::dynamic_extent>(3));
 
-      static_assert(caspan.rank() == 1);
+      STATIC_CHECK(caspan.rank() == 1);
       REQUIRE(caspan.extent(0) == 3);
       REQUIRE(caspan.extents() == zipper::extents<std::dynamic_extent>(3));
     }
