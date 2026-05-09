@@ -94,12 +94,7 @@ public:
     return FormBase<V>(std::in_place, std::forward<Self>(self).expression(), Slices{}...);
   }
 
-  auto operator*() const -> const FormBase & {
-    // Phase 1: Euclidean Hodge star on 1-forms = identity on coefficients.
-    // For general k-forms with non-Euclidean metrics, this needs the
-    // metric tensor and Levi-Civita symbol infrastructure.
-    return *this;
-  }
+  auto operator*() const;
 };
 
 template <concepts::Expression Expr>

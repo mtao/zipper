@@ -3,6 +3,7 @@
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
 #include <zipper/concepts/shapes.hpp>
+#include <zipper/exterior.hpp>
 #include <zipper/expression/nullary/Constant.hpp>
 #include <zipper/expression/nullary/Identity.hpp>
 #include <zipper/expression/nullary/Random.hpp>
@@ -68,7 +69,7 @@ TEST_CASE("test_dot", "[matrix][storage][dense]") {
     // static_assert(zipper::concepts::ValidExtents<Vector<double,3>,3>);
     STATIC_CHECK(zipper::concepts::ValidExtents<Vector<double, 3>, 3>);
 
-    Vector c = (*a.as_form()).as_vector();
+    Vector c = (*(*a.as_form())).as_vector();
 
     VectorBase e0 = expression::nullary::unit_vector<double, 3>(0);
     VectorBase e1 = expression::nullary::unit_vector<double>(3, 1);
@@ -240,60 +241,63 @@ TEST_CASE("static_matrix_compound_scalar_div", "[matrix][compound]") {
 // Form compound tests are omitted until FormBase assignment is fixed.
 
 TEST_CASE("hodge_star_euclidean_1form", "[form][hodge]") {
-    Vector<double, 3> v{{1.0, 2.0, 3.0}};
-    auto f = v.as_form();
-    auto const &star_f = *f;
-    Vector<double, 3> roundtrip = star_f.as_vector();
+    auto dx = basis_form<3, 1, double>({0});
+    auto star_dx = (*dx).eval();
 
-    CHECK(roundtrip(0) == 1.0);
-    CHECK(roundtrip(1) == 2.0);
-    CHECK(roundtrip(2) == 3.0);
+    CHECK(star_dx.extent(0) == 3);
+    CHECK(star_dx.extent(1) == 3);
+    CHECK(star_dx(1, 2) == Catch::Approx(1.0));
+    CHECK(star_dx(2, 1) == Catch::Approx(-1.0));
+    CHECK(star_dx(0, 1) == Catch::Approx(0.0));
+    CHECK(star_dx(0, 2) == Catch::Approx(0.0));
 }
 
 TEST_CASE("hodge_star_2d", "[form][hodge]") {
     Vector<double, 2> v{{4.0, -5.0}};
     auto f = v.as_form();
-    auto const &star_f = *f;
-    Vector<double, 2> roundtrip = star_f.as_vector();
+    auto star_f = (*f).eval();
+    auto star_star_f = (*star_f).eval();
+    Vector<double, 2> roundtrip = star_star_f.as_vector();
 
-    CHECK(roundtrip(0) == 4.0);
-    CHECK(roundtrip(1) == -5.0);
+    CHECK(roundtrip(0) == -4.0);
+    CHECK(roundtrip(1) == 5.0);
 }
 
 TEST_CASE("hodge_star_preserves_dot_product", "[form][hodge]") {
-    // In Euclidean space, dot(a,b) = (as_form(a)) * b =
-    // (*as_form(a)).as_vector().dot(b) Since the hodge star is identity on
-    // coefficients, this is just a.dot(b)
-    Vector<double, 3> a{{1.0, 2.0, 3.0}};
-    Vector<double, 3> b{{4.0, 5.0, 6.0}};
+    auto dx = basis_form<3, 1, double>({0});
+    auto dy = basis_form<3, 1, double>({1});
+    auto dx_wedge_dy = wedge(dx, dy).eval();
+    auto star_dx_wedge_dy = (*dx_wedge_dy).eval();
 
-    double dot_ab = a.dot(b);
-    Vector<double, 3> star_a = (*a.as_form()).as_vector();
-    double dot_star = star_a.dot(b);
-
-    CHECK(dot_ab == dot_star);
+    CHECK(star_dx_wedge_dy.extent(0) == 3);
+    CHECK(star_dx_wedge_dy(2) == Catch::Approx(1.0));
+    CHECK(star_dx_wedge_dy(0) == Catch::Approx(0.0));
+    CHECK(star_dx_wedge_dy(1) == Catch::Approx(0.0));
 }
 
 TEST_CASE("hodge_star_double_application", "[form][hodge]") {
-    // Applying hodge star twice on a 1-form in R^n should give back the same
-    // coefficients (for the Euclidean identity case)
-    Vector<double, 3> v{{7.0, -3.0, 2.5}};
-    auto f = v.as_form();
-    auto const &star_f = *f;
-    auto const &star_star_f = *star_f;
-    Vector<double, 3> result = star_star_f.as_vector();
+    auto dx = basis_form<3, 1, double>({0});
+    auto star_dx = (*dx).eval();
+    auto star_star_dx = (*star_dx).eval();
 
-    CHECK(result(0) == 7.0);
-    CHECK(result(1) == -3.0);
-    CHECK(result(2) == 2.5);
+    CHECK(star_star_dx(0) == Catch::Approx(1.0));
+    CHECK(star_star_dx(1) == Catch::Approx(0.0));
+    CHECK(star_star_dx(2) == Catch::Approx(0.0));
+
+    auto dx_wedge_dy = wedge(basis_form<3, 1, double>({0}),
+                             basis_form<3, 1, double>({1})).eval();
+    auto star_2 = (*dx_wedge_dy).eval();
+    auto star_star_2 = (*star_2).eval();
+
+    CHECK(star_star_2(0, 1) == Catch::Approx(dx_wedge_dy(0, 1)));
+    CHECK(star_star_2(1, 0) == Catch::Approx(dx_wedge_dy(1, 0)));
 }
 
 TEST_CASE("hodge_star_1d", "[form][hodge]") {
     Vector<double, 1> v;
     v(0) = 42.0;
     auto f = v.as_form();
-    auto const &star_f = *f;
-    Vector<double, 1> roundtrip = star_f.as_vector();
+    auto star_f = (*f).eval();
 
-    CHECK(roundtrip(0) == 42.0);
+    CHECK(star_f() == 42.0);
 }
