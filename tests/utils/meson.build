@@ -22,6 +22,9 @@ test('solver', test_solver)
 test_qr = executable('test_qr', 'test_qr.cpp', dependencies: [zipper_test_dep])
 test('qr', test_qr)
 
+test_gemm_kernel = executable('test_gemm_kernel', 'test_gemm_kernel.cpp', dependencies: [zipper_test_dep])
+test('gemm_kernel', test_gemm_kernel)
+
 test_triangular_solve = executable('test_triangular_solve', 'test_triangular_solve.cpp', dependencies: [zipper_test_dep])
 test('triangular_solve', test_triangular_solve)
 

@@ -52,6 +52,10 @@
 #include "zipper/detail/assert.hpp"
 #include "zipper/expression/detail/ExpressionTraits.hpp"
 #include "zipper/expression/detail/IndexSet.hpp"
+#ifndef ZIPPER_DISABLE_GEMM_KERNEL
+#include "zipper/expression/binary/detail/gemm_eligible.hpp"
+#include "zipper/expression/binary/detail/gemm_kernel.hpp"
+#endif
 
 namespace zipper::expression {
 namespace binary {
@@ -104,6 +108,12 @@ struct detail::ExpressionTraits<binary::MatrixProduct<A, B>>
     using extents_type = typename _Detail::ConvertExtentsUtil::product_extents_type;
     constexpr static bool is_coefficient_consistent = false;
     constexpr static bool is_value_based = false;
+#ifndef ZIPPER_DISABLE_GEMM_KERNEL
+    // Routes eligible assignments through MatrixProduct::assign_to (the blocked
+    // GEMM kernel). Ineligible cases fail assign_to's constraint, so
+    // AssignHelper falls back to the generic coefficient path.
+    using assign_strategy = zipper::expression::binary::detail::GemmAssignStrategy;
+#endif
 };
 
 namespace binary {
@@ -205,6 +215,23 @@ class MatrixProduct : public BinaryExpressionBase<MatrixProduct<A, B>, A, B> {
         }
         return v;
     }
+
+#ifndef ZIPPER_DISABLE_GEMM_KERNEL
+    /// Optimized blocked-GEMM assignment, selected only when both operands and
+    /// the target are dense, contiguous, row-major, same floating-point type,
+    /// and dynamically sized (see detail::GemmEligible). When the constraint is
+    /// not satisfied this overload is removed and AssignHelper uses the generic
+    /// coefficient path. Operands are exhaustive row-major, so the row stride
+    /// (leading dimension) equals the column count.
+    template <zipper::concepts::Expression To>
+        requires detail::GemmEligible<A, B, To>
+    void assign_to(To& to) const {
+        // Expression-native: hand the operand expressions straight to the
+        // kernel. It reads them through their element accessor while packing,
+        // so contiguity/layout of the operands is irrelevant here.
+        detail::gemm::gemm(lhs(), rhs(), to);
+    }
+#endif
 
     /// Recursively deep-copy children so the result owns all data.
     auto make_owned() const {
