@@ -1,11 +1,15 @@
 #if !defined(ZIPPER_EXPRESSION_UNARY_SWIZZLE_HPP)
 #define ZIPPER_EXPRESSION_UNARY_SWIZZLE_HPP
 
+#include <array>
+
 #include "UnaryExpressionBase.hpp"
 #include "zipper/concepts/Expression.hpp"
 #include "zipper/detail/extents/swizzle_extents.hpp"
+#include "zipper/expression/concepts/capabilities.hpp"
 #include "zipper/expression/detail/AssignHelper.hpp"
 #include "zipper/expression/detail/IndexSet.hpp"
+#include "zipper/storage/layout_types.hpp"
 
 namespace zipper::expression {
 namespace unary {
@@ -47,6 +51,12 @@ struct detail::ExpressionTraits<unary::Swizzle<QualifiedExprType, Indices...>>
 
     /// Backward-compatible alias for has_index_set.
     constexpr static bool has_known_zeros = has_index_set;
+
+    /// A swizzle permutes the child's strides over the same buffer, so it
+    /// composes a layout mapping and (if the child is a linear array) shares
+    /// the same buffer through operator[]. Forward both capabilities.
+    constexpr static bool has_layout_mapping = Base::has_layout_mapping;
+    constexpr static bool is_linear_array = Base::is_linear_array;
 
   private:
     /// True when Indices... is exactly {1, 0} — a matrix transpose.
@@ -162,6 +172,42 @@ namespace unary {
 
         constexpr auto extents() const -> extents_type {
             return extents_traits::make_extents_from(*this);
+        }
+
+        // ── Layout linearization ───────────────────────────────────────
+        // A swizzle is a permutation of the child's strides over the same
+        // buffer (no data movement). When the child carries a layout, expose a
+        // composed layout_stride mapping; when it's a linear array, forward the
+        // flat operator[] and data() to the child. This makes the swizzle
+        // satisfy HasLayoutMapping / LinearArray (its ExpressionTraits forward
+        // both flags), so consumers linearize through it. A transpose of a
+        // row-major matrix is a column-major (strided) view of the same data.
+        auto mapping() const
+            requires zipper::expression::concepts::HasLayoutMapping<ExprType>
+        {
+            constexpr std::array<index_type, sizeof...(Indices)> swizzle_map = {
+                {Indices...}};
+            const auto& child_map = expression().mapping();
+            std::array<index_type, extents_type::rank()> strides{};
+            for (rank_type r = 0; r < extents_type::rank(); ++r) {
+                strides[r] = (swizzle_map[r] == std::dynamic_extent)
+                                 ? index_type{0}
+                                 : child_map.stride(swizzle_map[r]);
+            }
+            return typename zipper::storage::layout_stride::template mapping<
+                extents_type>(extents(), strides);
+        }
+
+        auto operator[](index_type k) const
+            requires zipper::expression::concepts::LinearArray<ExprType>
+        {
+            return expression()[k];  // same buffer, flat index
+        }
+
+        auto data() const
+            requires zipper::expression::concepts::LinearArray<ExprType>
+        {
+            return expression().data();
         }
 
         template <typename... Args>
