@@ -112,5 +112,31 @@ concept OwningExpression =
     zipper::concepts::QualifiedExpression<T> &&
     !detail::traits_of<T>::stores_references;
 
+// ---------------------------------------------------------------------------
+// HasLayoutMapping / LinearArray
+// ---------------------------------------------------------------------------
+
+/// An expression **has a layout mapping** when it exposes `mapping()` — a
+/// tensor-index → linear-offset map with per-dimension `stride()` / `extents()`.
+/// Such an expression can be *linearized* (its access expressed as offsets)
+/// rather than walked through the recursive `coeff` chain. This is the pure
+/// reindexing capability: it does not imply an addressable buffer (a lazy
+/// `2*A` can have a mapping with no storage of its own).
+template <typename T>
+concept HasLayoutMapping =
+    zipper::concepts::QualifiedExpression<T> &&
+    detail::traits_of<T>::has_layout_mapping;
+
+/// An expression is a **linear array** when it has a layout mapping AND a flat
+/// unchecked `operator[](index_type)` over a contiguous buffer, satisfying
+/// `e[ e.mapping()(i,j) ] == e(i,j)`. Dense storage and buffer-sharing views
+/// (Slice, Swizzle) are linear arrays; value-computing expressions are not.
+///
+/// Consumers that read raw storage (e.g. the blocked GEMM pack) gate on this.
+template <typename T>
+concept LinearArray =
+    zipper::concepts::QualifiedExpression<T> &&
+    detail::traits_of<T>::is_linear_array;
+
 } // namespace zipper::expression::concepts
 #endif

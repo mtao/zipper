@@ -136,6 +136,20 @@ public:
   }
   auto data() const -> const value_type * { return linear_accessor().data(); }
 
+  // Flat unchecked linear access into the underlying buffer (the `is_linear_array`
+  // contract: `(*this)[mapping()(i,j,...)] == (*this)(i,j,...)`). Deliberately
+  // unchecked — bounds-checked indexing (e.g. std::span's under
+  // _GLIBCXX_ASSERTIONS) inserts branches that defeat vectorization in hot
+  // kernels.
+  constexpr auto operator[](index_type k) -> value_type &
+    requires(!traits::is_const_valued())
+  {
+    return linear_accessor().data()[k];
+  }
+  constexpr auto operator[](index_type k) const -> const value_type & {
+    return linear_accessor().data()[k];
+  }
+
   auto as_mdspan() -> mdspan_type
     requires(!traits::is_const_valued());
   auto as_mdspan() const -> const_mdspan_type;
@@ -217,6 +231,11 @@ struct detail::ExpressionTraits<nullary::LinearLayoutExpression<
   /// Dense leaf → prefer the layout it was created with.
   using preferred_layout =
       zipper::detail::DenseLayoutPreference<LayoutPolicy>;
+
+  /// Dense linear storage exposes `mapping()` and a flat `operator[]`, so it
+  /// both has a layout mapping and is a linear array.
+  constexpr static bool has_layout_mapping = true;
+  constexpr static bool is_linear_array = true;
 };
 } // namespace zipper::expression
 #endif

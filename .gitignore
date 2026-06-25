@@ -55,3 +55,9 @@ subprojects/*.wrap
 !subprojects/mdspan.wrap
 
 docs/
+
+# Local-only scaffolding — never tracked on the feature branches.
+# Per-ticket notes live in the worktree but are not committed; the benchmark
+# harness lives on its own `benchmarking` branch, not in feature work.
+TICKET.md
+benchmarks/
