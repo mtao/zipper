@@ -19,13 +19,15 @@
 /// packing is O(MK+KN), dominated by the O(MNK) microkernel, so its abstraction
 /// cost is amortized away for non-trivial sizes.
 ///
-/// Row-major result: C(M×N) = A(M×K) * B(K×N). gemm() adds a runtime aliasing
-/// guard, since MatrixProduct::assign_to bypasses AssignHelper's temporary.
+/// C(M×N) = A(M×K) * B(K×N). The target may be row- OR column-major: the kernel
+/// emits a row-major block and routes a column-major target through the
+/// transpose identity Cᵀ = Bᵀ·Aᵀ (see gemm()), so neither layout is privileged.
+/// gemm() adds a runtime aliasing guard, since MatrixProduct::assign_to bypasses
+/// AssignHelper's temporary.
 ///
 /// FUTURE: dispatch on the operands' compile-time traits — static extents
-/// (specialize/unroll), known-zero structure (skip packed blocks), column-major
-/// targets — all of which the expression exposes and this kernel does not yet
-/// exploit.
+/// (specialize/unroll), known-zero structure (skip packed blocks) — which the
+/// expression exposes and this kernel does not yet exploit.
 
 #include <algorithm>
 #include <cstddef>
@@ -33,11 +35,32 @@
 #include <vector>
 
 #include "zipper/expression/concepts/capabilities.hpp"
+#include "zipper/storage/layout_types.hpp"
 #include "zipper/types.hpp"
 
 namespace zipper::expression::binary::detail::gemm {
 
 using index_type = zipper::index_type;
+
+// Lightweight transpose adaptor for a source operand: presents e(j, i) as
+// (i, j) with swapped extents. Used to route a column-major target through the
+// row-major kernel (see gemm() below). Intentionally minimal — it only exposes
+// the element accessor and extents the packing/dispatch path needs, and is NOT
+// a zipper Expression, so `LinearArray<Transposed>` is false and packing uses
+// the (layout-agnostic) element-accessor path. The microkernel is untouched, so
+// the column-major case keeps the same unit-stride accumulator stores.
+template <typename Expr>
+struct Transposed {
+    const Expr& e;
+    constexpr auto operator()(index_type i, index_type j) const {
+        return e(j, i);
+    }
+    constexpr index_type extent(rank_type d) const {
+        return e.extent(d == 0 ? 1 : 0);
+    }
+};
+template <typename Expr>
+Transposed(const Expr&) -> Transposed<Expr>;
 
 // The fast packing path applies to any operand that is a `LinearArray`
 // (`zipper::expression::concepts::LinearArray`): it has a layout `mapping()`
@@ -207,13 +230,32 @@ void gemm_dispatch(const AExpr& A, const BExpr& B, T* C, index_type M,
 }
 
 // Public entry: C = A * B, with A,B zipper expressions and C the concrete
-// row-major target. Aliasing guard: if an operand that owns a buffer aliases
-// C's buffer (e.g. in-place A = A*B), compute into a temporary then copy out.
+// target (row- OR column-major). Aliasing guard: if an operand that owns a
+// buffer aliases C's buffer (e.g. in-place A = A*B), compute into a temporary
+// then copy out.
+//
+// Layout-generic write: the blocked kernel always emits a ROW-MAJOR M'×N'
+// result into a contiguous buffer. A column-major C(M×N) occupies the same
+// bytes as a row-major Cᵀ(N×M), and Cᵀ = (A·B)ᵀ = Bᵀ·Aᵀ. So for a column-major
+// target we run the kernel on the transposed operands with M and N swapped; the
+// row-major store lands exactly on the column-major layout. No microkernel
+// change, no privileged layout.
 template <typename AExpr, typename BExpr, typename CExpr>
 void gemm(const AExpr& A, const BExpr& B, CExpr& C) {
     using T = std::remove_cv_t<std::remove_pointer_t<decltype(C.data())>>;
     const index_type M = A.extent(0), K = A.extent(1), N = B.extent(1);
     T* const Cd = C.data();
+    constexpr bool c_col_major =
+        std::is_same_v<typename CExpr::layout_policy, zipper::storage::layout_left>;
+
+    // Run the product into a row-major contiguous buffer `out`, transposing for
+    // a column-major target so the same bytes spell the right layout.
+    auto run = [&](T* out) {
+        if constexpr (c_col_major)
+            gemm_dispatch(Transposed{B}, Transposed{A}, out, N, M, K);
+        else
+            gemm_dispatch(A, B, out, M, N, K);
+    };
 
     bool alias = false;
     if constexpr (requires { A.data(); })
@@ -223,11 +265,11 @@ void gemm(const AExpr& A, const BExpr& B, CExpr& C) {
 
     if (alias) {
         std::vector<T> tmp(static_cast<std::size_t>(M) * N);
-        gemm_dispatch(A, B, tmp.data(), M, N, K);
+        run(tmp.data());
         std::copy(tmp.begin(), tmp.end(), Cd);
         return;
     }
-    gemm_dispatch(A, B, Cd, M, N, K);
+    run(Cd);
 }
 
 }  // namespace zipper::expression::binary::detail::gemm

@@ -10,6 +10,7 @@ using namespace zipper;
 namespace {
 
 using DMat = Matrix<double, dynamic_extent, dynamic_extent>;
+using DMatCol = Matrix<double, dynamic_extent, dynamic_extent, false>;  // col-major
 
 // Deterministic fill, distinct per (salt) so A != B.
 DMat make_filled(index_type rows, index_type cols, unsigned salt) {
@@ -23,8 +24,10 @@ DMat make_filled(index_type rows, index_type cols, unsigned salt) {
     return M;
 }
 
-// Independent reference: plain triple loop, no expression templates.
-void check_against_reference(const DMat& A, const DMat& B, const DMat& C) {
+// Independent reference: plain triple loop, no expression templates. Templated
+// on the target type so it also validates column-major results.
+template <typename CMat>
+void check_against_reference(const DMat& A, const DMat& B, const CMat& C) {
     const index_type M = A.extent(0), K = A.extent(1), N = B.extent(1);
     REQUIRE(C.extent(0) == M);
     REQUIRE(C.extent(1) == N);
@@ -59,6 +62,28 @@ TEST_CASE("gemm kernel: rectangular M != K != N", "[gemm][matrix][dense]") {
     check_product(70, 130, 33);
     check_product(129, 65, 200);
     check_product(200, 33, 129);
+}
+
+TEST_CASE("gemm kernel: column-major target routes through the kernel",
+          "[gemm][matrix][dense][layout]") {
+    namespace gd = zipper::expression::binary::detail;
+    // Both layouts are eligible targets — the gate is no longer row-major-only.
+    STATIC_CHECK(gd::DenseContiguousTarget<DMat::expression_type>);
+    STATIC_CHECK(gd::DenseContiguousTarget<DMatCol::expression_type>);
+
+    // Column-major C(M×N) is written via the transpose identity Cᵀ = Bᵀ·Aᵀ;
+    // exercise the ikj tier, the blocked tier, and ragged edges.
+    for (index_type n : {3, 8, 64, 100, 129}) {
+        DMat A = make_filled(n, n, 1), B = make_filled(n, n, 2);
+        DMatCol C = A * B;
+        check_against_reference(A, B, C);
+    }
+    // Rectangular, blocked: M != K != N.
+    {
+        DMat A = make_filled(70, 130, 5), B = make_filled(130, 33, 6);
+        DMatCol C = A * B;
+        check_against_reference(A, B, C);
+    }
 }
 
 TEST_CASE("gemm kernel: in-place aliasing A = A * B stays correct",

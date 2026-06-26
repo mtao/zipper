@@ -61,13 +61,20 @@ concept DenseGemmSource =
     gemm_rank_v<E> == 2 && !gemm_is_sparse_v<E> &&
     requires(const std::remove_cvref_t<E>& ce) { ce(index_type{0}, index_type{0}); };
 
-/// A valid GEMM *target*: dense, contiguous, row-major, writable (the kernel
-/// stores results into its raw buffer).
+/// A valid GEMM *target*: dense, contiguous, writable (the kernel stores
+/// results into its raw buffer). Layout-GENERIC: both row-major (layout_right)
+/// and column-major (layout_left) qualify — the kernel writes a column-major
+/// target by computing the transposed product (Cᵀ = Bᵀ·Aᵀ) into the same
+/// contiguous buffer, so no single layout is privileged. A strided / non-
+/// exhaustive layout (e.g. a Slice's layout_stride) does NOT qualify: its
+/// buffer is not a packed M*N block, so it falls back to the generic path.
 template <typename E>
-concept DenseRowMajorTarget =
+concept DenseContiguousTarget =
     requires { typename std::remove_cvref_t<E>::layout_policy; } &&
-    std::is_same_v<typename std::remove_cvref_t<E>::layout_policy,
-                   zipper::storage::layout_right> &&
+    (std::is_same_v<typename std::remove_cvref_t<E>::layout_policy,
+                    zipper::storage::layout_right> ||
+     std::is_same_v<typename std::remove_cvref_t<E>::layout_policy,
+                    zipper::storage::layout_left>) &&
     requires(const std::remove_cvref_t<E>& ce) {
         ce.data();
         ce.extent(0);
@@ -76,7 +83,7 @@ concept DenseRowMajorTarget =
 /// Gate for routing C = A * B to the blocked kernel.
 template <typename A, typename B, typename To>
 concept GemmEligible =
-    DenseGemmSource<A> && DenseGemmSource<B> && DenseRowMajorTarget<To> &&
+    DenseGemmSource<A> && DenseGemmSource<B> && DenseContiguousTarget<To> &&
     std::floating_point<gemm_scalar_t<A>> &&
     std::is_same_v<gemm_scalar_t<A>, gemm_scalar_t<B>> &&
     std::is_same_v<gemm_scalar_t<A>, gemm_scalar_t<To>> &&
