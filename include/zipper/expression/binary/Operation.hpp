@@ -145,6 +145,20 @@ public:
     return lhs().mapping();
   }
 
+  // Flat, MAPPING-FREE value access: the op applied to the k-th flat element of
+  // each operand. Available when BOTH operands are flat-vectorizable (contiguous
+  // leaves, or coeff-wise ops over them), so this composes recursively:
+  // `(A+B)[k]` → `A.data()[k] + B.data()[k]`, and deeper trees like
+  // `(4*A+B)[k]` / `(A+B+C+D)[k]` bottom out at a flat loop the compiler
+  // auto-vectorizes. Returns by VALUE → NOT a LinearArray. Same caveat as
+  // ScalarOperation: do NOT use mapping()/strides per element here.
+  auto operator[](index_type k) const
+    requires(zipper::expression::concepts::FlatVectorizable<std::decay_t<A>> &&
+             zipper::expression::concepts::FlatVectorizable<std::decay_t<B>>)
+  {
+    return get_value(lhs()[k], rhs()[k]);
+  }
+
   /// Recursively deep-copy children so the result owns all data.
   auto make_owned() const {
       auto owned_a = lhs().make_owned();

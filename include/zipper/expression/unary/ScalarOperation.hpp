@@ -116,10 +116,13 @@ namespace unary {
         // we deliberately do NOT route through mapping()/strides here: per-
         // element stride math would hide the unit stride and defeat the
         // vectorizer. Returns by VALUE (computed) → this is NOT a LinearArray.
-        // Available only when the child is flat-indexable (its leaves are
-        // contiguous); otherwise consumers fall back to coeff().
+        // Available whenever the child is itself flat-vectorizable (a contiguous
+        // leaf OR another coeff-wise op over contiguous leaves), so this
+        // composes to arbitrary depth: `(4*(A+B))[k]` → `4*((A+B)[k])`
+        // → `4*(A.data()[k]+B.data()[k])`. Non-contiguous children fall back to
+        // coeff().
         auto operator[](index_type k) const
-            requires zipper::expression::concepts::LinearArray<std::decay_t<Child>>
+            requires zipper::expression::concepts::FlatVectorizable<std::decay_t<Child>>
         {
             return get_value(expression()[k]);
         }

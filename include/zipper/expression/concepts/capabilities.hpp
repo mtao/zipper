@@ -138,5 +138,39 @@ concept LinearArray =
     zipper::concepts::QualifiedExpression<T> &&
     detail::traits_of<T>::is_linear_array;
 
+// ---------------------------------------------------------------------------
+// FlatVectorizable
+// ---------------------------------------------------------------------------
+
+/// An expression is **flat-vectorizable** when it exposes a flat,
+/// value-returning `operator[](index_type)` that enumerates its coefficients in
+/// the same (buffer/row-major) order a contiguous `LinearArray` would. Such an
+/// expression can be assigned with a single linear loop
+/// `for k: to[k] = from[k]`, which the compiler auto-vectorizes — no per-element
+/// `mapping()`/stride math (that hides the unit stride and defeats the
+/// vectorizer), no recursive `coeff` walk.
+///
+/// This is the RECURSIVE, structural sibling of `LinearArray`:
+///   - a `LinearArray` leaf is flat-vectorizable (its `operator[]` is the buffer);
+///   - a coefficient-wise op (`2*A`, `A+B`, cast) is flat-vectorizable **iff its
+///     operands are** — its `operator[]` composes the op over the operands'
+///     flat accessors, bottoming out at contiguous leaves.
+/// So an arbitrarily deep coeff-wise tree (`4*A+B`, `A+B+C+D`, `4*(A+B)`)
+/// satisfies this exactly when every leaf is contiguous.
+///
+/// IMPORTANT (layout / correctness, for the eventual assignment gate): a flat
+/// `operator[]` enumerates in *buffer* order. Combining operands by a single
+/// flat index `k` is only correct when every leaf shares the target's layout
+/// (no reordering). Reordering views (transpose/Swizzle, Slice) must therefore
+/// be EXCLUDED from this path even though they carry a buffer — their flat
+/// order differs from their logical order. The vectorized assignment must gate
+/// on layout match (or restrict to row-major contiguous); see REVIEW_ORDER.md.
+template <typename T>
+concept FlatVectorizable =
+    zipper::concepts::QualifiedExpression<T> &&
+    requires(const std::remove_cvref_t<T>& e) {
+        e[std::declval<zipper::index_type>()];
+    };
+
 } // namespace zipper::expression::concepts
 #endif
