@@ -33,6 +33,9 @@
 #include <cstddef>
 #include <type_traits>
 #include <vector>
+#if defined(__linux__)
+#include <unistd.h>  // sysconf — runtime cache-size query for auto-tuning
+#endif
 
 #include "zipper/expression/binary/detail/gemm_eligible.hpp"
 #include "zipper/expression/concepts/capabilities.hpp"
@@ -134,17 +137,101 @@ void gemm_ikj(const AExpr& A, const BExpr& B, T* C, index_type M, index_type N,
 
 // ── Tier 1: blocked + packed + register-tiled microkernel ──────────────
 
-inline constexpr index_type MC = 64;
-inline constexpr index_type KC = 256;
-inline constexpr index_type NC = 256;
-// 4×4 keeps all accumulators in registers (4 YMM for doubles). Wider tiles
-// spill with this auto-vectorized formulation; step (2) replaces it with a
-// hand-vectorized microkernel.
-inline constexpr index_type MR = 4;
-inline constexpr index_type NR = 4;
+// ── Tunable parameters: auto-derived from platform info ────────────────
+//
+// REGISTER BLOCK  MR × NR  — COMPILE-TIME, from the target SIMD width.
+//   The microkernel accumulates an MR×NR tile of C in vector registers. NR is
+//   one SIMD register's worth of T, so the inner (j) loop is exactly one packed
+//   FMA. This matters: if NR is narrower than the register (e.g. NR=4 doubles
+//   on AVX-512, where a register holds 8), the auto-vectorizer gives up and
+//   scalarizes the accumulator onto the stack — which is precisely what made
+//   the naive 4×4 tile ~3× slow at -march=native. MR is the count of
+//   accumulator registers; kept small (4) so the A-broadcast and B operands
+//   also stay in registers (MR + 1 + 1 ≤ register file → no spills).
+//   `consteval`, because the SIMD width is a compile-time property of -march
+//   (__AVX512F__ / __AVX__ / __SSE2__) — see simd_lanes().
+//
+// CACHE BLOCK  MC / KC / NC  — RUNTIME, auto-tuned from the machine's real
+//   L1/L2/L3 sizes (Goto/BLIS model: an MR×KC + NR×KC pair of micro-panels in
+//   L1, an MC×KC block of A in L2, a KC×NC panel of B in L3). Cache *capacity*
+//   is NOT a compile-time constant — the binary may run on a different CPU than
+//   it was built on — so this can't be consteval. We query it at runtime
+//   (sysconf; Eigen uses cpuid), compute the blocks once via compute_block_sizes()
+//   and cache them. Falls back to sane defaults when the query is unavailable.
+
+template <typename T>
+consteval index_type simd_lanes() {
+#if defined(__AVX512F__)
+    return static_cast<index_type>(64 / sizeof(T));  // 512-bit register
+#elif defined(__AVX__)
+    return static_cast<index_type>(32 / sizeof(T));  // 256-bit
+#elif defined(__SSE2__) || defined(__ARM_NEON)
+    return static_cast<index_type>(16 / sizeof(T));  // 128-bit
+#else
+    return 1;
+#endif
+}
+/// One full SIMD register wide (so the j-loop is one packed FMA, no scalarize).
+template <typename T>
+consteval index_type reg_NR() {
+    return simd_lanes<T>();
+}
+/// Number of accumulator registers (small enough to leave room for operands).
+template <typename T>
+consteval index_type reg_MR() {
+    return 4;
+}
 
 inline constexpr index_type round_up(index_type x, index_type m) {
     return ((x + m - 1) / m) * m;
+}
+
+/// L1d/L2/L3 capacity in bytes for `level` ∈ {1,2,3}; 0 when unknown.
+inline std::size_t cache_bytes(int level) {
+#if defined(__linux__) && defined(_SC_LEVEL1_DCACHE_SIZE)
+    const long s = level == 1   ? sysconf(_SC_LEVEL1_DCACHE_SIZE)
+                   : level == 2 ? sysconf(_SC_LEVEL2_CACHE_SIZE)
+                                : sysconf(_SC_LEVEL3_CACHE_SIZE);
+    return s > 0 ? static_cast<std::size_t>(s) : 0;
+#else
+    (void)level;
+    return 0;
+#endif
+}
+
+struct BlockSizes {
+    index_type MC, KC, NC;
+};
+
+/// Auto-tune the cache blocks from queried cache sizes (Goto/BLIS model). Each
+/// level is given ~half its capacity (room for the other operand + reuse).
+template <typename T>
+inline BlockSizes compute_block_sizes() {
+    constexpr index_type MR = reg_MR<T>(), NR = reg_NR<T>();
+    constexpr std::size_t es = sizeof(T);
+    const std::size_t L1 = cache_bytes(1), L2 = cache_bytes(2),
+                      L3 = cache_bytes(3);
+    auto floor_to = [](index_type v, index_type m) {
+        return std::max<index_type>(m, (v / m) * m);
+    };
+    index_type KC = L1 ? floor_to(static_cast<index_type>(
+                                      L1 / (2 * (MR + NR) * es)), 8)
+                       : 256;
+    KC = std::clamp<index_type>(KC, 32, 512);
+    index_type MC = L2 ? floor_to(static_cast<index_type>(L2 / (2 * KC * es)), MR)
+                       : 64;
+    MC = std::clamp<index_type>(MC, MR, 1024);
+    index_type NC = L3 ? floor_to(static_cast<index_type>(L3 / (2 * KC * es)), NR)
+                       : 1024;
+    NC = std::clamp<index_type>(NC, NR, 8192);
+    return {MC, KC, NC};
+}
+
+/// Cache blocks for T, computed once on first use.
+template <typename T>
+inline const BlockSizes& block_sizes() {
+    static const BlockSizes bs = compute_block_sizes<T>();
+    return bs;
 }
 
 // Pack an mc×kc block of A read via the expression accessor into MR-tall
@@ -152,27 +239,42 @@ inline constexpr index_type round_up(index_type x, index_type m) {
 template <typename AExpr, typename T>
 void pack_A(const AExpr& A, index_type i0, index_type p0, index_type mc,
             index_type kc, T* Apack) {
+    constexpr index_type MR = reg_MR<T>();
     const index_type panels = round_up(mc, MR) / MR;
-    for (index_type panel = 0; panel < panels; ++panel) {
-        T* dst = Apack + static_cast<std::size_t>(panel) * MR * kc;
-        for (index_type ir = 0; ir < MR; ++ir) {
-            const index_type i = panel * MR + ir;
-            if (i >= mc) {
-                for (index_type p = 0; p < kc; ++p) dst[p * MR + ir] = T(0);
-            } else if constexpr (FastPackable<AExpr>) {
-                // Lower-order re-indexing through the layout mapping: resolve
-                // the row base once via the row stride, then step along the
-                // column stride (== 1 for row-major → sequential), reading the
-                // buffer through the unchecked flat operator[].
-                const index_type s0 = A.mapping().stride(0),
-                                 s1 = A.mapping().stride(1);
-                const index_type base =
-                    static_cast<index_type>(i0 + i) * s0 + p0 * s1;
-                for (index_type p = 0; p < kc; ++p)
-                    dst[p * MR + ir] = A[base + p * s1];
-            } else {
-                for (index_type p = 0; p < kc; ++p)
-                    dst[p * MR + ir] = elem(A, i0 + i, p0 + p);
+    if constexpr (FastPackable<AExpr>) {
+        // Extract the buffer base pointer ONCE; then raw-index the hot loop.
+        // Per-element operator[] does not vectorize — it must be a raw strided
+        // load. Lower-order re-indexing: the row base via the row stride, then
+        // the column stride (== 1 for row-major). FastPackable (not LinearArray)
+        // is the gate so the internal Transposed adaptor — which forwards
+        // data()/mapping() with swapped strides — also takes this fast path on
+        // the column-major route, instead of falling back to operator().
+        const T* abase = A.data();
+        const index_type s0 = A.mapping().stride(0),
+                         s1 = A.mapping().stride(1);
+        for (index_type panel = 0; panel < panels; ++panel) {
+            T* dst = Apack + static_cast<std::size_t>(panel) * MR * kc;
+            for (index_type ir = 0; ir < MR; ++ir) {
+                const index_type i = panel * MR + ir;
+                if (i >= mc) {
+                    for (index_type p = 0; p < kc; ++p) dst[p * MR + ir] = T(0);
+                } else {
+                    const index_type rb = (i0 + i) * s0 + p0 * s1;
+                    for (index_type p = 0; p < kc; ++p)
+                        dst[p * MR + ir] = abase[rb + p * s1];
+                }
+            }
+        }
+    } else {
+        for (index_type panel = 0; panel < panels; ++panel) {
+            T* dst = Apack + static_cast<std::size_t>(panel) * MR * kc;
+            for (index_type ir = 0; ir < MR; ++ir) {
+                const index_type i = panel * MR + ir;
+                if (i >= mc)
+                    for (index_type p = 0; p < kc; ++p) dst[p * MR + ir] = T(0);
+                else
+                    for (index_type p = 0; p < kc; ++p)
+                        dst[p * MR + ir] = elem(A, i0 + i, p0 + p);
             }
         }
     }
@@ -183,25 +285,31 @@ void pack_A(const AExpr& A, index_type i0, index_type p0, index_type mc,
 template <typename BExpr, typename T>
 void pack_B(const BExpr& B, index_type p0, index_type j0, index_type kc,
             index_type nc, T* Bpack) {
+    constexpr index_type NR = reg_NR<T>();
     const index_type panels = round_up(nc, NR) / NR;
-    for (index_type panel = 0; panel < panels; ++panel) {
-        T* dst = Bpack + static_cast<std::size_t>(panel) * NR * kc;
-        for (index_type p = 0; p < kc; ++p) {
-            if constexpr (FastPackable<BExpr>) {
-                const index_type s0 = B.mapping().stride(0),
-                                 s1 = B.mapping().stride(1);
-                const index_type base =
-                    static_cast<index_type>(p0 + p) * s0 + j0 * s1;
+    if constexpr (FastPackable<BExpr>) {
+        const T* bbase = B.data();
+        const index_type s0 = B.mapping().stride(0),
+                         s1 = B.mapping().stride(1);
+        for (index_type panel = 0; panel < panels; ++panel) {
+            T* dst = Bpack + static_cast<std::size_t>(panel) * NR * kc;
+            for (index_type p = 0; p < kc; ++p) {
+                const index_type rb = (p0 + p) * s0 + j0 * s1;
                 for (index_type jr = 0; jr < NR; ++jr) {
                     const index_type j = panel * NR + jr;
-                    dst[p * NR + jr] = (j < nc) ? B[base + j * s1] : T(0);
-                }
-            } else {
-                for (index_type jr = 0; jr < NR; ++jr) {
-                    const index_type j = panel * NR + jr;
-                    dst[p * NR + jr] = (j < nc) ? elem(B, p0 + p, j0 + j) : T(0);
+                    dst[p * NR + jr] = (j < nc) ? bbase[rb + j * s1] : T(0);
                 }
             }
+        }
+    } else {
+        for (index_type panel = 0; panel < panels; ++panel) {
+            T* dst = Bpack + static_cast<std::size_t>(panel) * NR * kc;
+            for (index_type p = 0; p < kc; ++p)
+                for (index_type jr = 0; jr < NR; ++jr) {
+                    const index_type j = panel * NR + jr;
+                    dst[p * NR + jr] =
+                        (j < nc) ? elem(B, p0 + p, j0 + j) : T(0);
+                }
         }
     }
 }
@@ -210,8 +318,11 @@ void pack_B(const BExpr& B, index_type p0, index_type j0, index_type kc,
 // pointers so the accumulators stay in registers and the j-loop vectorizes;
 // see the file header on why this must not be a bounds-checked view here.
 template <typename T>
-void microkernel(index_type kc, const T* Apanel, const T* Bpanel, T* Ctile,
-                 index_type ldc, index_type mr, index_type nr) {
+[[gnu::always_inline]] inline void microkernel(index_type kc, const T* Apanel,
+                                               const T* Bpanel, T* Ctile,
+                                               index_type ldc, index_type mr,
+                                               index_type nr) {
+    constexpr index_type MR = reg_MR<T>(), NR = reg_NR<T>();
     T acc[MR][NR] = {};
     for (index_type p = 0; p < kc; ++p) {
         const T* a = Apanel + p * MR;
@@ -227,6 +338,9 @@ void microkernel(index_type kc, const T* Apanel, const T* Bpanel, T* Ctile,
 template <typename AExpr, typename BExpr, typename T>
 void gemm_blocked(const AExpr& A, const BExpr& B, T* C, index_type M,
                   index_type N, index_type K) {
+    constexpr index_type MR = reg_MR<T>(), NR = reg_NR<T>();
+    const BlockSizes blk = block_sizes<T>();  // auto-tuned from cache sizes
+    const index_type MC = blk.MC, KC = blk.KC, NC = blk.NC;
     std::vector<T> Apack(static_cast<std::size_t>(round_up(MC, MR)) * KC);
     std::vector<T> Bpack(static_cast<std::size_t>(round_up(NC, NR)) * KC);
 
