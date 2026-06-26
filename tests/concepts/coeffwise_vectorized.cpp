@@ -9,7 +9,12 @@ using namespace zipper;
 namespace cc = zipper::expression::concepts;
 
 namespace {
-using DM = Matrix<double, dynamic_extent, dynamic_extent>;
+using DM = Matrix<double, dynamic_extent, dynamic_extent>;             // row-major
+using DMc = Matrix<double, dynamic_extent, dynamic_extent, false>;     // col-major
+
+template <typename E>
+using flat_layout_of =
+    typename zipper::expression::detail::ExpressionTraits<E>::flat_layout_type;
 }
 
 // PROTOTYPE: a coeff-wise op exposes a flat, mapping-free operator[] that
@@ -83,4 +88,68 @@ TEST_CASE("coeffwise: deeper trees are flat-vectorizable (4*A+B, A+B+C+D)",
             CHECK(e[k] == 4.0 * (A(i, j) + B(i, j)));
         }
     }
+}
+
+// The flat path is layout-GENERIC: a column-major tree is flat-vectorizable in
+// its own (layout_left) order, and a column-major target is flat-COMPATIBLE
+// with a column-major source — exactly the "everything has a consistent
+// mapping" condition. Mixed layouts (row-major target ← column-major source)
+// are NOT flat-compatible and fall back to the index walk (still correct).
+TEST_CASE("coeffwise: flat-vectorization supports >1 mapping type",
+          "[coeffwise][vectorize][layout]") {
+    namespace st = zipper::storage;
+    using RowExpr = std::remove_cvref_t<decltype((4.0 * std::declval<DM&>() +
+                                                  std::declval<DM&>())
+                                                     .expression())>;
+    using ColExpr = std::remove_cvref_t<decltype((4.0 * std::declval<DMc&>() +
+                                                  std::declval<DMc&>())
+                                                     .expression())>;
+    using RowTarget = std::remove_cvref_t<decltype(std::declval<DM&>().expression())>;
+    using ColTarget = std::remove_cvref_t<decltype(std::declval<DMc&>().expression())>;
+
+    // Each tree carries the layout it actually enumerates in — not hardcoded.
+    STATIC_CHECK(std::is_same_v<flat_layout_of<RowExpr>, st::layout_right>);
+    STATIC_CHECK(std::is_same_v<flat_layout_of<ColExpr>, st::layout_left>);
+
+    // Same layout on both sides ⇒ flat-compatible (vectorized fast path).
+    STATIC_CHECK(cc::FlatCompatible<RowTarget, RowExpr>);
+    STATIC_CHECK(cc::FlatCompatible<ColTarget, ColExpr>);
+    // Mismatched layouts ⇒ NOT flat-compatible ⇒ safe fallback.
+    STATIC_CHECK(!cc::FlatCompatible<RowTarget, ColExpr>);
+    STATIC_CHECK(!cc::FlatCompatible<ColTarget, RowExpr>);
+}
+
+// End-to-end: the actual assignment (through AssignHelper) produces correct
+// results on BOTH the vectorized fast path (matching layout) and the fallback
+// (mixed layout). Same numeric answer either way.
+TEST_CASE("coeffwise: linear assignment fast path is correct (any layout)",
+          "[coeffwise][vectorize][assign]") {
+    auto fill = [](auto& M) {
+        for (index_type i = 0; i < 4; ++i)
+            for (index_type j = 0; j < 5; ++j)
+                M(i, j) = static_cast<double>(i * 5 + j) - 7.0;
+    };
+
+    DM Ar(4, 5), Br(4, 5);
+    DMc Ac(4, 5), Bc(4, 5);
+    fill(Ar); fill(Br); fill(Ac); fill(Bc);
+
+    // Row target ← row source: fast path.
+    DM Cr(4, 5);
+    Cr = 4.0 * Ar + Br;
+    // Col target ← col source: fast path (column-major).
+    DMc Cc(4, 5);
+    Cc = 4.0 * Ac + Bc;
+    // Row target ← col source: fallback (layout mismatch), must still be right.
+    DM Cmix(4, 5);
+    Cmix = 4.0 * Ac + Bc;
+
+    for (index_type i = 0; i < 4; ++i)
+        for (index_type j = 0; j < 5; ++j) {
+            double want = 4.0 * (static_cast<double>(i * 5 + j) - 7.0) +
+                          (static_cast<double>(i * 5 + j) - 7.0);
+            CHECK(Cr(i, j) == want);
+            CHECK(Cc(i, j) == want);
+            CHECK(Cmix(i, j) == want);
+        }
 }

@@ -51,6 +51,11 @@ struct detail::ExpressionTraits<
     /// Leave false: no contiguous buffer of our own (reading `data()` would
     /// skip the per-coefficient computation).
     constexpr static bool is_linear_array = false;
+
+    /// A scalar coeff-wise op preserves the child's flat enumeration order, so
+    /// it forwards the child's flat layout (void if the child has none). This
+    /// lets `(2*A)[k]` compose to a flat, layout-consistent linear assignment.
+    using flat_layout_type = typename ChildTraits::flat_layout_type;
 };
 
 namespace unary {
@@ -122,7 +127,7 @@ namespace unary {
         // → `4*(A.data()[k]+B.data()[k])`. Non-contiguous children fall back to
         // coeff().
         auto operator[](index_type k) const
-            requires zipper::expression::concepts::FlatVectorizable<std::decay_t<Child>>
+            requires(!std::is_void_v<typename traits::flat_layout_type>)
         {
             return get_value(expression()[k]);
         }

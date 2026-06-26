@@ -236,6 +236,18 @@ struct detail::ExpressionTraits<nullary::LinearLayoutExpression<
   /// both has a layout mapping and is a linear array.
   constexpr static bool has_layout_mapping = true;
   constexpr static bool is_linear_array = true;
+
+  /// Flat-vectorizable in its own layout when that layout is one of the
+  /// EXHAUSTIVE contiguous policies (row-major / column-major): then
+  /// `operator[](k) == data()[k]` enumerates all elements bijectively in that
+  /// order. A strided layout (e.g. layout_stride from a Slice) is NOT
+  /// exhaustive, so it leaves this void (no flat path). Layout-generic: both
+  /// row- and column-major qualify, each carrying its own policy so the
+  /// assignment fast path only fires when source and target agree.
+  using flat_layout_type = std::conditional_t<
+      std::is_same_v<LayoutPolicy, zipper::storage::layout_right> ||
+          std::is_same_v<LayoutPolicy, zipper::storage::layout_left>,
+      LayoutPolicy, void>;
 };
 } // namespace zipper::expression
 #endif
