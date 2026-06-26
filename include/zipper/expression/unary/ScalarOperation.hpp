@@ -109,6 +109,21 @@ namespace unary {
             return expression().mapping();
         }
 
+        // Flat, MAPPING-FREE value access: the op applied to the child's k-th
+        // buffer element. Composing this over a contiguous child bottoms out at
+        // `child.data()[k]`, so a linear assignment `to[k] = (2*A)[k]` becomes
+        // `to[k] = 2 * A.data()[k]` — which the compiler auto-vectorizes. Note
+        // we deliberately do NOT route through mapping()/strides here: per-
+        // element stride math would hide the unit stride and defeat the
+        // vectorizer. Returns by VALUE (computed) → this is NOT a LinearArray.
+        // Available only when the child is flat-indexable (its leaves are
+        // contiguous); otherwise consumers fall back to coeff().
+        auto operator[](index_type k) const
+            requires zipper::expression::concepts::LinearArray<std::decay_t<Child>>
+        {
+            return get_value(expression()[k]);
+        }
+
         /// Recursively deep-copy child so the result owns all data.
         auto make_owned() const {
             auto owned_child = expression().make_owned();
