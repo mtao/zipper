@@ -2,6 +2,7 @@
 
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
+#include <zipper/expression/binary/detail/gemm_eligible.hpp>
 
 #include "../catch_include.hpp"
 
@@ -187,6 +188,90 @@ TEST_CASE("gemm kernel: ineligible operands use the generic path correctly",
                 double ref = 0.0;
                 for (index_type k = 0; k < 3; ++k) ref += A(i, k) * B(k, j);
                 CHECK(C(i, j) == Catch::Approx(ref));
+            }
+    }
+}
+
+namespace {
+
+// Fill a statically-sized matrix with the same deterministic pattern used for
+// the dynamic operands above (so a static M×N matches its dynamic twin).
+template <typename Mat>
+void fill_static(Mat& M, index_type rows, index_type cols, unsigned salt) {
+    unsigned s = salt * 2654435761u + 1u;
+    for (index_type i = 0; i < rows; ++i)
+        for (index_type j = 0; j < cols; ++j) {
+            s = s * 1103515245u + 12345u;
+            M(i, j) = static_cast<double>((s >> 9) % 1000) / 500.0 - 1.0;
+        }
+}
+
+}  // namespace
+
+// Lock in the gate decision itself (not just the numeric result): large static
+// operands must be GemmEligible (routed to the kernel), small ones must not.
+TEST_CASE("gemm gate: large static eligible, small static not",
+          "[gemm][matrix][dense][static]") {
+    namespace gd = zipper::expression::binary::detail;
+    using Big = Matrix<double, 80, 80>::expression_type;
+    using Small = Matrix<double, 3, 3>::expression_type;
+    using Dyn = DMat::expression_type;
+    using OneDimBig = Matrix<double, 64, 8>::expression_type;
+
+    STATIC_CHECK(gd::GemmEligible<Big, Big, Big>);
+    STATIC_CHECK(gd::GemmEligible<OneDimBig, OneDimBig, OneDimBig>);
+    STATIC_CHECK(gd::GemmEligible<Dyn, Dyn, Dyn>);  // unchanged dynamic path
+    STATIC_CHECK_FALSE(gd::GemmEligible<Small, Small, Small>);
+    // Mixing a small static target with large static sources is still gated
+    // out, since every operand must be size-admissible.
+    STATIC_CHECK_FALSE(gd::GemmEligible<Big, Big, Small>);
+}
+
+// The gate (gemm_eligible.hpp) admits a fully-static operand once a dimension
+// reaches gemm_static_dim_threshold (== 64), so these large static products are
+// routed through the blocked kernel; correctness is the same triple-loop check.
+TEST_CASE("gemm kernel: large static-extent operands route through the kernel",
+          "[gemm][matrix][dense][static]") {
+    SECTION("square, exact tile multiple (80x80)") {
+        Matrix<double, 80, 80> A, B;
+        fill_static(A, 80, 80, 11);
+        fill_static(B, 80, 80, 12);
+        Matrix<double, 80, 80> C = A * B;
+        for (index_type i = 0; i < 80; ++i)
+            for (index_type j = 0; j < 80; ++j) {
+                double ref = 0.0;
+                for (index_type k = 0; k < 80; ++k) ref += A(i, k) * B(k, j);
+                CHECK(C(i, j) ==
+                      Catch::Approx(ref).epsilon(1e-12).margin(1e-12));
+            }
+    }
+    SECTION("rectangular, non-tile-multiple (100x72 = 100x96 * 96x72)") {
+        Matrix<double, 100, 96> A;
+        Matrix<double, 96, 72> B;
+        fill_static(A, 100, 96, 13);
+        fill_static(B, 96, 72, 14);
+        Matrix<double, 100, 72> C = A * B;
+        for (index_type i = 0; i < 100; ++i)
+            for (index_type j = 0; j < 72; ++j) {
+                double ref = 0.0;
+                for (index_type k = 0; k < 96; ++k) ref += A(i, k) * B(k, j);
+                CHECK(C(i, j) ==
+                      Catch::Approx(ref).epsilon(1e-12).margin(1e-12));
+            }
+    }
+    SECTION("large by a single dimension (64x8 * 8x64)") {
+        // Only the 64 dimension reaches the threshold; still admitted.
+        Matrix<double, 64, 8> A;
+        Matrix<double, 8, 64> B;
+        fill_static(A, 64, 8, 15);
+        fill_static(B, 8, 64, 16);
+        Matrix<double, 64, 64> C = A * B;
+        for (index_type i = 0; i < 64; ++i)
+            for (index_type j = 0; j < 64; ++j) {
+                double ref = 0.0;
+                for (index_type k = 0; k < 8; ++k) ref += A(i, k) * B(k, j);
+                CHECK(C(i, j) ==
+                      Catch::Approx(ref).epsilon(1e-12).margin(1e-12));
             }
     }
 }

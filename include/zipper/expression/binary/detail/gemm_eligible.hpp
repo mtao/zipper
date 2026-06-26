@@ -10,9 +10,11 @@
 /// to be a writable dense rank-2 expression: contiguous targets get an in-place
 /// writeback, any other writable target (strided / view / sub-block) is written
 /// by scattering a row-major scratch through its operator() — that choice is
-/// made inside gemm(), not at this gate. `GemmEligible<A, B, To>` composes the
-/// building blocks that guarantee this; when it fails (sparse, non-writable,
-/// mixed or non-float scalars, or small static extents) the MatrixProduct's
+/// made inside gemm(), not at this gate. Operands are admitted by size when they
+/// are (partly) dynamic OR fully static and large enough to benefit (see
+/// gemm_static_dim_threshold). `GemmEligible<A, B, To>` composes the building
+/// blocks that guarantee this; when it fails (sparse, non-writable, mixed or
+/// non-float scalars, or small fully-static extents) the MatrixProduct's
 /// constrained assign_to is removed by SFINAE and AssignHelper falls back to the
 /// generic coefficient path.
 
@@ -37,13 +39,49 @@ template <typename E>
 using gemm_scalar_t = typename zipper::expression::detail::ExpressionTraits<
     std::remove_cvref_t<E>>::element_type;
 
+/// E's extents type (cv/ref stripped).
+template <typename E>
+using gemm_extents_t = typename zipper::expression::detail::ExpressionTraits<
+    std::remove_cvref_t<E>>::extents_type;
+
 /// True when E's extents are (partly) dynamic — the case the generic path
 /// handles poorly and the kernel targets. Small static matrices keep their
 /// already-competitive unrolled path.
 template <typename E>
-inline constexpr bool gemm_is_dynamic_v = zipper::detail::ExtentsTraits<
-    typename zipper::expression::detail::ExpressionTraits<
-        std::remove_cvref_t<E>>::extents_type>::is_dynamic;
+inline constexpr bool gemm_is_dynamic_v =
+    zipper::detail::ExtentsTraits<gemm_extents_t<E>>::is_dynamic;
+
+/// Minimum dimension (rows OR cols) at which a *fully static* rank-2 operand is
+/// admitted to the kernel. Matched to the kernel's own blocked/ikj crossover
+/// (gemm::kBlockedThreshold == 64): below it the generic unrolled `coeff` path
+/// is already competitive (3×3, 4×4, …), so we keep small statics off the
+/// kernel and avoid regressing them; at or above it the blocked, packed kernel
+/// wins, so a static `Matrix<double,256,256>` should route through it just like
+/// its dynamic twin. A single dimension reaching the threshold suffices because
+/// the kernel blocks per-dimension.
+inline constexpr index_type gemm_static_dim_threshold = 64;
+
+/// True when E is rank-2 and *fully static* with at least one extent reaching
+/// gemm_static_dim_threshold. (For rank != 2 this is false; rank is checked
+/// independently by DenseGemmSource/DenseContiguousTarget.)
+template <typename E>
+inline constexpr bool gemm_is_large_static_v = [] {
+    using Ext = gemm_extents_t<E>;
+    if constexpr (zipper::detail::ExtentsTraits<Ext>::is_static &&
+                  Ext::rank() == 2) {
+        return Ext::static_extent(0) >= gemm_static_dim_threshold ||
+               Ext::static_extent(1) >= gemm_static_dim_threshold;
+    } else {
+        return false;
+    }
+}();
+
+/// An operand is admissible by *size* if its extents are (partly) dynamic — the
+/// original kernel target — or fully static and large enough to benefit. Small
+/// fully-static operands fail this and stay on the generic unrolled path.
+template <typename E>
+inline constexpr bool gemm_size_admissible_v =
+    gemm_is_dynamic_v<E> || gemm_is_large_static_v<E>;
 
 /// Rank of an expression's extents.
 template <typename E>
@@ -111,7 +149,8 @@ concept GemmEligible =
     std::floating_point<gemm_scalar_t<A>> &&
     std::is_same_v<gemm_scalar_t<A>, gemm_scalar_t<B>> &&
     std::is_same_v<gemm_scalar_t<A>, gemm_scalar_t<To>> &&
-    gemm_is_dynamic_v<A> && gemm_is_dynamic_v<B> && gemm_is_dynamic_v<To>;
+    gemm_size_admissible_v<A> && gemm_size_admissible_v<B> &&
+    gemm_size_admissible_v<To>;
 
 }  // namespace zipper::expression::binary::detail
 
