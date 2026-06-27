@@ -5,20 +5,26 @@
 /// @brief Compile-time gate that decides whether a MatrixProduct may be routed
 /// to the optimized blocked-GEMM kernel (gemm_kernel.hpp).
 ///
-/// The blocked kernel needs raw contiguous row-major buffers of a floating
-/// point type. `GemmEligible<A, B, To>` composes the building blocks that
-/// guarantee this; when it fails (sparse, transposed/strided view, mixed or
-/// non-float scalars, or small static extents) the MatrixProduct's constrained
-/// assign_to is removed by SFINAE and AssignHelper falls back to the generic
-/// coefficient path.
+/// The blocked kernel packs both operands through their element accessor and
+/// produces a row-major result of a floating-point type. The TARGET only needs
+/// to be a writable dense rank-2 expression: contiguous targets get an in-place
+/// writeback, any other writable target (strided / view / sub-block) is written
+/// by scattering a row-major scratch through its operator() — that choice is
+/// made inside gemm(), not at this gate. `GemmEligible<A, B, To>` composes the
+/// building blocks that guarantee this; when it fails (sparse, non-writable,
+/// mixed or non-float scalars, or small static extents) the MatrixProduct's
+/// constrained assign_to is removed by SFINAE and AssignHelper falls back to the
+/// generic coefficient path.
 
 #include <concepts>
 #include <type_traits>
 
 #include "zipper/detail/ExtentsTraits.hpp"
 #include "zipper/detail/LayoutPreference.hpp"
+#include "zipper/expression/concepts/capabilities.hpp"
 #include "zipper/expression/detail/ExpressionTraits.hpp"
 #include "zipper/storage/layout_types.hpp"
+#include "zipper/types.hpp"
 
 namespace zipper::expression::binary::detail {
 
@@ -80,10 +86,28 @@ concept DenseContiguousTarget =
         ce.extent(0);
     };
 
+/// A valid GEMM *target* in the GENERAL sense: any dense (non-sparse) rank-2
+/// expression that is writable through its element accessor. This admits the
+/// contiguous targets (DenseContiguousTarget, a strict subset) AND strided /
+/// view / sub-block targets (e.g. a Slice's layout_stride) that have no packed
+/// M*N buffer to write in place. gemm() decides at compile time which write
+/// strategy to use: PATH 1 (in-place into data()) for contiguous targets, or
+/// PATH 2 (scatter a row-major scratch through `C(i, j)`) for everything else.
+/// Writability uses the expression-level trait (is_writable == is_assignable),
+/// and we additionally require that `e(i, j)` yields a real assignable lvalue.
+template <typename E>
+concept WritableDenseRank2Target =
+    gemm_rank_v<E> == 2 && !gemm_is_sparse_v<E> &&
+    zipper::expression::concepts::WritableExpression<std::remove_cvref_t<E>> &&
+    requires(std::remove_cvref_t<E>& e) {
+        e(index_type{0}, index_type{0}) =
+            std::declval<gemm_scalar_t<E>>();
+    };
+
 /// Gate for routing C = A * B to the blocked kernel.
 template <typename A, typename B, typename To>
 concept GemmEligible =
-    DenseGemmSource<A> && DenseGemmSource<B> && DenseContiguousTarget<To> &&
+    DenseGemmSource<A> && DenseGemmSource<B> && WritableDenseRank2Target<To> &&
     std::floating_point<gemm_scalar_t<A>> &&
     std::is_same_v<gemm_scalar_t<A>, gemm_scalar_t<B>> &&
     std::is_same_v<gemm_scalar_t<A>, gemm_scalar_t<To>> &&

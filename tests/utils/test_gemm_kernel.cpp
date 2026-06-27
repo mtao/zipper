@@ -86,6 +86,53 @@ TEST_CASE("gemm kernel: column-major target routes through the kernel",
     }
 }
 
+TEST_CASE("gemm kernel: writable non-contiguous sub-block target (PATH 2)",
+          "[gemm][matrix][dense][slice]") {
+    namespace gd = zipper::expression::binary::detail;
+
+    // A writable rank-2 sub-block view of a larger matrix is the canonical
+    // PATH-2 target: it is a Slice (layout_stride, no data()), so it is NOT a
+    // DenseContiguousTarget, yet it is a writable dense rank-2 expression. The
+    // gate must admit it via WritableDenseRank2Target so gemm() routes it to
+    // the scatter path instead of the generic coefficient product.
+    using BlockExpr = std::decay_t<decltype(std::declval<DMat&>().slice(
+        zipper::slice(index_type{1}, index_type{2}),
+        zipper::slice(index_type{1}, index_type{2})))>::expression_type;
+    STATIC_CHECK(gd::WritableDenseRank2Target<BlockExpr>);
+    STATIC_CHECK_FALSE(gd::DenseContiguousTarget<BlockExpr>);
+    STATIC_CHECK(gd::GemmEligible<DMat::expression_type, DMat::expression_type,
+                                  BlockExpr>);
+
+    // Cover an ikj-tier size (<64) and a blocked-tier size (>=64). For each,
+    // place an M×N product into the interior of a larger (M+2pad)×(N+2pad)
+    // matrix, leaving a border that must remain untouched.
+    auto run = [](index_type M, index_type K, index_type N, index_type pad,
+                  double sentinel) {
+        DMat A = make_filled(M, K, 11), B = make_filled(K, N, 12);
+        DMat big(M + 2 * pad, N + 2 * pad);
+        for (index_type i = 0; i < big.extent(0); ++i)
+            for (index_type j = 0; j < big.extent(1); ++j) big(i, j) = sentinel;
+
+        auto block = big.slice(zipper::slice(pad, M), zipper::slice(pad, N));
+        block = A * B;  // routed through PATH 2 (scatter into the strided view)
+
+        // (a) the block equals the independent triple-loop reference
+        check_against_reference(A, B, block);
+
+        // (b) every element outside the block is UNTOUCHED
+        for (index_type i = 0; i < big.extent(0); ++i)
+            for (index_type j = 0; j < big.extent(1); ++j) {
+                const bool inside = (i >= pad && i < pad + M && j >= pad &&
+                                     j < pad + N);
+                if (!inside) CHECK(big(i, j) == sentinel);
+            }
+    };
+
+    run(8, 8, 8, 2, 7.5);        // ikj tier
+    run(100, 70, 90, 3, -3.25);  // blocked tier
+    run(65, 1, 65, 1, 1.0);      // blocked tier, ragged edges
+}
+
 TEST_CASE("gemm kernel: in-place aliasing A = A * B stays correct",
           "[gemm][matrix][dense][aliasing]") {
     for (index_type n : {4, 64, 100}) {

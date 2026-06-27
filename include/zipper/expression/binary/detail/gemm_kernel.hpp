@@ -34,6 +34,7 @@
 #include <type_traits>
 #include <vector>
 
+#include "zipper/expression/binary/detail/gemm_eligible.hpp"
 #include "zipper/expression/concepts/capabilities.hpp"
 #include "zipper/storage/layout_types.hpp"
 #include "zipper/types.hpp"
@@ -229,47 +230,75 @@ void gemm_dispatch(const AExpr& A, const BExpr& B, T* C, index_type M,
         gemm_ikj(A, B, C, M, N, K);
 }
 
-// Public entry: C = A * B, with A,B zipper expressions and C the concrete
-// target (row- OR column-major). Aliasing guard: if an operand that owns a
-// buffer aliases C's buffer (e.g. in-place A = A*B), compute into a temporary
-// then copy out.
+// Public entry: C = A * B, with A,B zipper expressions and C the target.
 //
-// Layout-generic write: the blocked kernel always emits a ROW-MAJOR M'×N'
-// result into a contiguous buffer. A column-major C(M×N) occupies the same
-// bytes as a row-major Cᵀ(N×M), and Cᵀ = (A·B)ᵀ = Bᵀ·Aᵀ. So for a column-major
-// target we run the kernel on the transposed operands with M and N swapped; the
-// row-major store lands exactly on the column-major layout. No microkernel
-// change, no privileged layout.
+// Two write strategies, chosen with `if constexpr` on the target's capability:
+//
+//   PATH 1 — contiguous target (DenseContiguousTarget): write the kernel result
+//     straight into C's raw buffer via data(). Layout-generic: the blocked
+//     kernel emits a ROW-MAJOR M'×N' result; a column-major C(M×N) occupies the
+//     same bytes as a row-major Cᵀ(N×M) and Cᵀ = (A·B)ᵀ = Bᵀ·Aᵀ, so for a
+//     column-major target we run the kernel on the transposed operands with M
+//     and N swapped and the row-major store lands on the column-major layout.
+//     An aliasing guard handles in-place A = A*B (MatrixProduct::assign_to
+//     bypasses AssignHelper's temporary): if an operand buffer aliases C's, the
+//     kernel computes into a temporary then copies out.
+//
+//   PATH 2 — any other writable dense rank-2 target (strided / sub-block / view,
+//     e.g. a Slice with layout_stride): run the kernel into a row-major scratch
+//     buffer, then scatter into the target through its own `C(i, j)`, which
+//     resolves the address through the target's mapping (any layout lands
+//     correctly). No aliasing guard is needed: the kernel consumes A and B fully
+//     (into packed panels + scratch) before the scatter touches C, so aliasing
+//     targets are safe.
 template <typename AExpr, typename BExpr, typename CExpr>
 void gemm(const AExpr& A, const BExpr& B, CExpr& C) {
-    using T = std::remove_cv_t<std::remove_pointer_t<decltype(C.data())>>;
+    using T = std::remove_cvref_t<
+        typename zipper::expression::detail::ExpressionTraits<
+            std::remove_cvref_t<CExpr>>::element_type>;
     const index_type M = A.extent(0), K = A.extent(1), N = B.extent(1);
-    T* const Cd = C.data();
-    constexpr bool c_col_major =
-        std::is_same_v<typename CExpr::layout_policy, zipper::storage::layout_left>;
 
-    // Run the product into a row-major contiguous buffer `out`, transposing for
-    // a column-major target so the same bytes spell the right layout.
-    auto run = [&](T* out) {
-        if constexpr (c_col_major)
-            gemm_dispatch(Transposed{B}, Transposed{A}, out, N, M, K);
-        else
-            gemm_dispatch(A, B, out, M, N, K);
-    };
+    if constexpr (zipper::expression::binary::detail::DenseContiguousTarget<
+                      CExpr>) {
+        // PATH 1 — contiguous buffer, in-place writeback (unchanged).
+        T* const Cd = C.data();
+        constexpr bool c_col_major =
+            std::is_same_v<typename CExpr::layout_policy,
+                           zipper::storage::layout_left>;
 
-    bool alias = false;
-    if constexpr (requires { A.data(); })
-        alias = alias || static_cast<const void*>(A.data()) == Cd;
-    if constexpr (requires { B.data(); })
-        alias = alias || static_cast<const void*>(B.data()) == Cd;
+        // Run the product into a row-major contiguous buffer `out`, transposing
+        // for a column-major target so the same bytes spell the right layout.
+        auto run = [&](T* out) {
+            if constexpr (c_col_major)
+                gemm_dispatch(Transposed{B}, Transposed{A}, out, N, M, K);
+            else
+                gemm_dispatch(A, B, out, M, N, K);
+        };
 
-    if (alias) {
-        std::vector<T> tmp(static_cast<std::size_t>(M) * N);
-        run(tmp.data());
-        std::copy(tmp.begin(), tmp.end(), Cd);
-        return;
+        bool alias = false;
+        if constexpr (requires { A.data(); })
+            alias = alias || static_cast<const void*>(A.data()) == Cd;
+        if constexpr (requires { B.data(); })
+            alias = alias || static_cast<const void*>(B.data()) == Cd;
+
+        if (alias) {
+            std::vector<T> tmp(static_cast<std::size_t>(M) * N);
+            run(tmp.data());
+            std::copy(tmp.begin(), tmp.end(), Cd);
+            return;
+        }
+        run(Cd);
+    } else {
+        // PATH 2 — general writable target: kernel into row-major scratch, then
+        // scatter through the target's own operator() (resolves any layout).
+        static thread_local std::vector<T> cbuf;
+        const std::size_t need = static_cast<std::size_t>(M) * N;
+        if (cbuf.size() < need) cbuf.resize(need);
+        gemm_dispatch(A, B, cbuf.data(), M, N, K);  // gemm_dispatch zero-fills
+        for (index_type i = 0; i < M; ++i)
+            for (index_type j = 0; j < N; ++j)
+                C(i, j) = cbuf[static_cast<std::size_t>(i) * N + j];
     }
-    run(Cd);
 }
 
 }  // namespace zipper::expression::binary::detail::gemm

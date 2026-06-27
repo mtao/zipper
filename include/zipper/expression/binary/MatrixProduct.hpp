@@ -217,12 +217,14 @@ class MatrixProduct : public BinaryExpressionBase<MatrixProduct<A, B>, A, B> {
     }
 
 #ifndef ZIPPER_DISABLE_GEMM_KERNEL
-    /// Optimized blocked-GEMM assignment, selected only when both operands and
-    /// the target are dense, contiguous, row-major, same floating-point type,
-    /// and dynamically sized (see detail::GemmEligible). When the constraint is
-    /// not satisfied this overload is removed and AssignHelper uses the generic
-    /// coefficient path. Operands are exhaustive row-major, so the row stride
-    /// (leading dimension) equals the column count.
+    /// Optimized blocked-GEMM assignment, selected when both operands are dense
+    /// rank-2 and the target is any writable dense rank-2 expression, with the
+    /// same floating-point scalar type and dynamic sizing (see
+    /// detail::GemmEligible). The target need not be contiguous: gemm() writes a
+    /// contiguous-buffer target in place (PATH 1) and scatters into a strided /
+    /// view / sub-block target through its own operator() (PATH 2). When the
+    /// constraint is not satisfied this overload is removed and AssignHelper
+    /// uses the generic coefficient path.
     template <zipper::concepts::Expression To>
         requires detail::GemmEligible<A, B, To>
     void assign_to(To& to) const {
