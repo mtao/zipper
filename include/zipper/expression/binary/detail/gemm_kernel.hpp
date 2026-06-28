@@ -45,11 +45,18 @@ using index_type = zipper::index_type;
 
 // Lightweight transpose adaptor for a source operand: presents e(j, i) as
 // (i, j) with swapped extents. Used to route a column-major target through the
-// row-major kernel (see gemm() below). Intentionally minimal — it only exposes
-// the element accessor and extents the packing/dispatch path needs, and is NOT
-// a zipper Expression, so `LinearArray<Transposed>` is false and packing uses
-// the (layout-agnostic) element-accessor path. The microkernel is untouched, so
-// the column-major case keeps the same unit-stride accumulator stores.
+// row-major kernel (see gemm() below). The microkernel is untouched, so the
+// column-major case keeps the same unit-stride accumulator stores.
+//
+// A transpose of a buffer-backed operand is the SAME buffer with swapped
+// strides, so when the underlying operand is itself fast-packable we expose a
+// swapped-stride mapping() + a forwarding operator[]. That lets the packing
+// fast path read the buffer directly (operand[base + p*stride]) for the
+// transpose-routed column-major case too, instead of falling back to the
+// per-element operator() — closing most of the column-major packing overhead.
+// The mapping()/operator[] members are CONSTRAINED on the underlying operand
+// providing them, so Transposed of a lazy/value-computing operand simply lacks
+// them and packing uses the element-accessor fallback (still correct).
 template <typename Expr>
 struct Transposed {
     const Expr& e;
@@ -59,18 +66,49 @@ struct Transposed {
     constexpr index_type extent(rank_type d) const {
         return e.extent(d == 0 ? 1 : 0);
     }
+    constexpr decltype(auto) operator[](index_type k) const
+        requires requires(const Expr& x) { x[k]; }
+    {
+        return e[k];  // same buffer; pack composes the swapped strides below
+    }
+    constexpr auto data() const
+        requires requires(const Expr& x) { x.data(); }
+    {
+        return e.data();  // a transpose shares the child's buffer
+    }
+    constexpr auto mapping() const
+        requires requires(const Expr& x) { x.mapping().stride(0); }
+    {
+        // Expose only what the packing path consumes: stride(0)/stride(1),
+        // swapped relative to the child (transpose permutes the two strides).
+        struct SwappedMapping {
+            index_type s0, s1;
+            constexpr index_type stride(rank_type d) const {
+                return d == 0 ? s0 : s1;
+            }
+        };
+        return SwappedMapping{e.mapping().stride(1), e.mapping().stride(0)};
+    }
 };
 template <typename Expr>
 Transposed(const Expr&) -> Transposed<Expr>;
 
-// The fast packing path applies to any operand that is a `LinearArray`
-// (`zipper::expression::concepts::LinearArray`): it has a layout `mapping()`
-// (per-dimension strides) AND a flat unchecked `operator[]` over its buffer, so
-// packing linearizes as `operand[ i*s0 + j*s1 ]`. This holds for dense storage
-// of any layout (row- or column-major) and, as the linearization tickets land,
-// for slices and transposes too. Operands that aren't linear arrays
-// (value-computing / lazy) use the general expression-accessor fallback below.
+// A pack operand is "fast-packable" when it exposes a layout mapping (per-dim
+// strides) AND a flat unchecked operator[] over a buffer, so packing reads it
+// as operand[base + p*stride] instead of the per-element operator() path. Real
+// operands satisfy this exactly when they are `LinearArray`s (the trait
+// guarantees both members); the kernel-internal `Transposed` adaptor satisfies
+// it structurally when its underlying operand does. We gate the pack on this
+// structural form rather than the LinearArray *trait* precisely so the internal
+// adaptor is recognized too — this is a local packing optimization (the
+// element-accessor fallback is always correct), not a public capability.
 using zipper::expression::concepts::LinearArray;
+template <typename E>
+concept FastPackable = requires(const std::remove_cvref_t<E>& e, index_type k) {
+    e.data();             // raw buffer base (extracted once by the pack)
+    e.mapping().stride(0);  // per-dimension strides
+    e[k];                 // unchecked flat element access
+};
 
 /// Read element (i, j) of an operand expression (general path). Heavy compared
 /// to a linearized load — the deep access_pack→coeff→mapping chain — so it's
@@ -121,7 +159,7 @@ void pack_A(const AExpr& A, index_type i0, index_type p0, index_type mc,
             const index_type i = panel * MR + ir;
             if (i >= mc) {
                 for (index_type p = 0; p < kc; ++p) dst[p * MR + ir] = T(0);
-            } else if constexpr (LinearArray<AExpr>) {
+            } else if constexpr (FastPackable<AExpr>) {
                 // Lower-order re-indexing through the layout mapping: resolve
                 // the row base once via the row stride, then step along the
                 // column stride (== 1 for row-major → sequential), reading the
@@ -149,7 +187,7 @@ void pack_B(const BExpr& B, index_type p0, index_type j0, index_type kc,
     for (index_type panel = 0; panel < panels; ++panel) {
         T* dst = Bpack + static_cast<std::size_t>(panel) * NR * kc;
         for (index_type p = 0; p < kc; ++p) {
-            if constexpr (LinearArray<BExpr>) {
+            if constexpr (FastPackable<BExpr>) {
                 const index_type s0 = B.mapping().stride(0),
                                  s1 = B.mapping().stride(1);
                 const index_type base =
