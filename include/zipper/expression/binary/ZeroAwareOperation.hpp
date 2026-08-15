@@ -39,6 +39,7 @@
 #include "BinaryExpressionBase.hpp"
 #include "detail/CoeffWiseTraits.hpp"
 #include "zipper/concepts/Expression.hpp"
+#include "zipper/expression/concepts/capabilities.hpp"
 #include "zipper/expression/detail/ExpressionTraits.hpp"
 #include "zipper/expression/detail/IndexSet.hpp"
 
@@ -87,6 +88,22 @@ struct detail::ExpressionTraits<binary::ZeroAwareOperation<A, B, Op>>
 
     /// Backward-compatible alias for has_index_set.
     constexpr static bool has_known_zeros = has_index_set;
+
+    /// A same-shape coefficient-wise binary op (e.g. `A + B`) preserves the
+    /// index→linear layout/shape of its operands. The operands share the same
+    /// shape, so either mapping describes the result; we require BOTH operands
+    /// to carry a layout mapping (AND) and forward lhs's. This advertises the
+    /// access PATTERN (shape/strides) only — NOT zero-copy storage: the
+    /// expression is value-computing and owns no buffer. Values still come
+    /// through `operator()` / `coeff`; consumers must NOT read `data()` (it is
+    /// not a LinearArray).
+    constexpr static bool has_layout_mapping =
+        _Detail::ATraits::has_layout_mapping &&
+        _Detail::BTraits::has_layout_mapping;
+
+    /// Leave false: no contiguous buffer of our own (reading `data()` would
+    /// skip the per-coefficient computation).
+    constexpr static bool is_linear_array = false;
 };
 
 // ─── ZeroAwareOperation class ────────────────────────────────────────────────
@@ -169,6 +186,19 @@ class ZeroAwareOperation
 
     constexpr auto extents() const -> extents_type {
         return extents_traits::make_extents_from(*this);
+    }
+
+    // ── Layout mapping forwarding ─────────────────────────────────────────
+    // A same-shape coeff-wise binary op preserves the operands' index→linear
+    // layout/shape. Both operands share the shape, so we forward lhs's
+    // mapping(). This exposes only the access PATTERN (shape/strides), not an
+    // addressable buffer: there is intentionally NO operator[] / data() here
+    // (this is not a LinearArray). Values must still be obtained through
+    // operator()/coeff.
+    auto mapping() const
+        requires zipper::expression::concepts::HasLayoutMapping<std::decay_t<A>>
+    {
+        return lhs().mapping();
     }
 
     // ── Index set interface ────────────────────────────────────────────

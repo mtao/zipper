@@ -3,6 +3,7 @@
 
 #include "UnaryExpressionBase.hpp"
 #include "detail/ZeroPreserving.hpp"
+#include "zipper/expression/concepts/capabilities.hpp"
 #include "zipper/expression/detail/ExpressionTraits.hpp"
 #include "zipper/expression/detail/IndexSet.hpp"
 
@@ -29,6 +30,20 @@ struct expression::detail::ExpressionTraits<
 
     /// Backward-compatible alias for has_index_set.
     constexpr static bool has_known_zeros = has_index_set;
+
+    /// A coefficient-wise op (cast / abs / scalar `2*A`) preserves the
+    /// child's index→linear layout and shape, so we forward the child's
+    /// layout mapping. This advertises the access PATTERN (shape/strides) of
+    /// the operand, NOT zero-copy storage: this expression is value-computing
+    /// and owns no buffer. Values still come through `operator()` / `coeff`;
+    /// consumers must NOT read `data()` (it is not a LinearArray). This lets a
+    /// downstream consumer (e.g. a future cast-aware GEMM packing) know the
+    /// operand is regularly laid out.
+    constexpr static bool has_layout_mapping = child_traits::has_layout_mapping;
+
+    /// Leave false: no contiguous buffer of our own (reading `data()` would
+    /// skip the per-coefficient computation).
+    constexpr static bool is_linear_array = false;
 };
 
 // represents a coefficient-wise transformation of an underlyng expression
@@ -58,6 +73,19 @@ namespace unary {
 
         auto get_value(const child_value_type &value) const -> value_type {
             return value_type(m_op(value));
+        }
+
+        // ── Layout mapping forwarding ───────────────────────────────────────
+        // A coeff-wise op preserves the operand's index→linear layout/shape,
+        // so we expose the child's mapping() unchanged. This advertises only
+        // the access PATTERN (shape/strides), not addressable storage: there
+        // is intentionally NO operator[] / data() here (this is not a
+        // LinearArray). Values must still be obtained through operator()/coeff.
+        auto mapping() const
+            requires zipper::expression::concepts::HasLayoutMapping<
+                std::decay_t<Child>>
+        {
+            return expression().mapping();
         }
 
         /// Recursively deep-copy child so the result owns all data.

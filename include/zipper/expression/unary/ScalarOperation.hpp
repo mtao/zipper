@@ -3,6 +3,7 @@
 
 #include "UnaryExpressionBase.hpp"
 #include "detail/ZeroPreserving.hpp"
+#include "zipper/expression/concepts/capabilities.hpp"
 #include "zipper/expression/detail/IndexSet.hpp"
 
 namespace zipper::expression {
@@ -36,6 +37,20 @@ struct detail::ExpressionTraits<
 
     /// Backward-compatible alias for has_index_set.
     constexpr static bool has_known_zeros = has_index_set;
+
+    /// A scalar coefficient-wise op (e.g. `2*A`) preserves the child's
+    /// index→linear layout and shape, so we forward the child's layout
+    /// mapping. This advertises the access PATTERN (shape/strides) of the
+    /// operand, NOT zero-copy storage: this expression is value-computing and
+    /// owns no buffer. Values still come through `operator()` / `coeff`;
+    /// consumers must NOT read `data()` (it is not a LinearArray). This lets a
+    /// downstream consumer (e.g. a future cast-aware GEMM packing) know the
+    /// operand is regularly laid out.
+    constexpr static bool has_layout_mapping = ChildTraits::has_layout_mapping;
+
+    /// Leave false: no contiguous buffer of our own (reading `data()` would
+    /// skip the per-coefficient computation).
+    constexpr static bool is_linear_array = false;
 };
 
 namespace unary {
@@ -78,6 +93,20 @@ namespace unary {
             } else {
                 return m_op(m_scalar, value);
             }
+        }
+
+        // ── Layout mapping forwarding ───────────────────────────────────────
+        // A scalar coeff-wise op preserves the operand's index→linear
+        // layout/shape, so we expose the child's mapping() unchanged. This
+        // advertises only the access PATTERN (shape/strides), not addressable
+        // storage: there is intentionally NO operator[] / data() here (this is
+        // not a LinearArray). Values must still be obtained through
+        // operator()/coeff.
+        auto mapping() const
+            requires zipper::expression::concepts::HasLayoutMapping<
+                std::decay_t<Child>>
+        {
+            return expression().mapping();
         }
 
         /// Recursively deep-copy child so the result owns all data.
