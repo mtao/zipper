@@ -37,8 +37,8 @@
 
 #include <algorithm>
 #include <cstddef>
-#include <type_traits>
 #include <span>
+#include <type_traits>
 #include <vector>
 #if defined(__linux__)
 #include <unistd.h>  // sysconf — runtime cache-size query for auto-tuning
