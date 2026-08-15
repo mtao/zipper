@@ -12,7 +12,13 @@
 /// treating the zipper expression as the view — it carries layout, extents, and
 /// value semantics, and packing materializes whatever shape it presents.
 ///
-/// The contiguous packed scratch and the target buffer use raw pointers: the
+/// The kernel leans on the expression layer's own assertion-free flat access
+/// (`LinearArray`'s unchecked `operator[]` == `data()[k]`) rather than private
+/// adaptors: transposition is the library's `Swizzle` expression (which
+/// composes a swapped-stride mapping over the same buffer), and the strided
+/// writeback is a plain expression assignment through `AssignHelper`. Only the
+/// packed panel scratch — a kernel-private storage format (PW-interleaved,
+/// zero-padded panels), not a strided tensor layout — is indexed directly; the
 /// register-tiled FMA microkernel must stay unchecked (this build hardens the
 /// STL via -D_GLIBCXX_ASSERTIONS, which would put bounds-check barriers in the
 /// hot loop — measured ~3× slower at -march=native). The expression accessor in
@@ -32,6 +38,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <type_traits>
+#include <span>
 #include <vector>
 #if defined(__linux__)
 #include <unistd.h>  // sysconf — runtime cache-size query for auto-tuning
@@ -42,86 +49,29 @@
 
 #include "zipper/expression/binary/detail/gemm_eligible.hpp"
 #include "zipper/expression/concepts/capabilities.hpp"
+#include "zipper/expression/detail/AssignHelper.hpp"
+#include "zipper/expression/nullary/LinearLayoutExpression.hpp"
+#include "zipper/expression/unary/Swizzle.hpp"
+#include "zipper/storage/SpanData.hpp"
 #include "zipper/storage/layout_types.hpp"
 #include "zipper/types.hpp"
 
 namespace zipper::expression::binary::detail::gemm {
 
 using index_type = zipper::index_type;
-
-// Lightweight transpose adaptor for a source operand: presents e(j, i) as
-// (i, j) with swapped extents. Used to route a column-major target through the
-// row-major kernel (see gemm() below). The microkernel is untouched, so the
-// column-major case keeps the same unit-stride accumulator stores.
-//
-// A transpose of a buffer-backed operand is the SAME buffer with swapped
-// strides, so when the underlying operand is itself fast-packable we expose a
-// swapped-stride mapping() + a forwarding operator[]. That lets the packing
-// fast path read the buffer directly (operand[base + p*stride]) for the
-// transpose-routed column-major case too, instead of falling back to the
-// per-element operator() — closing most of the column-major packing overhead.
-// The mapping()/operator[] members are CONSTRAINED on the underlying operand
-// providing them, so Transposed of a lazy/value-computing operand simply lacks
-// them and packing uses the element-accessor fallback (still correct).
-template <typename Expr>
-struct Transposed {
-    const Expr& e;
-    constexpr auto operator()(index_type i, index_type j) const {
-        return e(j, i);
-    }
-    constexpr index_type extent(rank_type d) const {
-        return e.extent(d == 0 ? 1 : 0);
-    }
-    constexpr decltype(auto) operator[](index_type k) const
-        requires requires(const Expr& x) { x[k]; }
-    {
-        return e[k];  // same buffer; pack composes the swapped strides below
-    }
-    constexpr auto data() const
-        requires requires(const Expr& x) { x.data(); }
-    {
-        return e.data();  // a transpose shares the child's buffer
-    }
-    constexpr auto mapping() const
-        requires requires(const Expr& x) { x.mapping().stride(0); }
-    {
-        // Expose only what the packing path consumes: stride(0)/stride(1),
-        // swapped relative to the child (transpose permutes the two strides).
-        struct SwappedMapping {
-            index_type s0, s1;
-            constexpr index_type stride(rank_type d) const {
-                return d == 0 ? s0 : s1;
-            }
-        };
-        return SwappedMapping{e.mapping().stride(1), e.mapping().stride(0)};
-    }
-};
-template <typename Expr>
-Transposed(const Expr&) -> Transposed<Expr>;
-
-// A pack operand is "fast-packable" when it exposes a layout mapping (per-dim
-// strides) AND a flat unchecked operator[] over a buffer, so packing reads it
-// as operand[base + p*stride] instead of the per-element operator() path. Real
-// operands satisfy this exactly when they are `LinearArray`s (the trait
-// guarantees both members); the kernel-internal `Transposed` adaptor satisfies
-// it structurally when its underlying operand does. We gate the pack on this
-// structural form rather than the LinearArray *trait* precisely so the internal
-// adaptor is recognized too — this is a local packing optimization (the
-// element-accessor fallback is always correct), not a public capability.
 using zipper::expression::concepts::LinearArray;
-template <typename E>
-concept FastPackable = requires(const std::remove_cvref_t<E>& e, index_type k) {
-    e.data();             // raw buffer base (extracted once by the pack)
-    e.mapping().stride(0);  // per-dimension strides
-    e[k];                 // unchecked flat element access
-};
 
-/// Read element (i, j) of an operand expression (general path). Heavy compared
-/// to a linearized load — the deep access_pack→coeff→mapping chain — so it's
-/// used only when the operand has no layout mapping (truly lazy nodes).
+/// Transpose an operand through the library's own Swizzle expression: e(j, i)
+/// presented as (i, j) with swapped extents. Used to route a column-major
+/// target through the row-major kernel (see gemm() below) and to feed the B
+/// operand to the unified pack. When the child is a LinearArray, Swizzle
+/// composes a swapped-stride mapping over the SAME buffer and forwards the
+/// unchecked flat operator[]/data(), so the packing fast path applies to
+/// transposed operands too; lazy children simply fall back to the
+/// element-accessor path (still correct).
 template <typename Expr>
-constexpr auto elem(const Expr& e, index_type i, index_type j) {
-    return e(i, j);
+auto transposed(const Expr& e) {
+    return zipper::expression::unary::Swizzle<const Expr&, 1, 0>(e);
 }
 
 // ── Tier 0: cache-friendly i-k-j reorder (small sizes) ─────────────────
@@ -132,8 +82,8 @@ void gemm_ikj(const AExpr& A, const BExpr& B, T* C, index_type M, index_type N,
     for (index_type i = 0; i < M; ++i) {
         T* c_row = C + i * N;
         for (index_type k = 0; k < K; ++k) {
-            const T aik = elem(A, i, k);
-            for (index_type j = 0; j < N; ++j) c_row[j] += aik * elem(B, k, j);
+            const T aik = A(i, k);
+            for (index_type j = 0; j < N; ++j) c_row[j] += aik * B(k, j);
         }
     }
 }
@@ -274,82 +224,68 @@ inline const BlockSizes& block_sizes() {
     return bs;
 }
 
-// Pack an mc×kc block of A read via the expression accessor into MR-tall
-// panels (rows past mc zero-padded): Apack[panel*(MR*kc)+p*MR+ir] = A(i0+.., p0+p)
-template <typename AExpr, typename T>
-void pack_A(const AExpr& A, index_type i0, index_type p0, index_type mc,
-            index_type kc, T* Apack) {
-    constexpr index_type MR = reg_MR<T>();
-    const index_type panels = round_up(mc, MR) / MR;
-    if constexpr (FastPackable<AExpr>) {
-        // Extract the buffer base pointer ONCE; then raw-index the hot loop.
-        // Per-element operator[] does not vectorize — it must be a raw strided
-        // load. Lower-order re-indexing: the row base via the row stride, then
-        // the column stride (== 1 for row-major). FastPackable (not LinearArray)
-        // is the gate so the internal Transposed adaptor — which forwards
-        // data()/mapping() with swapped strides — also takes this fast path on
-        // the column-major route, instead of falling back to operator().
-        const T* abase = A.data();
-        const index_type s0 = A.mapping().stride(0),
-                         s1 = A.mapping().stride(1);
+// ── Unified operand packing ─────────────────────────────────────────────
+//
+// Both operands pack into the SAME panel format: a rc×kc block, viewed as
+// (panel-dim r) × (depth k), laid out in PW-interleaved panels with the panel
+// remainder zero-padded:
+//
+//     dst[panel*(PW*kc) + p*PW + r] = op(r0 + panel*PW + r, k0 + p)
+//
+// The A side packs MR-tall row panels of A(i, k) directly; the B side is the
+// identical operation on the TRANSPOSE — NR-wide column panels of B(k, j) are
+// row panels of Bᵀ(j, k) — so gemm_blocked() feeds `transposed(B)` here and
+// pack_A/pack_B collapse into one implementation differing only in PW.
+//
+// Fast path (LinearArray operands, including Swizzle-transposed ones): hoist
+// the buffer base + strides once and read raw strided loads — the per-element
+// operator[] chain does not vectorize. The loop nest is chosen at runtime by
+// stride: when the k stride is the small one (A-side on a row-major source) we
+// walk r-outer/p-inner (sequential reads); when the panel-dim stride is the
+// small one (B-side: Bᵀ's dim 0 is B's contiguous dim 1) we walk
+// p-outer/r-inner (sequential reads AND sequential panel writes). Lazy
+// operands fall back to the element accessor.
+template <index_type PW, typename Expr, typename T>
+void pack_panels(const Expr& op, index_type r0, index_type k0, index_type rc,
+                 index_type kc, T* pack) {
+    const index_type panels = round_up(rc, PW) / PW;
+    if constexpr (LinearArray<Expr>) {
+        const auto* base = op.data();
+        const auto map = op.mapping();
+        const index_type sr = map.stride(0), sk = map.stride(1);
         for (index_type panel = 0; panel < panels; ++panel) {
-            T* dst = Apack + static_cast<std::size_t>(panel) * MR * kc;
-            for (index_type ir = 0; ir < MR; ++ir) {
-                const index_type i = panel * MR + ir;
-                if (i >= mc) {
-                    for (index_type p = 0; p < kc; ++p) dst[p * MR + ir] = T(0);
-                } else {
-                    const index_type rb = (i0 + i) * s0 + p0 * s1;
+            T* dst = pack + static_cast<std::size_t>(panel) * PW * kc;
+            const index_type pr0 = panel * PW;
+            if (sk <= sr && pr0 + PW <= rc) {
+                // k is the fast axis (A side, full panel): sequential reads
+                // per row, strided panel writes.
+                for (index_type r = 0; r < PW; ++r) {
+                    const index_type rb = (r0 + pr0 + r) * sr + k0 * sk;
                     for (index_type p = 0; p < kc; ++p)
-                        dst[p * MR + ir] = abase[rb + p * s1];
+                        dst[p * PW + r] = base[rb + p * sk];
+                }
+            } else {
+                // r is the fast axis (B side) or a ragged panel: sequential
+                // panel writes, zero-padding the r-remainder inline.
+                for (index_type p = 0; p < kc; ++p) {
+                    const index_type kb = (k0 + p) * sk + (r0 + pr0) * sr;
+                    for (index_type r = 0; r < PW; ++r)
+                        dst[p * PW + r] =
+                            (pr0 + r < rc) ? base[kb + r * sr] : T(0);
                 }
             }
         }
     } else {
         for (index_type panel = 0; panel < panels; ++panel) {
-            T* dst = Apack + static_cast<std::size_t>(panel) * MR * kc;
-            for (index_type ir = 0; ir < MR; ++ir) {
-                const index_type i = panel * MR + ir;
-                if (i >= mc)
-                    for (index_type p = 0; p < kc; ++p) dst[p * MR + ir] = T(0);
+            T* dst = pack + static_cast<std::size_t>(panel) * PW * kc;
+            for (index_type r = 0; r < PW; ++r) {
+                const index_type i = panel * PW + r;
+                if (i >= rc)
+                    for (index_type p = 0; p < kc; ++p) dst[p * PW + r] = T(0);
                 else
                     for (index_type p = 0; p < kc; ++p)
-                        dst[p * MR + ir] = elem(A, i0 + i, p0 + p);
+                        dst[p * PW + r] = op(r0 + i, k0 + p);
             }
-        }
-    }
-}
-
-// Pack a kc×nc block of B into NR-wide panels (cols past nc zero-padded):
-// Bpack[panel*(NR*kc)+p*NR+jr] = B(p0+p, j0+..)
-template <typename BExpr, typename T>
-void pack_B(const BExpr& B, index_type p0, index_type j0, index_type kc,
-            index_type nc, T* Bpack) {
-    constexpr index_type NR = reg_NR<T>();
-    const index_type panels = round_up(nc, NR) / NR;
-    if constexpr (FastPackable<BExpr>) {
-        const T* bbase = B.data();
-        const index_type s0 = B.mapping().stride(0),
-                         s1 = B.mapping().stride(1);
-        for (index_type panel = 0; panel < panels; ++panel) {
-            T* dst = Bpack + static_cast<std::size_t>(panel) * NR * kc;
-            for (index_type p = 0; p < kc; ++p) {
-                const index_type rb = (p0 + p) * s0 + j0 * s1;
-                for (index_type jr = 0; jr < NR; ++jr) {
-                    const index_type j = panel * NR + jr;
-                    dst[p * NR + jr] = (j < nc) ? bbase[rb + j * s1] : T(0);
-                }
-            }
-        }
-    } else {
-        for (index_type panel = 0; panel < panels; ++panel) {
-            T* dst = Bpack + static_cast<std::size_t>(panel) * NR * kc;
-            for (index_type p = 0; p < kc; ++p)
-                for (index_type jr = 0; jr < NR; ++jr) {
-                    const index_type j = panel * NR + jr;
-                    dst[p * NR + jr] =
-                        (j < nc) ? elem(B, p0 + p, j0 + j) : T(0);
-                }
         }
     }
 }
@@ -560,6 +496,8 @@ void gemm_blocked(const AExpr& A, const BExpr& B, T* C, index_type M,
     constexpr index_type MR = reg_MR<T>(), NR = reg_NR<T>();
     const BlockSizes blk = block_sizes<T>();  // auto-tuned from cache sizes
     const index_type MC = blk.MC, KC = blk.KC, NC = blk.NC;
+    // B packs as row panels of Bᵀ — one pack implementation for both operands.
+    const auto Bt = transposed(B);
     // Reused per-thread scratch: the pack buffers have a fixed size for a given
     // T (MC/KC/NC are constant), so allocating+zeroing them on every call is
     // pure overhead — measured a hard cliff at small M/N where a few hundred KB
@@ -575,10 +513,10 @@ void gemm_blocked(const AExpr& A, const BExpr& B, T* C, index_type M,
         const index_type nc = std::min(NC, N - jc);
         for (index_type pc = 0; pc < K; pc += KC) {
             const index_type kc = std::min(KC, K - pc);
-            pack_B(B, pc, jc, kc, nc, Bpack.data());
+            pack_panels<NR>(Bt, jc, pc, nc, kc, Bpack.data());
             for (index_type ic = 0; ic < M; ic += MC) {
                 const index_type mc = std::min(MC, M - ic);
-                pack_A(A, ic, pc, mc, kc, Apack.data());
+                pack_panels<MR>(A, ic, pc, mc, kc, Apack.data());
                 for (index_type jr = 0; jr < nc; jr += NR) {
                     const index_type nr = std::min(NR, nc - jr);
                     const T* Bpanel =
@@ -649,7 +587,7 @@ void gemm(const AExpr& A, const BExpr& B, CExpr& C) {
         // for a column-major target so the same bytes spell the right layout.
         auto run = [&](T* out) {
             if constexpr (c_col_major)
-                gemm_dispatch(Transposed{B}, Transposed{A}, out, N, M, K);
+                gemm_dispatch(transposed(B), transposed(A), out, N, M, K);
             else
                 gemm_dispatch(A, B, out, M, N, K);
         };
@@ -668,15 +606,29 @@ void gemm(const AExpr& A, const BExpr& B, CExpr& C) {
         }
         run(Cd);
     } else {
-        // PATH 2 — general writable target: kernel into row-major scratch, then
-        // scatter through the target's own operator() (resolves any layout).
+        // PATH 2 — general writable target: kernel into row-major scratch,
+        // then write back as a plain expression assignment. The scratch is
+        // viewed as a row-major LinearLayoutExpression over the same buffer
+        // and AssignHelper routes it into the target through the target's own
+        // layout (any mapping lands correctly) — the same machinery every
+        // other zipper assignment uses, so improvements there (vectorized
+        // linear assignment) apply here for free.
         static thread_local std::vector<T> cbuf;
         const std::size_t need = static_cast<std::size_t>(M) * N;
         if (cbuf.size() < need) cbuf.resize(need);
         gemm_dispatch(A, B, cbuf.data(), M, N, K);  // gemm_dispatch zero-fills
-        for (index_type i = 0; i < M; ++i)
-            for (index_type j = 0; j < N; ++j)
-                C(i, j) = cbuf[static_cast<std::size_t>(i) * N + j];
+
+        using scratch_view_type = zipper::expression::nullary::
+            LinearLayoutExpression<zipper::storage::SpanData<const T,
+                                                             std::dynamic_extent>,
+                                   zipper::dextents<2>,
+                                   zipper::storage::layout_right>;
+        const scratch_view_type scratch(
+            zipper::storage::SpanData<const T, std::dynamic_extent>(
+                std::span<const T>(cbuf.data(), need)),
+            zipper::dextents<2>(M, N));
+        zipper::expression::detail::AssignHelper<scratch_view_type,
+                                                 CExpr>::assign(scratch, C);
     }
 }
 
