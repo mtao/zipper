@@ -28,6 +28,9 @@ test('swizzle_layout', test_swizzle_layout)
 test_slice_layout = executable('test_slice_layout', 'test_slice_layout.cpp', dependencies: [zipper_test_dep])
 test('slice_layout', test_slice_layout)
 
+test_gemm_kernel = executable('test_gemm_kernel', 'test_gemm_kernel.cpp', dependencies: [zipper_test_dep])
+test('gemm_kernel', test_gemm_kernel)
+
 test_triangular_solve = executable('test_triangular_solve', 'test_triangular_solve.cpp', dependencies: [zipper_test_dep])
 test('triangular_solve', test_triangular_solve)
 
