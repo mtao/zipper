@@ -98,6 +98,36 @@ struct BasicExpressionTraits {
     /// expressions (coeff-wise ops, products) leave it false.
     constexpr static bool is_linear_array = false;
 
+    /// The **contiguous layout** in which this expression's flat,
+    /// value-returning `operator[](index_type)` enumerates its coefficients, or
+    /// `void` when it has no such flat accessor. When non-void, flat index `k`
+    /// addresses the k-th element of a packed buffer in THIS layout's order, so
+    /// two expressions with the *same* `flat_layout_type` (and equal extents)
+    /// can be assigned with a single linear loop `for k: to[k] = from[k]` —
+    /// which the compiler auto-vectorizes (no per-element `mapping()` stride
+    /// math, no recursive `coeff` walk).
+    ///
+    /// Layout-GENERIC by design — it is NOT hardcoded to row-major. A
+    /// row-major (layout_right) dense leaf carries `layout_right`; a
+    /// column-major (layout_left) leaf carries `layout_left`; the linear
+    /// assignment fast path fires for either, as long as source and target
+    /// agree. This is the recursive sibling of `is_linear_array`, propagated
+    /// through coefficient-wise ops:
+    ///   - a contiguous dense leaf → its own `LayoutPolicy`;
+    ///   - a unary coeff-wise op (`2*A`, cast) → its child's layout;
+    ///   - a binary coeff-wise op (`A+B`) → the operands' COMMON layout, or
+    ///     `void` if they disagree (mixed row/col-major ⇒ no flat path).
+    /// So a deep coeff-wise tree (`4*A+B`, `A+B+C+D`) carries a layout exactly
+    /// when every leaf is contiguous in the *same* layout.
+    ///
+    /// IMPORTANT: a reordering view (transpose/Swizzle, shape-changing Slice)
+    /// enumerates in a different order than its logical layout, so it leaves
+    /// this `void` even though it owns a buffer (`is_linear_array`). This is
+    /// what makes the linear-assignment fast path (AssignHelper) sound: it gates
+    /// on `flat_layout_type` matching between source and target, guaranteeing
+    /// flat-order alignment regardless of which layout that is.
+    using flat_layout_type = void;
+
     /// Layout preference for smart eval().
     /// Leaf expressions override this; non-leaf expressions propagate.
     /// Default: no preference → eval() produces default row-major dense.

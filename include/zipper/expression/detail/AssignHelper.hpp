@@ -3,10 +3,12 @@
 #include "zipper/concepts/Expression.hpp"
 #include "zipper/detail/ExtentsTraits.hpp"
 #include "zipper/detail/assert.hpp"
+#include "zipper/expression/concepts/capabilities.hpp"
 #include "zipper/expression/detail/AssignStrategy.hpp"
 #include "zipper/expression/detail/ExpressionTraits.hpp"
 #include "zipper/utils/extents/for_each_index.hpp"
 #include <tuple>
+#include <type_traits>
 
 namespace zipper::expression::nullary {
 template <typename ElementType,
@@ -69,6 +71,21 @@ template <zipper::concepts::Expression From, zipper::concepts::Expression To>
 void AssignHelper<From, To>::assign_direct(const From &from, To &to) {
     if constexpr (extents_type::rank() == 0) {
         to() = from();
+    } else if constexpr (zipper::expression::concepts::FlatCompatible<To,
+                                                                       From>) {
+        // ── Linear (vectorized) fast path ─────────────────────────────────
+        // Source and target are both flat-vectorizable AND share one
+        // contiguous layout (FlatCompatible), so flat index k addresses the
+        // same logical element on both sides. Assign straight over the buffer
+        // index: a single tight loop the compiler auto-vectorizes — no
+        // per-element mapping()/stride math, no recursive coeff walk. This is
+        // layout-GENERIC: it fires for whatever layout the two agree on (row-
+        // or column-major), not just row-major. Anything that reorders
+        // (transpose/Swizzle, Slice) or mixes layouts leaves flat_layout_type
+        // void / mismatched and falls through to the index walk below.
+        index_type n = 1;
+        for (rank_type d = 0; d < extents_type::rank(); ++d) n *= to.extent(d);
+        for (index_type k = 0; k < n; ++k) to[k] = from[k];
     } else {
         // Use layout-aware iteration: respect the target's preferred layout
         // for cache-friendly traversal order. NoLayoutPreference and

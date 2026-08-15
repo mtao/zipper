@@ -51,6 +51,11 @@ struct detail::ExpressionTraits<
     /// Leave false: no contiguous buffer of our own (reading `data()` would
     /// skip the per-coefficient computation).
     constexpr static bool is_linear_array = false;
+
+    /// A scalar coeff-wise op preserves the child's flat enumeration order, so
+    /// it forwards the child's flat layout (void if the child has none). This
+    /// lets `(2*A)[k]` compose to a flat, layout-consistent linear assignment.
+    using flat_layout_type = typename ChildTraits::flat_layout_type;
 };
 
 namespace unary {
@@ -107,6 +112,24 @@ namespace unary {
                 std::decay_t<Child>>
         {
             return expression().mapping();
+        }
+
+        // Flat, MAPPING-FREE value access: the op applied to the child's k-th
+        // buffer element. Composing this over a contiguous child bottoms out at
+        // `child.data()[k]`, so a linear assignment `to[k] = (2*A)[k]` becomes
+        // `to[k] = 2 * A.data()[k]` — which the compiler auto-vectorizes. Note
+        // we deliberately do NOT route through mapping()/strides here: per-
+        // element stride math would hide the unit stride and defeat the
+        // vectorizer. Returns by VALUE (computed) → this is NOT a LinearArray.
+        // Available whenever the child is itself flat-vectorizable (a contiguous
+        // leaf OR another coeff-wise op over contiguous leaves), so this
+        // composes to arbitrary depth: `(4*(A+B))[k]` → `4*((A+B)[k])`
+        // → `4*(A.data()[k]+B.data()[k])`. Non-contiguous children fall back to
+        // coeff().
+        auto operator[](index_type k) const
+            requires(!std::is_void_v<typename traits::flat_layout_type>)
+        {
+            return get_value(expression()[k]);
         }
 
         /// Recursively deep-copy child so the result owns all data.

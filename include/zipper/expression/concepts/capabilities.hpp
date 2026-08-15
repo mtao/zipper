@@ -138,5 +138,49 @@ concept LinearArray =
     zipper::concepts::QualifiedExpression<T> &&
     detail::traits_of<T>::is_linear_array;
 
+// ---------------------------------------------------------------------------
+// FlatVectorizable
+// ---------------------------------------------------------------------------
+
+/// An expression is **flat-vectorizable** when it exposes a flat,
+/// value-returning `operator[](index_type)` that enumerates its coefficients in
+/// the same (buffer/row-major) order a contiguous `LinearArray` would. Such an
+/// expression can be assigned with a single linear loop
+/// `for k: to[k] = from[k]`, which the compiler auto-vectorizes — no per-element
+/// `mapping()`/stride math (that hides the unit stride and defeats the
+/// vectorizer), no recursive `coeff` walk.
+///
+/// This is the RECURSIVE, structural sibling of `LinearArray`:
+///   - a `LinearArray` leaf is flat-vectorizable (its `operator[]` is the buffer);
+///   - a coefficient-wise op (`2*A`, `A+B`, cast) is flat-vectorizable **iff its
+///     operands are** — its `operator[]` composes the op over the operands'
+///     flat accessors, bottoming out at contiguous leaves.
+/// So an arbitrarily deep coeff-wise tree (`4*A+B`, `A+B+C+D`, `4*(A+B)`)
+/// satisfies this exactly when every leaf is contiguous.
+///
+/// This is a DECLARED trait (`ExpressionTraits::flat_layout_type`), not a
+/// structural `operator[]` probe: an expression is flat-vectorizable iff its
+/// whole tree has a CONSISTENT contiguous mapping (every leaf shares one
+/// layout). It is layout-GENERIC — row-major or column-major both qualify, as
+/// long as the tree agrees. Reordering views (transpose/Swizzle, shape-changing
+/// Slice) carry a buffer but enumerate out of layout order, so they leave
+/// `flat_layout_type` void and are excluded.
+template <typename T>
+concept FlatVectorizable =
+    zipper::concepts::QualifiedExpression<T> &&
+    !std::is_void_v<typename detail::traits_of<T>::flat_layout_type>;
+
+/// Two expressions are **flat-compatible** when both are flat-vectorizable AND
+/// share the SAME contiguous layout, so a single linear loop
+/// `for k: dst[k] = src[k]` visits the same logical element on both sides
+/// (given equal extents). This is the soundness gate for the vectorized
+/// linear-assignment fast path — it holds for any layout the two agree on, not
+/// just row-major.
+template <typename Dst, typename Src>
+concept FlatCompatible =
+    FlatVectorizable<Dst> && FlatVectorizable<Src> &&
+    std::is_same_v<typename detail::traits_of<Dst>::flat_layout_type,
+                   typename detail::traits_of<Src>::flat_layout_type>;
+
 } // namespace zipper::expression::concepts
 #endif

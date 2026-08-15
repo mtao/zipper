@@ -6,3 +6,6 @@ test('layout_mapping', test_layout_mapping)
 
 test_coeffwise_layout_mapping = executable('test_coeffwise_layout_mapping', 'coeffwise_layout_mapping.cpp', dependencies: [zipper_test_dep])
 test('coeffwise_layout_mapping', test_coeffwise_layout_mapping)
+
+test_coeffwise_vectorized = executable('test_coeffwise_vectorized', 'coeffwise_vectorized.cpp', dependencies: [zipper_test_dep])
+test('coeffwise_vectorized', test_coeffwise_vectorized)

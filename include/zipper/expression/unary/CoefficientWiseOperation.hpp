@@ -44,6 +44,10 @@ struct expression::detail::ExpressionTraits<
     /// Leave false: no contiguous buffer of our own (reading `data()` would
     /// skip the per-coefficient computation).
     constexpr static bool is_linear_array = false;
+
+    /// A unary coeff-wise op (cast / abs) preserves the child's flat
+    /// enumeration order, so it forwards the child's flat layout (void if none).
+    using flat_layout_type = typename child_traits::flat_layout_type;
 };
 
 // represents a coefficient-wise transformation of an underlyng expression
@@ -86,6 +90,18 @@ namespace unary {
                 std::decay_t<Child>>
         {
             return expression().mapping();
+        }
+
+        // Flat, MAPPING-FREE value access: the op applied to the child's k-th
+        // flat element. Composes recursively when the child is flat-vectorizable
+        // (cast over a contiguous leaf, or over another coeff-wise op), so e.g.
+        // `cast<float>(2.0*A)[k]` → `float(2.0 * A.data()[k])` auto-vectorizes.
+        // Returns by VALUE (computed) → this is NOT a LinearArray. See
+        // ScalarOperation::operator[] for the rationale (no per-element strides).
+        auto operator[](index_type k) const
+            requires(!std::is_void_v<typename traits::flat_layout_type>)
+        {
+            return get_value(expression()[k]);
         }
 
         /// Recursively deep-copy child so the result owns all data.

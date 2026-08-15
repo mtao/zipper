@@ -104,6 +104,15 @@ struct detail::ExpressionTraits<binary::ZeroAwareOperation<A, B, Op>>
     /// Leave false: no contiguous buffer of our own (reading `data()` would
     /// skip the per-coefficient computation).
     constexpr static bool is_linear_array = false;
+
+    /// Flat-vectorizable in the operands' COMMON layout (same rule as
+    /// binary::Operation): carry the shared layout when both operands are
+    /// flat-vectorizable AND agree, else void. Layout-generic.
+    using flat_layout_type = std::conditional_t<
+        !std::is_void_v<typename _Detail::ATraits::flat_layout_type> &&
+            std::is_same_v<typename _Detail::ATraits::flat_layout_type,
+                           typename _Detail::BTraits::flat_layout_type>,
+        typename _Detail::ATraits::flat_layout_type, void>;
 };
 
 // ─── ZeroAwareOperation class ────────────────────────────────────────────────
@@ -199,6 +208,19 @@ class ZeroAwareOperation
         requires zipper::expression::concepts::HasLayoutMapping<std::decay_t<A>>
     {
         return lhs().mapping();
+    }
+
+    // Flat, MAPPING-FREE value access (identical to binary::Operation): the op
+    // applied to the k-th flat element of each operand, available when BOTH
+    // operands are flat-vectorizable. `(A+B)[k]` → `A.data()[k] + B.data()[k]`.
+    // Returns by VALUE → NOT a LinearArray. NOTE: this is the flat *dense* walk;
+    // it ignores the index_set / sparsity structure (a linear assignment over a
+    // contiguous target visits every element anyway). Consumers that exploit
+    // structural zeros stay on the index_set path.
+    auto operator[](index_type k) const
+        requires(!std::is_void_v<typename traits::flat_layout_type>)
+    {
+        return get_value(lhs()[k], rhs()[k]);
     }
 
     // ── Index set interface ────────────────────────────────────────────

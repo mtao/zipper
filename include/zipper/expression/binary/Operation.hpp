@@ -61,6 +61,17 @@ struct detail::ExpressionTraits<binary::Operation<A, B, Op>>
   /// Leave false: no contiguous buffer of our own (reading `data()` would
   /// skip the per-coefficient computation).
   constexpr static bool is_linear_array = false;
+
+  /// Flat-vectorizable in the operands' COMMON layout: `(A+B)[k]` reads the
+  /// k-th flat element of each operand, which is the same logical element only
+  /// when both enumerate in the same order. So we carry the shared layout when
+  /// both operands are flat-vectorizable AND agree; otherwise void (a mixed
+  /// row-/column-major sum has no sound flat path). Layout-generic.
+  using flat_layout_type = std::conditional_t<
+      !std::is_void_v<typename _Detail::ATraits::flat_layout_type> &&
+          std::is_same_v<typename _Detail::ATraits::flat_layout_type,
+                         typename _Detail::BTraits::flat_layout_type>,
+      typename _Detail::ATraits::flat_layout_type, void>;
 };
 
 namespace binary {
@@ -143,6 +154,19 @@ public:
     requires zipper::expression::concepts::HasLayoutMapping<std::decay_t<A>>
   {
     return lhs().mapping();
+  }
+
+  // Flat, MAPPING-FREE value access: the op applied to the k-th flat element of
+  // each operand. Available when BOTH operands are flat-vectorizable (contiguous
+  // leaves, or coeff-wise ops over them), so this composes recursively:
+  // `(A+B)[k]` → `A.data()[k] + B.data()[k]`, and deeper trees like
+  // `(4*A+B)[k]` / `(A+B+C+D)[k]` bottom out at a flat loop the compiler
+  // auto-vectorizes. Returns by VALUE → NOT a LinearArray. Same caveat as
+  // ScalarOperation: do NOT use mapping()/strides per element here.
+  auto operator[](index_type k) const
+    requires(!std::is_void_v<typename traits::flat_layout_type>)
+  {
+    return get_value(lhs()[k], rhs()[k]);
   }
 
   /// Recursively deep-copy children so the result owns all data.
