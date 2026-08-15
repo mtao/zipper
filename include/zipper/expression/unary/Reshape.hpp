@@ -46,6 +46,27 @@ struct detail::ExpressionTraits<unary::Reshape<ExpressionType, NewExtents>>
 
   constexpr static bool is_coefficient_consistent = false;
   constexpr static bool is_value_based = false;
+
+  /// A reshape is PURE METADATA when the child's flat element order is
+  /// row-major (`flat_layout_type == layout_right`): reshape semantics unravel
+  /// the new multi-index row-major into the child, so the flat sequence of
+  /// elements is bit-identical — only the extents change. In that case the
+  /// reshape forwards the child's flat capabilities: it is itself
+  /// flat-vectorizable (coeff-wise ops are transitive with reshapes — a
+  /// reshape inside a coeff-wise tree stays on the flat/vectorized path), it
+  /// carries its own row-major mapping over the NEW extents, and when the
+  /// child is buffer-backed it forwards the buffer, so chained reshapes
+  /// collapse to a single index transform on the root storage instead of a
+  /// linearize→unravel round-trip per level. A column-major or strided child
+  /// leaves all of this void/false and uses the coeff fallback.
+  using flat_layout_type =
+      std::conditional_t<std::is_same_v<typename child_traits::flat_layout_type,
+                                        zipper::default_layout_policy>,
+                         zipper::default_layout_policy, void>;
+  constexpr static bool has_layout_mapping =
+      !std::is_void_v<flat_layout_type>;
+  constexpr static bool is_linear_array =
+      has_layout_mapping && child_traits::is_linear_array;
 };
 
 // ── Class definition ───────────────────────────────────────────────────
@@ -164,6 +185,39 @@ private:
   new_mapping_type m_new_mapping;
 
 public:
+  // ── Flat / layout linearization (metadata-only reshape) ───────────────
+  // See the traits note: when the child's flat order is row-major, the
+  // reshape does not move data, so flat access and (for buffer-backed
+  // children) the raw buffer forward straight through, and the row-major
+  // mapping over the NEW extents is the composed index transform.
+  constexpr auto mapping() const -> const new_mapping_type &
+    requires(traits::has_layout_mapping)
+  {
+    return m_new_mapping;
+  }
+  constexpr decltype(auto) operator[](index_type k) const
+    requires(!std::is_void_v<typename traits::flat_layout_type>)
+  {
+    return expression()[k];
+  }
+  constexpr decltype(auto) operator[](index_type k)
+    requires(!std::is_void_v<typename traits::flat_layout_type> &&
+             requires(std::decay_t<ExpressionType> &e, index_type i) { e[i]; })
+  {
+    return expression()[k];
+  }
+  constexpr auto data() const
+    requires(traits::is_linear_array)
+  {
+    return expression().data();
+  }
+  constexpr auto data()
+    requires(traits::is_linear_array &&
+             requires(std::decay_t<ExpressionType> &e) { e.data(); })
+  {
+    return expression().data();
+  }
+
   /// Recursively deep-copy child so the result owns all data.
   auto make_owned() const {
       auto owned_child = expression().make_owned();

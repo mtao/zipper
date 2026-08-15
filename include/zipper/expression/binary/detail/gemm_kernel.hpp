@@ -197,8 +197,7 @@ template <typename T>
 inline BlockSizes compute_block_sizes() {
     constexpr index_type MR = reg_MR<T>(), NR = reg_NR<T>();
     constexpr std::size_t es = sizeof(T);
-    const std::size_t L1 = cache_bytes(1), L2 = cache_bytes(2),
-                      L3 = cache_bytes(3);
+    const std::size_t L1 = cache_bytes(1), L2 = cache_bytes(2);
     auto floor_to = [](index_type v, index_type m) {
         return std::max<index_type>(m, (v / m) * m);
     };
@@ -465,7 +464,7 @@ template <typename T>
                                                const T* Bpanel, T* Ctile,
                                                index_type ldc, index_type mr,
                                                index_type nr) {
-    constexpr index_type MR = reg_MR<T>(), NR = reg_NR<T>();
+    [[maybe_unused]] constexpr index_type MR = reg_MR<T>(), NR = reg_NR<T>();
 #if defined(__AVX512F__)
     if constexpr (std::is_same_v<T, double> && MR == 8 && NR == 16) {
         if (mr == 8 && nr == 16) {
