@@ -3,6 +3,7 @@
 
 #include "UnaryExpressionBase.hpp"
 #include "zipper/concepts/IndexSlice.hpp"
+#include <array>
 #include <utility>
 #include "zipper/concepts/Expression.hpp"
 #include "zipper/concepts/Index.hpp"
@@ -10,8 +11,10 @@
 #include "zipper/detail/constexpr_arithmetic.hpp"
 #include "zipper/detail/is_integral_constant.hpp"
 #include "zipper/detail/pack_index.hpp"
+#include "zipper/expression/concepts/capabilities.hpp"
 #include "zipper/expression/detail/AssignHelper.hpp"
 #include "zipper/expression/detail/IndexSet.hpp"
+#include "zipper/storage/layout_types.hpp"
 
 namespace zipper::expression {
 namespace unary {
@@ -402,6 +405,12 @@ struct detail::ExpressionTraits<unary::Slice<ExprType, Slices...>>
 
     /// Backward-compatible alias for has_index_set.
     constexpr static bool has_known_zeros = has_index_set;
+
+    /// A slice of a layout-mapped expression is itself affine in the child's
+    /// buffer (composed offset + strides), and shares that buffer — so forward
+    /// both capabilities from the child.
+    constexpr static bool has_layout_mapping = _Detail::Base::has_layout_mapping;
+    constexpr static bool is_linear_array = _Detail::Base::is_linear_array;
 };
 
 namespace unary {
@@ -449,6 +458,60 @@ class Slice : public UnaryExpressionBase<Slice<ExprType, Slices...>,
 
     constexpr auto extents() const -> extents_type {
         return m_extents;
+    }
+
+    // ── Layout linearization ───────────────────────────────────────────
+    // A slice of a layout-mapped child is affine in the child's buffer: each
+    // output index maps (via get_index<K>) to a child multi-index, whose child
+    // linear offset is composed-strided. We expose a layout_stride mapping
+    // (offset-free) plus data()/operator[] rebased to the slice origin, so
+    // slice[ mapping()(out) ] == slice(out). Shares the child buffer; no copy.
+   private:
+    // Child linear offset for the given output multi-index.
+    template <rank_type... C, std::size_t... O>
+    index_type _child_offset(std::integer_sequence<rank_type, C...>,
+                             std::index_sequence<O...>,
+                             const std::array<index_type, extents_type::rank()>&
+                                 out) const {
+        return expression().mapping()(this->template get_index<C>(out[O]...)...);
+    }
+    index_type _child_offset(
+        const std::array<index_type, extents_type::rank()>& out) const {
+        return _child_offset(
+            std::make_integer_sequence<rank_type, expr_extents_type::rank()>{},
+            std::make_index_sequence<extents_type::rank()>{}, out);
+    }
+    // Linear offset of the slice origin (output all-zeros) into the child buffer.
+    index_type _base_offset() const {
+        return _child_offset(std::array<index_type, extents_type::rank()>{});
+    }
+
+   public:
+    auto mapping() const
+        requires zipper::expression::concepts::HasLayoutMapping<ExpressionType>
+    {
+        constexpr rank_type R = extents_type::rank();
+        const index_type base = _base_offset();
+        std::array<index_type, R> strides{};
+        for (rank_type o = 0; o < R; ++o) {
+            std::array<index_type, R> unit{};
+            unit[o] = 1;
+            strides[o] = _child_offset(unit) - base;
+        }
+        return typename zipper::storage::layout_stride::template mapping<
+            extents_type>(extents(), strides);
+    }
+
+    auto data() const
+        requires zipper::expression::concepts::LinearArray<ExpressionType>
+    {
+        return expression().data() + _base_offset();
+    }
+
+    auto operator[](index_type k) const
+        requires zipper::expression::concepts::LinearArray<ExpressionType>
+    {
+        return expression()[_base_offset() + k];
     }
 
     template <rank_type K, typename... Args>
