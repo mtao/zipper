@@ -34,31 +34,16 @@ public:
 
   auto as_array() & { return zipper::as_array(*this); }
   auto as_array() const & { return zipper::as_array(*this); }
-  auto as_array() && {
-    return ArrayBase<expression_type>(
-      std::in_place, std::move(*this).expression());
-  }
-  auto as_array() const && {
-    return ArrayBase<expression_type>(std::in_place, expression());
-  }
+  auto as_array() && { return zipper::as_array(std::move(*this)); }
+  auto as_array() const && { return zipper::as_array(std::move(*this)); }
   auto as_tensor() & { return zipper::as_tensor(*this); }
   auto as_tensor() const & { return zipper::as_tensor(*this); }
-  auto as_tensor() && {
-    return TensorBase<expression_type>(
-      std::in_place, std::move(*this).expression());
-  }
-  auto as_tensor() const && {
-    return TensorBase<expression_type>(std::in_place, expression());
-  }
+  auto as_tensor() && { return zipper::as_tensor(std::move(*this)); }
+  auto as_tensor() const && { return zipper::as_tensor(std::move(*this)); }
   auto as_vector() & { return zipper::as_vector(*this); }
   auto as_vector() const & { return zipper::as_vector(*this); }
-  auto as_vector() && {
-    return VectorBase<expression_type>(
-      std::in_place, std::move(*this).expression());
-  }
-  auto as_vector() const && {
-    return VectorBase<expression_type>(std::in_place, expression());
-  }
+  auto as_vector() && { return zipper::as_vector(std::move(*this)); }
+  auto as_vector() const && { return zipper::as_vector(std::move(*this)); }
   template <index_type... N>
   auto eval(const std::integer_sequence<index_type, N...> &) const
     requires(std::is_same_v<extents<N...>, extents_type>)

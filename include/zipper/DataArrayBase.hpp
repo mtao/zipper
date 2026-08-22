@@ -86,13 +86,8 @@ public:
 
   auto as_array() & { return zipper::as_array(*this); }
   auto as_array() const & { return zipper::as_array(*this); }
-  auto as_array() && {
-    return ArrayBase<expression_type>(
-      std::in_place, std::move(*this).expression());
-  }
-  auto as_array() const && {
-    return ArrayBase<expression_type>(std::in_place, expression());
-  }
+  auto as_array() && { return zipper::as_array(std::move(*this)); }
+  auto as_array() const && { return zipper::as_array(std::move(*this)); }
 
   /// Set all elements to the given value.
   void fill(const value_type &value)

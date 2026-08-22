@@ -79,6 +79,14 @@ using squeeze_specifier_t = std::conditional_t<Extents::static_extent(D) == 1,
   auto as_##NAME_LOWER(const ZipperDerived &v) {                               \
     using Expr = typename ZipperDerived::expression_type;                      \
     return NAME_UPPER##Base<const Expr &>(std::in_place, v.expression());      \
+  }                                                                            \
+  template <concepts::Zipper ZipperDerived>                                    \
+  auto as_##NAME_LOWER(ZipperDerived &&v)                                      \
+    requires(!std::is_lvalue_reference_v<ZipperDerived>)                       \
+  {                                                                            \
+    using Expr = typename ZipperDerived::expression_type;                      \
+    return NAME_UPPER##Base<Expr>(                                             \
+      std::in_place, std::forward<ZipperDerived>(v).expression());             \
   }
 
 ZIPPER_AS_IMPL_(array, Array)
@@ -155,6 +163,32 @@ auto as_vector(const ZipperDerived &v) {
   }
 }
 
+/// @brief Convert an rvalue Zipper wrapper to an owning VectorBase.
+template <concepts::Zipper ZipperDerived>
+  requires(!std::is_lvalue_reference_v<ZipperDerived>
+           && (ZipperDerived::expression_traits::extents_type::rank() == 1
+               || detail::squeeze_rank<
+                    typename ZipperDerived::expression_traits::extents_type>()
+                    == 1))
+auto as_vector(ZipperDerived &&v) {
+  using Expr = typename ZipperDerived::expression_type;
+  using extents_type = typename ZipperDerived::expression_traits::extents_type;
+
+  if constexpr (extents_type::rank() == 1) {
+    return VectorBase<Expr>(
+      std::in_place, std::forward<ZipperDerived>(v).expression());
+  } else {
+    return [&]<rank_type... Ds>(std::integer_sequence<rank_type, Ds...>) {
+      using SliceT = expression::unary::Slice<
+        Expr, detail::squeeze_specifier_t<extents_type, Ds>...>;
+      return VectorBase<SliceT>(
+        std::in_place,
+        std::forward<ZipperDerived>(v).expression(),
+        detail::squeeze_specifier_t<extents_type, Ds>{}...);
+    }(std::make_integer_sequence<rank_type, extents_type::rank()>{});
+  }
+}
+
 /// @brief Convert a Zipper wrapper to MatrixBase (rank 2).
 ///
 /// If the source expression has rank 2, wraps it directly.  If the rank is
@@ -212,6 +246,32 @@ auto as_matrix(const ZipperDerived &v) {
   }
 }
 
+/// @brief Convert an rvalue Zipper wrapper to an owning MatrixBase.
+template <concepts::Zipper ZipperDerived>
+  requires(!std::is_lvalue_reference_v<ZipperDerived>
+           && (ZipperDerived::expression_traits::extents_type::rank() == 2
+               || detail::squeeze_rank<
+                    typename ZipperDerived::expression_traits::extents_type>()
+                    == 2))
+auto as_matrix(ZipperDerived &&v) {
+  using Expr = typename ZipperDerived::expression_type;
+  using extents_type = typename ZipperDerived::expression_traits::extents_type;
+
+  if constexpr (extents_type::rank() == 2) {
+    return MatrixBase<Expr>(
+      std::in_place, std::forward<ZipperDerived>(v).expression());
+  } else {
+    return [&]<rank_type... Ds>(std::integer_sequence<rank_type, Ds...>) {
+      using SliceT = expression::unary::Slice<
+        Expr, detail::squeeze_specifier_t<extents_type, Ds>...>;
+      return MatrixBase<SliceT>(
+        std::in_place,
+        std::forward<ZipperDerived>(v).expression(),
+        detail::squeeze_specifier_t<extents_type, Ds>{}...);
+    }(std::make_integer_sequence<rank_type, extents_type::rank()>{});
+  }
+}
+
 /// @brief Convert a Zipper wrapper to QuaternionBase (rank 1).
 ///
 /// If the source expression has rank 1, wraps it directly.  If the rank is
@@ -265,6 +325,32 @@ auto as_quaternion(const ZipperDerived &v) {
       return QuaternionBase<SliceT>(
           std::in_place, v.expression(),
           detail::squeeze_specifier_t<extents_type, Ds>{}...);
+    }(std::make_integer_sequence<rank_type, extents_type::rank()>{});
+  }
+}
+
+/// @brief Convert an rvalue Zipper wrapper to an owning QuaternionBase.
+template <concepts::Zipper ZipperDerived>
+  requires(!std::is_lvalue_reference_v<ZipperDerived>
+           && (ZipperDerived::expression_traits::extents_type::rank() == 1
+               || detail::squeeze_rank<
+                    typename ZipperDerived::expression_traits::extents_type>()
+                    == 1))
+auto as_quaternion(ZipperDerived &&v) {
+  using Expr = typename ZipperDerived::expression_type;
+  using extents_type = typename ZipperDerived::expression_traits::extents_type;
+
+  if constexpr (extents_type::rank() == 1) {
+    return QuaternionBase<Expr>(
+      std::in_place, std::forward<ZipperDerived>(v).expression());
+  } else {
+    return [&]<rank_type... Ds>(std::integer_sequence<rank_type, Ds...>) {
+      using SliceT = expression::unary::Slice<
+        Expr, detail::squeeze_specifier_t<extents_type, Ds>...>;
+      return QuaternionBase<SliceT>(
+        std::in_place,
+        std::forward<ZipperDerived>(v).expression(),
+        detail::squeeze_specifier_t<extents_type, Ds>{}...);
     }(std::make_integer_sequence<rank_type, extents_type::rank()>{});
   }
 }
