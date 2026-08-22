@@ -84,7 +84,10 @@ public:
   DataArrayBase(Args &&...args)
       : Base(std::in_place, std::forward<Args>(args)...) {}
 
-  auto as_array() const { return zipper::as_array(*this); }
+  auto as_array() & { return zipper::as_array(*this); }
+  auto as_array() const & { return zipper::as_array(*this); }
+  auto as_array() && { return zipper::as_array(std::move(*this)); }
+  auto as_array() const && { return zipper::as_array(std::move(*this)); }
 
   /// Set all elements to the given value.
   void fill(const value_type &value)

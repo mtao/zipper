@@ -203,6 +203,12 @@ TEST_CASE("test_matrix_slicing", "[extents][matrix][slice]") {
 
     slice = zipper::expression::nullary::Constant<double>(3.4);
     sliceD = zipper::expression::nullary::Constant<double>(3.4);
+    auto slice_array = sliceD.as_array();
+    zipper::VectorX<double> constant{4.2, 4.2, 4.2, 4.2};
+    slice_array = constant.as_array().expression();
+    CHECK(4.2 == MND(1, 0));
+    CHECK(4.2 == MND(1, 3));
+    sliceD = zipper::expression::nullary::Constant<double>(3.4);
     CHECK(3.4 == MN(1, 0));
     CHECK(3.4 == MN(1, 1));
     CHECK(3.4 == MN(1, 2));

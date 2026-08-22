@@ -228,6 +228,15 @@ TEST_CASE("test_mdspan_deduction_guides", "[mdspan][ctad]") {
     CHECK(t(1, 1) == 99);
   }
 
+  // MatrixBase.hpp provides mdspan CTAD without requiring Matrix.hpp.
+  {
+    std::vector<double> data(6);
+    zipper::mdspan<double, zipper::dextents<2>> ms(data.data(), 2, 3);
+    zipper::MatrixBase matrix(ms);
+    matrix(1, 2) = 7;
+    CHECK(data[5] == 7);
+  }
+
   // Const mdspan → read-only views via CTAD
   {
     const std::array<double, 3> data = {5, 10, 15};
@@ -245,5 +254,12 @@ TEST_CASE("test_mdspan_deduction_guides", "[mdspan][ctad]") {
     CHECK(t(0) == 5);
     CHECK(f(0) == 5);
     CHECK(a(0) == 5);
+  }
+
+  // Rvalue semantic conversions own their expression instead of dangling.
+  {
+    auto array = zipper::Vector<double, 3>{1, 2, 3}.as_array();
+    CHECK(array(0) == 1);
+    CHECK(array(2) == 3);
   }
 }

@@ -13,11 +13,6 @@
 
 namespace zipper {
 
-// Deduction guide from std::mdspan
-template <typename T, typename Extents, typename Layout, typename Accessor>
-MatrixBase(zipper::mdspan<T, Extents, Layout, Accessor>) -> MatrixBase<
-    expression::nullary::MDSpan<T, Extents, Layout, Accessor>>;
-
 UNARY_DECLARATION(MatrixBase, LogicalNot, operator!)
 UNARY_DECLARATION(MatrixBase, BitNot, operator~)
 UNARY_DECLARATION(MatrixBase, Negate, operator-)
