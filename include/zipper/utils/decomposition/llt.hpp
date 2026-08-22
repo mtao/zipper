@@ -35,10 +35,13 @@
 
 #include <cmath>
 #include <expected>
+#include <string>
+#include <type_traits>
+#include <utility>
 
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
-#include <zipper/expression/nullary/Constant.hpp>
+#include <zipper/expression/nullary/StaticConstant.hpp>
 #include <zipper/expression/unary/TriangularView.hpp>
 #include <zipper/utils/solver/result.hpp>
 
@@ -87,7 +90,7 @@ struct LLTResult {
         }
 
         // 2. Back substitution: L^T * x = y.
-        Matrix<T, N, N> Lt(L.transpose());
+        auto Lt = L.transpose();
 
         auto Lt_upper =
             expression::triangular_view<expression::TriangularMode::Upper>(Lt);
@@ -125,13 +128,14 @@ auto llt(const Derived &A) -> std::expected<
 
     // Initialise L to zero.
     Matrix<T, N, N> L(n, n);
-    L = expression::nullary::Constant(T{0}, L.extents());
+    L = expression::nullary::Zero<T, N, N>(L.extents());
 
     for (index_type j = 0; j < n; ++j) {
         // Compute the diagonal element L(j,j).
         //   L(j,j) = sqrt( A(j,j) - ||L(j, 0:j)||^2 )
-        T sum =
-            (j > 0) ? L.row(j).segment(0, j).dot(L.row(j).segment(0, j)) : T{0};
+        T sum = (j > 0)
+                    ? L.row(j).segment(0, j).template norm_powered<2>()
+                    : T{0};
         T diag = A(j, j) - sum;
 
         if (diag <= T{0}) {
@@ -146,10 +150,19 @@ auto llt(const Derived &A) -> std::expected<
 
         // Compute the sub-diagonal elements L(i,j) for i > j.
         //   L(i,j) = ( A(i,j) - L(i, 0:j) . L(j, 0:j) ) / L(j,j)
-        for (index_type i = j + 1; i < n; ++i) {
-            T s = (j > 0) ? L.row(i).segment(0, j).dot(L.row(j).segment(0, j))
-                          : T{0};
-            L(i, j) = (A(i, j) - s) / L(j, j);
+        const index_type trailing_size = n - j - 1;
+        if (trailing_size > 0) {
+            auto L_subdiagonal = L.col(j).segment(j + 1, trailing_size);
+            auto A_subdiagonal = A.col(j).segment(j + 1, trailing_size);
+            if (j > 0) {
+                auto L_block = L.slice(zipper::slice(j + 1, trailing_size),
+                                       zipper::slice(index_type{0}, j));
+                auto L_row = L.row(j).segment(0, j);
+                L_subdiagonal =
+                    (A_subdiagonal - L_block * L_row) / L(j, j);
+            } else {
+                L_subdiagonal = A_subdiagonal / L(j, j);
+            }
         }
     }
 

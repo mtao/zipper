@@ -30,6 +30,10 @@
 #include <array>
 #include <cmath>
 #include <limits>
+#include <numeric>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
@@ -138,7 +142,7 @@ auto svd(const Derived &A) {
 
         // diag_norm_sq = sum of ||col_j||^4 = sum of (||col_j||^2)^2
         auto col_norms_sq = W.colwise().template norm_powered<2>();
-        T diag_norm_sq = zipper::as_array(col_norms_sq).pow(T{2}).sum();
+        T diag_norm_sq = col_norms_sq.as_array().pow(T{2}).sum();
 
         T off_diag_norm_sq = T{0};
         for (index_type j1 = 0; j1 < n; ++j1) {
@@ -216,7 +220,7 @@ auto svd(const Derived &A) {
     // there are n columns but only p = min(m,n) non-trivial singular values).
 
     // First compute all n column norms.
-    Vector<T, std::dynamic_extent> all_sigmas(W.colwise().norm());
+    auto all_sigmas = W.colwise().norm().eval();
 
     // Build a permutation array sorted by descending singular value.
     std::vector<index_type> perm(n);
@@ -224,27 +228,23 @@ auto svd(const Derived &A) {
     std::sort(perm.begin(), perm.end(), [&](index_type a, index_type b) {
         return all_sigmas(a) > all_sigmas(b);
     });
+    perm.resize(p);
 
-    // Extract the top p results.
+    // Gather the top p columns in singular-value order.
+    auto sorted_W = W.col_slice(perm);
     Matrix<T, M, P> U_result(m, p);
-    Vector<T, P> S_result(p);
-    Matrix<T, P, N> Vt_result(p, n);
+    Vector<T, P> S_result(all_sigmas(perm));
+    Matrix<T, P, N> Vt_result(V.col_slice(perm).transpose());
 
     for (index_type k = 0; k < p; ++k) {
-        index_type col = perm[k];
-        S_result(k) = all_sigmas(col);
-
         if (S_result(k) > std::numeric_limits<T>::min()) {
-            U_result.col(k) = W.col(col) / S_result(k);
+            U_result.col(k) = sorted_W.col(k) / S_result(k);
         } else {
             // Zero singular value — seed with e_k so that Gram-Schmidt
             // below can orthonormalise it against the other columns.
             U_result.col(k) =
                 expression::nullary::unit_vector<T>(m, k < m ? k : 0);
         }
-
-        // Vt is p x n: row k of Vt = column perm[k] of V, transposed.
-        Vt_result.row(k) = V.col(col);
     }
 
     // Orthonormalise U columns.  The non-zero-SV columns are already

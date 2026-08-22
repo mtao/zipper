@@ -19,6 +19,8 @@
 #include <cmath>
 #include <limits>
 #include <optional>
+#include <type_traits>
+#include <utility>
 
 #include <zipper/Vector.hpp>
 #include <zipper/concepts/Matrix.hpp>
@@ -69,7 +71,7 @@ auto householder_vector(const VDerived &x) -> std::optional<
 
     T v_norm = v.norm();
     if (v_norm < std::numeric_limits<T>::min()) { return std::nullopt; }
-    v.normalize();
+    v /= v_norm;
 
     return HouseholderVector<T, N>{.v = std::move(v), .sigma = sigma};
 }
@@ -95,13 +97,9 @@ auto apply_householder_left(MDerived &M,
     using T = typename std::decay_t<VDerived>::value_type;
     const index_type len = v.extent(0);
 
-    // For each column j, compute dot = v^T * M(r0:r0+len, j),
-    // then M(r0+i, j) -= 2 * v(i) * dot.
     for (index_type j = c0; j < c1; ++j) {
-        auto col = M.col(j);
-        auto col_sub = col.segment(r0, len);
-        auto dot = v.dot(col_sub);
-        col_sub -= (T{2} * dot) * v;
+        auto column = M.col(j).segment(r0, len);
+        column -= (T{2} * v.dot(column)) * v;
     }
 }
 
@@ -126,13 +124,9 @@ auto apply_householder_right(MDerived &M,
     using T = typename std::decay_t<VDerived>::value_type;
     const index_type len = v.extent(0);
 
-    // For each row i, compute dot = M(i, c0:c0+len) . v,
-    // then M(i, c0+j) -= 2 * dot * v(j).
     for (index_type i = r0; i < r1; ++i) {
-        auto row = M.row(i);
-        auto row_sub = row.segment(c0, len);
-        auto dot = v.dot(row_sub);
-        row_sub -= (T{2} * dot) * v;
+        auto row = M.row(i).segment(c0, len);
+        row -= (T{2} * v.dot(row)) * v;
     }
 }
 

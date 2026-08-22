@@ -41,15 +41,21 @@
 #define ZIPPER_UTILS_DECOMPOSITION_LU_HPP
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <expected>
 #include <limits>
-#include <numeric>
+#include <string>
+#include <type_traits>
+#include <utility>
 
+#include <zipper/Array.hpp>
 #include <zipper/DataArray.hpp>
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
+#include <zipper/expression/nullary/Iota.hpp>
 #include <zipper/expression/unary/TriangularView.hpp>
+#include <zipper/utils/max_coeff.hpp>
 #include <zipper/utils/solver/result.hpp>
 
 namespace zipper::utils::decomposition {
@@ -68,85 +74,75 @@ namespace zipper::utils::decomposition {
 /// Calling `.solve(b)` performs permuted forward/back substitution using the
 /// stored factors to solve A*x = b without re-factoring.
 template <typename T, index_type N> struct PLUResult {
-  /// Scalar type of the decomposition.
-  using value_type = T;
+    /// Scalar type of the decomposition.
+    using value_type = T;
 
-  /// Combined LU matrix (lower triangle = L multipliers, upper triangle = U).
-  Matrix<T, N, N> LU;
-  /// Row permutation: perm[i] = original row index at position i.
-  DataArray<index_type, N> perm;
-  /// Sign of the permutation (+1 or -1).
-  int sign;
+    /// Combined LU matrix (lower triangle = L multipliers, upper triangle = U).
+    Matrix<T, N, N> LU;
+    /// Row permutation: perm[i] = original row index at position i.
+    DataArray<index_type, N> perm;
+    /// Sign of the permutation (+1 or -1).
+    int sign;
 
-  /// @brief Unit lower triangular factor L.
-  ///
-  /// Returns a read-only TriangularView of the combined LU matrix with
-  /// UnitLower mode: the strict lower triangle contains the L multipliers,
-  /// and the diagonal is implicitly 1.
-  auto L() const {
-    return LU.template as_triangular<expression::TriangularMode::UnitLower>();
-  }
-
-  /// @brief Upper triangular factor U.
-  ///
-  /// Returns a read-only TriangularView of the combined LU matrix with
-  /// Upper mode: the upper triangle (including the diagonal) contains U.
-  auto U() const {
-    return LU.template as_triangular<expression::TriangularMode::Upper>();
-  }
-
-  /// @brief Solve A*x = b using the stored PLU factors.
-  ///
-  /// Performs:
-  ///   1. Apply permutation to b:  Pb(i) = b(perm(i))
-  ///   2. Forward substitution:    L * y = Pb  (unit lower triangular)
-  ///   3. Back substitution:       U * x = y   (upper triangular)
-  ///
-  /// @param b  Right-hand side vector of length n.
-  /// @return   `std::expected<Vector<T,N>, SolverError>` — the solution on
-  ///           success, or a breakdown error if a zero pivot is encountered.
-  template <concepts::Vector BDerived>
-  auto solve(const BDerived &b) const
-      -> std::expected<Vector<T, N>, solver::SolverError> {
-    using ResultVec = Vector<T, N>;
-    using Result = std::expected<ResultVec, solver::SolverError>;
-
-    const index_type n = LU.rows();
-
-    // 1. Apply permutation: Pb(i) = b(perm(i)).
-    ResultVec Pb(n);
-    for (index_type i = 0; i < n; ++i) {
-      Pb(i) = b(perm(i));
+    /// @brief Unit lower triangular factor L.
+    ///
+    /// Returns a read-only TriangularView of the combined LU matrix with
+    /// UnitLower mode: the strict lower triangle contains the L multipliers,
+    /// and the diagonal is implicitly 1.
+    auto L() const {
+        return LU.template as_triangular<expression::TriangularMode::UnitLower>();
     }
 
-    // 2. Forward substitution: L * y = Pb  (L is unit lower triangular).
-    auto y_result = L().solve(Pb);
-
-    if (!y_result) {
-      return Result{std::unexpected(std::move(y_result.error()))};
+    /// @brief Upper triangular factor U.
+    ///
+    /// Returns a read-only TriangularView of the combined LU matrix with
+    /// Upper mode: the upper triangle (including the diagonal) contains U.
+    auto U() const {
+        return LU.template as_triangular<expression::TriangularMode::Upper>();
     }
 
-    // 3. Back substitution: U * x = y  (U is upper triangular).
-    auto x_result = U().solve(*y_result);
+    /// @brief Solve A*x = b using the stored PLU factors.
+    ///
+    /// Performs:
+    ///   1. Apply permutation to b:  Pb(i) = b(perm(i))
+    ///   2. Forward substitution:    L * y = Pb  (unit lower triangular)
+    ///   3. Back substitution:       U * x = y   (upper triangular)
+    ///
+    /// @param b  Right-hand side vector of length n.
+    /// @return   `std::expected<Vector<T,N>, SolverError>` — the solution on
+    ///           success, or a breakdown error if a zero pivot is encountered.
+    template <concepts::Vector BDerived>
+    auto solve(const BDerived &b) const
+        -> std::expected<Vector<T, N>, solver::SolverError> {
+        using ResultVec = Vector<T, N>;
+        using Result = std::expected<ResultVec, solver::SolverError>;
 
-    if (!x_result) {
-      return Result{std::unexpected(std::move(x_result.error()))};
+        // 1. Apply permutation: Pb(i) = b(perm(i)).
+        ResultVec Pb(b(perm));
+
+        // 2. Forward substitution: L * y = Pb  (L is unit lower triangular).
+        auto y_result = L().solve(Pb);
+
+        if (!y_result) {
+            return Result{std::unexpected(std::move(y_result.error()))};
+        }
+
+        // 3. Back substitution: U * x = y  (U is upper triangular).
+        auto x_result = U().solve(*y_result);
+
+        if (!x_result) {
+            return Result{std::unexpected(std::move(x_result.error()))};
+        }
+
+        return Result{std::move(*x_result)};
     }
 
-    return Result{std::move(*x_result)};
-  }
-
-  /// @brief Compute the determinant of the original matrix A.
-  ///
-  /// det(A) = sign * product of U diagonal entries.
-  auto determinant() const -> T {
-    const index_type n = LU.rows();
-    T det = static_cast<T>(sign);
-    for (index_type i = 0; i < n; ++i) {
-      det *= LU(i, i);
+    /// @brief Compute the determinant of the original matrix A.
+    ///
+    /// det(A) = sign * product of U diagonal entries.
+    auto determinant() const -> T {
+        return static_cast<T>(sign) * LU.diagonal().as_array().product();
     }
-    return det;
-  }
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -168,66 +164,64 @@ auto plu(const Derived &A)
         PLUResult<typename std::decay_t<Derived>::value_type,
                   std::decay_t<Derived>::extents_type::static_extent(0)>,
         solver::SolverError> {
-  using AType = std::decay_t<Derived>;
-  using T = typename AType::value_type;
-  constexpr index_type N = AType::extents_type::static_extent(0);
-  using Result = std::expected<PLUResult<T, N>, solver::SolverError>;
+    using AType = std::decay_t<Derived>;
+    using T = typename AType::value_type;
+    constexpr index_type N = AType::extents_type::static_extent(0);
+    using Result = std::expected<PLUResult<T, N>, solver::SolverError>;
 
-  const index_type n = A.rows();
+    const index_type n = A.rows();
 
-  // Copy A into the combined LU matrix via converting constructor.
-  Matrix<T, N, N> LU(A);
+    // Copy A into the combined LU matrix via converting constructor.
+    Matrix<T, N, N> LU(A);
 
-  // Initialise the permutation vector to the identity.
-  DataArray<index_type, N> perm(n);
-  std::iota(perm.begin(), perm.end(), index_type{0});
-  int sign = 1;
+    // Initialise the permutation vector to the identity.
+    DataArray<index_type, N> perm(
+        expression::nullary::iota<index_type>(index_type{0},
+                                               zipper::extents<N>(n)));
+    int sign = 1;
 
-  for (index_type k = 0; k < n; ++k) {
-    // Partial pivoting: find the row with the largest absolute value in
-    // column k (from row k downward).
-    index_type max_row = k;
-    T max_val = std::abs(LU(k, k));
-    for (index_type i = k + 1; i < n; ++i) {
-      T val = std::abs(LU(i, k));
-      if (val > max_val) {
-        max_val = val;
-        max_row = i;
-      }
+    for (index_type k = 0; k < n; ++k) {
+        // Partial pivoting: find the row with the largest absolute value in
+        // column k (from row k downward).
+        const auto [max_val, max_index] = utils::maxCoeffWithIndex(
+            LU.col(k).segment(k, n - k).as_array().abs());
+        const index_type max_row = k + max_index[0];
+
+        // Check for singular matrix.
+        if (max_val <= std::numeric_limits<T>::epsilon()) {
+            return Result{std::unexpected(solver::SolverError{
+                .kind = solver::SolverError::Kind::breakdown,
+                .message = "PLU decomposition: matrix is singular (zero pivot at column " +
+                           std::to_string(k) + ")"})};
+        }
+
+        // Swap rows if necessary.
+        if (max_row != k) {
+            auto rows = LU.row_slice(
+                std::array<index_type, 2>{k, max_row});
+            rows = rows.row_slice(std::array<index_type, 2>{1, 0}).eval();
+            std::swap(perm(k), perm(max_row));
+            sign = -sign;
+        }
+
+        // Gaussian elimination: compute multipliers and update trailing submatrix.
+        const T pivot = LU(k, k);
+        if (k + 1 < n) {
+            auto multipliers = LU.col(k).segment(k + 1, n - k - 1);
+            multipliers /= pivot;
+
+            auto trailing = LU.slice(zipper::slice(k + 1, n - k - 1),
+                                     zipper::slice(k + 1, n - k - 1));
+            auto pivot_row = LU.row(k).segment(k + 1, n - k - 1);
+            auto outer_product = multipliers.lift().as_array() *
+                                 pivot_row.lift().transpose().as_array();
+            auto trailing_array = trailing.as_array();
+            trailing_array = (trailing_array - outer_product).eval();
+        }
     }
 
-    // Check for singular matrix.
-    if (max_val <= std::numeric_limits<T>::epsilon()) {
-      return Result{std::unexpected(solver::SolverError{
-          .kind = solver::SolverError::Kind::breakdown,
-          .message =
-              "PLU decomposition: matrix is singular (zero pivot at column " +
-              std::to_string(k) + ")"})};
-    }
-
-    // Swap rows if necessary.
-    if (max_row != k) {
-      // Swap entire rows in LU (includes both L multipliers and U entries)
-      // via row views.  A temporary is needed to avoid aliasing.
-      Vector<T, N> tmp(LU.row(k));
-      LU.row(k) = LU.row(max_row);
-      LU.row(max_row) = tmp;
-      std::swap(perm(k), perm(max_row));
-      sign = -sign;
-    }
-
-    // Gaussian elimination: compute multipliers and update trailing submatrix.
-    T pivot = LU(k, k);
-    for (index_type i = k + 1; i < n; ++i) {
-      LU(i, k) /= pivot; // Store the multiplier in the lower triangle.
-      for (index_type j = k + 1; j < n; ++j) {
-        LU(i, j) -= LU(i, k) * LU(k, j);
-      }
-    }
-  }
-
-  return Result{PLUResult<T, N>{
-      .LU = std::move(LU), .perm = std::move(perm), .sign = sign}};
+    return Result{PLUResult<T, N>{
+        .LU = std::move(LU), .perm = std::move(perm), .sign = sign}};
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -244,18 +238,18 @@ auto plu(const Derived &A)
 ///           success, or a breakdown error if the matrix is singular.
 template <concepts::Matrix ADerived, concepts::Vector BDerived>
 auto plu_solve(const ADerived &A, const BDerived &b) {
-  using AType = std::decay_t<ADerived>;
-  using T = typename AType::value_type;
-  constexpr index_type N = AType::extents_type::static_extent(0);
-  using ResultVec = Vector<T, N>;
-  using Result = std::expected<ResultVec, solver::SolverError>;
+    using AType = std::decay_t<ADerived>;
+    using T = typename AType::value_type;
+    constexpr index_type N = AType::extents_type::static_extent(0);
+    using ResultVec = Vector<T, N>;
+    using Result = std::expected<ResultVec, solver::SolverError>;
 
-  auto plu_result = plu(A);
-  if (!plu_result) {
-    return Result{std::unexpected(std::move(plu_result.error()))};
-  }
+    auto plu_result = plu(A);
+    if (!plu_result) {
+        return Result{std::unexpected(std::move(plu_result.error()))};
+    }
 
-  return plu_result->solve(b);
+    return plu_result->solve(b);
 }
 
 } // namespace zipper::utils::decomposition
