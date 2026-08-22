@@ -3,7 +3,7 @@
 #include <zipper/Quaternion.hpp>
 #include <zipper/Vector.hpp>
 
-#include "../catch_include.hpp"
+#include "catch_include.hpp"
 
 using namespace zipper;
 

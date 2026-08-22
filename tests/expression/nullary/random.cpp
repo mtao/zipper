@@ -5,9 +5,15 @@
 using namespace zipper::expression::nullary;
 using namespace zipper;
 TEST_CASE("test_random", "[expression][nullary]") {
-  auto a = uniform_random<double>(create_dextents(3));
-  auto b = uniform_random<double>(extents<2, 3>{});
-  auto c = uniform_random<double>();
+  const std::default_random_engine generator{12345};
+  auto a = uniform_random<double>(create_dextents(3), -2.0, 3.0, generator);
+  auto a_repeat =
+      uniform_random<double>(create_dextents(3), -2.0, 3.0, generator);
+  auto b = uniform_random<double>(extents<2, 3>{}, -2.0, 3.0, generator);
+  auto b_repeat =
+      uniform_random<double>(extents<2, 3>{}, -2.0, 3.0, generator);
+  auto c = uniform_random<double>({}, -2.0, 3.0, generator);
+  auto c_repeat = uniform_random<double>({}, -2.0, 3.0, generator);
 
   REQUIRE(a.extents().rank() == 1);
   CHECK(a.extent(0) == 3);
@@ -17,26 +23,24 @@ TEST_CASE("test_random", "[expression][nullary]") {
 
   REQUIRE(c.extents().rank() == 0);
 
-  // testing is mostly to make sure that values can be evaluated, probability
-  // of getting the same values twice is basically none
-
   for (index_type j = 0; j < 3; ++j) {
-    double u = a(j);
-    double v = a(j);
-    CHECK(u != v);
+    const double value = a(j);
+    CHECK(value == a_repeat(j));
+    CHECK(value >= -2.0);
+    CHECK(value < 3.0);
   }
 
   for (index_type j = 0; j < 2; ++j) {
     for (index_type k = 0; k < 3; ++k) {
-      double u = b(j, k);
-      double v = b(j, k);
-      CHECK(u != v);
+      const double value = b(j, k);
+      CHECK(value == b_repeat(j, k));
+      CHECK(value >= -2.0);
+      CHECK(value < 3.0);
     }
   }
 
-  // for an "infinite" view we can pass in random values
-  CHECK(c(2) != c(2));
-  CHECK(c(1, 2) != c(1, 2));
-  CHECK(c(2, 3, 1, 2) != c(2, 3, 1, 2));
-  CHECK(c() != c());
+  CHECK(c(2) == c_repeat(2));
+  CHECK(c(1, 2) == c_repeat(1, 2));
+  CHECK(c(2, 3, 1, 2) == c_repeat(2, 3, 1, 2));
+  CHECK(c() == c_repeat());
 }

@@ -16,9 +16,6 @@ test('transform_geometric', test_geometric)
 test_coordinate = executable('test_transform_coordinate', 'test_coordinate.cpp', dependencies: [zipper_test_dep])
 test('transform_coordinate', test_coordinate)
 
-test_quaternion = executable('test_quaternion', 'test_quaternion.cpp', dependencies: [zipper_test_dep])
-test('quaternion', test_quaternion)
-
 test_quaternion_transform = executable('test_quaternion_transform', 'test_quaternion_transform.cpp', dependencies: [zipper_test_dep])
 test('quaternion_transform', test_quaternion_transform)
 

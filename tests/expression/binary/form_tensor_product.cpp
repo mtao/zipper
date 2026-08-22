@@ -66,30 +66,27 @@ TEST_CASE("test_form_tensor_product_basic", "[storage][dense]") {
 
     zipper::Tensor<double, 3, 3, 3> J =
         zipper::expression::nullary::Constant<double>{6};
-    print(J);
-
-    M = zipper::expression::nullary::normal_random_infinite<double>(0, 1);
-
-    x = zipper::expression::nullary::normal_random_infinite<double>(10, 1);
-
-    print(M);
-
+    M = zipper::expression::nullary::Constant<double>{2};
     x(0) = 2;
     x(1) = 5;
     x(2) = 9;
 
-    print(M * x);
-    print(I * M);
     auto IM = I * M;
     STATIC_CHECK(decltype(I)::extents_type::rank() == 2);
     STATIC_CHECK(decltype(M)::extents_type::rank() == 2);
     STATIC_CHECK(decltype(IM)::extents_type::rank() == 4);
 
-    // CHECK(IM.slice(std::integral_constant<zipper::rank_type, 0>{},
-    //                std::integral_constant<zipper::rank_type, 0>{},
-    //                zipper::full_extent, zipper::full_extent) == M);
-
-    // zipper::Tensor C ;
+    for (zipper::index_type i = 0; i < 3; ++i) {
+        for (zipper::index_type j = 0; j < 3; ++j) {
+            for (zipper::index_type k = 0; k < 3; ++k) {
+                CHECK((M * x)(i, j, k) == 2.0 * x(k));
+                CHECK(J(i, j, k) == 6.0);
+                for (zipper::index_type l = 0; l < 3; ++l) {
+                    CHECK(IM(i, j, k, l) == (i == j ? 2.0 : 0.0));
+                }
+            }
+        }
+    }
 }
 
 TEST_CASE("test_product_via_partial_trace", "[storage][tensor]") {

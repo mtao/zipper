@@ -5,7 +5,7 @@
 /// When SuiteSparse is not available, a single placeholder test passes
 /// to keep the test suite green.
 
-#include "../catch_include.hpp"
+#include "catch_include.hpp"
 
 #ifdef ZIPPER_HAS_SUITESPARSE
 

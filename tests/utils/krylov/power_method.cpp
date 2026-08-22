@@ -4,7 +4,7 @@
 #include <zipper/Vector.hpp>
 #include <zipper/utils/krylov/power_method.hpp>
 
-#include "../catch_include.hpp"
+#include "catch_include.hpp"
 
 using namespace zipper;
 

@@ -18,6 +18,9 @@ sources = [
 test_unary_views = executable('test_unary_views', sources, dependencies: [zipper_test_dep])
 test('unary_views', test_unary_views)
 
+test_diagonal_embed = executable('test_diagonal_embed', 'diagonal_embed.cpp', dependencies: [zipper_test_dep])
+test('diagonal_embed', test_diagonal_embed)
+
 test_anti_slice = executable('test_anti_slice', 'anti_slice.cpp', dependencies: [zipper_test_dep])
 test('anti_slice', test_anti_slice)
 

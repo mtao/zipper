@@ -7,7 +7,7 @@
 #include <zipper/utils/solver/gmres.hpp>
 #include <zipper/utils/solver/bicgstab.hpp>
 
-#include "../catch_include.hpp"
+#include "catch_include.hpp"
 
 using namespace zipper;
 
@@ -70,6 +70,33 @@ TEST_CASE("jacobi with initial guess", "[solver][jacobi]") {
     CHECK(result->x(0) == Catch::Approx(1.0 / 11.0).epsilon(1e-8));
     CHECK(result->x(1) == Catch::Approx(7.0 / 11.0).epsilon(1e-8));
     // Should converge faster with a good initial guess.
+}
+
+TEST_CASE("stationary_solvers_report_failures", "[solver][failure]") {
+    Matrix<double, 2, 2> A{{4.0, 1.0}, {1.0, 3.0}};
+    Vector<double, 2> b{1.0, 2.0};
+
+    SECTION("jacobi iteration limit") {
+        auto result = utils::solver::jacobi(A, b, 1e-10, 0);
+        REQUIRE_FALSE(result.has_value());
+        CHECK(result.error().kind ==
+              utils::solver::SolverError::Kind::diverged);
+    }
+
+    SECTION("gauss-seidel iteration limit") {
+        auto result = utils::solver::gauss_seidel(A, b, 1e-10, 0);
+        REQUIRE_FALSE(result.has_value());
+        CHECK(result.error().kind ==
+              utils::solver::SolverError::Kind::diverged);
+    }
+
+    SECTION("gauss-seidel zero diagonal breakdown") {
+        Matrix<double, 2, 2> singular{{0.0, 1.0}, {1.0, 2.0}};
+        auto result = utils::solver::gauss_seidel(singular, b);
+        REQUIRE_FALSE(result.has_value());
+        CHECK(result.error().kind ==
+              utils::solver::SolverError::Kind::breakdown);
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -152,6 +179,54 @@ TEST_CASE("cg converges in at most n steps", "[solver][cg]") {
     auto result = utils::solver::conjugate_gradient(A, b);
     REQUIRE(result.has_value());
     CHECK(result->iterations <= 2);
+}
+
+TEST_CASE("krylov_solvers_report_failures", "[solver][failure]") {
+    Matrix<double, 2, 2> A{{4.0, 1.0}, {1.0, 3.0}};
+    Matrix<double, 2, 2> zero{{0.0, 0.0}, {0.0, 0.0}};
+    Vector<double, 2> b{1.0, 2.0};
+
+    SECTION("cg iteration limit") {
+        auto result = utils::solver::conjugate_gradient(A, b, 1e-10, 0);
+        REQUIRE_FALSE(result.has_value());
+        CHECK(result.error().kind ==
+              utils::solver::SolverError::Kind::diverged);
+    }
+
+    SECTION("cg non-SPD breakdown") {
+        auto result = utils::solver::conjugate_gradient(zero, b);
+        REQUIRE_FALSE(result.has_value());
+        CHECK(result.error().kind ==
+              utils::solver::SolverError::Kind::breakdown);
+    }
+
+    SECTION("gmres iteration limit") {
+        auto result = utils::solver::gmres(A, b, 1e-10, 0);
+        REQUIRE_FALSE(result.has_value());
+        CHECK(result.error().kind ==
+              utils::solver::SolverError::Kind::diverged);
+    }
+
+    SECTION("gmres Arnoldi breakdown") {
+        auto result = utils::solver::gmres(zero, b);
+        REQUIRE_FALSE(result.has_value());
+        CHECK(result.error().kind ==
+              utils::solver::SolverError::Kind::breakdown);
+    }
+
+    SECTION("bicgstab iteration limit") {
+        auto result = utils::solver::bicgstab(A, b, 1e-10, 0);
+        REQUIRE_FALSE(result.has_value());
+        CHECK(result.error().kind ==
+              utils::solver::SolverError::Kind::diverged);
+    }
+
+    SECTION("bicgstab breakdown") {
+        auto result = utils::solver::bicgstab(zero, b);
+        REQUIRE_FALSE(result.has_value());
+        CHECK(result.error().kind ==
+              utils::solver::SolverError::Kind::breakdown);
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

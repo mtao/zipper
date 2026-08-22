@@ -4,7 +4,7 @@
 #include <zipper/utils/detail/dot.hpp>
 #include <zipper/utils/krylov/lanczos.hpp>
 
-#include "../catch_include.hpp"
+#include "catch_include.hpp"
 
 using namespace zipper;
 

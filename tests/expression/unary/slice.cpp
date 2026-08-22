@@ -2,6 +2,7 @@
 
 #include <print>
 #include <zipper/Matrix.hpp>
+#include <zipper/Tensor.hpp>
 #include <zipper/Vector.hpp>
 #include <zipper/VectorBase.hxx>
 #include <zipper/detail/extents/dynamic_extents_indices.hpp>
@@ -298,7 +299,23 @@ TEST_CASE("test_vector_slice_assignment", "[extents][vector][slice]") {
     CHECK(x(3) == 2);
 }
 
-TEST_CASE("test_partial_slice", "[extents][tensor][slice]") {
+TEST_CASE("partial_tensor_slice_maps_values", "[extents][tensor][slice]") {
+    zipper::Tensor<int, 2, 3, 4> tensor;
+    for (zipper::index_type i = 0; i < 2; ++i) {
+        for (zipper::index_type j = 0; j < 3; ++j) {
+            for (zipper::index_type k = 0; k < 4; ++k) {
+                tensor(i, j, k) = 100 * i + 10 * j + k;
+            }
+        }
+    }
+
+    auto sliced = tensor.slice(1, zipper::full_extent_t{}, zipper::slice(1, 2));
+    REQUIRE(sliced.extent(0) == 3);
+    REQUIRE(sliced.extent(1) == 2);
+    for (zipper::index_type j = 0; j < 3; ++j) {
+        CHECK(sliced(j, 0) == static_cast<int>(100 + 10 * j + 1));
+        CHECK(sliced(j, 1) == static_cast<int>(100 + 10 * j + 2));
+    }
 }
 
 // test_span_array_access uses std::array/std::vector which already satisfy IndexSlice.

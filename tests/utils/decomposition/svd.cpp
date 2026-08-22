@@ -5,7 +5,7 @@
 #include <zipper/Vector.hpp>
 #include <zipper/utils/decomposition/svd.hpp>
 
-#include "../catch_include.hpp"
+#include "catch_include.hpp"
 
 using namespace zipper;
 

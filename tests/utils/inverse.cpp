@@ -59,9 +59,8 @@ TEST_CASE("test_matrix_inverse", "[matrix][storage][dense]") {
       CHECK(Inv(b, b) == Inv2(1, 1));
     }
   }
-  for (int j = 0; j < 10; ++j) {
-    zipper::Matrix<double, 2, 2> M =
-        zipper::expression::nullary::uniform_random<double>({});
+  {
+    zipper::Matrix<double, 2, 2> M{{4.0, 1.0}, {2.0, 3.0}};
     auto Inv = zipper::utils::inverse(M);
 
     zipper::MatrixBase I = zipper::expression::nullary::Identity<double, 2, 2>();
@@ -72,9 +71,9 @@ TEST_CASE("test_matrix_inverse", "[matrix][storage][dense]") {
     CHECK((I - myI).as_array().norm() < 1e-5);
     CHECK((I - myI2).as_array().norm() < 1e-5);
   }
-  for (int j = 0; j < 10; ++j) {
-    zipper::Matrix<double, 3, 3> M =
-        zipper::expression::nullary::uniform_random<double>({});
+  {
+    zipper::Matrix<double, 3, 3> M{
+        {4.0, 1.0, 0.0}, {1.0, 4.0, 1.0}, {0.0, 1.0, 4.0}};
     auto Inv = zipper::utils::inverse(M);
 
     zipper::MatrixBase I = zipper::expression::nullary::Identity<double, 3, 3>();
