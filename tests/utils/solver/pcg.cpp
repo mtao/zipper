@@ -7,7 +7,7 @@
 #include <zipper/utils/solver/preconditioner/jacobi_preconditioner.hpp>
 #include <zipper/utils/solver/preconditioner/ssor_preconditioner.hpp>
 
-#include "../catch_include.hpp"
+#include "catch_include.hpp"
 
 using namespace zipper;
 

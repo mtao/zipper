@@ -12,7 +12,7 @@
 #include <zipper/expression/unary/TriangularView.hpp>
 #include <zipper/utils/solver/result.hpp>
 
-#include "../catch_include.hpp"
+#include "catch_include.hpp"
 
 using namespace zipper;
 using namespace zipper::expression;

@@ -5,7 +5,7 @@
 #include <zipper/utils/decomposition/polar.hpp>
 #include <zipper/utils/determinant.hpp>
 
-#include "../catch_include.hpp"
+#include "catch_include.hpp"
 
 using namespace zipper;
 using namespace zipper::utils::decomposition;

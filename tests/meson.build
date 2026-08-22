@@ -15,6 +15,9 @@ subdir('utils')
 subdir('detail')
 subdir('transform')
 
+test_quaternion = executable('test_quaternion', 'quaternion.cpp', dependencies: [zipper_test_dep])
+test('quaternion', test_quaternion)
+
 test_struct = executable('test_struct', 'struct.cpp', dependencies: [zipper_test_dep])
 test('struct', test_struct)
 
@@ -39,13 +42,13 @@ test('zipperbase_stl', test_zipperbase_stl)
 test_data_array = executable('test_data_array', 'data_array.cpp', dependencies: [zipper_test_dep])
 test('data_array', test_data_array)
 
-test_function_boundary = executable('test_function_boundary', 'test_function_boundary.cpp', dependencies: [zipper_test_dep])
+test_function_boundary = executable('test_function_boundary', 'function_boundary.cpp', dependencies: [zipper_test_dep])
 test('function_boundary', test_function_boundary)
 
 test_readme_examples = executable('test_readme_examples', 'readme_examples.cpp', dependencies: [zipper_test_dep])
 test('readme_examples', test_readme_examples)
 
-test_ref = executable('test_ref', 'test_ref.cpp', dependencies: [zipper_test_dep])
+test_ref = executable('test_ref', 'ref.cpp', dependencies: [zipper_test_dep])
 test('ref', test_ref)
 
 test_sparse_types = executable('test_sparse_types', 'sparse_types.cpp', dependencies: [zipper_test_dep])

@@ -9,7 +9,7 @@
 #include <zipper/Vector.hpp>
 #include <zipper/utils/sparse/diagonal.hpp>
 
-#include "../catch_include.hpp"
+#include "catch_include.hpp"
 
 using namespace zipper;
 

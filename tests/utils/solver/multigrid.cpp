@@ -6,7 +6,7 @@
 #include <zipper/expression/nullary/Constant.hpp>
 #include <zipper/utils/solver/multigrid.hpp>
 
-#include "../catch_include.hpp"
+#include "catch_include.hpp"
 
 using namespace zipper;
 

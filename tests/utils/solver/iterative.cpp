@@ -7,7 +7,7 @@
 #include <zipper/utils/solver/gmres.hpp>
 #include <zipper/utils/solver/bicgstab.hpp>
 
-#include "../catch_include.hpp"
+#include "catch_include.hpp"
 
 using namespace zipper;
 

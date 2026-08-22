@@ -6,7 +6,7 @@
 #include <zipper/Vector.hpp>
 #include <zipper/utils/eigenvalue/general.hpp>
 
-#include "../catch_include.hpp"
+#include "catch_include.hpp"
 
 using namespace zipper;
 
