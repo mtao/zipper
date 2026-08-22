@@ -96,6 +96,30 @@ TEST_CASE("pcg jacobi with initial guess", "[solver][pcg][jacobi]") {
     CHECK(result->x(1) == Catch::Approx(7.0 / 11.0).epsilon(1e-8));
 }
 
+TEST_CASE("pcg_reports_failures", "[solver][pcg][failure]") {
+    Matrix<double, 2, 2> A{{4.0, 1.0}, {1.0, 3.0}};
+    Matrix<double, 2, 2> identity{{1.0, 0.0}, {0.0, 1.0}};
+    Vector<double, 2> b{1.0, 2.0};
+    utils::solver::JacobiPreconditioner<double, 2> precond(identity);
+
+    SECTION("iteration limit") {
+        auto result = utils::solver::preconditioned_conjugate_gradient(
+            A, b, precond, 1e-10, 0);
+        REQUIRE_FALSE(result.has_value());
+        CHECK(result.error().kind ==
+              utils::solver::SolverError::Kind::diverged);
+    }
+
+    SECTION("non-SPD breakdown") {
+        Matrix<double, 2, 2> zero{{0.0, 0.0}, {0.0, 0.0}};
+        auto result = utils::solver::preconditioned_conjugate_gradient(
+            zero, b, precond);
+        REQUIRE_FALSE(result.has_value());
+        CHECK(result.error().kind ==
+              utils::solver::SolverError::Kind::breakdown);
+    }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // PCG with SSOR preconditioner
 // ─────────────────────────────────────────────────────────────────────────────

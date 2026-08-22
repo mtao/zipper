@@ -31,9 +31,10 @@ TEST_CASE("test_mdarray", "[expression][nullary]") {
   for (index_type j = 0; j < 3; ++j) {
     CHECK(a(j) == static_cast<double>(j + 1));
   }
-  // Reading same index twice should give same value
-  CHECK(a(0) == a(0));
-  CHECK(a(1) == a(1));
+  a.coeff_ref(1) = 7.5;
+  CHECK(a(0) == 1.0);
+  CHECK(a(1) == 7.5);
+  CHECK(a(2) == 3.0);
 
   // Test 2D: write values then read them back
   for (index_type j = 0; j < 2; ++j) {

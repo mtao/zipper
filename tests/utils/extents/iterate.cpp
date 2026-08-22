@@ -4,15 +4,19 @@
 #include <zipper/utils/extents/all_extents_indices.hpp>
 #include <zipper/expression/detail/intersect_nonzeros.hpp>
 #include <zipper/Vector.hpp>
-#include <print>
 using namespace zipper;
 
-TEST_CASE("test_all_extents", "[storage][dense]") {
+TEST_CASE("all_extents_indices_visits_each_index", "[extents][iteration]") {
+    std::vector<std::tuple<index_type, index_type>> indices;
     for (const auto& ind : zipper::utils::extents::all_extents_indices(3, 4)) {
-        // auto v = ind | ranges::views::transform([](auto i) { return 2 * i;
-        // });
+        indices.push_back(ind);
+    }
 
-        std::println("{} {}", std::get<0>(ind), std::get<1>(ind));
+    REQUIRE(indices.size() == 12);
+    for (index_type i = 0; i < 3; ++i) {
+        for (index_type j = 0; j < 4; ++j) {
+            CHECK(indices[4 * i + j] == std::tuple{i, j});
+        }
     }
 }
 TEST_CASE("test_vector_iterate", "[vector][dense]") {

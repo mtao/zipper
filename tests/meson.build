@@ -9,6 +9,7 @@ zipper_test_dep = declare_dependency(
 
 subdir('concepts')
 subdir('expression')
+subdir('headers')
 subdir('integration')
 subdir('storage')
 subdir('utils')

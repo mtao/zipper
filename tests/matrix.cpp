@@ -96,8 +96,9 @@ TEST_CASE("test_assignment", "[matrix][storage][dense]") {
 }
 
 TEST_CASE("test_matrix_eval", "[matrix][storage][dense]") {
-    zipper::Matrix<double, 3, 5> N =
-      zipper::expression::nullary::uniform_random<double>({});
+    zipper::Matrix<double, 3, 5> N{{0, 1, 2, 3, 4},
+                                    {5, 6, 7, 8, 9},
+                                    {10, 11, 12, 13, 14}};
 
     auto x = (N * 2).eval();
     auto v = N.as_array();
@@ -105,8 +106,12 @@ TEST_CASE("test_matrix_eval", "[matrix][storage][dense]") {
                                  decltype(N)::extents_type>);
     STATIC_CHECK(std::is_same_v<decltype(v.extents()), decltype(N.extents())>);
     STATIC_CHECK(std::decay_t<decltype(v)>::extents_type::rank() == 2);
-    // auto y = N.as_array().eval();
-    print(x);
+    REQUIRE(x.extents() == N.extents());
+    for (zipper::index_type i = 0; i < N.extent(0); ++i) {
+        for (zipper::index_type j = 0; j < N.extent(1); ++j) {
+            CHECK(x(i, j) == 2 * N(i, j));
+        }
+    }
 }
 
 TEST_CASE("test_span", "[matrix][storage][dense]") {
