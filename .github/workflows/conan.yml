@@ -105,6 +105,7 @@ jobs:
             echo "compiler.cppstd=23" >> "$PROFILE_PATH"
           fi
           if [ "$RUNNER_OS" = "Windows" ]; then
+            echo "[conf]" >> "$PROFILE_PATH"
             echo "tools.cmake.cmaketoolchain:generator=Ninja" >> "$PROFILE_PATH"
           fi
           echo "build_type=${{ matrix.build_type }}" >> "$PROFILE_PATH"
