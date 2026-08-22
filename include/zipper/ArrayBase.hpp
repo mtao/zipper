@@ -46,6 +46,7 @@ class ArrayBase : public ZipperBase<ArrayBase, Expr> {
     using Base = ZipperBase<ArrayBase, Expr>;
     using Base::Base;
     using Base::expression;
+    using Base::operator=;
 
     template <typename... Args>
         requires(!(concepts::Array<Args> && ...))

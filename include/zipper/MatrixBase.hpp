@@ -13,6 +13,7 @@
 //
 #include "concepts/DirectSolver.hpp"
 #include "expression/nullary/StlMDArray.hpp"
+#include "expression/nullary/MDSpan.hpp"
 #include "expression/reductions/Trace.hpp"
 #include "expression/unary/TriangularView.hpp"
 #include "zipper/detail/PartialReductionDispatcher.hpp"
@@ -102,7 +103,15 @@ class MatrixBase : public ZipperBase<MatrixBase, Expr> {
         expression().resize(extents_type{ size });
     }
 
-    auto as_array() const { return zipper::as_array(*this); }
+    auto as_array() & { return zipper::as_array(*this); }
+    auto as_array() const & { return zipper::as_array(*this); }
+    auto as_array() && {
+        return ArrayBase<expression_type>(
+            std::in_place, std::move(*this).expression());
+    }
+    auto as_array() const && {
+        return ArrayBase<expression_type>(std::in_place, expression());
+    }
 
     auto trace() const -> value_type {
         return expression::reductions::Trace(expression())();
@@ -289,6 +298,10 @@ template<concepts::Expression Expr>
 MatrixBase(Expr &&) -> MatrixBase<Expr>;
 template<concepts::Expression Expr>
 MatrixBase(const Expr &) -> MatrixBase<Expr>;
+
+template <typename T, typename Extents, typename Layout, typename Accessor>
+MatrixBase(zipper::mdspan<T, Extents, Layout, Accessor>) -> MatrixBase<
+    expression::nullary::MDSpan<T, Extents, Layout, Accessor>>;
 
 // STL deduction guides: rvalue → owning StlMDArray, lvalue → borrowing StlMDArray
 template<concepts::StlStorageOfRank<2> S>

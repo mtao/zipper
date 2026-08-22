@@ -81,9 +81,19 @@ public:
   auto expression() const & -> const Expression & { return m_expression; }
   auto expression() & -> Expression & { return m_expression; }
   auto expression() const && -> const Expression && {
-    return std::move(m_expression);
+    if constexpr (std::is_reference_v<Expression>) {
+      return m_expression;
+    } else {
+      return std::move(m_expression);
+    }
   }
-  auto expression() && -> Expression && { return std::move(m_expression); }
+  auto expression() && -> Expression && {
+    if constexpr (std::is_lvalue_reference_v<Expression>) {
+      return m_expression;
+    } else {
+      return std::move(m_expression);
+    }
+  }
   auto extents() const -> extents_type { return expression().extents(); }
   [[nodiscard]] constexpr auto extent(rank_type i) const -> index_type {
     return m_expression.extent(i);
