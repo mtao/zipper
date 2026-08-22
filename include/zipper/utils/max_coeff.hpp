@@ -17,12 +17,14 @@ auto _maxCoeff(const D& d) {
     T max = std::numeric_limits<T>::lowest();
     // hopefully the compiler will alide this
     using AT = std::array<index_type, rank>;
-    AT arr;
+    AT arr{};
+    bool initialized = false;
     for (const auto& i :
          zipper::utils::extents::all_extents_indices(d.extents())) {
         T v = std::apply(d, i);
-        if (v > max) {
+        if (!initialized || v > max) {
             max = v;
+            initialized = true;
             if constexpr (ReturnMultiIndex) {
                 arr = detail::tuple_to_array(i);
             }

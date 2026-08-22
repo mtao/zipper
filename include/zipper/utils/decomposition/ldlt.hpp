@@ -41,10 +41,15 @@
 #include <cmath>
 #include <expected>
 #include <limits>
+#include <string>
+#include <type_traits>
+#include <utility>
 
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
-#include <zipper/expression/nullary/Constant.hpp>
+#include <zipper/as.hpp>
+#include <zipper/expression/nullary/Identity.hpp>
+#include <zipper/expression/nullary/StaticConstant.hpp>
 #include <zipper/expression/unary/TriangularView.hpp>
 #include <zipper/utils/solver/result.hpp>
 
@@ -101,7 +106,6 @@ struct LDLTResult {
         }
 
         // 2. Diagonal solve: D * z = y  →  z(i) = y(i) / D(i).
-        ResultVec z(n);
         for (index_type i = 0; i < n; ++i) {
             if (std::abs(D(i)) <= std::numeric_limits<T>::epsilon()) {
                 return Result{std::unexpected(solver::SolverError{
@@ -110,11 +114,11 @@ struct LDLTResult {
                                + std::to_string(i)
                                + ") — matrix is singular"})};
             }
-            z(i) = (*y_result)(i) / D(i);
         }
+        ResultVec z(as_vector(y_result->as_array() / D.as_array()));
 
         // 3. Back substitution: L^T * x = z  (L^T is unit upper triangular).
-        Matrix<T, N, N> Lt(L.transpose());
+        auto Lt = L.transpose();
 
         auto Lt_upper =
             expression::triangular_view<expression::TriangularMode::UnitUpper>(
@@ -151,25 +155,22 @@ auto ldlt(const Derived &A) -> std::expected<
 
     const index_type n = A.extent(0);
 
-    // Initialise L to zero and D to zero.
+    // Initialise L to identity and D to zero.
     Matrix<T, N, N> L(n, n);
-    L = expression::nullary::Constant(T{0}, L.extents());
+    L = expression::nullary::Identity<T, N, N>(L.extents());
     Vector<T, N> D(n);
-    D = expression::nullary::Constant(T{0}, D.extents());
+    D = expression::nullary::Zero<T, N>(D.extents());
 
     for (index_type j = 0; j < n; ++j) {
         // Compute D(j) = A(j,j) - sum_{k<j} L(j,k)^2 * D(k).
         //   = A(j,j) - ||L(j, 0:j)||^2_D   (D-weighted squared norm)
         auto Lj_seg = L.row(j).segment(0, j);
         auto D_seg = D.segment(0, j);
-        T sum = (j > 0)
-                    ? (Lj_seg.as_array() * Lj_seg.as_array() * D_seg.as_array())
-                          .sum()
-                    : T{0};
+        T sum =
+            (j > 0)
+                ? Lj_seg.dot(as_vector(Lj_seg.as_array() * D_seg.as_array()))
+                : T{0};
         D(j) = A(j, j) - sum;
-
-        // Set the unit diagonal.
-        L(j, j) = T{1};
 
         if (std::abs(D(j)) <= std::numeric_limits<T>::epsilon()) {
             // Zero pivot — cannot compute sub-diagonal entries for this column.
@@ -187,12 +188,20 @@ auto ldlt(const Derived &A) -> std::expected<
 
         // Compute sub-diagonal entries L(i,j) for i > j.
         //   L(i,j) = ( A(i,j) - L(i, 0:j) . (L(j, 0:j) .* D(0:j)) ) / D(j)
-        for (index_type i = j + 1; i < n; ++i) {
-            T s = (j > 0) ? (L.row(i).segment(0, j).as_array()
-                             * Lj_seg.as_array() * D_seg.as_array())
-                                .sum()
-                          : T{0};
-            L(i, j) = (A(i, j) - s) / D(j);
+        const index_type trailing_size = n - j - 1;
+        if (trailing_size > 0) {
+            auto L_subdiagonal = L.col(j).segment(j + 1, trailing_size);
+            auto A_subdiagonal = A.col(j).segment(j + 1, trailing_size);
+            if (j > 0) {
+                auto L_block = L.slice(zipper::slice(j + 1, trailing_size),
+                                       zipper::slice(index_type{0}, j));
+                auto weighted_row =
+                    as_vector(Lj_seg.as_array() * D_seg.as_array());
+                L_subdiagonal =
+                    (A_subdiagonal - L_block * weighted_row) / D(j);
+            } else {
+                L_subdiagonal = A_subdiagonal / D(j);
+            }
         }
     }
 

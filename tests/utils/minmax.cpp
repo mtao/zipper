@@ -6,6 +6,9 @@
 
 #include "../catch_include.hpp"
 
+#include <cmath>
+#include <limits>
+
 TEST_CASE("test_minMax_vector", "[storage][dense]") {
     zipper::Vector<double, 3> x({0, 1, 2});
     zipper::Vector<double, 3> y({1, 2, 0});
@@ -68,4 +71,15 @@ TEST_CASE("test_minMax_matrix", "[storage][dense]") {
         CHECK(m == 100);
         CHECK(c == std::array<zipper::index_type, 2>{{0, 2}});
     }
+}
+
+TEST_CASE("max_coeff_with_index_initializes_index_for_nan", "[utils][max]") {
+    zipper::Vector<double, 2> values{
+        std::numeric_limits<double>::quiet_NaN(),
+        std::numeric_limits<double>::quiet_NaN()};
+
+    const auto [value, index] = zipper::utils::maxCoeffWithIndex(values);
+
+    CHECK(std::isnan(value));
+    CHECK(index[0] == 0);
 }

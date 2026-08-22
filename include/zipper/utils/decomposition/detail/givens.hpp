@@ -35,7 +35,7 @@ namespace zipper::utils::decomposition::detail {
 template <typename T>
 auto givens_params(T a, T b) -> std::pair<T, T> {
     if (b == T{0}) { return {T{1}, T{0}}; }
-    T r = std::sqrt(a * a + b * b);
+    T r = std::hypot(a, b);
     return {a / r, b / r};
 }
 
@@ -61,8 +61,8 @@ auto apply_givens_rows(MDerived &M,
                        index_type c0,
                        index_type c1) -> void {
     for (index_type j = c0; j < c1; ++j) {
-        T hp = M(p, j);
-        T hq = M(q, j);
+        const T hp = M(p, j);
+        const T hq = M(q, j);
         M(p, j) = c * hp + s * hq;
         M(q, j) = -s * hp + c * hq;
     }
@@ -94,8 +94,8 @@ auto apply_givens_cols(MDerived &M,
                        index_type r0,
                        index_type r1) -> void {
     for (index_type i = r0; i < r1; ++i) {
-        T hp = M(i, p);
-        T hq = M(i, q);
+        const T hp = M(i, p);
+        const T hq = M(i, q);
         M(i, p) = c * hp + s * hq;
         M(i, q) = -s * hp + c * hq;
     }

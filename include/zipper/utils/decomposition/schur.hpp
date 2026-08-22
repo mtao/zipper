@@ -43,11 +43,13 @@
 #include <cmath>
 #include <expected>
 #include <limits>
+#include <type_traits>
+#include <utility>
 
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
-#include <zipper/expression/nullary/Constant.hpp>
 #include <zipper/expression/nullary/Identity.hpp>
+#include <zipper/expression/nullary/StaticConstant.hpp>
 #include <zipper/utils/decomposition/detail/givens.hpp>
 #include <zipper/utils/decomposition/detail/householder.hpp>
 #include <zipper/utils/determinant.hpp>
@@ -272,7 +274,8 @@ namespace schur_detail {
 
             // Clean up numerical noise below the sub-diagonal.
             for (index_type i = q + 2; i < p; ++i) {
-                for (index_type j = q; j < i - 1; ++j) { H(i, j) = T{0}; }
+                H.row(i).segment(q, i - q - 1) =
+                    expression::nullary::Zero<T, dynamic_extent>(i - q - 1);
             }
 
             ++total_iter;
@@ -404,7 +407,8 @@ namespace schur_detail {
 
             // Clean up sub-sub-diagonal entries created by numerical noise.
             for (index_type i = q + 2; i < p; ++i) {
-                for (index_type j = q; j < i - 1; ++j) { H(i, j) = T{0}; }
+                H.row(i).segment(q, i - q - 1) =
+                    expression::nullary::Zero<T, dynamic_extent>(i - q - 1);
             }
 
             ++total_iter;
@@ -473,7 +477,8 @@ auto schur(const Derived &A,
 
     // Clean up numerical noise below the sub-diagonal.
     for (index_type i = 2; i < n; ++i) {
-        for (index_type j = 0; j < i - 1; ++j) { H(i, j) = T{0}; }
+        H.row(i).segment(0, i - 1) =
+            expression::nullary::Zero<T, dynamic_extent>(i - 1);
     }
 
     // Phase 2: QR iteration (strategy-dependent).

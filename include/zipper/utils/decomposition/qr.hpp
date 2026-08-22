@@ -55,19 +55,23 @@
 #define ZIPPER_UTILS_DECOMPOSITION_QR_HPP
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <expected>
 #include <limits>
-#include <numeric>
+#include <type_traits>
+#include <utility>
 
+#include <zipper/Array.hpp>
 #include <zipper/DataArray.hpp>
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
-#include <zipper/expression/nullary/Constant.hpp>
 #include <zipper/expression/nullary/Identity.hpp>
+#include <zipper/expression/nullary/Iota.hpp>
 #include <zipper/expression/unary/TriangularView.hpp>
 #include <zipper/utils/decomposition/detail/householder.hpp>
 #include <zipper/utils/extents/extent_arithmetic.hpp>
+#include <zipper/utils/max_coeff.hpp>
 #include <zipper/utils/orthogonalization/gram_schmidt.hpp>
 #include <zipper/utils/solver/result.hpp>
 
@@ -112,15 +116,12 @@ struct QRReducedResult {
         using ResultVec = Vector<T, P>;
         using Result = std::expected<ResultVec, solver::SolverError>;
 
-        const index_type p = Q.extent(1);
-
         // 1. Compute c = Q^T * b (p-dimensional vector).
-        //    c(i) = Q.col(i) . b
-        ResultVec c(p);
-        for (index_type i = 0; i < p; ++i) { c(i) = Q.col(i).dot(b); }
+        ResultVec c(Q.transpose() * b);
 
         // 2. Solve R * x = c via upper-triangular back substitution.
         //    Extract the leading p x p block of R.
+        const index_type p = Q.extent(1);
         Matrix<T, P, P> R_sq(R.leftCols(p));
 
         auto R_upper =
@@ -169,13 +170,10 @@ struct QRFullResult {
         using ResultVec = Vector<T, P>;
         using Result = std::expected<ResultVec, solver::SolverError>;
 
-        const index_type n = R.extent(1);
-        const index_type p = std::min(Q.extent(0), n);
+        const index_type p = std::min(Q.extent(0), R.extent(1));
 
         // 1. Compute c = Q^T * b, but only the first p entries matter.
-        //    c(i) = Q.col(i) . b
-        ResultVec c(p);
-        for (index_type i = 0; i < p; ++i) { c(i) = Q.col(i).dot(b); }
+        ResultVec c(Q.leftCols(p).transpose() * b);
 
         // 2. Solve R_top * x = c, where R_top is the leading p x p block of R.
         Matrix<T, P, P> R_sq(R.topRows(p).leftCols(p));
@@ -228,8 +226,7 @@ auto qr(const Derived &A) {
 
         // Extract the sub-column R_work(k:m-1, k) and compute its
         // Householder vector.
-        Vector<T, dynamic_extent> sub_col(R_work.col(k).segment(k, len));
-        auto hh = detail::householder_vector(sub_col);
+        auto hh = detail::householder_vector(R_work.col(k).segment(k, len));
         if (!hh) { continue; }
 
         // Apply H to R_work from the left: rows k..m-1, columns k..n-1.
@@ -281,8 +278,7 @@ auto qr_full(const Derived &A) {
         const index_type len = m - k;
 
         // Extract sub-column R(k:m-1, k) and compute Householder vector.
-        Vector<T, dynamic_extent> sub_col(R.col(k).segment(k, len));
-        auto hh = detail::householder_vector(sub_col);
+        auto hh = detail::householder_vector(R.col(k).segment(k, len));
         if (!hh) { continue; }
 
         // Apply H to R from the left: rows k..m-1, columns k..n-1.
@@ -477,8 +473,9 @@ auto qr_col_pivot(const Derived &A) {
     Q_full = expression::nullary::Identity<T, M, M>(Q_full.extents());
 
     // Column permutation (identity initially).
-    DataArray<index_type, N> col_perm(n);
-    std::iota(col_perm.begin(), col_perm.end(), index_type{0});
+    DataArray<index_type, N> col_perm(
+        expression::nullary::iota<index_type>(index_type{0},
+                                               zipper::extents<N>(n)));
 
     // Precompute column norms squared (diagonal of the Gram matrix A^T A)
     // for efficient pivot selection via Businger-Golub norm downdating.
@@ -487,28 +484,23 @@ auto qr_col_pivot(const Derived &A) {
     for (index_type k = 0; k < p; ++k) {
         // ── Column pivoting: find the column (>= k) with largest remaining
         // norm.
-        index_type max_col = k;
-        T max_norm = col_norms_sq(k);
-        for (index_type j = k + 1; j < n; ++j) {
-            if (col_norms_sq(j) > max_norm) {
-                max_norm = col_norms_sq(j);
-                max_col = j;
-            }
-        }
+        const auto max_norm =
+            utils::maxCoeffWithIndex(col_norms_sq.segment(k, n - k));
+        const index_type max_col = k + max_norm.second[0];
 
         // Swap columns k and max_col in R_work, col_perm, and col_norms_sq.
         if (max_col != k) {
             std::swap(col_perm(k), col_perm(max_col));
             std::swap(col_norms_sq(k), col_norms_sq(max_col));
-            for (index_type i = 0; i < m; ++i) {
-                std::swap(R_work(i, k), R_work(i, max_col));
-            }
+            auto cols = R_work.col_slice(
+                std::array<index_type, 2>{k, max_col});
+            cols = cols.col_slice(std::array<index_type, 2>{1, 0}).eval();
         }
 
         // ── Householder reflection.
         const index_type len = m - k;
-        Vector<T, dynamic_extent> sub_col(R_work.col(k).segment(k, len));
-        auto hh = detail::householder_vector(sub_col);
+        auto hh = detail::householder_vector(
+            R_work.col(k).segment(k, len));
         if (!hh) { continue; }
 
         // Apply H to R_work from the left.
@@ -522,10 +514,19 @@ auto qr_col_pivot(const Derived &A) {
         // The remaining norm squared of column j (rows k+1..m-1) is
         // col_norms_sq(j) - R_work(k, j)^2.  This avoids recomputing from
         // scratch and is the standard technique (Businger-Golub).
-        for (index_type j = k + 1; j < n; ++j) {
-            col_norms_sq(j) -= R_work(k, j) * R_work(k, j);
-            // Guard against negative due to rounding.
-            if (col_norms_sq(j) < T{0}) col_norms_sq(j) = T{0};
+        if (k + 1 < n) {
+            auto trailing_norms = col_norms_sq.segment(k + 1, n - k - 1);
+            auto transformed_row =
+                R_work.row(k).segment(k + 1, n - k - 1);
+            auto updated_norms = trailing_norms.as_array() -
+                                 transformed_row.as_array() *
+                                     transformed_row.as_array();
+            auto zeros = updated_norms * T{0};
+            auto trailing_norms_array = trailing_norms.as_array();
+            trailing_norms_array =
+                (updated_norms <=> T{0})
+                    .select(zeros, updated_norms, updated_norms)
+                    .eval();
         }
     }
 
