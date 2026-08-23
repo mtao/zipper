@@ -38,9 +38,8 @@
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
 #include <zipper/expression/nullary/Identity.hpp>
-#include <zipper/expression/nullary/Unit.hpp>
+#include <zipper/expression/nullary/StaticConstant.hpp>
 #include <zipper/utils/extents/extent_arithmetic.hpp>
-#include <zipper/utils/orthogonalization/gram_schmidt.hpp>
 
 namespace zipper::utils::decomposition {
 
@@ -235,22 +234,37 @@ auto svd(const Derived &A) {
     Matrix<T, M, P> U_result(m, p);
     Vector<T, P> S_result(all_sigmas(perm));
     Matrix<T, P, N> Vt_result(V.col_slice(perm).transpose());
-
     for (index_type k = 0; k < p; ++k) {
         if (S_result(k) > std::numeric_limits<T>::min()) {
             U_result.col(k) = sorted_W.col(k) / S_result(k);
         } else {
-            // Zero singular value — seed with e_k so that Gram-Schmidt
-            // below can orthonormalise it against the other columns.
-            U_result.col(k) =
-                expression::nullary::unit_vector<T>(m, k < m ? k : 0);
+            S_result(k) = T{0};
+
+            Vector<T, M> best(m);
+            T best_norm_squared = T{-1};
+            for (index_type direction = 0; direction < m; ++direction) {
+                Vector<T, M> residual(m);
+                residual = expression::nullary::Zero<T, M>(residual.extents());
+                residual(direction) = T{1};
+
+                // Reorthogonalization keeps the completion stable when the
+                // preceding singular vectors are only numerically orthogonal.
+                for (index_type pass = 0; pass < 2; ++pass) {
+                    for (index_type previous = 0; previous < k; ++previous) {
+                        auto u = U_result.col(previous);
+                        residual -= residual.dot(u) * u;
+                    }
+                }
+
+                const T norm_squared = residual.template norm_powered<2>();
+                if (norm_squared > best_norm_squared) {
+                    best = residual;
+                    best_norm_squared = norm_squared;
+                }
+            }
+            U_result.col(k) = best / std::sqrt(best_norm_squared);
         }
     }
-
-    // Orthonormalise U columns.  The non-zero-SV columns are already
-    // orthonormal; Gram-Schmidt will leave them unchanged and make the
-    // zero-SV seed columns orthogonal to everything else.
-    orthogonalization::gram_schmidt_in_place(U_result);
 
     return SVDResult<T, M, N>{.U = std::move(U_result),
                               .S = std::move(S_result),

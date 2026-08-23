@@ -3,6 +3,7 @@
 
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
+#include <zipper/expression/unary/DiagonalEmbed.hpp>
 #include <zipper/utils/decomposition/ldlt.hpp>
 
 #include "catch_include.hpp"
@@ -180,6 +181,62 @@ TEST_CASE("ldlt 1x1", "[decomposition][ldlt]") {
     REQUIRE(result.has_value());
     CHECK(result->L(0, 0) == Catch::Approx(1.0).margin(1e-12));
     CHECK(result->D(0) == Catch::Approx(9.0).margin(1e-12));
+}
+
+TEST_CASE("ldlt accepts a consistent zero pivot", "[decomposition][ldlt]") {
+    Matrix<double, 3, 3> A{{1.0, 1.0, 0.0},
+                            {1.0, 1.0, 0.0},
+                            {0.0, 0.0, 2.0}};
+
+    auto result = utils::decomposition::ldlt(A);
+
+    REQUIRE(result.has_value());
+    CHECK(result->D(1) == 0.0);
+    expression::unary::DiagonalEmbed diagonal(result->D.expression());
+    Matrix<double, 3, 3> diagonal_matrix(diagonal);
+    Matrix<double, 3, 3> reconstructed(
+        result->L * diagonal_matrix * result->L.transpose());
+    CHECK(reconstructed == A);
+}
+
+TEST_CASE("ldlt rejects an inconsistent zero pivot", "[decomposition][ldlt]") {
+    Matrix<double, 2, 2> A{{0.0, 1.0}, {1.0, 1.0}};
+
+    auto result = utils::decomposition::ldlt(A);
+
+    REQUIRE_FALSE(result.has_value());
+    CHECK(result.error().kind == utils::solver::SolverError::Kind::breakdown);
+}
+
+TEST_CASE("ldlt rejects a negative pivot", "[decomposition][ldlt]") {
+    Matrix<double, 2, 2> A{{1.0, 0.0}, {0.0, -1e-20}};
+
+    auto result = utils::decomposition::ldlt(A);
+
+    REQUIRE_FALSE(result.has_value());
+    CHECK(result.error().kind == utils::solver::SolverError::Kind::breakdown);
+}
+
+TEST_CASE("ldlt tolerance follows matrix scale", "[decomposition][ldlt]") {
+    Matrix<double, 2, 2> A{{1.0, 0.0}, {0.0, 1e-20}};
+
+    auto result = utils::decomposition::ldlt(A);
+
+    REQUIRE(result.has_value());
+    CHECK(result->D(0) == Catch::Approx(1.0));
+    CHECK(result->D(1) == Catch::Approx(1e-20));
+}
+
+TEST_CASE("ldlt_solve tolerance follows matrix scale",
+          "[decomposition][ldlt_solve]") {
+    Matrix<double, 2, 2> A{{1e-20, 0.0}, {0.0, 2e-20}};
+    Vector<double, 2> b{1e-20, 4e-20};
+
+    auto result = utils::decomposition::ldlt_solve(A, b);
+
+    REQUIRE(result.has_value());
+    CHECK((*result)(0) == Catch::Approx(1.0));
+    CHECK((*result)(1) == Catch::Approx(2.0));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

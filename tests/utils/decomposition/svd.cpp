@@ -16,14 +16,11 @@ using namespace zipper;
 /// Check that U has orthonormal columns: U^T * U ≈ I.
 template <typename UType>
 void check_orthonormal_columns(const UType &U, index_type p, double tol) {
+    auto gram = (U.transpose() * U).eval();
     for (index_type i = 0; i < p; ++i) {
         for (index_type j = 0; j < p; ++j) {
-            double dot = 0.0;
-            for (index_type k = 0; k < U.extent(0); ++k) {
-                dot += U(k, i) * U(k, j);
-            }
             double expected = (i == j) ? 1.0 : 0.0;
-            CHECK(dot == Catch::Approx(expected).margin(tol));
+            CHECK(gram(i, j) == Catch::Approx(expected).margin(tol));
         }
     }
 }
@@ -136,6 +133,7 @@ TEST_CASE("svd 2x2 zero matrix", "[decomposition][svd]") {
 
     CHECK(S(0) == Catch::Approx(0.0).margin(1e-12));
     CHECK(S(1) == Catch::Approx(0.0).margin(1e-12));
+    check_orthonormal_columns(U, 2, 1e-12);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -223,7 +221,58 @@ TEST_CASE("svd 3x3 rank deficient", "[decomposition][svd]") {
 
     check_singular_values_sorted(S, 3);
     CHECK(S(2) == Catch::Approx(0.0).margin(1e-10));
+    check_orthonormal_columns(U, 3, 1e-10);
     check_reconstruction(U, S, Vt, A, 3, 3, 3, 1e-10);
+}
+
+TEST_CASE("svd tall rank deficient U is orthonormal", "[decomposition][svd]") {
+    Matrix<double, 4, 3> A{{0.0, 1.0, 2.0},
+                            {0.0, 0.0, 0.0},
+                            {0.0, 0.0, 0.0},
+                            {0.0, 0.0, 0.0}};
+
+    auto [U, S, Vt] = utils::decomposition::svd(A);
+
+    CHECK(S(1) == 0.0);
+    CHECK(S(2) == 0.0);
+    check_orthonormal_columns(U, 3, 1e-12);
+    check_reconstruction(U, S, Vt, A, 4, 3, 3, 1e-12);
+}
+
+TEST_CASE("svd wide rank deficient U is orthonormal", "[decomposition][svd]") {
+    Matrix<double, 3, 5> A{{0.0, 1.0, 2.0, 3.0, 4.0},
+                            {0.0, 0.0, 0.0, 0.0, 0.0},
+                            {0.0, 0.0, 0.0, 0.0, 0.0}};
+
+    auto [U, S, Vt] = utils::decomposition::svd(A);
+
+    CHECK(S(1) == 0.0);
+    CHECK(S(2) == 0.0);
+    check_orthonormal_columns(U, 3, 1e-12);
+    check_reconstruction(U, S, Vt, A, 3, 5, 3, 1e-12);
+}
+
+TEST_CASE("svd tall zero matrix U is orthonormal", "[decomposition][svd]") {
+    Matrix<double, 4, 3> A{{0.0, 0.0, 0.0},
+                            {0.0, 0.0, 0.0},
+                            {0.0, 0.0, 0.0},
+                            {0.0, 0.0, 0.0}};
+
+    auto [U, S, Vt] = utils::decomposition::svd(A);
+
+    check_orthonormal_columns(U, 3, 1e-12);
+    check_reconstruction(U, S, Vt, A, 4, 3, 3, 1e-12);
+}
+
+TEST_CASE("svd wide zero matrix U is orthonormal", "[decomposition][svd]") {
+    Matrix<double, 3, 4> A{{0.0, 0.0, 0.0, 0.0},
+                            {0.0, 0.0, 0.0, 0.0},
+                            {0.0, 0.0, 0.0, 0.0}};
+
+    auto [U, S, Vt] = utils::decomposition::svd(A);
+
+    check_orthonormal_columns(U, 3, 1e-12);
+    check_reconstruction(U, S, Vt, A, 3, 4, 3, 1e-12);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
