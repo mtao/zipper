@@ -70,8 +70,11 @@ struct lp_norm_holder {
                     LpNormPowered<P, const expression_type &>(expression())();
                 if constexpr (P == 1) {
                     return v;
+                } else if constexpr (P == 2) {
+                    return value_type(std::sqrt(v));
                 } else {
-                    return std::pow(v, value_type(1.0) / P);
+                    return value_type(
+                        std::pow(v, 1.0 / static_cast<double>(P)));
                 }
             }
         }
