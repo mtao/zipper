@@ -116,4 +116,6 @@ struct IsZipperBase<zipper::detail::Form_<ValueType, Extents, LeftMajor>>
 } // namespace concepts::detail
 } // namespace zipper
 
+#include "exterior.hpp"
+
 #endif
