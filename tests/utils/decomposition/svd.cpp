@@ -10,6 +10,83 @@
 
 using namespace zipper;
 
+namespace test {
+
+struct SvdScalar {
+    long double value = 0;
+
+    constexpr SvdScalar() = default;
+    constexpr SvdScalar(int input) : value(input) {}
+    constexpr explicit SvdScalar(long double input) : value(input) {}
+
+    constexpr auto operator+=(SvdScalar rhs) -> SvdScalar & {
+        value += rhs.value;
+        return *this;
+    }
+    constexpr auto operator-=(SvdScalar rhs) -> SvdScalar & {
+        value -= rhs.value;
+        return *this;
+    }
+    constexpr auto operator*=(SvdScalar rhs) -> SvdScalar & {
+        value *= rhs.value;
+        return *this;
+    }
+    constexpr auto operator/=(SvdScalar rhs) -> SvdScalar & {
+        value /= rhs.value;
+        return *this;
+    }
+
+    friend constexpr auto operator+(SvdScalar lhs, SvdScalar rhs)
+        -> SvdScalar {
+        return lhs += rhs;
+    }
+    friend constexpr auto operator-(SvdScalar lhs, SvdScalar rhs)
+        -> SvdScalar {
+        return lhs -= rhs;
+    }
+    friend constexpr auto operator*(SvdScalar lhs, SvdScalar rhs)
+        -> SvdScalar {
+        return lhs *= rhs;
+    }
+    friend constexpr auto operator/(SvdScalar lhs, SvdScalar rhs)
+        -> SvdScalar {
+        return lhs /= rhs;
+    }
+    friend constexpr auto operator-(SvdScalar input) -> SvdScalar {
+        return SvdScalar{-input.value};
+    }
+    friend constexpr auto operator<=>(SvdScalar, SvdScalar) = default;
+};
+
+inline auto abs(SvdScalar input) -> SvdScalar {
+    return SvdScalar{std::abs(input.value)};
+}
+
+inline auto sqrt(SvdScalar input) -> SvdScalar {
+    return SvdScalar{std::sqrt(input.value)};
+}
+
+inline auto hypot(SvdScalar lhs, SvdScalar rhs) -> SvdScalar {
+    return SvdScalar{std::hypot(lhs.value, rhs.value)};
+}
+
+inline auto copysign(SvdScalar magnitude, SvdScalar sign) -> SvdScalar {
+    return SvdScalar{std::copysign(magnitude.value, sign.value)};
+}
+
+} // namespace test
+
+template <>
+struct zipper::utils::scalar_math::traits<test::SvdScalar> {
+    static constexpr auto epsilon() noexcept -> test::SvdScalar {
+        return test::SvdScalar{std::numeric_limits<long double>::epsilon()};
+    }
+};
+
+template <>
+struct zipper::concepts::detail::HasDivision<test::SvdScalar>
+    : std::true_type {};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Helper: verify SVD properties for a given decomposition
 // ─────────────────────────────────────────────────────────────────────────────
@@ -496,4 +573,24 @@ TEST_CASE("svd_preserves_representable_singular_values_across_extreme_scales",
 
     CHECK(S(1) == Catch::Approx(1e-16));
     check_orthonormal_columns(U, 2, 1e-12);
+}
+
+TEST_CASE("svd_supports_scalar_without_builtin_conversion",
+          "[decomposition][svd]") {
+    using T = test::SvdScalar;
+    Matrix<T, 2, 2> A{{T{3.0L}, T{1.0L}}, {T{0.0L}, T{2.0L}}};
+
+    const auto [U, S, Vt] = utils::decomposition::svd(A);
+    static_assert(std::same_as<std::remove_cvref_t<decltype(S)>, Vector<T, 2>>);
+
+    for (index_type i = 0; i < 2; ++i) {
+        for (index_type j = 0; j < 2; ++j) {
+            T reconstructed{0};
+            for (index_type k = 0; k < 2; ++k) {
+                reconstructed += U(i, k) * S(k) * Vt(k, j);
+            }
+            CHECK(reconstructed.value ==
+                  Catch::Approx(A(i, j).value).margin(1e-15L));
+        }
+    }
 }

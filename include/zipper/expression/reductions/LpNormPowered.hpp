@@ -38,7 +38,7 @@ struct lp_norm_powered_holder {
           return sum();
         } else {
           auto pow =
-              unary::ScalarPower<const expression_type&, value_type>(expression(), P);
+              unary::ScalarPower<decltype(abs), value_type>(abs, P);
           auto sum = reductions::CoefficientSum(pow);
           return sum();
         }

@@ -21,6 +21,7 @@
 #include <type_traits>
 #include <utility>
 
+#include <zipper/utils/decomposition/detail/scalar_math.hpp>
 #include <zipper/utils/max_coeff.hpp>
 
 #include <zipper/Vector.hpp>
@@ -67,11 +68,12 @@ auto householder_vector(const VDerived &x) -> std::optional<
 
     // Unit scaling keeps x_0 + ||x|| and the normalization representable for
     // every finite nonzero input.
-    v /= scale;
+    for (index_type i = 0; i < v.extent(0); ++i) { v(i) /= scale; }
     const T scaled_norm = v.norm();
-    const T scaled_sigma = -std::copysign(scaled_norm, v(0));
+    const T scaled_sigma = -scalar_math::copy_sign(scaled_norm, v(0));
     v(0) -= scaled_sigma;
-    v /= v.norm();
+    const T v_norm = v.norm();
+    for (index_type i = 0; i < v.extent(0); ++i) { v(i) /= v_norm; }
 
     const T sigma = scale * scaled_sigma;
 
@@ -103,9 +105,16 @@ auto apply_householder_left(MDerived &M,
         auto column = M.col(j).segment(r0, len);
         const T scale = utils::maxCoeff(column.as_array().abs());
         if (scale != T{0}) {
-            Vector<T, dynamic_extent> normalized(column / scale);
-            normalized -= (T{2} * v.dot(normalized)) * v;
-            column = normalized * scale;
+            Vector<T, dynamic_extent> normalized(len);
+            T projection{0};
+            for (index_type i = 0; i < len; ++i) {
+                normalized(i) = column(i) / scale;
+                projection += v(i) * normalized(i);
+            }
+            for (index_type i = 0; i < len; ++i) {
+                column(i) =
+                    (normalized(i) - T{2} * projection * v(i)) * scale;
+            }
         }
     }
 }
@@ -135,9 +144,15 @@ auto apply_householder_right(MDerived &M,
         auto row = M.row(i).segment(c0, len);
         const T scale = utils::maxCoeff(row.as_array().abs());
         if (scale != T{0}) {
-            Vector<T, dynamic_extent> normalized(row / scale);
-            normalized -= (T{2} * v.dot(normalized)) * v;
-            row = normalized * scale;
+            Vector<T, dynamic_extent> normalized(len);
+            T projection{0};
+            for (index_type j = 0; j < len; ++j) {
+                normalized(j) = row(j) / scale;
+                projection += v(j) * normalized(j);
+            }
+            for (index_type j = 0; j < len; ++j) {
+                row(j) = (normalized(j) - T{2} * projection * v(j)) * scale;
+            }
         }
     }
 }

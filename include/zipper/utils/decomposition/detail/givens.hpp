@@ -22,6 +22,7 @@
 #include <zipper/Matrix.hpp>
 #include <zipper/concepts/Matrix.hpp>
 #include <zipper/types.hpp>
+#include <zipper/utils/scalar_math.hpp>
 
 namespace zipper::utils::decomposition::detail {
 
@@ -35,7 +36,7 @@ namespace zipper::utils::decomposition::detail {
 template <typename T>
 auto givens_params(T a, T b) -> std::pair<T, T> {
     if (b == T{0}) { return {T{1}, T{0}}; }
-    T r = std::hypot(a, b);
+    T r = utils::scalar_math::hypotenuse(a, b);
     return {a / r, b / r};
 }
 

@@ -5,6 +5,7 @@ umbrella_header_sources = [
   'solver_error.cpp',
   'solver_result.cpp',
   'shape_validation.cpp',
+  'scalar_math.cpp',
 ]
 
 foreach source : umbrella_header_sources

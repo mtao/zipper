@@ -9,6 +9,7 @@
 #include "LpNormPowered.hpp"
 #include "ReductionBase.hpp"
 #include "zipper/utils/extents/all_extents_indices.hpp"
+#include "zipper/utils/scalar_math.hpp"
 
 namespace zipper::expression {
 namespace reductions {
@@ -28,7 +29,9 @@ struct lp_norm_holder {
         using Base::expression;
 
         value_type operator()() const {
-            if constexpr (P == 2 && std::is_floating_point_v<value_type>) {
+            if constexpr (P == 2 &&
+                          utils::scalar_math::orthogonal_decomposition_scalar<
+                              value_type>) {
                 using accumulator_type = value_type;
                 accumulator_type scale = accumulator_type{0};
                 accumulator_type sumsq = accumulator_type{1};
@@ -38,14 +41,17 @@ struct lp_norm_holder {
                      zipper::utils::extents::all_extents_indices(
                          expression().extents())) {
                     const accumulator_type value =
-                        std::abs(std::apply(expression(), i));
-                    if (std::isnan(value)) {
-                        return value_type(
-                            std::numeric_limits<accumulator_type>::quiet_NaN());
-                    }
-                    if (std::isinf(value)) {
-                        has_inf = true;
-                        continue;
+                        utils::scalar_math::absolute_value(
+                            std::apply(expression(), i));
+                    if constexpr (std::is_floating_point_v<value_type>) {
+                        if (std::isnan(value)) {
+                            return value_type(std::numeric_limits<
+                                              accumulator_type>::quiet_NaN());
+                        }
+                        if (std::isinf(value)) {
+                            has_inf = true;
+                            continue;
+                        }
                     }
                     if (value == accumulator_type{0}) { continue; }
 
@@ -59,22 +65,24 @@ struct lp_norm_holder {
                     }
                 }
 
-                if (has_inf) {
-                    return value_type(
-                        std::numeric_limits<accumulator_type>::infinity());
+                if constexpr (std::is_floating_point_v<value_type>) {
+                    if (has_inf) {
+                        return value_type(std::numeric_limits<
+                                          accumulator_type>::infinity());
+                    }
                 }
                 if (scale == accumulator_type{0}) { return value_type{0}; }
-                return value_type(scale * std::sqrt(sumsq));
+                return scale * utils::scalar_math::square_root(sumsq);
             } else {
                 auto v =
                     LpNormPowered<P, const expression_type &>(expression())();
                 if constexpr (P == 1) {
                     return v;
                 } else if constexpr (P == 2) {
-                    return value_type(std::sqrt(v));
+                    using std::sqrt;
+                    return value_type(sqrt(v));
                 } else {
-                    return value_type(
-                        std::pow(v, 1.0 / static_cast<double>(P)));
+                    return utils::scalar_math::root(v, P);
                 }
             }
         }

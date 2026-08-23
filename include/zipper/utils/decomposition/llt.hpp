@@ -44,6 +44,7 @@
 #include <zipper/expression/nullary/StaticConstant.hpp>
 #include <zipper/expression/unary/TriangularView.hpp>
 #include <zipper/utils/decomposition/detail/shape_validation.hpp>
+#include <zipper/utils/scalar_math.hpp>
 #include <zipper/utils/solver/result.hpp>
 
 namespace zipper::utils::decomposition {
@@ -161,7 +162,7 @@ auto llt(const Derived &A) -> std::expected<
                            + std::to_string(j) + ")"})};
         }
 
-        L(j, j) = std::sqrt(diag);
+        L(j, j) = utils::scalar_math::square_root(diag);
 
         // Compute the sub-diagonal elements L(i,j) for i > j.
         //   L(i,j) = ( A(i,j) - L(i, 0:j) . L(j, 0:j) ) / L(j,j)

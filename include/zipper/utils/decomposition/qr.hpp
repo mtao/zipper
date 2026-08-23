@@ -56,8 +56,6 @@
 
 #include <algorithm>
 #include <array>
-#include <cmath>
-#include <concepts>
 #include <expected>
 #include <limits>
 #include <type_traits>
@@ -72,6 +70,7 @@
 #include <zipper/expression/unary/TriangularView.hpp>
 #include <zipper/utils/decomposition/detail/shape_validation.hpp>
 #include <zipper/utils/decomposition/detail/householder.hpp>
+#include <zipper/utils/decomposition/detail/scalar_math.hpp>
 #include <zipper/utils/extents/extent_arithmetic.hpp>
 #include <zipper/utils/max_coeff.hpp>
 #include <zipper/utils/orthogonalization/gram_schmidt.hpp>
@@ -239,9 +238,16 @@ struct QRFullResult {
 ///
 /// The algorithm applies p = min(m, n) Householder reflections to reduce A to
 /// upper triangular form, accumulating the reflections into Q.
+/// The scalar type must be a field closed under square root; ordinary exact
+/// rational types therefore require a promoted or approximate square-root type.
 template <concepts::Matrix Derived>
-    requires std::floating_point<typename std::decay_t<Derived>::value_type>
-auto qr(const Derived &A) {
+    requires detail::orthogonal_decomposition_scalar<
+        typename std::decay_t<Derived>::value_type>
+auto qr(const Derived &A)
+    -> QRReducedResult<
+        typename std::decay_t<Derived>::value_type,
+        std::decay_t<Derived>::extents_type::static_extent(0),
+        std::decay_t<Derived>::extents_type::static_extent(1)> {
     using AType = std::decay_t<Derived>;
     using T = typename AType::value_type;
     constexpr index_type M = AType::extents_type::static_extent(0);
@@ -295,8 +301,12 @@ auto qr(const Derived &A) {
 /// (m x m) rather than truncated to the first min(m,n) columns, and R is
 /// m x n rather than min(m,n) x n.
 template <concepts::Matrix Derived>
-    requires std::floating_point<typename std::decay_t<Derived>::value_type>
-auto qr_full(const Derived &A) {
+    requires detail::orthogonal_decomposition_scalar<
+        typename std::decay_t<Derived>::value_type>
+auto qr_full(const Derived &A)
+    -> QRFullResult<typename std::decay_t<Derived>::value_type,
+                    std::decay_t<Derived>::extents_type::static_extent(0),
+                    std::decay_t<Derived>::extents_type::static_extent(1)> {
     using AType = std::decay_t<Derived>;
     using T = typename AType::value_type;
     constexpr index_type M = AType::extents_type::static_extent(0);
@@ -346,8 +356,13 @@ auto qr_full(const Derived &A) {
 /// This variant is simpler than Householder but less numerically stable.
 /// For well-conditioned matrices the results are essentially identical.
 template <concepts::Matrix Derived>
-    requires std::floating_point<typename std::decay_t<Derived>::value_type>
-auto qr_gram_schmidt(const Derived &A) {
+    requires detail::orthogonal_decomposition_scalar<
+        typename std::decay_t<Derived>::value_type>
+auto qr_gram_schmidt(const Derived &A)
+    -> QRReducedResult<
+        typename std::decay_t<Derived>::value_type,
+        std::decay_t<Derived>::extents_type::static_extent(0),
+        std::decay_t<Derived>::extents_type::static_extent(1)> {
     using AType = std::decay_t<Derived>;
     using T = typename AType::value_type;
     constexpr index_type M = AType::extents_type::static_extent(0);
@@ -381,7 +396,9 @@ auto qr_gram_schmidt(const Derived &A) {
 /// @return   `std::expected<Vector<T, N>, SolverError>` — the solution on
 ///           success, or a breakdown error if R has a zero pivot.
 template <concepts::Matrix ADerived, concepts::Vector BDerived>
-    requires detail::StaticallyNotWide<ADerived> &&
+    requires detail::orthogonal_decomposition_scalar<
+                 typename std::decay_t<ADerived>::value_type> &&
+             detail::StaticallyNotWide<ADerived> &&
              detail::StaticallyCompatibleRhs<ADerived, BDerived>
 auto qr_solve(const ADerived &A, const BDerived &b)
     -> std::expected<
@@ -424,7 +441,9 @@ auto qr_solve(const ADerived &A, const BDerived &b)
 /// @return   `std::expected<Vector<T, N>, SolverError>` — the solution on
 ///           success, or a breakdown error if R has a zero pivot.
 template <concepts::Matrix ADerived, concepts::Vector BDerived>
-    requires detail::StaticallyNotWide<ADerived> &&
+    requires detail::orthogonal_decomposition_scalar<
+                 typename std::decay_t<ADerived>::value_type> &&
+             detail::StaticallyNotWide<ADerived> &&
              detail::StaticallyCompatibleRhs<ADerived, BDerived>
 auto qr_solve_full(const ADerived &A, const BDerived &b)
     -> std::expected<
@@ -499,15 +518,15 @@ struct QRColPivotResult {
         // Default tolerance: eps * max(m, n).
         T tol = tol_override;
         if (tol < T{0}) {
-            tol = std::numeric_limits<T>::epsilon()
+            tol = detail::scalar_math::epsilon<T>()
                   * static_cast<T>(std::max(m, n));
         }
 
-        const T threshold = tol * std::abs(R(0, 0));
+        const T threshold = tol * detail::scalar_math::absolute_value(R(0, 0));
 
         index_type r = 0;
         for (index_type i = 0; i < p; ++i) {
-            if (std::abs(R(i, i)) > threshold)
+            if (detail::scalar_math::absolute_value(R(i, i)) > threshold)
                 ++r;
             else
                 break; // Diagonal is non-increasing, so all subsequent are <=
@@ -530,8 +549,13 @@ struct QRColPivotResult {
 /// @param A  An m x n matrix.
 /// @return   A `QRColPivotResult` with Q (m x p), R (p x n), and col_perm.
 template <concepts::Matrix Derived>
-    requires std::floating_point<typename std::decay_t<Derived>::value_type>
-auto qr_col_pivot(const Derived &A) {
+    requires detail::orthogonal_decomposition_scalar<
+        typename std::decay_t<Derived>::value_type>
+auto qr_col_pivot(const Derived &A)
+    -> QRColPivotResult<
+        typename std::decay_t<Derived>::value_type,
+        std::decay_t<Derived>::extents_type::static_extent(0),
+        std::decay_t<Derived>::extents_type::static_extent(1)> {
     using AType = std::decay_t<Derived>;
     using T = typename AType::value_type;
     constexpr index_type M = AType::extents_type::static_extent(0);

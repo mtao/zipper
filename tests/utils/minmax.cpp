@@ -8,6 +8,7 @@
 
 #include <cmath>
 #include <limits>
+#include <stdexcept>
 
 TEST_CASE("test_minMax_vector", "[storage][dense]") {
     zipper::Vector<double, 3> x({0, 1, 2});
@@ -82,4 +83,9 @@ TEST_CASE("max_coeff_with_index_initializes_index_for_nan", "[utils][max]") {
 
     CHECK(std::isnan(value));
     CHECK(index[0] == 0);
+}
+
+TEST_CASE("max_coeff_rejects_empty_inputs", "[utils][max]") {
+    zipper::VectorX<double> values(0);
+    CHECK_THROWS_AS(zipper::utils::maxCoeff(values), std::invalid_argument);
 }

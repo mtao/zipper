@@ -23,20 +23,21 @@
 /// This approach is robust for singular and near-singular F (unlike the
 /// iterative R_{k+1} = 0.5*(R_k + R_k^{-T}) method which requires
 /// invertibility).
+/// The scalar type must be a field closed under square root; ordinary exact
+/// rational types require a promoted or approximate square-root type.
 
 #if !defined(ZIPPER_UTILS_DECOMPOSITION_POLAR_HPP)
 #define ZIPPER_UTILS_DECOMPOSITION_POLAR_HPP
 
-#include <cmath>
-#include <concepts>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
 
 #include <zipper/Matrix.hpp>
 #include <zipper/concepts/Matrix.hpp>
-#include <zipper/utils/decomposition/svd.hpp>
+#include <zipper/utils/decomposition/detail/scalar_math.hpp>
 #include <zipper/utils/decomposition/detail/shape_validation.hpp>
+#include <zipper/utils/decomposition/svd.hpp>
 #include <zipper/utils/determinant.hpp>
 
 namespace zipper::utils::decomposition {
@@ -63,7 +64,8 @@ namespace detail {
 
 template <bool Proper, concepts::Matrix Derived>
     requires StaticallySquare<Derived> &&
-             std::floating_point<typename std::decay_t<Derived>::value_type>
+              orthogonal_decomposition_scalar<
+                  typename std::decay_t<Derived>::value_type>
 auto polar_impl(const Derived &F)
     -> PolarResult<typename std::decay_t<Derived>::value_type,
                    std::decay_t<Derived>::extents_type::static_extent(0)> {
@@ -109,7 +111,8 @@ auto polar_impl(const Derived &F)
 /// nonsquare input throws `std::invalid_argument`.
 template <concepts::Matrix Derived>
     requires detail::StaticallySquare<Derived> &&
-             std::floating_point<typename std::decay_t<Derived>::value_type>
+              detail::orthogonal_decomposition_scalar<
+                  typename std::decay_t<Derived>::value_type>
 auto polar(const Derived &F)
     -> PolarResult<typename std::decay_t<Derived>::value_type,
                    std::decay_t<Derived>::extents_type::static_extent(0)> {
@@ -123,7 +126,8 @@ auto polar(const Derived &F)
 /// @throws std::invalid_argument if a dynamically sized input is nonsquare.
 template <concepts::Matrix Derived>
     requires detail::StaticallySquare<Derived> &&
-             std::floating_point<typename std::decay_t<Derived>::value_type>
+              detail::orthogonal_decomposition_scalar<
+                  typename std::decay_t<Derived>::value_type>
 auto proper_polar(const Derived &F)
     -> PolarResult<typename std::decay_t<Derived>::value_type,
                    std::decay_t<Derived>::extents_type::static_extent(0)> {

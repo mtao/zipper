@@ -1,4 +1,6 @@
 #include <concepts>
+#include <cmath>
+#include <limits>
 #include <stdexcept>
 #include <utility>
 
@@ -17,6 +19,75 @@ using namespace zipper;
 using namespace zipper::utils::decomposition;
 namespace solver = zipper::utils::solver;
 
+namespace test {
+
+struct FieldScalar {
+    long double value = 0;
+
+    constexpr FieldScalar() = default;
+    constexpr FieldScalar(int input) : value(input) {}
+    constexpr explicit FieldScalar(long double input) : value(input) {}
+
+    constexpr auto operator+=(FieldScalar rhs) -> FieldScalar & {
+        value += rhs.value;
+        return *this;
+    }
+    constexpr auto operator-=(FieldScalar rhs) -> FieldScalar & {
+        value -= rhs.value;
+        return *this;
+    }
+    constexpr auto operator*=(FieldScalar rhs) -> FieldScalar & {
+        value *= rhs.value;
+        return *this;
+    }
+    constexpr auto operator/=(FieldScalar rhs) -> FieldScalar & {
+        value /= rhs.value;
+        return *this;
+    }
+
+    friend constexpr auto operator+(FieldScalar lhs, FieldScalar rhs)
+        -> FieldScalar {
+        return lhs += rhs;
+    }
+    friend constexpr auto operator-(FieldScalar lhs, FieldScalar rhs)
+        -> FieldScalar {
+        return lhs -= rhs;
+    }
+    friend constexpr auto operator*(FieldScalar lhs, FieldScalar rhs)
+        -> FieldScalar {
+        return lhs *= rhs;
+    }
+    friend constexpr auto operator/(FieldScalar lhs, FieldScalar rhs)
+        -> FieldScalar {
+        return lhs /= rhs;
+    }
+    friend constexpr auto operator-(FieldScalar value) -> FieldScalar {
+        return FieldScalar{-value.value};
+    }
+    friend constexpr auto operator<=>(FieldScalar, FieldScalar) = default;
+};
+
+inline auto abs(FieldScalar value) -> FieldScalar {
+    return FieldScalar{std::abs(value.value)};
+}
+
+inline auto sqrt(FieldScalar value) -> FieldScalar {
+    return FieldScalar{std::sqrt(value.value)};
+}
+
+} // namespace test
+
+template <>
+struct zipper::concepts::detail::HasDivision<test::FieldScalar>
+    : std::true_type {};
+
+template <>
+struct zipper::utils::scalar_math::traits<test::FieldScalar> {
+    static constexpr auto epsilon() noexcept -> test::FieldScalar {
+        return test::FieldScalar{std::numeric_limits<long double>::epsilon()};
+    }
+};
+
 template <typename MatrixType>
 concept HasLlt = requires(const MatrixType &matrix) { llt(matrix); };
 
@@ -32,6 +103,14 @@ concept HasPolar = requires(const MatrixType &matrix) { polar(matrix); };
 template <typename MatrixType>
 concept HasProperPolar = requires(const MatrixType &matrix) {
     proper_polar(matrix);
+};
+
+template <typename MatrixType>
+concept HasQr = requires(const MatrixType &matrix) {
+    qr(matrix);
+    qr_full(matrix);
+    qr_gram_schmidt(matrix);
+    qr_col_pivot(matrix);
 };
 
 template <typename MatrixType>
@@ -60,12 +139,39 @@ static_assert(!HasProperPolar<Matrix<int, 2, 2>>);
 static_assert(HasSvd<Matrix<float, 2, 2>>);
 static_assert(HasPolar<Matrix<float, 2, 2>>);
 static_assert(HasProperPolar<Matrix<float, 2, 2>>);
+static_assert(HasQr<Matrix<test::FieldScalar, 2, 2>>);
+static_assert(HasPolar<Matrix<test::FieldScalar, 2, 2>>);
+static_assert(HasProperPolar<Matrix<test::FieldScalar, 2, 2>>);
+static_assert(!HasQr<Matrix<int, 2, 2>>);
 static_assert(std::same_as<decltype(svd(std::declval<Matrix<float, 2, 2>>())),
                            SVDResult<float, 2, 2>>);
 static_assert(!HasQrSolve<Matrix<double, 2, 3>, Vector<double, 2>>);
 static_assert(!HasQrSolve<Matrix<double, 3, 2>, Vector<double, 2>>);
 static_assert(!HasRvalueL<PLUResult<double, 2>>);
 static_assert(!HasRvalueU<PLUResult<double, 2>>);
+
+TEST_CASE("orthogonal_decompositions_support_custom_field_scalars",
+          "[decomposition][contracts][scalar]") {
+    using T = test::FieldScalar;
+    Vector<T, 2> vector{T{3}, T{4}};
+    CHECK(vector.norm().value == Catch::Approx(5.0L));
+
+    Matrix<T, 2, 2> matrix{{T{3}, T{1}}, {T{0}, T{2}}};
+    const auto qr_result = qr(matrix);
+    const Matrix<T, 2, 2> qr_reconstructed(qr_result.Q * qr_result.R);
+    const auto polar_result = polar(matrix);
+    const Matrix<T, 2, 2> polar_reconstructed(
+        polar_result.R * polar_result.S);
+
+    for (index_type i = 0; i < 2; ++i) {
+        for (index_type j = 0; j < 2; ++j) {
+            CHECK(qr_reconstructed(i, j).value ==
+                  Catch::Approx(matrix(i, j).value).margin(1e-15L));
+            CHECK(polar_reconstructed(i, j).value ==
+                  Catch::Approx(matrix(i, j).value).margin(1e-15L));
+        }
+    }
+}
 static_assert(HasLlt<Matrix<double, 2, dynamic_extent>>);
 static_assert(HasLlt<Matrix<double, dynamic_extent, 2>>);
 static_assert(HasQrSolve<Matrix<double, 3, dynamic_extent>, Vector<double, 3>>);

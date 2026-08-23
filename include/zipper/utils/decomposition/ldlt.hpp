@@ -194,8 +194,10 @@ auto ldlt(const Derived &A) -> std::expected<
                 ? Lj_seg.dot(as_vector(Lj_seg.as_array() * D_seg.as_array()))
                 : T{0};
         const T pivot = A(j, j) - sum;
-        const T cancellation_scale = std::abs(A(j, j)) + std::abs(sum);
-        const T pivot_tolerance = std::numeric_limits<T>::epsilon() *
+        const T cancellation_scale =
+            utils::scalar_math::absolute_value(A(j, j)) +
+            utils::scalar_math::absolute_value(sum);
+        const T pivot_tolerance = utils::scalar_math::epsilon<T>() *
                                   static_cast<T>(n) * cancellation_scale;
 
         // Compute the trailing Schur-column residual before classifying a

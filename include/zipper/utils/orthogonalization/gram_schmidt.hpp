@@ -39,6 +39,7 @@
 #include <zipper/Vector.hpp>
 #include <zipper/expression/nullary/Constant.hpp>
 #include <zipper/utils/detail/dot.hpp>
+#include <zipper/utils/scalar_math.hpp>
 
 namespace zipper::utils::orthogonalization {
 
@@ -60,7 +61,7 @@ namespace zipper::utils::orthogonalization {
 ///      Otherwise normalise it to unit length.
 template <concepts::Matrix Derived> void gram_schmidt_in_place(Derived &M) {
   using T = typename std::decay_t<Derived>::value_type;
-  constexpr T eps = std::numeric_limits<T>::epsilon();
+  const T eps = utils::scalar_math::epsilon<T>();
   constexpr index_type RowsStatic =
       std::decay_t<Derived>::extents_type::static_extent(0);
   using Vec = Vector<T, RowsStatic>;

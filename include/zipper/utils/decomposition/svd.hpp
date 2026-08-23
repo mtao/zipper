@@ -27,9 +27,6 @@
 #define ZIPPER_UTILS_DECOMPOSITION_SVD_HPP
 
 #include <algorithm>
-#include <array>
-#include <cmath>
-#include <concepts>
 #include <limits>
 #include <numeric>
 #include <type_traits>
@@ -40,6 +37,7 @@
 #include <zipper/Vector.hpp>
 #include <zipper/expression/nullary/Identity.hpp>
 #include <zipper/expression/nullary/StaticConstant.hpp>
+#include <zipper/utils/decomposition/detail/scalar_math.hpp>
 #include <zipper/utils/extents/extent_arithmetic.hpp>
 
 namespace zipper::utils::decomposition {
@@ -83,15 +81,17 @@ struct SVDResult {
 ///
 /// SVD always succeeds, so the result is returned directly (not wrapped in
 /// `std::expected`).
+/// The scalar type must be a field closed under square root; ordinary exact
+/// rational types therefore require a promoted or approximate square-root type.
 template <concepts::Matrix Derived>
-    requires std::floating_point<typename std::decay_t<Derived>::value_type>
-auto svd(const Derived &A) {
+    requires detail::orthogonal_decomposition_scalar<
+        typename std::decay_t<Derived>::value_type>
+auto svd(const Derived &A)
+    -> SVDResult<typename std::decay_t<Derived>::value_type,
+                 std::decay_t<Derived>::extents_type::static_extent(0),
+                 std::decay_t<Derived>::extents_type::static_extent(1)> {
     using AType = std::decay_t<Derived>;
     using T = typename AType::value_type;
-    using WorkT = std::conditional_t<
-        (std::numeric_limits<long double>::digits >
-         std::numeric_limits<T>::digits),
-        long double, T>;
     constexpr index_type M = AType::extents_type::static_extent(0);
     constexpr index_type N = AType::extents_type::static_extent(1);
     constexpr index_type P = extents::min(M, N);
@@ -128,32 +128,47 @@ auto svd(const Derived &A) {
     //   - U(:,k) = W(:,k) / S(k)
     //   - V^T = V^T (accumulated)
 
-    using DynMat = Matrix<WorkT, std::dynamic_extent, std::dynamic_extent>;
-
-    // Scaling keeps the Gram quantities in range without changing the Jacobi
-    // rotations. Leave non-finite inputs untouched; this unchecked API retains
-    // its existing behavior for them.
-    WorkT input_scale = WorkT{0};
-    bool finite_input = true;
-    for (index_type i = 0; i < m; ++i) {
-        for (index_type j = 0; j < n; ++j) {
-            const WorkT value = static_cast<WorkT>(A(i, j));
-            finite_input = finite_input && std::isfinite(value);
-            input_scale = std::max(input_scale, std::abs(value));
-        }
-    }
+    using DynMat = Matrix<T, std::dynamic_extent, std::dynamic_extent>;
 
     // Working copy of A.
     DynMat W(A);
-    if (finite_input && input_scale > WorkT{0}) { W = W / input_scale; }
 
     // V accumulates right rotations (n x n identity initially).
     DynMat V(expression::nullary::
-                 Identity<WorkT, std::dynamic_extent, std::dynamic_extent>(n,
-                                                                           n));
+                 Identity<T, std::dynamic_extent, std::dynamic_extent>(n, n));
 
-    const WorkT eps = std::numeric_limits<WorkT>::epsilon();
+    const T eps = detail::scalar_math::epsilon<T>();
     const index_type max_sweeps = 100;
+
+    const auto column_norm = [m](const DynMat &matrix, index_type column) {
+        T norm{0};
+        for (index_type row = 0; row < m; ++row) {
+            norm = detail::scalar_math::hypotenuse(norm, matrix(row, column));
+        }
+        return norm;
+    };
+
+    const auto apply_rotation = [](DynMat &matrix,
+                                   index_type j1,
+                                   index_type j2,
+                                   const T &c,
+                                   const T &s) {
+        for (index_type row = 0; row < matrix.extent(0); ++row) {
+            const T first = matrix(row, j1);
+            const T second = matrix(row, j2);
+            const T scale = std::max(
+                detail::scalar_math::absolute_value(first),
+                detail::scalar_math::absolute_value(second));
+            if (scale == T{0}) { continue; }
+
+            const T scaled_first = first / scale;
+            const T scaled_second = second / scale;
+            matrix(row, j1) =
+                (scaled_first * c + scaled_second * s) * scale;
+            matrix(row, j2) =
+                (-scaled_first * s + scaled_second * c) * scale;
+        }
+    };
 
     for (index_type sweep = 0; sweep < max_sweeps; ++sweep) {
         bool converged = true;
@@ -161,50 +176,43 @@ auto svd(const Derived &A) {
         // Sweep: apply Jacobi rotations to all pairs (j1, j2) with j1 < j2.
         for (index_type j1 = 0; j1 < n; ++j1) {
             for (index_type j2 = j1 + 1; j2 < n; ++j2) {
-                const WorkT norm1 = W.col(j1).norm();
-                const WorkT norm2 = W.col(j2).norm();
-                if (norm1 == WorkT{0} || norm2 == WorkT{0}) { continue; }
+                const T norm1 = column_norm(W, j1);
+                const T norm2 = column_norm(W, j2);
+                if (norm1 == T{0} || norm2 == T{0}) { continue; }
 
-                const WorkT correlation =
-                    (W.col(j1) / norm1).dot(W.col(j2) / norm2);
-                if (std::abs(correlation) <= eps) { continue; }
+                T correlation{0};
+                for (index_type row = 0; row < m; ++row) {
+                    correlation = correlation +
+                                  (W(row, j1) / norm1) *
+                                      (W(row, j2) / norm2);
+                }
+                if (detail::scalar_math::absolute_value(correlation) <= eps) {
+                    continue;
+                }
                 converged = false;
 
                 // Form a uniformly scaled 2x2 Gram matrix. This preserves the
                 // angle while avoiding a*b and the overflow-prone tau*tau
                 // formulation of the Jacobi tangent.
-                const WorkT pair_scale = std::max(norm1, norm2);
-                const WorkT x = norm1 / pair_scale;
-                const WorkT y = norm2 / pair_scale;
-                const WorkT delta = x * x - y * y;
-                const WorkT twice_dot = WorkT{2} * correlation * x * y;
-                const WorkT radius = std::hypot(delta, twice_dot);
-                WorkT t;
-                if (delta == WorkT{0}) {
-                    t = std::copysign(WorkT{1}, twice_dot);
+                const T pair_scale = std::max(norm1, norm2);
+                const T x = norm1 / pair_scale;
+                const T y = norm2 / pair_scale;
+                const T delta = x * x - y * y;
+                const T twice_dot = T{2} * correlation * x * y;
+                const T radius =
+                    detail::scalar_math::hypotenuse(delta, twice_dot);
+                T t{0};
+                if (delta == T{0}) {
+                    t = detail::scalar_math::copy_sign(T{1}, twice_dot);
                 } else {
                     t = twice_dot /
-                        (delta + std::copysign(radius, delta));
+                        (delta + detail::scalar_math::copy_sign(radius, delta));
                 }
-                const WorkT c = WorkT{1} / std::hypot(WorkT{1}, t);
-                const WorkT s = t * c;
+                const T c = T{1} / detail::scalar_math::hypotenuse(T{1}, t);
+                const T s = t * c;
 
-                // Build the 2x2 Givens rotation matrix:
-                //   G = [ c  -s ]
-                //       [ s   c ]
-                Matrix<WorkT, 2, 2> G{{{c, -s}, {s, c}}};
-
-                // Apply right rotation to W: W(:,[j1,j2]) *= G
-                {
-                    auto W_sub = W.col_slice(std::array<index_type, 2>{j1, j2});
-                    W_sub = (W_sub * G).eval();
-                }
-
-                // Accumulate into V: V(:,[j1,j2]) *= G
-                {
-                    auto V_sub = V.col_slice(std::array<index_type, 2>{j1, j2});
-                    V_sub = (V_sub * G).eval();
-                }
+                apply_rotation(W, j1, j2, c, s);
+                apply_rotation(V, j1, j2, c, s);
             }
         }
         if (converged) { break; }
@@ -223,7 +231,10 @@ auto svd(const Derived &A) {
     // there are n columns but only p = min(m,n) non-trivial singular values).
 
     // First compute all n column norms.
-    auto all_sigmas = W.colwise().norm().eval();
+    Vector<T, N> all_sigmas(n);
+    for (index_type column = 0; column < n; ++column) {
+        all_sigmas(column) = column_norm(W, column);
+    }
 
     // Build a permutation array sorted by descending singular value.
     std::vector<index_type> perm(n);
@@ -235,46 +246,61 @@ auto svd(const Derived &A) {
 
     // Gather the top p columns in singular-value order.
     auto sorted_W = W.col_slice(perm);
-    Matrix<WorkT, M, P> work_U(m, p);
+    Matrix<T, M, P> U_result(m, p);
     for (index_type k = 0; k < p; ++k) {
-        if (all_sigmas(perm[k]) > WorkT{0}) {
-            work_U.col(k) = sorted_W.col(k) / all_sigmas(perm[k]);
+        if (all_sigmas(perm[k]) > T{0}) {
+            for (index_type row = 0; row < m; ++row) {
+                U_result(row, k) =
+                    sorted_W(row, k) / all_sigmas(perm[k]);
+            }
         } else {
-            all_sigmas(perm[k]) = WorkT{0};
+            all_sigmas(perm[k]) = T{0};
 
-            Vector<WorkT, M> best(m);
-            WorkT best_norm_squared = WorkT{-1};
+            Vector<T, M> best(m);
+            T best_norm{0};
+            bool has_best = false;
             for (index_type direction = 0; direction < m; ++direction) {
-                Vector<WorkT, M> residual(m);
+                Vector<T, M> residual(m);
                 residual =
-                    expression::nullary::Zero<WorkT, M>(residual.extents());
-                residual(direction) = WorkT{1};
+                    expression::nullary::Zero<T, M>(residual.extents());
+                residual(direction) = T{1};
 
                 // Reorthogonalization keeps the completion stable when the
                 // preceding singular vectors are only numerically orthogonal.
                 for (index_type pass = 0; pass < 2; ++pass) {
                     for (index_type previous = 0; previous < k; ++previous) {
-                        auto u = work_U.col(previous);
-                        residual -= residual.dot(u) * u;
+                        auto u = U_result.col(previous);
+                        T projection{0};
+                        for (index_type row = 0; row < m; ++row) {
+                            projection =
+                                projection + residual(row) * u(row);
+                        }
+                        for (index_type row = 0; row < m; ++row) {
+                            residual(row) =
+                                residual(row) - projection * u(row);
+                        }
                     }
                 }
 
-                const WorkT norm_squared = residual.template norm_powered<2>();
-                if (norm_squared > best_norm_squared) {
+                T residual_norm{0};
+                for (index_type row = 0; row < m; ++row) {
+                    residual_norm = detail::scalar_math::hypotenuse(
+                        residual_norm, residual(row));
+                }
+                if (!has_best || residual_norm > best_norm) {
                     best = residual;
-                    best_norm_squared = norm_squared;
+                    best_norm = residual_norm;
+                    has_best = true;
                 }
             }
-            work_U.col(k) = best / std::sqrt(best_norm_squared);
+            for (index_type row = 0; row < m; ++row) {
+                U_result(row, k) = best(row) / best_norm;
+            }
         }
     }
-    Matrix<T, M, P> U_result(work_U);
     Vector<T, P> S_result(p);
     for (index_type k = 0; k < p; ++k) {
-        const WorkT sigma = all_sigmas(perm[k]);
-        S_result(k) = static_cast<T>(
-            finite_input && input_scale > WorkT{0} ? sigma * input_scale
-                                                   : sigma);
+        S_result(k) = all_sigmas(perm[k]);
     }
     Matrix<T, P, N> Vt_result(V.col_slice(perm).transpose());
 

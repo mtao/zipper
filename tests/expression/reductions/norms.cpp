@@ -32,6 +32,11 @@ TEST_CASE("vector_l2_norm_integral", "[reduction][norm]") {
     CHECK(values.norm() == 5);
 }
 
+TEST_CASE("vector_l3_norm_uses_absolute_values", "[reduction][norm]") {
+    zipper::Vector<double, 2> values{-1.0, 2.0};
+    CHECK(values.norm<3>() == Catch::Approx(std::cbrt(9.0)));
+}
+
 TEST_CASE("vector_l2_norm_extreme_magnitudes", "[reduction][norm]") {
     const double max = std::numeric_limits<double>::max();
     const double min = std::numeric_limits<double>::min();
