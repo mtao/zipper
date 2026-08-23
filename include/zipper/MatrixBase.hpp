@@ -16,6 +16,7 @@
 #include "expression/nullary/MDSpan.hpp"
 #include "expression/reductions/Trace.hpp"
 #include "expression/unary/TriangularView.hpp"
+#include "utils/decomposition/detail/shape_concepts.hpp"
 #include "zipper/detail/PartialReductionDispatcher.hpp"
 #include "zipper/detail/constexpr_arithmetic.hpp"
 #include "zipper/detail/extents/get_extent.hpp"
@@ -208,7 +209,10 @@ class MatrixBase : public ZipperBase<MatrixBase, Expr> {
     /// satisfies the `DirectSolver` concept (e.g. when this MatrixBase wraps
     /// a TriangularView, or a decomposition result).
     template<concepts::Vector BDerived>
-        requires(concepts::DirectSolver<expression_type>)
+        requires(concepts::DirectSolver<expression_type> &&
+                 utils::decomposition::detail::StaticallySquare<MatrixBase> &&
+                 utils::decomposition::detail::StaticallyCompatibleRhs<
+                     MatrixBase, BDerived>)
     auto solve(const BDerived &b) const {
         return expression().solve(b);
     }

@@ -17,6 +17,15 @@
 using namespace zipper;
 using namespace zipper::expression;
 
+template <typename MatrixType, typename VectorType>
+concept HasTriangularSolve =
+    requires(const MatrixType &matrix, const VectorType &rhs) {
+        matrix.template as_triangular<TriangularMode::Lower>().solve(rhs);
+    };
+
+static_assert(!HasTriangularSolve<Matrix<double, 2, 3>, Vector<double, 2>>);
+static_assert(!HasTriangularSolve<Matrix<double, 2, 2>, Vector<double, 3>>);
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Lower triangular solve (forward substitution)
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -264,4 +273,28 @@ TEST_CASE("as_triangular upper solve", "[triangular_solve][as_triangular]") {
     CHECK((*result)(0ul) == Catch::Approx(1.0).epsilon(1e-12));
     CHECK((*result)(1ul) == Catch::Approx(2.0).epsilon(1e-12));
     CHECK((*result)(2ul) == Catch::Approx(1.0).epsilon(1e-12));
+}
+
+TEST_CASE("triangular_solve rejects dynamic nonsquare matrix",
+          "[triangular_solve][contracts]") {
+    MatrixXX<double> matrix(2, 3);
+    VectorX<double> rhs{1.0, 2.0};
+
+    const auto result =
+        matrix.as_triangular<TriangularMode::Lower>().solve(rhs);
+
+    REQUIRE_FALSE(result);
+    CHECK(result.error().kind == utils::solver::SolverError::Kind::invalid_input);
+}
+
+TEST_CASE("triangular_solve rejects dynamic RHS mismatch",
+          "[triangular_solve][contracts]") {
+    MatrixXX<double> matrix{{1.0, 0.0}, {2.0, 1.0}};
+    VectorX<double> rhs{1.0, 2.0, 3.0};
+
+    const auto result =
+        matrix.as_triangular<TriangularMode::Lower>().solve(rhs);
+
+    REQUIRE_FALSE(result);
+    CHECK(result.error().kind == utils::solver::SolverError::Kind::invalid_input);
 }

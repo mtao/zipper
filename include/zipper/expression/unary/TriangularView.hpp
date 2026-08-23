@@ -39,6 +39,8 @@
 #include "zipper/concepts/Vector.hpp"
 #include "zipper/expression/TriangularMode.hpp"
 #include "zipper/expression/detail/IndexSet.hpp"
+#include "zipper/utils/decomposition/detail/shape_concepts.hpp"
+#include "zipper/utils/decomposition/detail/shape_validation.hpp"
 #include "zipper/utils/solver/detail/triangular_substitute.hpp"
 
 namespace zipper::expression {
@@ -351,14 +353,33 @@ public:
     ///         on success, or a breakdown error on zero pivot.
     template <zipper::concepts::Vector BDerived>
         requires(!(has_flag(Mode, TriangularMode::Lower) &&
-                   has_flag(Mode, TriangularMode::Upper)))
-    auto solve(const BDerived &b) const {
+                    has_flag(Mode, TriangularMode::Upper))) &&
+                zipper::utils::decomposition::detail::StaticallySquare<
+                    TriangularView> &&
+                zipper::utils::decomposition::detail::StaticallyCompatibleRhs<
+                    TriangularView, BDerived>
+    auto solve(const BDerived &b) const
+        -> std::expected<
+            zipper::Vector<typename BDerived::value_type,
+                           BDerived::extents_type::static_extent(0)>,
+            zipper::utils::solver::SolverError> {
         using T = typename BDerived::value_type;
         constexpr auto Dim = BDerived::extents_type::static_extent(0);
 
         using ResultVec = zipper::Vector<T, Dim>;
         using Result =
             std::expected<ResultVec, zipper::utils::solver::SolverError>;
+
+        if (auto valid = zipper::utils::decomposition::detail::validate_square(
+                *this, "Triangular solve");
+            !valid) {
+            return Result{std::unexpected(std::move(valid.error()))};
+        }
+        if (auto valid = zipper::utils::decomposition::detail::validate_rhs(
+                this->extent(0), b, "Triangular solve");
+            !valid) {
+            return Result{std::unexpected(std::move(valid.error()))};
+        }
 
         ResultVec x(b);
 

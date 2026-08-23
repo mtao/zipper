@@ -2,6 +2,9 @@ umbrella_header_sources = [
   'concepts_all.cpp',
   'transform_all.cpp',
   'unary_math_all.cpp',
+  'solver_error.cpp',
+  'solver_result.cpp',
+  'shape_validation.cpp',
 ]
 
 foreach source : umbrella_header_sources

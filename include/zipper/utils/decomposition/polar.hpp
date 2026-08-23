@@ -25,10 +25,12 @@
 #define ZIPPER_UTILS_DECOMPOSITION_POLAR_HPP
 
 #include <cmath>
+#include <stdexcept>
 
 #include <zipper/Matrix.hpp>
 #include <zipper/concepts/Matrix.hpp>
 #include <zipper/utils/decomposition/svd.hpp>
+#include <zipper/utils/decomposition/detail/shape_validation.hpp>
 #include <zipper/utils/determinant.hpp>
 
 namespace zipper::utils::decomposition {
@@ -64,27 +66,16 @@ struct PolarResult {
 /// Polar decomposition always succeeds, so the result is returned directly
 /// (not wrapped in `std::expected`).
 template <concepts::Matrix Derived>
+    requires detail::StaticallySquare<Derived>
 auto polar(const Derived &F) {
     using FType = std::decay_t<Derived>;
     using T = typename FType::value_type;
     constexpr index_type M = FType::extents_type::static_extent(0);
     constexpr index_type N = FType::extents_type::static_extent(1);
 
-    // Polar decomposition requires a square matrix.
-    static_assert(M == N || M == std::dynamic_extent
-                      || N == std::dynamic_extent,
-                  "polar decomposition requires a square matrix");
-
     const index_type n = F.extent(0);
-    // Runtime check for dynamic extents.
     if (F.extent(0) != F.extent(1)) {
-        // In practice this should be caught earlier, but guard anyway.
-        // Return identity R and F as S as a fallback.
-        PolarResult<T, M> result;
-        result.R =
-            Matrix<T, M, N>(expression::nullary::Identity<T, M, N>(n, n));
-        result.S = Matrix<T, M, N>(F);
-        return result;
+        throw std::invalid_argument("polar decomposition: matrix must be square");
     }
 
     auto [U, sigma, Vt] = svd(F);

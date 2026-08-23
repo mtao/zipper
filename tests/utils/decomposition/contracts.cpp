@@ -1,0 +1,194 @@
+#include <concepts>
+#include <stdexcept>
+#include <utility>
+
+#include <zipper/Matrix.hpp>
+#include <zipper/Vector.hpp>
+#include <zipper/utils/decomposition/ldlt.hpp>
+#include <zipper/utils/decomposition/llt.hpp>
+#include <zipper/utils/decomposition/lu.hpp>
+#include <zipper/utils/decomposition/polar.hpp>
+#include <zipper/utils/decomposition/qr.hpp>
+
+#include "catch_include.hpp"
+
+using namespace zipper;
+using namespace zipper::utils::decomposition;
+namespace solver = zipper::utils::solver;
+
+template <typename MatrixType>
+concept HasLlt = requires(const MatrixType &matrix) { llt(matrix); };
+
+template <typename MatrixType>
+concept HasLdlt = requires(const MatrixType &matrix) { ldlt(matrix); };
+
+template <typename MatrixType>
+concept HasPlu = requires(const MatrixType &matrix) { plu(matrix); };
+
+template <typename MatrixType>
+concept HasPolar = requires(const MatrixType &matrix) { polar(matrix); };
+
+template <typename MatrixType, typename VectorType>
+concept HasQrSolve = requires(const MatrixType &matrix, const VectorType &rhs) {
+    qr_solve(matrix, rhs);
+    qr_solve_full(matrix, rhs);
+};
+
+template <typename Result>
+concept HasRvalueL = requires(Result result) { std::move(result).L(); };
+
+template <typename Result>
+concept HasRvalueU = requires(Result result) { std::move(result).U(); };
+
+static_assert(!HasLlt<Matrix<double, 2, 3>>);
+static_assert(!HasLdlt<Matrix<double, 2, 3>>);
+static_assert(!HasPlu<Matrix<double, 2, 3>>);
+static_assert(!HasPolar<Matrix<double, 2, 3>>);
+static_assert(!HasQrSolve<Matrix<double, 2, 3>, Vector<double, 2>>);
+static_assert(!HasQrSolve<Matrix<double, 3, 2>, Vector<double, 2>>);
+static_assert(!HasRvalueL<PLUResult<double, 2>>);
+static_assert(!HasRvalueU<PLUResult<double, 2>>);
+static_assert(HasLlt<Matrix<double, 2, dynamic_extent>>);
+static_assert(HasLlt<Matrix<double, dynamic_extent, 2>>);
+static_assert(HasQrSolve<Matrix<double, 3, dynamic_extent>, Vector<double, 3>>);
+
+TEST_CASE("square decompositions reject dynamic nonsquare matrices",
+          "[decomposition][contracts]") {
+    MatrixXX<double> matrix(2, 3);
+
+    const auto llt_result = llt(matrix);
+    const auto ldlt_result = ldlt(matrix);
+    const auto plu_result = plu(matrix);
+
+    REQUIRE_FALSE(llt_result);
+    REQUIRE_FALSE(ldlt_result);
+    REQUIRE_FALSE(plu_result);
+    CHECK(llt_result.error().kind == solver::SolverError::Kind::invalid_input);
+    CHECK(ldlt_result.error().kind == solver::SolverError::Kind::invalid_input);
+    CHECK(plu_result.error().kind == solver::SolverError::Kind::invalid_input);
+}
+
+TEST_CASE("square decompositions reject partially dynamic nonsquare matrices",
+          "[decomposition][contracts]") {
+    Matrix<double, 2, dynamic_extent> static_rows(3);
+    Matrix<double, dynamic_extent, 2> static_cols(3);
+
+    CHECK(llt(static_rows).error().kind ==
+          solver::SolverError::Kind::invalid_input);
+    CHECK(ldlt(static_rows).error().kind ==
+          solver::SolverError::Kind::invalid_input);
+    CHECK(plu(static_rows).error().kind ==
+          solver::SolverError::Kind::invalid_input);
+    CHECK(llt(static_cols).error().kind ==
+          solver::SolverError::Kind::invalid_input);
+}
+
+TEST_CASE("decomposition free solves reject dynamic RHS mismatches",
+          "[decomposition][contracts]") {
+    MatrixXX<double> matrix{{4.0, 1.0}, {1.0, 3.0}};
+    VectorX<double> rhs{1.0, 2.0, 3.0};
+
+    const auto llt_result = llt_solve(matrix, rhs);
+    const auto ldlt_result = ldlt_solve(matrix, rhs);
+    const auto plu_result = plu_solve(matrix, rhs);
+
+    REQUIRE_FALSE(llt_result);
+    REQUIRE_FALSE(ldlt_result);
+    REQUIRE_FALSE(plu_result);
+    CHECK(llt_result.error().kind == solver::SolverError::Kind::invalid_input);
+    CHECK(ldlt_result.error().kind == solver::SolverError::Kind::invalid_input);
+    CHECK(plu_result.error().kind == solver::SolverError::Kind::invalid_input);
+}
+
+TEST_CASE("stored decomposition solves reject dynamic RHS mismatches",
+          "[decomposition][contracts]") {
+    MatrixXX<double> matrix{{4.0, 1.0}, {1.0, 3.0}};
+    VectorX<double> rhs{1.0, 2.0, 3.0};
+    auto llt_result = llt(matrix);
+    auto ldlt_result = ldlt(matrix);
+    auto plu_result = plu(matrix);
+    REQUIRE(llt_result);
+    REQUIRE(ldlt_result);
+    REQUIRE(plu_result);
+
+    const auto llt_solve_result = llt_result->solve(rhs);
+    const auto ldlt_solve_result = ldlt_result->solve(rhs);
+    const auto plu_solve_result = plu_result->solve(rhs);
+    REQUIRE_FALSE(llt_solve_result);
+    REQUIRE_FALSE(ldlt_solve_result);
+    REQUIRE_FALSE(plu_solve_result);
+    CHECK(llt_solve_result.error().kind ==
+          solver::SolverError::Kind::invalid_input);
+    CHECK(ldlt_solve_result.error().kind ==
+          solver::SolverError::Kind::invalid_input);
+    CHECK(plu_solve_result.error().kind ==
+          solver::SolverError::Kind::invalid_input);
+}
+
+TEST_CASE("QR factors wide matrices but rejects solving them",
+          "[decomposition][qr][contracts]") {
+    MatrixXX<double> matrix{{1.0, 2.0, 3.0}, {4.0, 5.0, 7.0}};
+    VectorX<double> rhs{1.0, 2.0};
+
+    const auto reduced = qr(matrix);
+    const auto full = qr_full(matrix);
+    CHECK(reduced.Q.extent(0) == 2);
+    CHECK(reduced.R.extent(1) == 3);
+    CHECK(full.Q.extent(0) == 2);
+    CHECK(full.R.extent(1) == 3);
+
+    const auto reduced_result = reduced.solve(rhs);
+    const auto full_result = full.solve(rhs);
+    const auto free_result = qr_solve(matrix, rhs);
+    const auto free_full_result = qr_solve_full(matrix, rhs);
+    REQUIRE_FALSE(reduced_result);
+    REQUIRE_FALSE(full_result);
+    REQUIRE_FALSE(free_result);
+    REQUIRE_FALSE(free_full_result);
+    CHECK(reduced_result.error().kind ==
+          solver::SolverError::Kind::invalid_input);
+    CHECK(full_result.error().kind == solver::SolverError::Kind::invalid_input);
+    CHECK(free_result.error().kind == solver::SolverError::Kind::invalid_input);
+    CHECK(free_full_result.error().kind ==
+          solver::SolverError::Kind::invalid_input);
+}
+
+TEST_CASE("QR solves reject dynamic RHS mismatches",
+          "[decomposition][qr][contracts]") {
+    MatrixXX<double> matrix{{1.0, 0.0}, {0.0, 1.0}, {1.0, 1.0}};
+    VectorX<double> rhs{1.0, 2.0};
+
+    const auto reduced_result = qr(matrix).solve(rhs);
+    const auto full_result = qr_full(matrix).solve(rhs);
+    const auto free_result = qr_solve(matrix, rhs);
+    const auto free_full_result = qr_solve_full(matrix, rhs);
+    REQUIRE_FALSE(reduced_result);
+    REQUIRE_FALSE(full_result);
+    REQUIRE_FALSE(free_result);
+    REQUIRE_FALSE(free_full_result);
+    CHECK(reduced_result.error().kind ==
+          solver::SolverError::Kind::invalid_input);
+    CHECK(full_result.error().kind == solver::SolverError::Kind::invalid_input);
+    CHECK(free_result.error().kind == solver::SolverError::Kind::invalid_input);
+    CHECK(free_full_result.error().kind ==
+          solver::SolverError::Kind::invalid_input);
+}
+
+TEST_CASE("reduced QR solve rejects malformed dynamic factors",
+          "[decomposition][qr][contracts]") {
+    QRReducedResult<double, dynamic_extent, dynamic_extent> factors{
+        .Q = MatrixXX<double>(3, 2),
+        .R = MatrixXX<double>(2, 1)};
+    VectorX<double> rhs{1.0, 2.0, 3.0};
+
+    const auto result = factors.solve(rhs);
+
+    REQUIRE_FALSE(result);
+    CHECK(result.error().kind == solver::SolverError::Kind::invalid_input);
+}
+
+TEST_CASE("polar rejects a dynamic nonsquare matrix",
+          "[decomposition][polar][contracts]") {
+    MatrixXX<double> matrix(2, 3);
+    CHECK_THROWS_AS(polar(matrix), std::invalid_argument);
+}

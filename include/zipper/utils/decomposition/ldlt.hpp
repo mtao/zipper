@@ -51,6 +51,7 @@
 #include <zipper/expression/nullary/Identity.hpp>
 #include <zipper/expression/nullary/StaticConstant.hpp>
 #include <zipper/expression/unary/TriangularView.hpp>
+#include <zipper/utils/decomposition/detail/shape_validation.hpp>
 #include <zipper/utils/solver/result.hpp>
 
 namespace zipper::utils::decomposition {
@@ -88,10 +89,24 @@ struct LDLTResult {
     /// @return   `std::expected<Vector<T,N>, SolverError>` — the solution on
     ///           success, or a breakdown error if D contains a zero pivot.
     template <concepts::Vector BDerived>
+        requires detail::StaticallyCompatibleRhs<decltype(L), BDerived>
     auto solve(const BDerived &b) const
         -> std::expected<Vector<T, N>, solver::SolverError> {
         using ResultVec = Vector<T, N>;
         using Result = std::expected<ResultVec, solver::SolverError>;
+
+        if (auto valid = detail::validate_square(L, "LDLT solve"); !valid) {
+            return Result{std::unexpected(std::move(valid.error()))};
+        }
+        if (auto valid = detail::validate_equal_extent(
+                L, 0, D, 0, "LDLT solve");
+            !valid) {
+            return Result{std::unexpected(std::move(valid.error()))};
+        }
+        if (auto valid = detail::validate_rhs(L.extent(0), b, "LDLT solve");
+            !valid) {
+            return Result{std::unexpected(std::move(valid.error()))};
+        }
 
         const index_type n = L.extent(0);
 
@@ -144,6 +159,7 @@ struct LDLTResult {
 ///           and D on success, or a breakdown error if a zero pivot is
 ///           encountered.
 template <concepts::Matrix Derived>
+    requires detail::StaticallySquare<Derived>
 auto ldlt(const Derived &A) -> std::expected<
     LDLTResult<typename std::decay_t<Derived>::value_type,
                std::decay_t<Derived>::extents_type::static_extent(0)>,
@@ -152,6 +168,10 @@ auto ldlt(const Derived &A) -> std::expected<
     using T = typename AType::value_type;
     constexpr index_type N = AType::extents_type::static_extent(0);
     using Result = std::expected<LDLTResult<T, N>, solver::SolverError>;
+
+    if (auto valid = detail::validate_square(A, "LDLT decomposition"); !valid) {
+        return Result{std::unexpected(std::move(valid.error()))};
+    }
 
     const index_type n = A.extent(0);
 
@@ -225,12 +245,23 @@ auto ldlt(const Derived &A) -> std::expected<
 ///           success, or a breakdown error if the factorisation fails or D
 ///           contains a zero pivot.
 template <concepts::Matrix ADerived, concepts::Vector BDerived>
-auto ldlt_solve(const ADerived &A, const BDerived &b) {
+    requires detail::StaticallySquare<ADerived> &&
+             detail::StaticallyCompatibleRhs<ADerived, BDerived>
+auto ldlt_solve(const ADerived &A, const BDerived &b)
+    -> std::expected<
+        Vector<typename std::decay_t<ADerived>::value_type,
+               std::decay_t<ADerived>::extents_type::static_extent(0)>,
+        solver::SolverError> {
     using AType = std::decay_t<ADerived>;
     using T = typename AType::value_type;
     constexpr index_type N = AType::extents_type::static_extent(0);
     using ResultVec = Vector<T, N>;
     using Result = std::expected<ResultVec, solver::SolverError>;
+
+    if (auto valid = detail::validate_rhs(A.extent(0), b, "LDLT solve");
+        !valid) {
+        return Result{std::unexpected(std::move(valid.error()))};
+    }
 
     auto ldlt_result = ldlt(A);
     if (!ldlt_result) {

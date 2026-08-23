@@ -69,6 +69,7 @@
 #include <zipper/expression/nullary/Identity.hpp>
 #include <zipper/expression/nullary/Iota.hpp>
 #include <zipper/expression/unary/TriangularView.hpp>
+#include <zipper/utils/decomposition/detail/shape_validation.hpp>
 #include <zipper/utils/decomposition/detail/householder.hpp>
 #include <zipper/utils/extents/extent_arithmetic.hpp>
 #include <zipper/utils/max_coeff.hpp>
@@ -111,10 +112,25 @@ struct QRReducedResult {
     /// @return   `std::expected<Vector<T,P>, SolverError>` — the solution on
     ///           success, or a breakdown error if R has a zero pivot.
     template <concepts::Vector BDerived>
+        requires detail::StaticallySquare<decltype(R)> &&
+                 detail::StaticallyCompatibleRhs<decltype(Q), BDerived>
     auto solve(const BDerived &b) const
         -> std::expected<Vector<T, P>, solver::SolverError> {
         using ResultVec = Vector<T, P>;
         using Result = std::expected<ResultVec, solver::SolverError>;
+
+        if (auto valid = detail::validate_square(R, "QR solve"); !valid) {
+            return Result{std::unexpected(std::move(valid.error()))};
+        }
+        if (auto valid = detail::validate_equal_extent(Q, 1, R, 0,
+                                                       "QR solve");
+            !valid) {
+            return Result{std::unexpected(std::move(valid.error()))};
+        }
+        if (auto valid = detail::validate_rhs(Q.extent(0), b, "QR solve");
+            !valid) {
+            return Result{std::unexpected(std::move(valid.error()))};
+        }
 
         // 1. Compute c = Q^T * b (p-dimensional vector).
         ResultVec c(Q.transpose() * b);
@@ -165,10 +181,30 @@ struct QRFullResult {
     /// @return   `std::expected<Vector<T,P>, SolverError>` — the solution on
     ///           success, or a breakdown error if R has a zero pivot.
     template <concepts::Vector BDerived>
+        requires detail::StaticallyNotWide<decltype(R)> &&
+                 detail::StaticallyCompatibleRhs<decltype(Q), BDerived>
     auto solve(const BDerived &b) const
         -> std::expected<Vector<T, P>, solver::SolverError> {
         using ResultVec = Vector<T, P>;
         using Result = std::expected<ResultVec, solver::SolverError>;
+
+        if (auto valid = detail::validate_square(Q, "full QR solve"); !valid) {
+            return Result{std::unexpected(std::move(valid.error()))};
+        }
+        if (auto valid = detail::validate_not_wide(R, "full QR solve");
+            !valid) {
+            return Result{std::unexpected(std::move(valid.error()))};
+        }
+        if (auto valid = detail::validate_equal_extent(Q, 0, R, 0,
+                                                       "full QR solve");
+            !valid) {
+            return Result{std::unexpected(std::move(valid.error()))};
+        }
+        if (auto valid = detail::validate_rhs(Q.extent(0), b,
+                                              "full QR solve");
+            !valid) {
+            return Result{std::unexpected(std::move(valid.error()))};
+        }
 
         const index_type p = std::min(Q.extent(0), R.extent(1));
 
@@ -341,7 +377,25 @@ auto qr_gram_schmidt(const Derived &A) {
 /// @return   `std::expected<Vector<T, N>, SolverError>` — the solution on
 ///           success, or a breakdown error if R has a zero pivot.
 template <concepts::Matrix ADerived, concepts::Vector BDerived>
-auto qr_solve(const ADerived &A, const BDerived &b) {
+    requires detail::StaticallyNotWide<ADerived> &&
+             detail::StaticallyCompatibleRhs<ADerived, BDerived>
+auto qr_solve(const ADerived &A, const BDerived &b)
+    -> std::expected<
+        Vector<typename std::decay_t<ADerived>::value_type,
+               std::decay_t<ADerived>::extents_type::static_extent(1)>,
+        solver::SolverError> {
+    using AType = std::decay_t<ADerived>;
+    using Result = std::expected<
+        Vector<typename AType::value_type,
+               AType::extents_type::static_extent(1)>,
+        solver::SolverError>;
+    if (auto valid = detail::validate_not_wide(A, "QR solve"); !valid) {
+        return Result{std::unexpected(std::move(valid.error()))};
+    }
+    if (auto valid = detail::validate_rhs(A.extent(0), b, "QR solve");
+        !valid) {
+        return Result{std::unexpected(std::move(valid.error()))};
+    }
     auto result = qr(A);
     return result.solve(b);
 }
@@ -366,7 +420,25 @@ auto qr_solve(const ADerived &A, const BDerived &b) {
 /// @return   `std::expected<Vector<T, N>, SolverError>` — the solution on
 ///           success, or a breakdown error if R has a zero pivot.
 template <concepts::Matrix ADerived, concepts::Vector BDerived>
-auto qr_solve_full(const ADerived &A, const BDerived &b) {
+    requires detail::StaticallyNotWide<ADerived> &&
+             detail::StaticallyCompatibleRhs<ADerived, BDerived>
+auto qr_solve_full(const ADerived &A, const BDerived &b)
+    -> std::expected<
+        Vector<typename std::decay_t<ADerived>::value_type,
+               std::decay_t<ADerived>::extents_type::static_extent(1)>,
+        solver::SolverError> {
+    using AType = std::decay_t<ADerived>;
+    using Result = std::expected<
+        Vector<typename AType::value_type,
+               AType::extents_type::static_extent(1)>,
+        solver::SolverError>;
+    if (auto valid = detail::validate_not_wide(A, "full QR solve"); !valid) {
+        return Result{std::unexpected(std::move(valid.error()))};
+    }
+    if (auto valid = detail::validate_rhs(A.extent(0), b, "full QR solve");
+        !valid) {
+        return Result{std::unexpected(std::move(valid.error()))};
+    }
     auto result = qr_full(A);
     return result.solve(b);
 }
