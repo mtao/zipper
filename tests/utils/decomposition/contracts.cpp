@@ -28,6 +28,11 @@ concept HasPlu = requires(const MatrixType &matrix) { plu(matrix); };
 template <typename MatrixType>
 concept HasPolar = requires(const MatrixType &matrix) { polar(matrix); };
 
+template <typename MatrixType>
+concept HasProperPolar = requires(const MatrixType &matrix) {
+    proper_polar(matrix);
+};
+
 template <typename MatrixType, typename VectorType>
 concept HasQrSolve = requires(const MatrixType &matrix, const VectorType &rhs) {
     qr_solve(matrix, rhs);
@@ -44,6 +49,7 @@ static_assert(!HasLlt<Matrix<double, 2, 3>>);
 static_assert(!HasLdlt<Matrix<double, 2, 3>>);
 static_assert(!HasPlu<Matrix<double, 2, 3>>);
 static_assert(!HasPolar<Matrix<double, 2, 3>>);
+static_assert(!HasProperPolar<Matrix<double, 2, 3>>);
 static_assert(!HasQrSolve<Matrix<double, 2, 3>, Vector<double, 2>>);
 static_assert(!HasQrSolve<Matrix<double, 3, 2>, Vector<double, 2>>);
 static_assert(!HasRvalueL<PLUResult<double, 2>>);
@@ -187,8 +193,9 @@ TEST_CASE("reduced QR solve rejects malformed dynamic factors",
     CHECK(result.error().kind == solver::SolverError::Kind::invalid_input);
 }
 
-TEST_CASE("polar rejects a dynamic nonsquare matrix",
-          "[decomposition][polar][contracts]") {
+TEST_CASE("polar decompositions reject a dynamic nonsquare matrix",
+           "[decomposition][polar][contracts]") {
     MatrixXX<double> matrix(2, 3);
     CHECK_THROWS_AS(polar(matrix), std::invalid_argument);
+    CHECK_THROWS_AS(proper_polar(matrix), std::invalid_argument);
 }

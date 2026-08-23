@@ -6,16 +6,15 @@
 ///
 ///   F = R * S
 ///
-/// where R is a proper rotation (det R = +1, R^T R = I) and S is
-/// symmetric positive semi-definite.
+/// where R is orthogonal (R^T R = I) and S is symmetric positive
+/// semi-definite.
 ///
 /// The decomposition is computed via SVD.  Given F = U * diag(sigma) * V^T:
-///   R = U * V^T          (closest rotation to F)
+///   R = U * V^T          (closest orthogonal matrix to F)
 ///   S = V * diag(sigma) * V^T   (symmetric stretch)
 ///
-/// If det(U * V^T) < 0 (improper rotation / reflection), the sign of the
-/// column of U corresponding to the smallest singular value is flipped,
-/// along with the corresponding singular value, to ensure det(R) = +1.
+/// `proper_polar` instead forces det(R) = +1 by moving a reflection into a
+/// signed symmetric stretch.
 ///
 /// This approach is robust for singular and near-singular F (unlike the
 /// iterative R_{k+1} = 0.5*(R_k + R_k^{-T}) method which requires
@@ -47,27 +46,17 @@ template <typename T, index_type N>
 struct PolarResult {
     using value_type = T;
 
-    /// Proper rotation matrix (det R = +1, R^T R = I).
+    /// Orthogonal factor (R^T R = I).
     Matrix<T, N, N> R;
-    /// Symmetric positive semi-definite stretch matrix.
+    /// Symmetric stretch matrix.
     Matrix<T, N, N> S;
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Polar decomposition
-// ─────────────────────────────────────────────────────────────────────────────
+namespace detail {
 
-/// @brief SVD-based polar decomposition of a square matrix.
-///
-/// @param F  A square matrix.
-/// @return   A `PolarResult` with rotation R and symmetric stretch S
-///           such that F = R * S.
-///
-/// Polar decomposition always succeeds, so the result is returned directly
-/// (not wrapped in `std::expected`).
-template <concepts::Matrix Derived>
-    requires detail::StaticallySquare<Derived>
-auto polar(const Derived &F) {
+template <bool Proper, concepts::Matrix Derived>
+    requires StaticallySquare<Derived>
+auto polar_impl(const Derived &F) {
     using FType = std::decay_t<Derived>;
     using T = typename FType::value_type;
     constexpr index_type M = FType::extents_type::static_extent(0);
@@ -79,31 +68,48 @@ auto polar(const Derived &F) {
     }
 
     auto [U, sigma, Vt] = svd(F);
+    Matrix<T, M, N> R(U * Vt);
 
-    // R_candidate = U * Vt
-    Matrix<T, M, N> R_candidate(U * Vt);
-
-    // Check if R is a proper rotation (det > 0).
-    T det_R = determinant(R_candidate);
-
-    if (det_R < T{0}) {
-        // Flip the last column of U (smallest singular value column,
-        // since SVD returns singular values in descending order)
-        // to get a proper rotation.
-        const index_type last = n - 1;
-        U.col(last) = -U.col(last);
-        // Also flip the corresponding singular value.
-        sigma(last) = -sigma(last);
-        // Recompute R.
-        R_candidate = Matrix<T, M, N>(U * Vt);
+    if constexpr (Proper) {
+        if (determinant(R) < T{0}) {
+            const index_type last = n - 1;
+            U.col(last) = -U.col(last);
+            R = Matrix<T, M, N>(U * Vt);
+        }
     }
 
-    // S = R^T * F  (equivalently V * diag(sigma) * V^T, but R^T * F
-    // is simpler and numerically equivalent).
-    Matrix<T, M, N> S_result(R_candidate.transpose() * F);
+    Matrix<T, M, N> S(R.transpose() * F);
+    return PolarResult<T, M>{.R = std::move(R), .S = std::move(S)};
+}
 
-    return PolarResult<T, M>{.R = std::move(R_candidate),
-                             .S = std::move(S_result)};
+} // namespace detail
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Polar decomposition
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// @brief SVD-based polar decomposition of a square matrix.
+///
+/// @param F  A square matrix.
+/// @return   A `PolarResult` with orthogonal R and symmetric positive
+///           semi-definite stretch S such that F = R * S.
+///
+/// Polar decomposition always succeeds, so the result is returned directly
+/// (not wrapped in `std::expected`).
+template <concepts::Matrix Derived>
+    requires detail::StaticallySquare<Derived>
+auto polar(const Derived &F) {
+    return detail::polar_impl<false>(F);
+}
+
+/// @brief Orientation-preserving polar decomposition of a square matrix.
+///
+/// @return A `PolarResult` with proper orthogonal R (det R = +1) and signed
+///         symmetric stretch S such that F = R * S. S may be indefinite.
+template <concepts::Matrix Derived>
+    requires detail::StaticallySquare<Derived>
+auto proper_polar(const Derived &F) {
+    return detail::polar_impl<true>(F);
 }
 
 } // namespace zipper::utils::decomposition
