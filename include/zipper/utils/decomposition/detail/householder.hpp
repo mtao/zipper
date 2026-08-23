@@ -16,8 +16,8 @@
 #if !defined(ZIPPER_UTILS_DECOMPOSITION_DETAIL_HOUSEHOLDER_HPP)
 #define ZIPPER_UTILS_DECOMPOSITION_DETAIL_HOUSEHOLDER_HPP
 
+#include <algorithm>
 #include <cmath>
-#include <limits>
 #include <optional>
 #include <type_traits>
 #include <utility>
@@ -32,8 +32,8 @@ namespace zipper::utils::decomposition::detail {
 /// Result of computing a Householder vector from an input vector x.
 ///
 /// The Householder reflection P = I - 2 v v^T satisfies P x = sigma * e_0.
-/// `v` is unit-length. If the input was too small (near-zero), the result
-/// is std::nullopt.
+/// `v` is unit-length. If the input is exactly zero, the result is
+/// std::nullopt.
 template <typename T, index_type N>
 struct HouseholderVector {
     /// Unit Householder vector.
@@ -48,8 +48,8 @@ struct HouseholderVector {
 /// choosing the sign of sigma to avoid cancellation.
 ///
 /// @param x  Input vector of length m.
-/// @return   HouseholderVector on success, or std::nullopt if ||x|| is
-///           negligible.
+/// @return   HouseholderVector on success, or std::nullopt if x is exactly
+///           zero.
 template <concepts::Vector VDerived>
 auto householder_vector(const VDerived &x) -> std::optional<
     HouseholderVector<typename std::decay_t<VDerived>::value_type,
@@ -61,17 +61,23 @@ auto householder_vector(const VDerived &x) -> std::optional<
     // Copy x into an owning vector for modification.
     Vector<T, N> v(x);
 
-    T sigma = v.norm();
-    if (sigma < std::numeric_limits<T>::epsilon()) { return std::nullopt; }
+    T scale = T{0};
+    bool is_zero = true;
+    for (index_type i = 0; i < v.extent(0); ++i) {
+        is_zero = is_zero && v(i) == T{0};
+        scale = std::max(scale, std::abs(v(i)));
+    }
+    if (is_zero) { return std::nullopt; }
 
-    // Choose sign to avoid cancellation: v(0) -= sign(v(0)) * ||x||.
-    if (v(0) >= T{0}) { sigma = -sigma; }
+    // Unit scaling keeps x_0 + ||x|| and the normalization representable for
+    // every finite nonzero input.
+    v /= scale;
+    const T scaled_norm = v.norm();
+    const T scaled_sigma = -std::copysign(scaled_norm, v(0));
+    v(0) -= scaled_sigma;
+    v /= v.norm();
 
-    v(0) -= sigma;
-
-    T v_norm = v.norm();
-    if (v_norm < std::numeric_limits<T>::min()) { return std::nullopt; }
-    v /= v_norm;
+    const T sigma = scale * scaled_sigma;
 
     return HouseholderVector<T, N>{.v = std::move(v), .sigma = sigma};
 }
@@ -99,7 +105,15 @@ auto apply_householder_left(MDerived &M,
 
     for (index_type j = c0; j < c1; ++j) {
         auto column = M.col(j).segment(r0, len);
-        column -= (T{2} * v.dot(column)) * v;
+        T scale = T{0};
+        for (index_type i = 0; i < len; ++i) {
+            scale = std::max(scale, std::abs(column(i)));
+        }
+        if (scale != T{0}) {
+            Vector<T, dynamic_extent> normalized(column / scale);
+            normalized -= (T{2} * v.dot(normalized)) * v;
+            column = normalized * scale;
+        }
     }
 }
 
@@ -126,7 +140,15 @@ auto apply_householder_right(MDerived &M,
 
     for (index_type i = r0; i < r1; ++i) {
         auto row = M.row(i).segment(c0, len);
-        row -= (T{2} * v.dot(row)) * v;
+        T scale = T{0};
+        for (index_type j = 0; j < len; ++j) {
+            scale = std::max(scale, std::abs(row(j)));
+        }
+        if (scale != T{0}) {
+            Vector<T, dynamic_extent> normalized(row / scale);
+            normalized -= (T{2} * v.dot(normalized)) * v;
+            row = normalized * scale;
+        }
     }
 }
 

@@ -549,21 +549,19 @@ auto qr_col_pivot(const Derived &A) {
         expression::nullary::iota<index_type>(index_type{0},
                                                zipper::extents<N>(n)));
 
-    // Precompute column norms squared (diagonal of the Gram matrix A^T A)
-    // for efficient pivot selection via Businger-Golub norm downdating.
-    Vector<T, N> col_norms_sq(R_work.colwise().template norm_powered<2>());
+    Vector<T, N> col_norms(R_work.colwise().norm());
 
     for (index_type k = 0; k < p; ++k) {
         // ── Column pivoting: find the column (>= k) with largest remaining
         // norm.
         const auto max_norm =
-            utils::maxCoeffWithIndex(col_norms_sq.segment(k, n - k));
+            utils::maxCoeffWithIndex(col_norms.segment(k, n - k));
         const index_type max_col = k + max_norm.second[0];
 
-        // Swap columns k and max_col in R_work, col_perm, and col_norms_sq.
+        // Swap columns k and max_col in R_work, col_perm, and col_norms.
         if (max_col != k) {
             std::swap(col_perm(k), col_perm(max_col));
-            std::swap(col_norms_sq(k), col_norms_sq(max_col));
+            std::swap(col_norms(k), col_norms(max_col));
             auto cols = R_work.col_slice(
                 std::array<index_type, 2>{k, max_col});
             cols = cols.col_slice(std::array<index_type, 2>{1, 0}).eval();
@@ -573,32 +571,20 @@ auto qr_col_pivot(const Derived &A) {
         const index_type len = m - k;
         auto hh = detail::householder_vector(
             R_work.col(k).segment(k, len));
-        if (!hh) { continue; }
+        if (hh) {
+            // Apply H to R_work from the left.
+            detail::apply_householder_left(R_work, hh->v, k, k, n);
 
-        // Apply H to R_work from the left.
-        detail::apply_householder_left(R_work, hh->v, k, k, n);
+            // Apply H to Q_full from the right.
+            detail::apply_householder_right(Q_full, hh->v, 0, m, k);
+        }
 
-        // Apply H to Q_full from the right.
-        detail::apply_householder_right(Q_full, hh->v, 0, m, k);
-
-        // ── Update column norms for remaining columns (downdate).
-        // After the reflection, R_work(k, j) for j > k has changed.
-        // The remaining norm squared of column j (rows k+1..m-1) is
-        // col_norms_sq(j) - R_work(k, j)^2.  This avoids recomputing from
-        // scratch and is the standard technique (Businger-Golub).
-        if (k + 1 < n) {
-            auto trailing_norms = col_norms_sq.segment(k + 1, n - k - 1);
-            auto transformed_row =
-                R_work.row(k).segment(k + 1, n - k - 1);
-            auto updated_norms = trailing_norms.as_array() -
-                                 transformed_row.as_array() *
-                                     transformed_row.as_array();
-            auto zeros = updated_norms * T{0};
-            auto trailing_norms_array = trailing_norms.as_array();
-            trailing_norms_array =
-                (updated_norms <=> T{0})
-                    .select(zeros, updated_norms, updated_norms)
-                    .eval();
+        // Recompute exact trailing norms instead of downdating squared norms.
+        if (k + 1 < p) {
+            auto trailing = R_work.slice(zipper::slice(k + 1, m - k - 1),
+                                         zipper::slice(k + 1, n - k - 1));
+            col_norms.segment(k + 1, n - k - 1) =
+                trailing.colwise().norm();
         }
     }
 

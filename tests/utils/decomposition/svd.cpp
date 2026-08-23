@@ -451,3 +451,48 @@ TEST_CASE("svd 2x2 scaled rotation", "[decomposition][svd]") {
 
     check_reconstruction(U, S, Vt, A, 2, 2, 2, 1e-10);
 }
+
+TEST_CASE("svd extreme finite scales", "[decomposition][svd]") {
+    for (double scale : {1e300, 1e-300}) {
+        Matrix<double, 2, 2> A{{3.0 * scale, 4.0 * scale},
+                                {0.0, 5.0 * scale}};
+
+        auto [U, S, Vt] = utils::decomposition::svd(A);
+
+        CHECK(std::isfinite(S(0)));
+        CHECK(std::isfinite(S(1)));
+        CHECK(S(0) / scale == Catch::Approx(6.708203932499369).epsilon(1e-12));
+        CHECK(S(1) / scale == Catch::Approx(2.23606797749979).epsilon(1e-12));
+        check_orthonormal_columns(U, 2, 1e-12);
+        check_orthonormal_rows(Vt, 2, 1e-12);
+        check_reconstruction(U, S, Vt, A, 2, 2, 2,
+                             1e-12 * std::abs(scale));
+    }
+}
+
+TEST_CASE("svd disparate nonzero singular values keep U orthogonal",
+          "[decomposition][svd]") {
+    constexpr double small = 1e-12;
+    constexpr double inv_sqrt_two = 0.7071067811865475244;
+    Matrix<double, 2, 2> A{{inv_sqrt_two, inv_sqrt_two},
+                            {-small * inv_sqrt_two, small * inv_sqrt_two}};
+
+    auto [U, S, Vt] = utils::decomposition::svd(A);
+
+    CHECK(S(0) == Catch::Approx(1.0).epsilon(1e-12));
+    CHECK(S(1) == Catch::Approx(small).epsilon(1e-12));
+    check_orthonormal_columns(U, 2, 1e-12);
+    check_orthonormal_rows(Vt, 2, 1e-12);
+    check_reconstruction(U, S, Vt, A, 2, 2, 2, 1e-15);
+}
+
+TEST_CASE("svd preserves representable singular values across extreme scales",
+          "[decomposition][svd]") {
+    Matrix<double, 2, 2> A{{std::numeric_limits<double>::max(), 0.0},
+                            {0.0, 1.0}};
+
+    auto [U, S, Vt] = utils::decomposition::svd(A);
+
+    CHECK(S(1) == Catch::Approx(1.0));
+    check_orthonormal_columns(U, 2, 1e-12);
+}

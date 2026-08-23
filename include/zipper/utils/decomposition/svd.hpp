@@ -124,8 +124,22 @@ auto svd(const Derived &A) {
 
     using DynMat = Matrix<T, std::dynamic_extent, std::dynamic_extent>;
 
+    // Scaling keeps the Gram quantities in range without changing the Jacobi
+    // rotations. Leave non-finite inputs untouched; this unchecked API retains
+    // its existing behavior for them.
+    T input_scale = T{0};
+    bool finite_input = true;
+    for (index_type i = 0; i < m; ++i) {
+        for (index_type j = 0; j < n; ++j) {
+            const T value = A(i, j);
+            finite_input = finite_input && std::isfinite(value);
+            input_scale = std::max(input_scale, std::abs(value));
+        }
+    }
+
     // Working copy of A.
     DynMat W(A);
+    if (finite_input && input_scale > T{0}) { W = W / input_scale; }
 
     // V accumulates right rotations (n x n identity initially).
     DynMat V(expression::nullary::
@@ -135,56 +149,38 @@ auto svd(const Derived &A) {
     const index_type max_sweeps = 100;
 
     for (index_type sweep = 0; sweep < max_sweeps; ++sweep) {
-        // Check convergence: is W^T W close to diagonal?
-        // We check that all off-diagonal entries of W^T W are small
-        // relative to the diagonal.
-
-        // diag_norm_sq = sum of ||col_j||^4 = sum of (||col_j||^2)^2
-        auto col_norms_sq = W.colwise().template norm_powered<2>();
-        T diag_norm_sq = col_norms_sq.as_array().pow(T{2}).sum();
-
-        T off_diag_norm_sq = T{0};
-        for (index_type j1 = 0; j1 < n; ++j1) {
-            for (index_type j2 = j1 + 1; j2 < n; ++j2) {
-                T dot = W.col(j1).dot(W.col(j2));
-                off_diag_norm_sq += T{2} * dot * dot;
-            }
-        }
-
-        if (off_diag_norm_sq <= eps * eps * diag_norm_sq) { break; }
+        bool converged = true;
 
         // Sweep: apply Jacobi rotations to all pairs (j1, j2) with j1 < j2.
         for (index_type j1 = 0; j1 < n; ++j1) {
             for (index_type j2 = j1 + 1; j2 < n; ++j2) {
-                // Compute the 2x2 Gram matrix for columns j1 and j2:
-                //   G = [ a  d ]   where a = W(:,j1)^T W(:,j1)
-                //       [ d  b ]         b = W(:,j2)^T W(:,j2)
-                //                        d = W(:,j1)^T W(:,j2)
-                T a = W.col(j1).dot(W.col(j1));
-                T b = W.col(j2).dot(W.col(j2));
-                T d = W.col(j1).dot(W.col(j2));
+                const T norm1 = W.col(j1).norm();
+                const T norm2 = W.col(j2).norm();
+                if (norm1 == T{0} || norm2 == T{0}) { continue; }
 
-                // If d is negligible, columns are already orthogonal.
-                if (std::abs(d) <= eps * std::sqrt(a * b)) { continue; }
+                const T correlation =
+                    (W.col(j1) / norm1).dot(W.col(j2) / norm2);
+                if (std::abs(correlation) <= eps) { continue; }
+                converged = false;
 
-                // Jacobi rotation angle to zero out d:
-                //   tan(2*theta) = 2*d / (a - b)
-                T c, s;
-                if (std::abs(a - b) < eps * (a + b)) {
-                    // a ≈ b → theta = pi/4
-                    c = std::sqrt(T{0.5});
-                    s = (d >= T{0}) ? c : -c;
+                // Form a uniformly scaled 2x2 Gram matrix. This preserves the
+                // angle while avoiding a*b and the overflow-prone tau*tau
+                // formulation of the Jacobi tangent.
+                const T pair_scale = std::max(norm1, norm2);
+                const T x = norm1 / pair_scale;
+                const T y = norm2 / pair_scale;
+                const T delta = x * x - y * y;
+                const T twice_dot = T{2} * correlation * x * y;
+                const T radius = std::hypot(delta, twice_dot);
+                T t;
+                if (delta == T{0}) {
+                    t = std::copysign(T{1}, twice_dot);
                 } else {
-                    T tau = (a - b) / (T{2} * d);
-                    T t;
-                    if (tau >= T{0}) {
-                        t = T{1} / (tau + std::sqrt(T{1} + tau * tau));
-                    } else {
-                        t = T{-1} / (-tau + std::sqrt(T{1} + tau * tau));
-                    }
-                    c = T{1} / std::sqrt(T{1} + t * t);
-                    s = t * c;
+                    t = twice_dot /
+                        (delta + std::copysign(radius, delta));
                 }
+                const T c = T{1} / std::hypot(T{1}, t);
+                const T s = t * c;
 
                 // Build the 2x2 Givens rotation matrix:
                 //   G = [ c  -s ]
@@ -204,6 +200,7 @@ auto svd(const Derived &A) {
                 }
             }
         }
+        if (converged) { break; }
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -235,7 +232,7 @@ auto svd(const Derived &A) {
     Vector<T, P> S_result(all_sigmas(perm));
     Matrix<T, P, N> Vt_result(V.col_slice(perm).transpose());
     for (index_type k = 0; k < p; ++k) {
-        if (S_result(k) > std::numeric_limits<T>::min()) {
+        if (S_result(k) > T{0}) {
             U_result.col(k) = sorted_W.col(k) / S_result(k);
         } else {
             S_result(k) = T{0};
@@ -265,6 +262,7 @@ auto svd(const Derived &A) {
             U_result.col(k) = best / std::sqrt(best_norm_squared);
         }
     }
+    if (finite_input && input_scale > T{0}) { S_result *= input_scale; }
 
     return SVDResult<T, M, N>{.U = std::move(U_result),
                               .S = std::move(S_result),
