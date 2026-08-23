@@ -31,9 +31,10 @@
 ///   3. Back substitution:     L^T * x = z    (unit upper triangular)
 ///
 /// The decomposition accepts consistent zero pivots for positive
-/// semi-definite matrices. Negative pivots and zero pivots with a nonzero
-/// trailing residual produce a breakdown error. Solving still requires every
-/// diagonal entry of D to be nonzero.
+/// semi-definite matrices. Scale-negligible nonpositive pivots are clamped only
+/// when their trailing residual is also negligible; other nonpositive pivots
+/// produce a breakdown error. Solving still requires every diagonal entry of D
+/// to be nonzero.
 ///
 /// Complexity: O(n^3 / 3) for the factorisation, O(n^2) for each solve.
 
@@ -193,6 +194,9 @@ auto ldlt(const Derived &A) -> std::expected<
                 ? Lj_seg.dot(as_vector(Lj_seg.as_array() * D_seg.as_array()))
                 : T{0};
         const T pivot = A(j, j) - sum;
+        const T cancellation_scale = std::abs(A(j, j)) + std::abs(sum);
+        const T pivot_tolerance = std::numeric_limits<T>::epsilon() *
+                                  static_cast<T>(n) * cancellation_scale;
 
         // Compute the trailing Schur-column residual before classifying a
         // small pivot. A zero PSD pivot requires the whole residual to vanish.
@@ -211,24 +215,16 @@ auto ldlt(const Derived &A) -> std::expected<
             }
         }
 
-        if (pivot < T{0}) {
-            return Result{std::unexpected(solver::SolverError{
-                .kind = solver::SolverError::Kind::breakdown,
-                .message = "LDLT decomposition: matrix is not positive "
-                           "semi-definite (negative pivot at column "
-                           + std::to_string(j) + ")"})};
-        }
-
-        if (pivot == T{0}) {
+        if (pivot <= pivot_tolerance) {
             const T residual_max =
                 trailing_size > 0
                     ? utils::maxCoeff(trailing_residual.as_array().abs())
                     : T{0};
-            if (residual_max != T{0}) {
+            if (pivot < -pivot_tolerance || residual_max > pivot_tolerance) {
                 return Result{std::unexpected(solver::SolverError{
                     .kind = solver::SolverError::Kind::breakdown,
-                    .message = "LDLT decomposition: inconsistent zero pivot "
-                               "at column "
+                    .message = "LDLT decomposition: inconsistent nonpositive "
+                               "pivot at column "
                                + std::to_string(j)})};
             }
             D(j) = T{0};

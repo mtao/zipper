@@ -1,5 +1,7 @@
 
+#include <algorithm>
 #include <cmath>
+#include <limits>
 
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
@@ -10,7 +12,7 @@
 
 using namespace zipper;
 
-TEST_CASE("householder vector handles extreme finite scales",
+TEST_CASE("householder_vector_handles_extreme_finite_scales",
           "[decomposition][householder]") {
     for (const double scale : {1e200, 1e-200}) {
         Vector<double, 2> x{3.0 * scale, 4.0 * scale};
@@ -99,7 +101,7 @@ TEST_CASE("qr reduced 4x3 tall", "[decomposition][qr]") {
     }
 }
 
-TEST_CASE("qr reduced reconstructs extreme finite scales", "[decomposition][qr]") {
+TEST_CASE("qr_reduced_reconstructs_extreme_finite_scales", "[decomposition][qr]") {
     const Matrix<double, 3, 3> base{
         {3.0, -2.0, 1.0},
         {4.0, 1.0, -3.0},
@@ -699,7 +701,7 @@ TEST_CASE("qr_col_pivot wide matrix 2x4", "[decomposition][qr_col_pivot]") {
     }
 }
 
-TEST_CASE("qr_col_pivot preserves near-dependent pivot order and rank",
+TEST_CASE("qr_col_pivot_preserves_near_dependent_pivot_order_and_rank",
           "[decomposition][qr_col_pivot]") {
     constexpr double delta = 1e-10;
     Matrix<double, 3, 3> A{
@@ -724,7 +726,7 @@ TEST_CASE("qr_col_pivot preserves near-dependent pivot order and rank",
     }
 }
 
-TEST_CASE("qr_col_pivot handles representable norms with overflowing squares",
+TEST_CASE("qr_col_pivot_handles_representable_norms_with_overflowing_squares",
           "[decomposition][qr_col_pivot]") {
     constexpr double scale = 1e200;
     Matrix<double, 4, 3> A{
@@ -751,7 +753,7 @@ TEST_CASE("qr_col_pivot handles representable norms with overflowing squares",
     }
 }
 
-TEST_CASE("qr handles columns near the largest representable norm",
+TEST_CASE("qr_handles_columns_near_the_largest_representable_norm",
           "[decomposition][qr]") {
     const double value = std::numeric_limits<double>::max() / 2.0;
     Matrix<double, 2, 2> A{{value, 0.0}, {-value, value}};

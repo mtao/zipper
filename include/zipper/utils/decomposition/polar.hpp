@@ -16,6 +16,10 @@
 /// `proper_polar` instead forces det(R) = +1 by moving a reflection into a
 /// signed symmetric stretch.
 ///
+/// This intentionally changes `polar` from its former orientation-preserving
+/// behavior to the standard polar-decomposition semantics. Call
+/// `proper_polar` when an orientation-preserving orthogonal factor is required.
+///
 /// This approach is robust for singular and near-singular F (unlike the
 /// iterative R_{k+1} = 0.5*(R_k + R_k^{-T}) method which requires
 /// invertibility).
@@ -24,7 +28,10 @@
 #define ZIPPER_UTILS_DECOMPOSITION_POLAR_HPP
 
 #include <cmath>
+#include <concepts>
 #include <stdexcept>
+#include <type_traits>
+#include <utility>
 
 #include <zipper/Matrix.hpp>
 #include <zipper/concepts/Matrix.hpp>
@@ -55,8 +62,11 @@ struct PolarResult {
 namespace detail {
 
 template <bool Proper, concepts::Matrix Derived>
-    requires StaticallySquare<Derived>
-auto polar_impl(const Derived &F) {
+    requires StaticallySquare<Derived> &&
+             std::floating_point<typename std::decay_t<Derived>::value_type>
+auto polar_impl(const Derived &F)
+    -> PolarResult<typename std::decay_t<Derived>::value_type,
+                   std::decay_t<Derived>::extents_type::static_extent(0)> {
     using FType = std::decay_t<Derived>;
     using T = typename FType::value_type;
     constexpr index_type M = FType::extents_type::static_extent(0);
@@ -95,10 +105,14 @@ auto polar_impl(const Derived &F) {
 ///           semi-definite stretch S such that F = R * S.
 ///
 /// Polar decomposition always succeeds, so the result is returned directly
-/// (not wrapped in `std::expected`).
+/// (not wrapped in `std::expected`) for square inputs. A dynamically sized
+/// nonsquare input throws `std::invalid_argument`.
 template <concepts::Matrix Derived>
-    requires detail::StaticallySquare<Derived>
-auto polar(const Derived &F) {
+    requires detail::StaticallySquare<Derived> &&
+             std::floating_point<typename std::decay_t<Derived>::value_type>
+auto polar(const Derived &F)
+    -> PolarResult<typename std::decay_t<Derived>::value_type,
+                   std::decay_t<Derived>::extents_type::static_extent(0)> {
     return detail::polar_impl<false>(F);
 }
 
@@ -106,9 +120,13 @@ auto polar(const Derived &F) {
 ///
 /// @return A `PolarResult` with proper orthogonal R (det R = +1) and signed
 ///         symmetric stretch S such that F = R * S. S may be indefinite.
+/// @throws std::invalid_argument if a dynamically sized input is nonsquare.
 template <concepts::Matrix Derived>
-    requires detail::StaticallySquare<Derived>
-auto proper_polar(const Derived &F) {
+    requires detail::StaticallySquare<Derived> &&
+             std::floating_point<typename std::decay_t<Derived>::value_type>
+auto proper_polar(const Derived &F)
+    -> PolarResult<typename std::decay_t<Derived>::value_type,
+                   std::decay_t<Derived>::extents_type::static_extent(0)> {
     return detail::polar_impl<true>(F);
 }
 

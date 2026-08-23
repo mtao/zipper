@@ -1,5 +1,6 @@
 
 #include <cmath>
+#include <limits>
 
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
@@ -225,7 +226,7 @@ TEST_CASE("svd 3x3 rank deficient", "[decomposition][svd]") {
     check_reconstruction(U, S, Vt, A, 3, 3, 3, 1e-10);
 }
 
-TEST_CASE("svd tall rank deficient U is orthonormal", "[decomposition][svd]") {
+TEST_CASE("svd_tall_rank_deficient_u_is_orthonormal", "[decomposition][svd]") {
     Matrix<double, 4, 3> A{{0.0, 1.0, 2.0},
                             {0.0, 0.0, 0.0},
                             {0.0, 0.0, 0.0},
@@ -239,7 +240,7 @@ TEST_CASE("svd tall rank deficient U is orthonormal", "[decomposition][svd]") {
     check_reconstruction(U, S, Vt, A, 4, 3, 3, 1e-12);
 }
 
-TEST_CASE("svd wide rank deficient U is orthonormal", "[decomposition][svd]") {
+TEST_CASE("svd_wide_rank_deficient_u_is_orthonormal", "[decomposition][svd]") {
     Matrix<double, 3, 5> A{{0.0, 1.0, 2.0, 3.0, 4.0},
                             {0.0, 0.0, 0.0, 0.0, 0.0},
                             {0.0, 0.0, 0.0, 0.0, 0.0}};
@@ -252,7 +253,7 @@ TEST_CASE("svd wide rank deficient U is orthonormal", "[decomposition][svd]") {
     check_reconstruction(U, S, Vt, A, 3, 5, 3, 1e-12);
 }
 
-TEST_CASE("svd tall zero matrix U is orthonormal", "[decomposition][svd]") {
+TEST_CASE("svd_tall_zero_matrix_u_is_orthonormal", "[decomposition][svd]") {
     Matrix<double, 4, 3> A{{0.0, 0.0, 0.0},
                             {0.0, 0.0, 0.0},
                             {0.0, 0.0, 0.0},
@@ -264,7 +265,7 @@ TEST_CASE("svd tall zero matrix U is orthonormal", "[decomposition][svd]") {
     check_reconstruction(U, S, Vt, A, 4, 3, 3, 1e-12);
 }
 
-TEST_CASE("svd wide zero matrix U is orthonormal", "[decomposition][svd]") {
+TEST_CASE("svd_wide_zero_matrix_u_is_orthonormal", "[decomposition][svd]") {
     Matrix<double, 3, 4> A{{0.0, 0.0, 0.0, 0.0},
                             {0.0, 0.0, 0.0, 0.0},
                             {0.0, 0.0, 0.0, 0.0}};
@@ -452,7 +453,7 @@ TEST_CASE("svd 2x2 scaled rotation", "[decomposition][svd]") {
     check_reconstruction(U, S, Vt, A, 2, 2, 2, 1e-10);
 }
 
-TEST_CASE("svd extreme finite scales", "[decomposition][svd]") {
+TEST_CASE("svd_extreme_finite_scales", "[decomposition][svd]") {
     for (double scale : {1e300, 1e-300}) {
         Matrix<double, 2, 2> A{{3.0 * scale, 4.0 * scale},
                                 {0.0, 5.0 * scale}};
@@ -470,7 +471,7 @@ TEST_CASE("svd extreme finite scales", "[decomposition][svd]") {
     }
 }
 
-TEST_CASE("svd disparate nonzero singular values keep U orthogonal",
+TEST_CASE("svd_disparate_nonzero_singular_values_keep_u_orthogonal",
           "[decomposition][svd]") {
     constexpr double small = 1e-12;
     constexpr double inv_sqrt_two = 0.7071067811865475244;
@@ -486,13 +487,13 @@ TEST_CASE("svd disparate nonzero singular values keep U orthogonal",
     check_reconstruction(U, S, Vt, A, 2, 2, 2, 1e-15);
 }
 
-TEST_CASE("svd preserves representable singular values across extreme scales",
+TEST_CASE("svd_preserves_representable_singular_values_across_extreme_scales",
           "[decomposition][svd]") {
     Matrix<double, 2, 2> A{{std::numeric_limits<double>::max(), 0.0},
-                            {0.0, 1.0}};
+                            {0.0, 1e-16}};
 
     auto [U, S, Vt] = utils::decomposition::svd(A);
 
-    CHECK(S(1) == Catch::Approx(1.0));
+    CHECK(S(1) == Catch::Approx(1e-16));
     check_orthonormal_columns(U, 2, 1e-12);
 }

@@ -9,6 +9,7 @@
 #include <zipper/utils/decomposition/lu.hpp>
 #include <zipper/utils/decomposition/polar.hpp>
 #include <zipper/utils/decomposition/qr.hpp>
+#include <zipper/utils/decomposition/svd.hpp>
 
 #include "catch_include.hpp"
 
@@ -33,6 +34,9 @@ concept HasProperPolar = requires(const MatrixType &matrix) {
     proper_polar(matrix);
 };
 
+template <typename MatrixType>
+concept HasSvd = requires(const MatrixType &matrix) { svd(matrix); };
+
 template <typename MatrixType, typename VectorType>
 concept HasQrSolve = requires(const MatrixType &matrix, const VectorType &rhs) {
     qr_solve(matrix, rhs);
@@ -50,6 +54,14 @@ static_assert(!HasLdlt<Matrix<double, 2, 3>>);
 static_assert(!HasPlu<Matrix<double, 2, 3>>);
 static_assert(!HasPolar<Matrix<double, 2, 3>>);
 static_assert(!HasProperPolar<Matrix<double, 2, 3>>);
+static_assert(!HasSvd<Matrix<int, 2, 2>>);
+static_assert(!HasPolar<Matrix<int, 2, 2>>);
+static_assert(!HasProperPolar<Matrix<int, 2, 2>>);
+static_assert(HasSvd<Matrix<float, 2, 2>>);
+static_assert(HasPolar<Matrix<float, 2, 2>>);
+static_assert(HasProperPolar<Matrix<float, 2, 2>>);
+static_assert(std::same_as<decltype(svd(std::declval<Matrix<float, 2, 2>>())),
+                           SVDResult<float, 2, 2>>);
 static_assert(!HasQrSolve<Matrix<double, 2, 3>, Vector<double, 2>>);
 static_assert(!HasQrSolve<Matrix<double, 3, 2>, Vector<double, 2>>);
 static_assert(!HasRvalueL<PLUResult<double, 2>>);
@@ -58,7 +70,7 @@ static_assert(HasLlt<Matrix<double, 2, dynamic_extent>>);
 static_assert(HasLlt<Matrix<double, dynamic_extent, 2>>);
 static_assert(HasQrSolve<Matrix<double, 3, dynamic_extent>, Vector<double, 3>>);
 
-TEST_CASE("square decompositions reject dynamic nonsquare matrices",
+TEST_CASE("square_decompositions_reject_dynamic_nonsquare_matrices",
           "[decomposition][contracts]") {
     MatrixXX<double> matrix(2, 3);
 
@@ -74,7 +86,7 @@ TEST_CASE("square decompositions reject dynamic nonsquare matrices",
     CHECK(plu_result.error().kind == solver::SolverError::Kind::invalid_input);
 }
 
-TEST_CASE("square decompositions reject partially dynamic nonsquare matrices",
+TEST_CASE("square_decompositions_reject_partially_dynamic_nonsquare_matrices",
           "[decomposition][contracts]") {
     Matrix<double, 2, dynamic_extent> static_rows(3);
     Matrix<double, dynamic_extent, 2> static_cols(3);
@@ -89,7 +101,7 @@ TEST_CASE("square decompositions reject partially dynamic nonsquare matrices",
           solver::SolverError::Kind::invalid_input);
 }
 
-TEST_CASE("decomposition free solves reject dynamic RHS mismatches",
+TEST_CASE("decomposition_free_solves_reject_dynamic_rhs_mismatches",
           "[decomposition][contracts]") {
     MatrixXX<double> matrix{{4.0, 1.0}, {1.0, 3.0}};
     VectorX<double> rhs{1.0, 2.0, 3.0};
@@ -106,7 +118,7 @@ TEST_CASE("decomposition free solves reject dynamic RHS mismatches",
     CHECK(plu_result.error().kind == solver::SolverError::Kind::invalid_input);
 }
 
-TEST_CASE("stored decomposition solves reject dynamic RHS mismatches",
+TEST_CASE("stored_decomposition_solves_reject_dynamic_rhs_mismatches",
           "[decomposition][contracts]") {
     MatrixXX<double> matrix{{4.0, 1.0}, {1.0, 3.0}};
     VectorX<double> rhs{1.0, 2.0, 3.0};
@@ -131,7 +143,7 @@ TEST_CASE("stored decomposition solves reject dynamic RHS mismatches",
           solver::SolverError::Kind::invalid_input);
 }
 
-TEST_CASE("QR factors wide matrices but rejects solving them",
+TEST_CASE("qr_factors_wide_matrices_but_rejects_solving_them",
           "[decomposition][qr][contracts]") {
     MatrixXX<double> matrix{{1.0, 2.0, 3.0}, {4.0, 5.0, 7.0}};
     VectorX<double> rhs{1.0, 2.0};
@@ -159,7 +171,7 @@ TEST_CASE("QR factors wide matrices but rejects solving them",
           solver::SolverError::Kind::invalid_input);
 }
 
-TEST_CASE("QR solves reject dynamic RHS mismatches",
+TEST_CASE("qr_solves_reject_dynamic_rhs_mismatches",
           "[decomposition][qr][contracts]") {
     MatrixXX<double> matrix{{1.0, 0.0}, {0.0, 1.0}, {1.0, 1.0}};
     VectorX<double> rhs{1.0, 2.0};
@@ -180,7 +192,7 @@ TEST_CASE("QR solves reject dynamic RHS mismatches",
           solver::SolverError::Kind::invalid_input);
 }
 
-TEST_CASE("reduced QR solve rejects malformed dynamic factors",
+TEST_CASE("reduced_qr_solve_rejects_malformed_dynamic_factors",
           "[decomposition][qr][contracts]") {
     QRReducedResult<double, dynamic_extent, dynamic_extent> factors{
         .Q = MatrixXX<double>(3, 2),
@@ -193,7 +205,7 @@ TEST_CASE("reduced QR solve rejects malformed dynamic factors",
     CHECK(result.error().kind == solver::SolverError::Kind::invalid_input);
 }
 
-TEST_CASE("polar decompositions reject a dynamic nonsquare matrix",
+TEST_CASE("polar_decompositions_reject_a_dynamic_nonsquare_matrix",
            "[decomposition][polar][contracts]") {
     MatrixXX<double> matrix(2, 3);
     CHECK_THROWS_AS(polar(matrix), std::invalid_argument);

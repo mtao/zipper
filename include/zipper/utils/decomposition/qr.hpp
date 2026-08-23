@@ -57,6 +57,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <concepts>
 #include <expected>
 #include <limits>
 #include <type_traits>
@@ -239,6 +240,7 @@ struct QRFullResult {
 /// The algorithm applies p = min(m, n) Householder reflections to reduce A to
 /// upper triangular form, accumulating the reflections into Q.
 template <concepts::Matrix Derived>
+    requires std::floating_point<typename std::decay_t<Derived>::value_type>
 auto qr(const Derived &A) {
     using AType = std::decay_t<Derived>;
     using T = typename AType::value_type;
@@ -293,6 +295,7 @@ auto qr(const Derived &A) {
 /// (m x m) rather than truncated to the first min(m,n) columns, and R is
 /// m x n rather than min(m,n) x n.
 template <concepts::Matrix Derived>
+    requires std::floating_point<typename std::decay_t<Derived>::value_type>
 auto qr_full(const Derived &A) {
     using AType = std::decay_t<Derived>;
     using T = typename AType::value_type;
@@ -343,6 +346,7 @@ auto qr_full(const Derived &A) {
 /// This variant is simpler than Householder but less numerically stable.
 /// For well-conditioned matrices the results are essentially identical.
 template <concepts::Matrix Derived>
+    requires std::floating_point<typename std::decay_t<Derived>::value_type>
 auto qr_gram_schmidt(const Derived &A) {
     using AType = std::decay_t<Derived>;
     using T = typename AType::value_type;
@@ -526,6 +530,7 @@ struct QRColPivotResult {
 /// @param A  An m x n matrix.
 /// @return   A `QRColPivotResult` with Q (m x p), R (p x n), and col_perm.
 template <concepts::Matrix Derived>
+    requires std::floating_point<typename std::decay_t<Derived>::value_type>
 auto qr_col_pivot(const Derived &A) {
     using AType = std::decay_t<Derived>;
     using T = typename AType::value_type;

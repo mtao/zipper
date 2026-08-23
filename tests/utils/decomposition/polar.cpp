@@ -2,6 +2,8 @@
 #include <cmath>
 
 #include <zipper/Matrix.hpp>
+#include <zipper/Vector.hpp>
+#include <zipper/expression/nullary/StaticConstant.hpp>
 #include <zipper/utils/decomposition/polar.hpp>
 #include <zipper/utils/determinant.hpp>
 
@@ -255,7 +257,7 @@ TEST_CASE("polar_3x3_identity", "[decomposition][polar]") {
     }
 }
 
-TEST_CASE("polar singular reflection", "[decomposition][polar]") {
+TEST_CASE("polar_singular_reflection", "[decomposition][polar]") {
     Matrix<double, 3, 3> F{{-2.0, 0.0, 0.0},
                             {0.0, 1.0, 0.0},
                             {0.0, 0.0, 0.0}};

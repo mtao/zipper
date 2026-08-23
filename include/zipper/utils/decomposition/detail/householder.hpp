@@ -16,11 +16,12 @@
 #if !defined(ZIPPER_UTILS_DECOMPOSITION_DETAIL_HOUSEHOLDER_HPP)
 #define ZIPPER_UTILS_DECOMPOSITION_DETAIL_HOUSEHOLDER_HPP
 
-#include <algorithm>
 #include <cmath>
 #include <optional>
 #include <type_traits>
 #include <utility>
+
+#include <zipper/utils/max_coeff.hpp>
 
 #include <zipper/Vector.hpp>
 #include <zipper/concepts/Matrix.hpp>
@@ -61,13 +62,8 @@ auto householder_vector(const VDerived &x) -> std::optional<
     // Copy x into an owning vector for modification.
     Vector<T, N> v(x);
 
-    T scale = T{0};
-    bool is_zero = true;
-    for (index_type i = 0; i < v.extent(0); ++i) {
-        is_zero = is_zero && v(i) == T{0};
-        scale = std::max(scale, std::abs(v(i)));
-    }
-    if (is_zero) { return std::nullopt; }
+    const T scale = utils::maxCoeff(v.as_array().abs());
+    if (scale == T{0}) { return std::nullopt; }
 
     // Unit scaling keeps x_0 + ||x|| and the normalization representable for
     // every finite nonzero input.
@@ -105,10 +101,7 @@ auto apply_householder_left(MDerived &M,
 
     for (index_type j = c0; j < c1; ++j) {
         auto column = M.col(j).segment(r0, len);
-        T scale = T{0};
-        for (index_type i = 0; i < len; ++i) {
-            scale = std::max(scale, std::abs(column(i)));
-        }
+        const T scale = utils::maxCoeff(column.as_array().abs());
         if (scale != T{0}) {
             Vector<T, dynamic_extent> normalized(column / scale);
             normalized -= (T{2} * v.dot(normalized)) * v;
@@ -140,10 +133,7 @@ auto apply_householder_right(MDerived &M,
 
     for (index_type i = r0; i < r1; ++i) {
         auto row = M.row(i).segment(c0, len);
-        T scale = T{0};
-        for (index_type j = 0; j < len; ++j) {
-            scale = std::max(scale, std::abs(row(j)));
-        }
+        const T scale = utils::maxCoeff(row.as_array().abs());
         if (scale != T{0}) {
             Vector<T, dynamic_extent> normalized(row / scale);
             normalized -= (T{2} * v.dot(normalized)) * v;

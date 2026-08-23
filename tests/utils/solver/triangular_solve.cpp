@@ -275,7 +275,7 @@ TEST_CASE("as_triangular upper solve", "[triangular_solve][as_triangular]") {
     CHECK((*result)(2ul) == Catch::Approx(1.0).epsilon(1e-12));
 }
 
-TEST_CASE("triangular_solve rejects dynamic nonsquare matrix",
+TEST_CASE("triangular_solve_rejects_dynamic_nonsquare_matrix",
           "[triangular_solve][contracts]") {
     MatrixXX<double> matrix(2, 3);
     VectorX<double> rhs{1.0, 2.0};
@@ -287,7 +287,7 @@ TEST_CASE("triangular_solve rejects dynamic nonsquare matrix",
     CHECK(result.error().kind == utils::solver::SolverError::Kind::invalid_input);
 }
 
-TEST_CASE("triangular_solve rejects dynamic RHS mismatch",
+TEST_CASE("triangular_solve_rejects_dynamic_rhs_mismatch",
           "[triangular_solve][contracts]") {
     MatrixXX<double> matrix{{1.0, 0.0}, {2.0, 1.0}};
     VectorX<double> rhs{1.0, 2.0, 3.0};
