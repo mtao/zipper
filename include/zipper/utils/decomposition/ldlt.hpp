@@ -30,8 +30,11 @@
 ///   2. Diagonal solve:        D * z = y      (trivial element-wise division)
 ///   3. Back substitution:     L^T * x = z    (unit upper triangular)
 ///
-/// The decomposition detects zero pivots in D and returns a `SolverError`
-/// when a zero diagonal entry would cause division by zero.
+/// The decomposition accepts consistent zero pivots for positive
+/// semi-definite matrices. Scale-negligible nonpositive pivots are clamped only
+/// when their trailing residual is also negligible; other nonpositive pivots
+/// produce a breakdown error. Solving still requires every diagonal entry of D
+/// to be nonzero.
 ///
 /// Complexity: O(n^3 / 3) for the factorisation, O(n^2) for each solve.
 
@@ -51,6 +54,8 @@
 #include <zipper/expression/nullary/Identity.hpp>
 #include <zipper/expression/nullary/StaticConstant.hpp>
 #include <zipper/expression/unary/TriangularView.hpp>
+#include <zipper/utils/decomposition/detail/shape_validation.hpp>
+#include <zipper/utils/max_coeff.hpp>
 #include <zipper/utils/solver/result.hpp>
 
 namespace zipper::utils::decomposition {
@@ -88,10 +93,24 @@ struct LDLTResult {
     /// @return   `std::expected<Vector<T,N>, SolverError>` — the solution on
     ///           success, or a breakdown error if D contains a zero pivot.
     template <concepts::Vector BDerived>
+        requires detail::StaticallyCompatibleRhs<decltype(L), BDerived>
     auto solve(const BDerived &b) const
         -> std::expected<Vector<T, N>, solver::SolverError> {
         using ResultVec = Vector<T, N>;
         using Result = std::expected<ResultVec, solver::SolverError>;
+
+        if (auto valid = detail::validate_square(L, "LDLT solve"); !valid) {
+            return Result{std::unexpected(std::move(valid.error()))};
+        }
+        if (auto valid = detail::validate_equal_extent(
+                L, 0, D, 0, "LDLT solve");
+            !valid) {
+            return Result{std::unexpected(std::move(valid.error()))};
+        }
+        if (auto valid = detail::validate_rhs(L.extent(0), b, "LDLT solve");
+            !valid) {
+            return Result{std::unexpected(std::move(valid.error()))};
+        }
 
         const index_type n = L.extent(0);
 
@@ -107,7 +126,7 @@ struct LDLTResult {
 
         // 2. Diagonal solve: D * z = y  →  z(i) = y(i) / D(i).
         for (index_type i = 0; i < n; ++i) {
-            if (std::abs(D(i)) <= std::numeric_limits<T>::epsilon()) {
+            if (D(i) == T{0}) {
                 return Result{std::unexpected(solver::SolverError{
                     .kind = solver::SolverError::Kind::breakdown,
                     .message = "LDLT solve: zero diagonal entry D("
@@ -141,9 +160,10 @@ struct LDLTResult {
 ///
 /// @param A  An n x n symmetric matrix.
 /// @return   `std::expected<LDLTResult<T,N>, SolverError>` — the factors L
-///           and D on success, or a breakdown error if a zero pivot is
-///           encountered.
+///           and D on success, or a breakdown error if a negative or
+///           inconsistent zero pivot is encountered.
 template <concepts::Matrix Derived>
+    requires detail::StaticallySquare<Derived>
 auto ldlt(const Derived &A) -> std::expected<
     LDLTResult<typename std::decay_t<Derived>::value_type,
                std::decay_t<Derived>::extents_type::static_extent(0)>,
@@ -153,8 +173,11 @@ auto ldlt(const Derived &A) -> std::expected<
     constexpr index_type N = AType::extents_type::static_extent(0);
     using Result = std::expected<LDLTResult<T, N>, solver::SolverError>;
 
-    const index_type n = A.extent(0);
+    if (auto valid = detail::validate_square(A, "LDLT decomposition"); !valid) {
+        return Result{std::unexpected(std::move(valid.error()))};
+    }
 
+    const index_type n = A.extent(0);
     // Initialise L to identity and D to zero.
     Matrix<T, N, N> L(n, n);
     L = expression::nullary::Identity<T, N, N>(L.extents());
@@ -170,38 +193,49 @@ auto ldlt(const Derived &A) -> std::expected<
             (j > 0)
                 ? Lj_seg.dot(as_vector(Lj_seg.as_array() * D_seg.as_array()))
                 : T{0};
-        D(j) = A(j, j) - sum;
+        const T pivot = A(j, j) - sum;
+        const T cancellation_scale =
+            utils::scalar_math::absolute_value(A(j, j)) +
+            utils::scalar_math::absolute_value(sum);
+        const T pivot_tolerance = utils::scalar_math::epsilon<T>() *
+                                  static_cast<T>(n) * cancellation_scale;
 
-        if (std::abs(D(j)) <= std::numeric_limits<T>::epsilon()) {
-            // Zero pivot — cannot compute sub-diagonal entries for this column.
-            // For positive semi-definite matrices, D(j) == 0 means the
-            // remaining sub-diagonal entries in this column should be zero (the
-            // column is in the null space).  We leave them at zero and
-            // continue.
-            //
-            // However, if any A(i,j) - sum != 0 for i > j, the matrix is
-            // indefinite and the factorisation is invalid.  We skip that check
-            // here for simplicity and treat zero pivots as acceptable (the
-            // solve step will detect the singularity when dividing by D(j)).
-            continue;
-        }
-
-        // Compute sub-diagonal entries L(i,j) for i > j.
-        //   L(i,j) = ( A(i,j) - L(i, 0:j) . (L(j, 0:j) .* D(0:j)) ) / D(j)
+        // Compute the trailing Schur-column residual before classifying a
+        // small pivot. A zero PSD pivot requires the whole residual to vanish.
         const index_type trailing_size = n - j - 1;
+        Vector<T, dynamic_extent> trailing_residual(trailing_size);
         if (trailing_size > 0) {
-            auto L_subdiagonal = L.col(j).segment(j + 1, trailing_size);
             auto A_subdiagonal = A.col(j).segment(j + 1, trailing_size);
             if (j > 0) {
                 auto L_block = L.slice(zipper::slice(j + 1, trailing_size),
                                        zipper::slice(index_type{0}, j));
                 auto weighted_row =
                     as_vector(Lj_seg.as_array() * D_seg.as_array());
-                L_subdiagonal =
-                    (A_subdiagonal - L_block * weighted_row) / D(j);
+                trailing_residual = A_subdiagonal - L_block * weighted_row;
             } else {
-                L_subdiagonal = A_subdiagonal / D(j);
+                trailing_residual = A_subdiagonal;
             }
+        }
+
+        if (pivot <= pivot_tolerance) {
+            const T residual_max =
+                trailing_size > 0
+                    ? utils::maxCoeff(trailing_residual.as_array().abs())
+                    : T{0};
+            if (pivot < -pivot_tolerance || residual_max > pivot_tolerance) {
+                return Result{std::unexpected(solver::SolverError{
+                    .kind = solver::SolverError::Kind::breakdown,
+                    .message = "LDLT decomposition: inconsistent nonpositive "
+                               "pivot at column "
+                               + std::to_string(j)})};
+            }
+            D(j) = T{0};
+            continue;
+        }
+
+        D(j) = pivot;
+        if (trailing_size > 0) {
+            L.col(j).segment(j + 1, trailing_size) = trailing_residual / pivot;
         }
     }
 
@@ -225,12 +259,23 @@ auto ldlt(const Derived &A) -> std::expected<
 ///           success, or a breakdown error if the factorisation fails or D
 ///           contains a zero pivot.
 template <concepts::Matrix ADerived, concepts::Vector BDerived>
-auto ldlt_solve(const ADerived &A, const BDerived &b) {
+    requires detail::StaticallySquare<ADerived> &&
+             detail::StaticallyCompatibleRhs<ADerived, BDerived>
+auto ldlt_solve(const ADerived &A, const BDerived &b)
+    -> std::expected<
+        Vector<typename std::decay_t<ADerived>::value_type,
+               std::decay_t<ADerived>::extents_type::static_extent(0)>,
+        solver::SolverError> {
     using AType = std::decay_t<ADerived>;
     using T = typename AType::value_type;
     constexpr index_type N = AType::extents_type::static_extent(0);
     using ResultVec = Vector<T, N>;
     using Result = std::expected<ResultVec, solver::SolverError>;
+
+    if (auto valid = detail::validate_rhs(A.extent(0), b, "LDLT solve");
+        !valid) {
+        return Result{std::unexpected(std::move(valid.error()))};
+    }
 
     auto ldlt_result = ldlt(A);
     if (!ldlt_result) {

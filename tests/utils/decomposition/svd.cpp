@@ -1,5 +1,6 @@
 
 #include <cmath>
+#include <limits>
 
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
@@ -9,6 +10,83 @@
 
 using namespace zipper;
 
+namespace test {
+
+struct SvdScalar {
+    long double value = 0;
+
+    constexpr SvdScalar() = default;
+    constexpr SvdScalar(int input) : value(input) {}
+    constexpr explicit SvdScalar(long double input) : value(input) {}
+
+    constexpr auto operator+=(SvdScalar rhs) -> SvdScalar & {
+        value += rhs.value;
+        return *this;
+    }
+    constexpr auto operator-=(SvdScalar rhs) -> SvdScalar & {
+        value -= rhs.value;
+        return *this;
+    }
+    constexpr auto operator*=(SvdScalar rhs) -> SvdScalar & {
+        value *= rhs.value;
+        return *this;
+    }
+    constexpr auto operator/=(SvdScalar rhs) -> SvdScalar & {
+        value /= rhs.value;
+        return *this;
+    }
+
+    friend constexpr auto operator+(SvdScalar lhs, SvdScalar rhs)
+        -> SvdScalar {
+        return lhs += rhs;
+    }
+    friend constexpr auto operator-(SvdScalar lhs, SvdScalar rhs)
+        -> SvdScalar {
+        return lhs -= rhs;
+    }
+    friend constexpr auto operator*(SvdScalar lhs, SvdScalar rhs)
+        -> SvdScalar {
+        return lhs *= rhs;
+    }
+    friend constexpr auto operator/(SvdScalar lhs, SvdScalar rhs)
+        -> SvdScalar {
+        return lhs /= rhs;
+    }
+    friend constexpr auto operator-(SvdScalar input) -> SvdScalar {
+        return SvdScalar{-input.value};
+    }
+    friend constexpr auto operator<=>(SvdScalar, SvdScalar) = default;
+};
+
+inline auto abs(SvdScalar input) -> SvdScalar {
+    return SvdScalar{std::abs(input.value)};
+}
+
+inline auto sqrt(SvdScalar input) -> SvdScalar {
+    return SvdScalar{std::sqrt(input.value)};
+}
+
+inline auto hypot(SvdScalar lhs, SvdScalar rhs) -> SvdScalar {
+    return SvdScalar{std::hypot(lhs.value, rhs.value)};
+}
+
+inline auto copysign(SvdScalar magnitude, SvdScalar sign) -> SvdScalar {
+    return SvdScalar{std::copysign(magnitude.value, sign.value)};
+}
+
+} // namespace test
+
+template <>
+struct zipper::utils::scalar_math::traits<test::SvdScalar> {
+    static constexpr auto epsilon() noexcept -> test::SvdScalar {
+        return test::SvdScalar{std::numeric_limits<long double>::epsilon()};
+    }
+};
+
+template <>
+struct zipper::concepts::detail::HasDivision<test::SvdScalar>
+    : std::true_type {};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Helper: verify SVD properties for a given decomposition
 // ─────────────────────────────────────────────────────────────────────────────
@@ -16,14 +94,11 @@ using namespace zipper;
 /// Check that U has orthonormal columns: U^T * U ≈ I.
 template <typename UType>
 void check_orthonormal_columns(const UType &U, index_type p, double tol) {
+    auto gram = (U.transpose() * U).eval();
     for (index_type i = 0; i < p; ++i) {
         for (index_type j = 0; j < p; ++j) {
-            double dot = 0.0;
-            for (index_type k = 0; k < U.extent(0); ++k) {
-                dot += U(k, i) * U(k, j);
-            }
             double expected = (i == j) ? 1.0 : 0.0;
-            CHECK(dot == Catch::Approx(expected).margin(tol));
+            CHECK(gram(i, j) == Catch::Approx(expected).margin(tol));
         }
     }
 }
@@ -136,6 +211,7 @@ TEST_CASE("svd 2x2 zero matrix", "[decomposition][svd]") {
 
     CHECK(S(0) == Catch::Approx(0.0).margin(1e-12));
     CHECK(S(1) == Catch::Approx(0.0).margin(1e-12));
+    check_orthonormal_columns(U, 2, 1e-12);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -223,7 +299,58 @@ TEST_CASE("svd 3x3 rank deficient", "[decomposition][svd]") {
 
     check_singular_values_sorted(S, 3);
     CHECK(S(2) == Catch::Approx(0.0).margin(1e-10));
+    check_orthonormal_columns(U, 3, 1e-10);
     check_reconstruction(U, S, Vt, A, 3, 3, 3, 1e-10);
+}
+
+TEST_CASE("svd_tall_rank_deficient_u_is_orthonormal", "[decomposition][svd]") {
+    Matrix<double, 4, 3> A{{0.0, 1.0, 2.0},
+                            {0.0, 0.0, 0.0},
+                            {0.0, 0.0, 0.0},
+                            {0.0, 0.0, 0.0}};
+
+    auto [U, S, Vt] = utils::decomposition::svd(A);
+
+    CHECK(S(1) == 0.0);
+    CHECK(S(2) == 0.0);
+    check_orthonormal_columns(U, 3, 1e-12);
+    check_reconstruction(U, S, Vt, A, 4, 3, 3, 1e-12);
+}
+
+TEST_CASE("svd_wide_rank_deficient_u_is_orthonormal", "[decomposition][svd]") {
+    Matrix<double, 3, 5> A{{0.0, 1.0, 2.0, 3.0, 4.0},
+                            {0.0, 0.0, 0.0, 0.0, 0.0},
+                            {0.0, 0.0, 0.0, 0.0, 0.0}};
+
+    auto [U, S, Vt] = utils::decomposition::svd(A);
+
+    CHECK(S(1) == 0.0);
+    CHECK(S(2) == 0.0);
+    check_orthonormal_columns(U, 3, 1e-12);
+    check_reconstruction(U, S, Vt, A, 3, 5, 3, 1e-12);
+}
+
+TEST_CASE("svd_tall_zero_matrix_u_is_orthonormal", "[decomposition][svd]") {
+    Matrix<double, 4, 3> A{{0.0, 0.0, 0.0},
+                            {0.0, 0.0, 0.0},
+                            {0.0, 0.0, 0.0},
+                            {0.0, 0.0, 0.0}};
+
+    auto [U, S, Vt] = utils::decomposition::svd(A);
+
+    check_orthonormal_columns(U, 3, 1e-12);
+    check_reconstruction(U, S, Vt, A, 4, 3, 3, 1e-12);
+}
+
+TEST_CASE("svd_wide_zero_matrix_u_is_orthonormal", "[decomposition][svd]") {
+    Matrix<double, 3, 4> A{{0.0, 0.0, 0.0, 0.0},
+                            {0.0, 0.0, 0.0, 0.0},
+                            {0.0, 0.0, 0.0, 0.0}};
+
+    auto [U, S, Vt] = utils::decomposition::svd(A);
+
+    check_orthonormal_columns(U, 3, 1e-12);
+    check_reconstruction(U, S, Vt, A, 3, 4, 3, 1e-12);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -401,4 +528,69 @@ TEST_CASE("svd 2x2 scaled rotation", "[decomposition][svd]") {
     CHECK(S(1) == Catch::Approx(3.0).margin(1e-10));
 
     check_reconstruction(U, S, Vt, A, 2, 2, 2, 1e-10);
+}
+
+TEST_CASE("svd_extreme_finite_scales", "[decomposition][svd]") {
+    for (double scale : {1e300, 1e-300}) {
+        Matrix<double, 2, 2> A{{3.0 * scale, 4.0 * scale},
+                                {0.0, 5.0 * scale}};
+
+        auto [U, S, Vt] = utils::decomposition::svd(A);
+
+        CHECK(std::isfinite(S(0)));
+        CHECK(std::isfinite(S(1)));
+        CHECK(S(0) / scale == Catch::Approx(6.708203932499369).epsilon(1e-12));
+        CHECK(S(1) / scale == Catch::Approx(2.23606797749979).epsilon(1e-12));
+        check_orthonormal_columns(U, 2, 1e-12);
+        check_orthonormal_rows(Vt, 2, 1e-12);
+        check_reconstruction(U, S, Vt, A, 2, 2, 2,
+                             1e-12 * std::abs(scale));
+    }
+}
+
+TEST_CASE("svd_disparate_nonzero_singular_values_keep_u_orthogonal",
+          "[decomposition][svd]") {
+    constexpr double small = 1e-12;
+    constexpr double inv_sqrt_two = 0.7071067811865475244;
+    Matrix<double, 2, 2> A{{inv_sqrt_two, inv_sqrt_two},
+                            {-small * inv_sqrt_two, small * inv_sqrt_two}};
+
+    auto [U, S, Vt] = utils::decomposition::svd(A);
+
+    CHECK(S(0) == Catch::Approx(1.0).epsilon(1e-12));
+    CHECK(S(1) == Catch::Approx(small).epsilon(1e-12));
+    check_orthonormal_columns(U, 2, 1e-12);
+    check_orthonormal_rows(Vt, 2, 1e-12);
+    check_reconstruction(U, S, Vt, A, 2, 2, 2, 1e-15);
+}
+
+TEST_CASE("svd_preserves_representable_singular_values_across_extreme_scales",
+          "[decomposition][svd]") {
+    Matrix<double, 2, 2> A{{std::numeric_limits<double>::max(), 0.0},
+                            {0.0, 1e-16}};
+
+    auto [U, S, Vt] = utils::decomposition::svd(A);
+
+    CHECK(S(1) == Catch::Approx(1e-16));
+    check_orthonormal_columns(U, 2, 1e-12);
+}
+
+TEST_CASE("svd_supports_scalar_without_builtin_conversion",
+          "[decomposition][svd]") {
+    using T = test::SvdScalar;
+    Matrix<T, 2, 2> A{{T{3.0L}, T{1.0L}}, {T{0.0L}, T{2.0L}}};
+
+    const auto [U, S, Vt] = utils::decomposition::svd(A);
+    static_assert(std::same_as<std::remove_cvref_t<decltype(S)>, Vector<T, 2>>);
+
+    for (index_type i = 0; i < 2; ++i) {
+        for (index_type j = 0; j < 2; ++j) {
+            T reconstructed{0};
+            for (index_type k = 0; k < 2; ++k) {
+                reconstructed += U(i, k) * S(k) * Vt(k, j);
+            }
+            CHECK(reconstructed.value ==
+                  Catch::Approx(A(i, j).value).margin(1e-15L));
+        }
+    }
 }

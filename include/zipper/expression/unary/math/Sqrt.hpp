@@ -3,13 +3,15 @@
 
 #include "../CoefficientWiseOperation.hpp"
 #include "../detail/ZeroPreserving.hpp"
-#include <cmath>
+#include <zipper/utils/scalar_math.hpp>
 
 namespace zipper::expression::unary {
 namespace detail {
     template <typename A>
     struct sqrt {
-        static constexpr A operator()(const A &a) { return std::sqrt(a); }
+        static constexpr A operator()(const A &a) {
+            return utils::scalar_math::square_root(a);
+        }
     };
 } // namespace detail
 

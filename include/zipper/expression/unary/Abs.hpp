@@ -3,13 +3,15 @@
 
 #include "CoefficientWiseOperation.hpp"
 #include "detail/ZeroPreserving.hpp"
-#include <cmath>
+#include <zipper/utils/scalar_math.hpp>
 
 namespace zipper::expression::unary {
 namespace detail {
     template <typename A>
     struct abs {
-        static constexpr A operator()(const A &a) { return std::abs(a); }
+        static constexpr A operator()(const A &a) {
+            return utils::scalar_math::absolute_value(a);
+        }
     };
 } // namespace detail
 

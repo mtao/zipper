@@ -55,6 +55,7 @@
 #include <zipper/Vector.hpp>
 #include <zipper/expression/nullary/Iota.hpp>
 #include <zipper/expression/unary/TriangularView.hpp>
+#include <zipper/utils/decomposition/detail/shape_validation.hpp>
 #include <zipper/utils/max_coeff.hpp>
 #include <zipper/utils/solver/result.hpp>
 
@@ -89,17 +90,19 @@ template <typename T, index_type N> struct PLUResult {
     /// Returns a read-only TriangularView of the combined LU matrix with
     /// UnitLower mode: the strict lower triangle contains the L multipliers,
     /// and the diagonal is implicitly 1.
-    auto L() const {
+    auto L() const & {
         return LU.template as_triangular<expression::TriangularMode::UnitLower>();
     }
+    auto L() const && = delete;
 
     /// @brief Upper triangular factor U.
     ///
     /// Returns a read-only TriangularView of the combined LU matrix with
     /// Upper mode: the upper triangle (including the diagonal) contains U.
-    auto U() const {
+    auto U() const & {
         return LU.template as_triangular<expression::TriangularMode::Upper>();
     }
+    auto U() const && = delete;
 
     /// @brief Solve A*x = b using the stored PLU factors.
     ///
@@ -112,10 +115,23 @@ template <typename T, index_type N> struct PLUResult {
     /// @return   `std::expected<Vector<T,N>, SolverError>` — the solution on
     ///           success, or a breakdown error if a zero pivot is encountered.
     template <concepts::Vector BDerived>
+        requires detail::StaticallyCompatibleRhs<decltype(LU), BDerived>
     auto solve(const BDerived &b) const
         -> std::expected<Vector<T, N>, solver::SolverError> {
         using ResultVec = Vector<T, N>;
         using Result = std::expected<ResultVec, solver::SolverError>;
+
+        if (auto valid = detail::validate_square(LU, "PLU solve"); !valid) {
+            return Result{std::unexpected(std::move(valid.error()))};
+        }
+        if (perm.extent(0) != LU.extent(0)) {
+            return Result{std::unexpected(detail::invalid_shape(
+                "PLU solve: permutation size must match rows"))};
+        }
+        if (auto valid = detail::validate_rhs(LU.extent(0), b, "PLU solve");
+            !valid) {
+            return Result{std::unexpected(std::move(valid.error()))};
+        }
 
         // 1. Apply permutation: Pb(i) = b(perm(i)).
         ResultVec Pb(b(perm));
@@ -159,6 +175,7 @@ template <typename T, index_type N> struct PLUResult {
 ///           success, or a breakdown error if the matrix is singular (zero
 ///           pivot encountered).
 template <concepts::Matrix Derived>
+    requires detail::StaticallySquare<Derived>
 auto plu(const Derived &A)
     -> std::expected<
         PLUResult<typename std::decay_t<Derived>::value_type,
@@ -168,6 +185,10 @@ auto plu(const Derived &A)
     using T = typename AType::value_type;
     constexpr index_type N = AType::extents_type::static_extent(0);
     using Result = std::expected<PLUResult<T, N>, solver::SolverError>;
+
+    if (auto valid = detail::validate_square(A, "PLU decomposition"); !valid) {
+        return Result{std::unexpected(std::move(valid.error()))};
+    }
 
     const index_type n = A.rows();
 
@@ -237,12 +258,23 @@ auto plu(const Derived &A)
 /// @return   `std::expected<Vector<T,N>, SolverError>` — the solution on
 ///           success, or a breakdown error if the matrix is singular.
 template <concepts::Matrix ADerived, concepts::Vector BDerived>
-auto plu_solve(const ADerived &A, const BDerived &b) {
+    requires detail::StaticallySquare<ADerived> &&
+             detail::StaticallyCompatibleRhs<ADerived, BDerived>
+auto plu_solve(const ADerived &A, const BDerived &b)
+    -> std::expected<
+        Vector<typename std::decay_t<ADerived>::value_type,
+               std::decay_t<ADerived>::extents_type::static_extent(0)>,
+        solver::SolverError> {
     using AType = std::decay_t<ADerived>;
     using T = typename AType::value_type;
     constexpr index_type N = AType::extents_type::static_extent(0);
     using ResultVec = Vector<T, N>;
     using Result = std::expected<ResultVec, solver::SolverError>;
+
+    if (auto valid = detail::validate_rhs(A.extent(0), b, "PLU solve");
+        !valid) {
+        return Result{std::unexpected(std::move(valid.error()))};
+    }
 
     auto plu_result = plu(A);
     if (!plu_result) {

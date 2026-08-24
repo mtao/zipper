@@ -3,6 +3,8 @@
 #include <zipper/ZipperBase.hpp>
 #include <zipper/concepts/Zipper.hpp>
 
+#include <stdexcept>
+
 #include "detail/tuple_to_array.hpp"
 #include "extents/all_extents_indices.hpp"
 namespace zipper::utils {
@@ -14,7 +16,7 @@ auto _maxCoeff(const D& d) {
     constexpr static index_type rank = D::extents_traits::rank;
     using T = typename D::value_type;
 
-    T max = std::numeric_limits<T>::lowest();
+    T max{};
     // hopefully the compiler will alide this
     using AT = std::array<index_type, rank>;
     AT arr{};
@@ -29,6 +31,9 @@ auto _maxCoeff(const D& d) {
                 arr = detail::tuple_to_array(i);
             }
         }
+    }
+    if (!initialized) {
+        throw std::invalid_argument("maxCoeff requires a non-empty expression");
     }
     if constexpr (ReturnMultiIndex) {
         return std::make_pair(max, arr);

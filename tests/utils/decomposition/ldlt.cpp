@@ -3,6 +3,7 @@
 
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
+#include <zipper/expression/unary/DiagonalEmbed.hpp>
 #include <zipper/utils/decomposition/ldlt.hpp>
 
 #include "catch_include.hpp"
@@ -180,6 +181,97 @@ TEST_CASE("ldlt 1x1", "[decomposition][ldlt]") {
     REQUIRE(result.has_value());
     CHECK(result->L(0, 0) == Catch::Approx(1.0).margin(1e-12));
     CHECK(result->D(0) == Catch::Approx(9.0).margin(1e-12));
+}
+
+TEST_CASE("ldlt_accepts_a_consistent_zero_pivot", "[decomposition][ldlt]") {
+    Matrix<double, 3, 3> A{{1.0, 1.0, 0.0},
+                            {1.0, 1.0, 0.0},
+                            {0.0, 0.0, 2.0}};
+
+    auto result = utils::decomposition::ldlt(A);
+
+    REQUIRE(result.has_value());
+    CHECK(result->D(1) == 0.0);
+    expression::unary::DiagonalEmbed diagonal(result->D.expression());
+    Matrix<double, 3, 3> diagonal_matrix(diagonal);
+    Matrix<double, 3, 3> reconstructed(
+        result->L * diagonal_matrix * result->L.transpose());
+    CHECK(reconstructed == A);
+}
+
+TEST_CASE("ldlt_rejects_an_inconsistent_zero_pivot", "[decomposition][ldlt]") {
+    Matrix<double, 2, 2> A{{0.0, 1.0}, {1.0, 1.0}};
+
+    auto result = utils::decomposition::ldlt(A);
+
+    REQUIRE_FALSE(result.has_value());
+    CHECK(result.error().kind == utils::solver::SolverError::Kind::breakdown);
+}
+
+TEST_CASE("ldlt_rejects_a_direct_negative_pivot",
+           "[decomposition][ldlt]") {
+    Matrix<double, 2, 2> A{{1.0, 0.0}, {0.0, -1e-20}};
+
+    auto result = utils::decomposition::ldlt(A);
+
+    REQUIRE_FALSE(result.has_value());
+    CHECK(result.error().kind == utils::solver::SolverError::Kind::breakdown);
+}
+
+TEST_CASE("ldlt_rejects_a_significant_negative_pivot",
+          "[decomposition][ldlt]") {
+    Matrix<double, 2, 2> A{{1.0, 0.0}, {0.0, -1e-10}};
+
+    auto result = utils::decomposition::ldlt(A);
+
+    REQUIRE_FALSE(result.has_value());
+    CHECK(result.error().kind == utils::solver::SolverError::Kind::breakdown);
+}
+
+TEST_CASE("ldlt_rejects_a_negligible_pivot_with_a_significant_residual",
+          "[decomposition][ldlt]") {
+    Matrix<double, 2, 2> A{{-1e-20, 1e-10}, {1e-10, 1.0}};
+
+    auto result = utils::decomposition::ldlt(A);
+
+    REQUIRE_FALSE(result.has_value());
+    CHECK(result.error().kind == utils::solver::SolverError::Kind::breakdown);
+}
+
+TEST_CASE("ldlt_tolerance_follows_matrix_scale", "[decomposition][ldlt]") {
+    Matrix<double, 2, 2> A{{1.0, 0.0}, {0.0, 1e-20}};
+
+    auto result = utils::decomposition::ldlt(A);
+
+    REQUIRE(result.has_value());
+    CHECK(result->D(0) == Catch::Approx(1.0));
+    CHECK(result->D(1) == Catch::Approx(1e-20));
+}
+
+TEST_CASE("ldlt_accepts_a_rank_deficient_gram_matrix",
+          "[decomposition][ldlt]") {
+    Matrix<double, 3, 2> B{{1.0, 2.0}, {2.0, 4.0}, {3.0, 6.0}};
+    Matrix<double, 3, 3> A(B * B.transpose());
+
+    auto result = utils::decomposition::ldlt(A);
+
+    REQUIRE(result.has_value());
+    expression::unary::DiagonalEmbed diagonal(result->D.expression());
+    Matrix<double, 3, 3> reconstructed(
+        result->L * Matrix<double, 3, 3>(diagonal) * result->L.transpose());
+    CHECK(reconstructed == A);
+}
+
+TEST_CASE("ldlt_solve_tolerance_follows_matrix_scale",
+          "[decomposition][ldlt_solve]") {
+    Matrix<double, 2, 2> A{{1e-20, 0.0}, {0.0, 2e-20}};
+    Vector<double, 2> b{1e-20, 4e-20};
+
+    auto result = utils::decomposition::ldlt_solve(A, b);
+
+    REQUIRE(result.has_value());
+    CHECK((*result)(0) == Catch::Approx(1.0));
+    CHECK((*result)(1) == Catch::Approx(2.0));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

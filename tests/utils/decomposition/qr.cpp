@@ -1,13 +1,31 @@
 
+#include <algorithm>
 #include <cmath>
+#include <limits>
 
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
+#include <zipper/utils/decomposition/detail/householder.hpp>
 #include <zipper/utils/decomposition/qr.hpp>
 
 #include "catch_include.hpp"
 
 using namespace zipper;
+
+TEST_CASE("householder_vector_handles_extreme_finite_scales",
+          "[decomposition][householder]") {
+    for (const double scale : {1e200, 1e-200}) {
+        Vector<double, 2> x{3.0 * scale, 4.0 * scale};
+        auto hh = utils::decomposition::detail::householder_vector(x);
+
+        REQUIRE(hh.has_value());
+        CHECK(hh->v.norm() == Catch::Approx(1.0).margin(1e-15));
+        CHECK(hh->sigma / scale == Catch::Approx(-5.0).margin(1e-14));
+    }
+
+    Vector<double, 2> zero{0.0, 0.0};
+    CHECK_FALSE(utils::decomposition::detail::householder_vector(zero));
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Householder QR (reduced)
@@ -79,6 +97,33 @@ TEST_CASE("qr reduced 4x3 tall", "[decomposition][qr]") {
     for (index_type i = 0; i < 4; ++i) {
         for (index_type j = 0; j < 3; ++j) {
             CHECK(QR(i, j) == Catch::Approx(A(i, j)).margin(1e-10));
+        }
+    }
+}
+
+TEST_CASE("qr_reduced_reconstructs_extreme_finite_scales", "[decomposition][qr]") {
+    const Matrix<double, 3, 3> base{
+        {3.0, -2.0, 1.0},
+        {4.0, 1.0, -3.0},
+        {-1.0, 5.0, 2.0},
+    };
+
+    for (const double scale : {1e200, 1e-200}) {
+        Matrix<double, 3, 3> A = scale * base;
+        auto [Q, R] = utils::decomposition::qr(A);
+        Matrix<double, 3, 3> QtQ = Q.transpose() * Q;
+        Matrix<double, 3, 3> reconstructed = (Q * R) / scale;
+
+        for (index_type i = 0; i < 3; ++i) {
+            for (index_type j = 0; j < 3; ++j) {
+                const double expected = i == j ? 1.0 : 0.0;
+                CHECK(QtQ(i, j) == Catch::Approx(expected).margin(1e-12));
+                CHECK(reconstructed(i, j) ==
+                      Catch::Approx(base(i, j)).margin(1e-12));
+            }
+            for (index_type j = 0; j < i; ++j) {
+                CHECK(R(i, j) / scale == Catch::Approx(0.0).margin(1e-12));
+            }
         }
     }
 }
@@ -654,4 +699,70 @@ TEST_CASE("qr_col_pivot wide matrix 2x4", "[decomposition][qr_col_pivot]") {
             CHECK(QR(i, j) == Catch::Approx(A(i, perm(j))).margin(1e-10));
         }
     }
+}
+
+TEST_CASE("qr_col_pivot_preserves_near_dependent_pivot_order_and_rank",
+          "[decomposition][qr_col_pivot]") {
+    constexpr double delta = 1e-10;
+    Matrix<double, 3, 3> A{
+        {1.0, 1.0, 1.0},
+        {0.0, delta, 0.0},
+        {0.0, 0.0, 2.0 * delta},
+    };
+
+    auto result = utils::decomposition::qr_col_pivot(A);
+
+    CHECK(result.col_perm(0) == 0);
+    CHECK(result.col_perm(1) == 2);
+    CHECK(result.col_perm(2) == 1);
+    CHECK(result.rank(1.5e-10) == 2);
+
+    Matrix<double, 3, 3> QR = result.Q * result.R;
+    for (index_type i = 0; i < 3; ++i) {
+        for (index_type j = 0; j < 3; ++j) {
+            CHECK(QR(i, j) ==
+                  Catch::Approx(A(i, result.col_perm(j))).margin(1e-14));
+        }
+    }
+}
+
+TEST_CASE("qr_col_pivot_handles_representable_norms_with_overflowing_squares",
+          "[decomposition][qr_col_pivot]") {
+    constexpr double scale = 1e200;
+    Matrix<double, 4, 3> A{
+        {scale, 0.0, 0.0},
+        {0.0, 0.5 * scale, 0.0},
+        {0.0, 0.0, 2.0 * scale},
+        {0.25 * scale, 0.0, 0.0},
+    };
+
+    auto result = utils::decomposition::qr_col_pivot(A);
+
+    CHECK(result.col_perm(0) == 2);
+    CHECK(result.col_perm(1) == 0);
+    CHECK(result.col_perm(2) == 1);
+    CHECK(result.rank() == 3);
+
+    Matrix<double, 4, 3> QR = (result.Q * result.R) / scale;
+    Matrix<double, 4, 3> scaled_A = A / scale;
+    for (index_type i = 0; i < 4; ++i) {
+        for (index_type j = 0; j < 3; ++j) {
+            CHECK(QR(i, j) ==
+                  Catch::Approx(scaled_A(i, result.col_perm(j))).margin(1e-14));
+        }
+    }
+}
+
+TEST_CASE("qr_handles_columns_near_the_largest_representable_norm",
+          "[decomposition][qr]") {
+    const double value = std::numeric_limits<double>::max() / 2.0;
+    Matrix<double, 2, 2> A{{value, 0.0}, {-value, value}};
+
+    const auto result = utils::decomposition::qr(A);
+
+    CHECK(std::isfinite(result.R(0, 0)));
+    Matrix<double, 2, 2> reconstructed = (result.Q * result.R) / value;
+    Matrix<double, 2, 2> scaled_A = A / value;
+    CHECK(reconstructed(0, 0) == Catch::Approx(scaled_A(0, 0)).epsilon(1e-12));
+    CHECK(reconstructed(1, 0) == Catch::Approx(scaled_A(1, 0)).epsilon(1e-12));
 }

@@ -56,7 +56,6 @@
 
 #include <algorithm>
 #include <array>
-#include <cmath>
 #include <expected>
 #include <limits>
 #include <type_traits>
@@ -69,7 +68,9 @@
 #include <zipper/expression/nullary/Identity.hpp>
 #include <zipper/expression/nullary/Iota.hpp>
 #include <zipper/expression/unary/TriangularView.hpp>
+#include <zipper/utils/decomposition/detail/shape_validation.hpp>
 #include <zipper/utils/decomposition/detail/householder.hpp>
+#include <zipper/utils/decomposition/detail/scalar_math.hpp>
 #include <zipper/utils/extents/extent_arithmetic.hpp>
 #include <zipper/utils/max_coeff.hpp>
 #include <zipper/utils/orthogonalization/gram_schmidt.hpp>
@@ -111,10 +112,25 @@ struct QRReducedResult {
     /// @return   `std::expected<Vector<T,P>, SolverError>` — the solution on
     ///           success, or a breakdown error if R has a zero pivot.
     template <concepts::Vector BDerived>
+        requires detail::StaticallySquare<decltype(R)> &&
+                 detail::StaticallyCompatibleRhs<decltype(Q), BDerived>
     auto solve(const BDerived &b) const
         -> std::expected<Vector<T, P>, solver::SolverError> {
         using ResultVec = Vector<T, P>;
         using Result = std::expected<ResultVec, solver::SolverError>;
+
+        if (auto valid = detail::validate_square(R, "QR solve"); !valid) {
+            return Result{std::unexpected(std::move(valid.error()))};
+        }
+        if (auto valid = detail::validate_equal_extent(Q, 1, R, 0,
+                                                       "QR solve");
+            !valid) {
+            return Result{std::unexpected(std::move(valid.error()))};
+        }
+        if (auto valid = detail::validate_rhs(Q.extent(0), b, "QR solve");
+            !valid) {
+            return Result{std::unexpected(std::move(valid.error()))};
+        }
 
         // 1. Compute c = Q^T * b (p-dimensional vector).
         ResultVec c(Q.transpose() * b);
@@ -165,10 +181,30 @@ struct QRFullResult {
     /// @return   `std::expected<Vector<T,P>, SolverError>` — the solution on
     ///           success, or a breakdown error if R has a zero pivot.
     template <concepts::Vector BDerived>
+        requires detail::StaticallyNotWide<decltype(R)> &&
+                 detail::StaticallyCompatibleRhs<decltype(Q), BDerived>
     auto solve(const BDerived &b) const
         -> std::expected<Vector<T, P>, solver::SolverError> {
         using ResultVec = Vector<T, P>;
         using Result = std::expected<ResultVec, solver::SolverError>;
+
+        if (auto valid = detail::validate_square(Q, "full QR solve"); !valid) {
+            return Result{std::unexpected(std::move(valid.error()))};
+        }
+        if (auto valid = detail::validate_not_wide(R, "full QR solve");
+            !valid) {
+            return Result{std::unexpected(std::move(valid.error()))};
+        }
+        if (auto valid = detail::validate_equal_extent(Q, 0, R, 0,
+                                                       "full QR solve");
+            !valid) {
+            return Result{std::unexpected(std::move(valid.error()))};
+        }
+        if (auto valid = detail::validate_rhs(Q.extent(0), b,
+                                              "full QR solve");
+            !valid) {
+            return Result{std::unexpected(std::move(valid.error()))};
+        }
 
         const index_type p = std::min(Q.extent(0), R.extent(1));
 
@@ -202,8 +238,16 @@ struct QRFullResult {
 ///
 /// The algorithm applies p = min(m, n) Householder reflections to reduce A to
 /// upper triangular form, accumulating the reflections into Q.
+/// The scalar type must be a field closed under square root; ordinary exact
+/// rational types therefore require a promoted or approximate square-root type.
 template <concepts::Matrix Derived>
-auto qr(const Derived &A) {
+    requires detail::orthogonal_decomposition_scalar<
+        typename std::decay_t<Derived>::value_type>
+auto qr(const Derived &A)
+    -> QRReducedResult<
+        typename std::decay_t<Derived>::value_type,
+        std::decay_t<Derived>::extents_type::static_extent(0),
+        std::decay_t<Derived>::extents_type::static_extent(1)> {
     using AType = std::decay_t<Derived>;
     using T = typename AType::value_type;
     constexpr index_type M = AType::extents_type::static_extent(0);
@@ -257,7 +301,12 @@ auto qr(const Derived &A) {
 /// (m x m) rather than truncated to the first min(m,n) columns, and R is
 /// m x n rather than min(m,n) x n.
 template <concepts::Matrix Derived>
-auto qr_full(const Derived &A) {
+    requires detail::orthogonal_decomposition_scalar<
+        typename std::decay_t<Derived>::value_type>
+auto qr_full(const Derived &A)
+    -> QRFullResult<typename std::decay_t<Derived>::value_type,
+                    std::decay_t<Derived>::extents_type::static_extent(0),
+                    std::decay_t<Derived>::extents_type::static_extent(1)> {
     using AType = std::decay_t<Derived>;
     using T = typename AType::value_type;
     constexpr index_type M = AType::extents_type::static_extent(0);
@@ -307,7 +356,13 @@ auto qr_full(const Derived &A) {
 /// This variant is simpler than Householder but less numerically stable.
 /// For well-conditioned matrices the results are essentially identical.
 template <concepts::Matrix Derived>
-auto qr_gram_schmidt(const Derived &A) {
+    requires detail::orthogonal_decomposition_scalar<
+        typename std::decay_t<Derived>::value_type>
+auto qr_gram_schmidt(const Derived &A)
+    -> QRReducedResult<
+        typename std::decay_t<Derived>::value_type,
+        std::decay_t<Derived>::extents_type::static_extent(0),
+        std::decay_t<Derived>::extents_type::static_extent(1)> {
     using AType = std::decay_t<Derived>;
     using T = typename AType::value_type;
     constexpr index_type M = AType::extents_type::static_extent(0);
@@ -341,7 +396,27 @@ auto qr_gram_schmidt(const Derived &A) {
 /// @return   `std::expected<Vector<T, N>, SolverError>` — the solution on
 ///           success, or a breakdown error if R has a zero pivot.
 template <concepts::Matrix ADerived, concepts::Vector BDerived>
-auto qr_solve(const ADerived &A, const BDerived &b) {
+    requires detail::orthogonal_decomposition_scalar<
+                 typename std::decay_t<ADerived>::value_type> &&
+             detail::StaticallyNotWide<ADerived> &&
+             detail::StaticallyCompatibleRhs<ADerived, BDerived>
+auto qr_solve(const ADerived &A, const BDerived &b)
+    -> std::expected<
+        Vector<typename std::decay_t<ADerived>::value_type,
+               std::decay_t<ADerived>::extents_type::static_extent(1)>,
+        solver::SolverError> {
+    using AType = std::decay_t<ADerived>;
+    using Result = std::expected<
+        Vector<typename AType::value_type,
+               AType::extents_type::static_extent(1)>,
+        solver::SolverError>;
+    if (auto valid = detail::validate_not_wide(A, "QR solve"); !valid) {
+        return Result{std::unexpected(std::move(valid.error()))};
+    }
+    if (auto valid = detail::validate_rhs(A.extent(0), b, "QR solve");
+        !valid) {
+        return Result{std::unexpected(std::move(valid.error()))};
+    }
     auto result = qr(A);
     return result.solve(b);
 }
@@ -366,7 +441,27 @@ auto qr_solve(const ADerived &A, const BDerived &b) {
 /// @return   `std::expected<Vector<T, N>, SolverError>` — the solution on
 ///           success, or a breakdown error if R has a zero pivot.
 template <concepts::Matrix ADerived, concepts::Vector BDerived>
-auto qr_solve_full(const ADerived &A, const BDerived &b) {
+    requires detail::orthogonal_decomposition_scalar<
+                 typename std::decay_t<ADerived>::value_type> &&
+             detail::StaticallyNotWide<ADerived> &&
+             detail::StaticallyCompatibleRhs<ADerived, BDerived>
+auto qr_solve_full(const ADerived &A, const BDerived &b)
+    -> std::expected<
+        Vector<typename std::decay_t<ADerived>::value_type,
+               std::decay_t<ADerived>::extents_type::static_extent(1)>,
+        solver::SolverError> {
+    using AType = std::decay_t<ADerived>;
+    using Result = std::expected<
+        Vector<typename AType::value_type,
+               AType::extents_type::static_extent(1)>,
+        solver::SolverError>;
+    if (auto valid = detail::validate_not_wide(A, "full QR solve"); !valid) {
+        return Result{std::unexpected(std::move(valid.error()))};
+    }
+    if (auto valid = detail::validate_rhs(A.extent(0), b, "full QR solve");
+        !valid) {
+        return Result{std::unexpected(std::move(valid.error()))};
+    }
     auto result = qr_full(A);
     return result.solve(b);
 }
@@ -423,15 +518,15 @@ struct QRColPivotResult {
         // Default tolerance: eps * max(m, n).
         T tol = tol_override;
         if (tol < T{0}) {
-            tol = std::numeric_limits<T>::epsilon()
+            tol = detail::scalar_math::epsilon<T>()
                   * static_cast<T>(std::max(m, n));
         }
 
-        const T threshold = tol * std::abs(R(0, 0));
+        const T threshold = tol * detail::scalar_math::absolute_value(R(0, 0));
 
         index_type r = 0;
         for (index_type i = 0; i < p; ++i) {
-            if (std::abs(R(i, i)) > threshold)
+            if (detail::scalar_math::absolute_value(R(i, i)) > threshold)
                 ++r;
             else
                 break; // Diagonal is non-increasing, so all subsequent are <=
@@ -454,7 +549,13 @@ struct QRColPivotResult {
 /// @param A  An m x n matrix.
 /// @return   A `QRColPivotResult` with Q (m x p), R (p x n), and col_perm.
 template <concepts::Matrix Derived>
-auto qr_col_pivot(const Derived &A) {
+    requires detail::orthogonal_decomposition_scalar<
+        typename std::decay_t<Derived>::value_type>
+auto qr_col_pivot(const Derived &A)
+    -> QRColPivotResult<
+        typename std::decay_t<Derived>::value_type,
+        std::decay_t<Derived>::extents_type::static_extent(0),
+        std::decay_t<Derived>::extents_type::static_extent(1)> {
     using AType = std::decay_t<Derived>;
     using T = typename AType::value_type;
     constexpr index_type M = AType::extents_type::static_extent(0);
@@ -477,21 +578,19 @@ auto qr_col_pivot(const Derived &A) {
         expression::nullary::iota<index_type>(index_type{0},
                                                zipper::extents<N>(n)));
 
-    // Precompute column norms squared (diagonal of the Gram matrix A^T A)
-    // for efficient pivot selection via Businger-Golub norm downdating.
-    Vector<T, N> col_norms_sq(R_work.colwise().template norm_powered<2>());
+    Vector<T, N> col_norms(R_work.colwise().norm());
 
     for (index_type k = 0; k < p; ++k) {
         // ── Column pivoting: find the column (>= k) with largest remaining
         // norm.
         const auto max_norm =
-            utils::maxCoeffWithIndex(col_norms_sq.segment(k, n - k));
+            utils::maxCoeffWithIndex(col_norms.segment(k, n - k));
         const index_type max_col = k + max_norm.second[0];
 
-        // Swap columns k and max_col in R_work, col_perm, and col_norms_sq.
+        // Swap columns k and max_col in R_work, col_perm, and col_norms.
         if (max_col != k) {
             std::swap(col_perm(k), col_perm(max_col));
-            std::swap(col_norms_sq(k), col_norms_sq(max_col));
+            std::swap(col_norms(k), col_norms(max_col));
             auto cols = R_work.col_slice(
                 std::array<index_type, 2>{k, max_col});
             cols = cols.col_slice(std::array<index_type, 2>{1, 0}).eval();
@@ -501,32 +600,20 @@ auto qr_col_pivot(const Derived &A) {
         const index_type len = m - k;
         auto hh = detail::householder_vector(
             R_work.col(k).segment(k, len));
-        if (!hh) { continue; }
+        if (hh) {
+            // Apply H to R_work from the left.
+            detail::apply_householder_left(R_work, hh->v, k, k, n);
 
-        // Apply H to R_work from the left.
-        detail::apply_householder_left(R_work, hh->v, k, k, n);
+            // Apply H to Q_full from the right.
+            detail::apply_householder_right(Q_full, hh->v, 0, m, k);
+        }
 
-        // Apply H to Q_full from the right.
-        detail::apply_householder_right(Q_full, hh->v, 0, m, k);
-
-        // ── Update column norms for remaining columns (downdate).
-        // After the reflection, R_work(k, j) for j > k has changed.
-        // The remaining norm squared of column j (rows k+1..m-1) is
-        // col_norms_sq(j) - R_work(k, j)^2.  This avoids recomputing from
-        // scratch and is the standard technique (Businger-Golub).
-        if (k + 1 < n) {
-            auto trailing_norms = col_norms_sq.segment(k + 1, n - k - 1);
-            auto transformed_row =
-                R_work.row(k).segment(k + 1, n - k - 1);
-            auto updated_norms = trailing_norms.as_array() -
-                                 transformed_row.as_array() *
-                                     transformed_row.as_array();
-            auto zeros = updated_norms * T{0};
-            auto trailing_norms_array = trailing_norms.as_array();
-            trailing_norms_array =
-                (updated_norms <=> T{0})
-                    .select(zeros, updated_norms, updated_norms)
-                    .eval();
+        // Recompute exact trailing norms instead of downdating squared norms.
+        if (k + 1 < p) {
+            auto trailing = R_work.slice(zipper::slice(k + 1, m - k - 1),
+                                         zipper::slice(k + 1, n - k - 1));
+            col_norms.segment(k + 1, n - k - 1) =
+                trailing.colwise().norm();
         }
     }
 

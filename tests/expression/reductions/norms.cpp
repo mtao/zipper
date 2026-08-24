@@ -1,6 +1,7 @@
 // Tests for LpNorm and LpNormPowered reductions
 
 #include <cmath>
+#include <limits>
 #include <zipper/Array.hpp>
 #include <zipper/Vector.hpp>
 #include <zipper/ArrayBase.hxx>
@@ -24,6 +25,41 @@ TEST_CASE("vector_l2_norm_unit", "[reduction][norm]") {
 TEST_CASE("vector_l2_norm_general", "[reduction][norm]") {
     zipper::Vector<double, 3> x{1.0, 2.0, 3.0};
     CHECK(x.norm() == Catch::Approx(std::sqrt(14.0)));
+}
+
+TEST_CASE("vector_l2_norm_integral", "[reduction][norm]") {
+    zipper::Vector<int, 2> values{3, 4};
+    CHECK(values.norm() == 5);
+}
+
+TEST_CASE("vector_l3_norm_uses_absolute_values", "[reduction][norm]") {
+    zipper::Vector<double, 2> values{-1.0, 2.0};
+    CHECK(values.norm<3>() == Catch::Approx(std::cbrt(9.0)));
+}
+
+TEST_CASE("vector_l2_norm_extreme_magnitudes", "[reduction][norm]") {
+    const double max = std::numeric_limits<double>::max();
+    const double min = std::numeric_limits<double>::min();
+
+    zipper::Vector<double, 2> huge{max / 2.0, max / 2.0};
+    CHECK(huge.norm() ==
+          Catch::Approx(max / std::sqrt(2.0)).epsilon(1e-14));
+
+    zipper::Vector<double, 2> tiny{min / 2.0, min / 2.0};
+    CHECK(tiny.norm() ==
+          Catch::Approx(min / std::sqrt(2.0)).epsilon(1e-14));
+
+    zipper::Vector<double, 3> mixed{max / 4.0, min, 0.0};
+    CHECK(mixed.norm() == Catch::Approx(max / 4.0));
+}
+
+TEST_CASE("vector_l2_norm_non_finite", "[reduction][norm]") {
+    const double inf = std::numeric_limits<double>::infinity();
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+
+    CHECK(zipper::Vector<double, 3>{0.0, 0.0, 0.0}.norm() == 0.0);
+    CHECK(zipper::Vector<double, 3>{1.0, inf, 2.0}.norm() == inf);
+    CHECK(std::isnan(zipper::Vector<double, 3>{inf, nan, 1.0}.norm()));
 }
 
 // ============================================================

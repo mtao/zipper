@@ -2,6 +2,8 @@
 #include <cmath>
 
 #include <zipper/Matrix.hpp>
+#include <zipper/Vector.hpp>
+#include <zipper/expression/nullary/StaticConstant.hpp>
 #include <zipper/utils/decomposition/polar.hpp>
 #include <zipper/utils/determinant.hpp>
 
@@ -14,9 +16,9 @@ using namespace zipper::utils::decomposition;
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Verify R is a proper rotation: R^T R = I, det R = +1.
+/// Verify R is orthogonal: R^T R = I.
 template <typename MatType>
-void check_proper_rotation(const MatType &R, index_type n, double tol) {
+void check_orthogonal(const MatType &R, index_type n, double tol) {
     // R^T * R = I
     for (index_type i = 0; i < n; ++i) {
         for (index_type j = 0; j < n; ++j) {
@@ -26,7 +28,11 @@ void check_proper_rotation(const MatType &R, index_type n, double tol) {
             CHECK(dot == Catch::Approx(expected).margin(tol));
         }
     }
-    // det R = +1
+}
+
+template <typename MatType>
+void check_proper_rotation(const MatType &R, index_type n, double tol) {
+    check_orthogonal(R, n, tol);
     double det = utils::determinant(R);
     CHECK(det == Catch::Approx(1.0).margin(tol));
 }
@@ -37,6 +43,25 @@ void check_symmetric(const MatType &S, index_type n, double tol) {
     for (index_type i = 0; i < n; ++i) {
         for (index_type j = i + 1; j < n; ++j) {
             CHECK(S(i, j) == Catch::Approx(S(j, i)).margin(tol));
+        }
+    }
+}
+
+template <typename MatType>
+void check_positive_semidefinite(const MatType &S, double tol) {
+    const index_type n = S.extent(0);
+    for (index_type i = 0; i < n; ++i) {
+        VectorX<double> direction(n);
+        direction = expression::nullary::Zero<double, dynamic_extent>(n);
+        direction(i) = 1.0;
+        CHECK(direction.dot(S * direction) >= -tol);
+
+        for (index_type j = i + 1; j < n; ++j) {
+            direction(j) = 1.0;
+            CHECK(direction.dot(S * direction) >= -tol);
+            direction(j) = -1.0;
+            CHECK(direction.dot(S * direction) >= -tol);
+            direction(j) = 0.0;
         }
     }
 }
@@ -73,6 +98,7 @@ TEST_CASE("polar_2x2_identity", "[decomposition][polar]") {
 
     check_proper_rotation(R, 2, 1e-10);
     check_symmetric(S, 2, 1e-10);
+    check_positive_semidefinite(S, 1e-10);
     check_reconstruction(R, S, F, 2, 1e-10);
 
     // R = I, S = I
@@ -182,8 +208,7 @@ TEST_CASE("polar_2x2_general", "[decomposition][polar]") {
     check_reconstruction(R, S, F, 2, 1e-10);
 }
 
-TEST_CASE("polar_2x2_reflection_correction", "[decomposition][polar]") {
-    // F with negative determinant — should still produce proper rotation.
+TEST_CASE("polar_2x2_reflection", "[decomposition][polar]") {
     Matrix<double, 2, 2> F;
     F(0, 0) = -1.0;
     F(0, 1) = 0.0;
@@ -191,17 +216,19 @@ TEST_CASE("polar_2x2_reflection_correction", "[decomposition][polar]") {
     F(1, 1) = 1.0;
 
     auto [R, S] = polar(F);
+    auto [proper_R, signed_S] = proper_polar(F);
 
-    check_proper_rotation(R, 2, 1e-10);
+    check_orthogonal(R, 2, 1e-10);
     check_symmetric(S, 2, 1e-10);
     check_reconstruction(R, S, F, 2, 1e-10);
+    check_proper_rotation(proper_R, 2, 1e-10);
+    check_symmetric(signed_S, 2, 1e-10);
+    check_reconstruction(proper_R, signed_S, F, 2, 1e-10);
 
-    double det_F = utils::determinant(F);
-    CHECK(det_F < 0.0); // F is a reflection
-
-    // R is still proper rotation (det = +1)
-    double det_R = utils::determinant(R);
-    CHECK(det_R == Catch::Approx(1.0).margin(1e-10));
+    CHECK(utils::determinant(R) == Catch::Approx(-1.0).margin(1e-10));
+    CHECK(S(0, 0) == Catch::Approx(1.0).margin(1e-10));
+    CHECK(S(1, 1) == Catch::Approx(1.0).margin(1e-10));
+    CHECK(utils::determinant(signed_S) < 0.0);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -218,6 +245,7 @@ TEST_CASE("polar_3x3_identity", "[decomposition][polar]") {
 
     check_proper_rotation(R, 3, 1e-10);
     check_symmetric(S, 3, 1e-10);
+    check_positive_semidefinite(S, 1e-10);
     check_reconstruction(R, S, F, 3, 1e-10);
 
     for (index_type i = 0; i < 3; ++i) {
@@ -227,6 +255,22 @@ TEST_CASE("polar_3x3_identity", "[decomposition][polar]") {
             CHECK(S(i, j) == Catch::Approx(expected).margin(1e-10));
         }
     }
+}
+
+TEST_CASE("polar_singular_reflection", "[decomposition][polar]") {
+    Matrix<double, 3, 3> F{{-2.0, 0.0, 0.0},
+                            {0.0, 1.0, 0.0},
+                            {0.0, 0.0, 0.0}};
+
+    auto [R, S] = polar(F);
+    auto [proper_R, signed_S] = proper_polar(F);
+
+    check_orthogonal(R, 3, 1e-10);
+    check_positive_semidefinite(S, 1e-10);
+    check_reconstruction(R, S, F, 3, 1e-10);
+    check_proper_rotation(proper_R, 3, 1e-10);
+    check_symmetric(signed_S, 3, 1e-10);
+    check_reconstruction(proper_R, signed_S, F, 3, 1e-10);
 }
 
 TEST_CASE("polar_3x3_rotation_x", "[decomposition][polar]") {
@@ -308,10 +352,18 @@ TEST_CASE("polar_3x3_general", "[decomposition][polar]") {
     F(2, 2) = 3.0;
 
     auto [R, S] = polar(F);
+    auto [proper_R, proper_S] = proper_polar(F);
 
     check_proper_rotation(R, 3, 1e-10);
     check_symmetric(S, 3, 1e-10);
     check_reconstruction(R, S, F, 3, 1e-10);
+    check_reconstruction(proper_R, proper_S, F, 3, 1e-10);
+    for (index_type i = 0; i < 3; ++i) {
+        for (index_type j = 0; j < 3; ++j) {
+            CHECK(proper_R(i, j) == Catch::Approx(R(i, j)).margin(1e-10));
+            CHECK(proper_S(i, j) == Catch::Approx(S(i, j)).margin(1e-10));
+        }
+    }
 }
 
 TEST_CASE("polar_3x3_anisotropic_stretch", "[decomposition][polar]") {
@@ -343,7 +395,7 @@ TEST_CASE("polar_3x3_anisotropic_stretch", "[decomposition][polar]") {
     CHECK(S(2, 2) == Catch::Approx(5.0).margin(1e-10));
 }
 
-TEST_CASE("polar_3x3_reflection_correction", "[decomposition][polar]") {
+TEST_CASE("polar_3x3_reflection", "[decomposition][polar]") {
     // F with det < 0 (reflection in x)
     Matrix<double, 3, 3> F;
     for (index_type i = 0; i < 3; ++i) {
@@ -352,18 +404,20 @@ TEST_CASE("polar_3x3_reflection_correction", "[decomposition][polar]") {
     F(0, 0) = -1.0;
 
     auto [R, S] = polar(F);
+    auto [proper_R, signed_S] = proper_polar(F);
 
-    check_proper_rotation(R, 3, 1e-10);
+    check_orthogonal(R, 3, 1e-10);
     check_symmetric(S, 3, 1e-10);
     check_reconstruction(R, S, F, 3, 1e-10);
+    check_proper_rotation(proper_R, 3, 1e-10);
+    check_symmetric(signed_S, 3, 1e-10);
+    check_reconstruction(proper_R, signed_S, F, 3, 1e-10);
 
-    // det(F) < 0
-    double det_F = utils::determinant(F);
-    CHECK(det_F < 0.0);
-
-    // R is still proper
-    double det_R = utils::determinant(R);
-    CHECK(det_R == Catch::Approx(1.0).margin(1e-10));
+    CHECK(utils::determinant(R) == Catch::Approx(-1.0).margin(1e-10));
+    for (index_type i = 0; i < 3; ++i) {
+        CHECK(S(i, i) == Catch::Approx(1.0).margin(1e-10));
+    }
+    CHECK(utils::determinant(signed_S) < 0.0);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -383,8 +437,16 @@ TEST_CASE("polar_dynamic_3x3", "[decomposition][polar]") {
     F(2, 2) = 1.8;
 
     auto [R, S] = polar(F);
+    auto [proper_R, proper_S] = proper_polar(F);
 
     check_proper_rotation(R, 3, 1e-9);
     check_symmetric(S, 3, 1e-9);
     check_reconstruction(R, S, F, 3, 1e-9);
+    check_reconstruction(proper_R, proper_S, F, 3, 1e-9);
+    for (index_type i = 0; i < 3; ++i) {
+        for (index_type j = 0; j < 3; ++j) {
+            CHECK(proper_R(i, j) == Catch::Approx(R(i, j)).margin(1e-9));
+            CHECK(proper_S(i, j) == Catch::Approx(S(i, j)).margin(1e-9));
+        }
+    }
 }

@@ -27,8 +27,6 @@
 #define ZIPPER_UTILS_DECOMPOSITION_SVD_HPP
 
 #include <algorithm>
-#include <array>
-#include <cmath>
 #include <limits>
 #include <numeric>
 #include <type_traits>
@@ -38,9 +36,9 @@
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
 #include <zipper/expression/nullary/Identity.hpp>
-#include <zipper/expression/nullary/Unit.hpp>
+#include <zipper/expression/nullary/StaticConstant.hpp>
+#include <zipper/utils/decomposition/detail/scalar_math.hpp>
 #include <zipper/utils/extents/extent_arithmetic.hpp>
-#include <zipper/utils/orthogonalization/gram_schmidt.hpp>
 
 namespace zipper::utils::decomposition {
 
@@ -83,8 +81,15 @@ struct SVDResult {
 ///
 /// SVD always succeeds, so the result is returned directly (not wrapped in
 /// `std::expected`).
+/// The scalar type must be a field closed under square root; ordinary exact
+/// rational types therefore require a promoted or approximate square-root type.
 template <concepts::Matrix Derived>
-auto svd(const Derived &A) {
+    requires detail::orthogonal_decomposition_scalar<
+        typename std::decay_t<Derived>::value_type>
+auto svd(const Derived &A)
+    -> SVDResult<typename std::decay_t<Derived>::value_type,
+                 std::decay_t<Derived>::extents_type::static_extent(0),
+                 std::decay_t<Derived>::extents_type::static_extent(1)> {
     using AType = std::decay_t<Derived>;
     using T = typename AType::value_type;
     constexpr index_type M = AType::extents_type::static_extent(0);
@@ -132,79 +137,85 @@ auto svd(const Derived &A) {
     DynMat V(expression::nullary::
                  Identity<T, std::dynamic_extent, std::dynamic_extent>(n, n));
 
-    const T eps = std::numeric_limits<T>::epsilon();
+    const T eps = detail::scalar_math::epsilon<T>();
     const index_type max_sweeps = 100;
 
-    for (index_type sweep = 0; sweep < max_sweeps; ++sweep) {
-        // Check convergence: is W^T W close to diagonal?
-        // We check that all off-diagonal entries of W^T W are small
-        // relative to the diagonal.
-
-        // diag_norm_sq = sum of ||col_j||^4 = sum of (||col_j||^2)^2
-        auto col_norms_sq = W.colwise().template norm_powered<2>();
-        T diag_norm_sq = col_norms_sq.as_array().pow(T{2}).sum();
-
-        T off_diag_norm_sq = T{0};
-        for (index_type j1 = 0; j1 < n; ++j1) {
-            for (index_type j2 = j1 + 1; j2 < n; ++j2) {
-                T dot = W.col(j1).dot(W.col(j2));
-                off_diag_norm_sq += T{2} * dot * dot;
-            }
+    const auto column_norm = [m](const DynMat &matrix, index_type column) {
+        T norm{0};
+        for (index_type row = 0; row < m; ++row) {
+            norm = detail::scalar_math::hypotenuse(norm, matrix(row, column));
         }
+        return norm;
+    };
 
-        if (off_diag_norm_sq <= eps * eps * diag_norm_sq) { break; }
+    const auto apply_rotation = [](DynMat &matrix,
+                                   index_type j1,
+                                   index_type j2,
+                                   const T &c,
+                                   const T &s) {
+        for (index_type row = 0; row < matrix.extent(0); ++row) {
+            const T first = matrix(row, j1);
+            const T second = matrix(row, j2);
+            const T scale = std::max(
+                detail::scalar_math::absolute_value(first),
+                detail::scalar_math::absolute_value(second));
+            if (scale == T{0}) { continue; }
+
+            const T scaled_first = first / scale;
+            const T scaled_second = second / scale;
+            matrix(row, j1) =
+                (scaled_first * c + scaled_second * s) * scale;
+            matrix(row, j2) =
+                (-scaled_first * s + scaled_second * c) * scale;
+        }
+    };
+
+    for (index_type sweep = 0; sweep < max_sweeps; ++sweep) {
+        bool converged = true;
 
         // Sweep: apply Jacobi rotations to all pairs (j1, j2) with j1 < j2.
         for (index_type j1 = 0; j1 < n; ++j1) {
             for (index_type j2 = j1 + 1; j2 < n; ++j2) {
-                // Compute the 2x2 Gram matrix for columns j1 and j2:
-                //   G = [ a  d ]   where a = W(:,j1)^T W(:,j1)
-                //       [ d  b ]         b = W(:,j2)^T W(:,j2)
-                //                        d = W(:,j1)^T W(:,j2)
-                T a = W.col(j1).dot(W.col(j1));
-                T b = W.col(j2).dot(W.col(j2));
-                T d = W.col(j1).dot(W.col(j2));
+                const T norm1 = column_norm(W, j1);
+                const T norm2 = column_norm(W, j2);
+                if (norm1 == T{0} || norm2 == T{0}) { continue; }
 
-                // If d is negligible, columns are already orthogonal.
-                if (std::abs(d) <= eps * std::sqrt(a * b)) { continue; }
+                T correlation{0};
+                for (index_type row = 0; row < m; ++row) {
+                    correlation = correlation +
+                                  (W(row, j1) / norm1) *
+                                      (W(row, j2) / norm2);
+                }
+                if (detail::scalar_math::absolute_value(correlation) <= eps) {
+                    continue;
+                }
+                converged = false;
 
-                // Jacobi rotation angle to zero out d:
-                //   tan(2*theta) = 2*d / (a - b)
-                T c, s;
-                if (std::abs(a - b) < eps * (a + b)) {
-                    // a ≈ b → theta = pi/4
-                    c = std::sqrt(T{0.5});
-                    s = (d >= T{0}) ? c : -c;
+                // Form a uniformly scaled 2x2 Gram matrix. This preserves the
+                // angle while avoiding a*b and the overflow-prone tau*tau
+                // formulation of the Jacobi tangent.
+                const T pair_scale = std::max(norm1, norm2);
+                const T x = norm1 / pair_scale;
+                const T y = norm2 / pair_scale;
+                const T delta = x * x - y * y;
+                const T twice_dot = T{2} * correlation * x * y;
+                const T radius =
+                    detail::scalar_math::hypotenuse(delta, twice_dot);
+                T t{0};
+                if (delta == T{0}) {
+                    t = detail::scalar_math::copy_sign(T{1}, twice_dot);
                 } else {
-                    T tau = (a - b) / (T{2} * d);
-                    T t;
-                    if (tau >= T{0}) {
-                        t = T{1} / (tau + std::sqrt(T{1} + tau * tau));
-                    } else {
-                        t = T{-1} / (-tau + std::sqrt(T{1} + tau * tau));
-                    }
-                    c = T{1} / std::sqrt(T{1} + t * t);
-                    s = t * c;
+                    t = twice_dot /
+                        (delta + detail::scalar_math::copy_sign(radius, delta));
                 }
+                const T c = T{1} / detail::scalar_math::hypotenuse(T{1}, t);
+                const T s = t * c;
 
-                // Build the 2x2 Givens rotation matrix:
-                //   G = [ c  -s ]
-                //       [ s   c ]
-                Matrix<T, 2, 2> G{{{c, -s}, {s, c}}};
-
-                // Apply right rotation to W: W(:,[j1,j2]) *= G
-                {
-                    auto W_sub = W.col_slice(std::array<index_type, 2>{j1, j2});
-                    W_sub = (W_sub * G).eval();
-                }
-
-                // Accumulate into V: V(:,[j1,j2]) *= G
-                {
-                    auto V_sub = V.col_slice(std::array<index_type, 2>{j1, j2});
-                    V_sub = (V_sub * G).eval();
-                }
+                apply_rotation(W, j1, j2, c, s);
+                apply_rotation(V, j1, j2, c, s);
             }
         }
+        if (converged) { break; }
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -220,7 +231,10 @@ auto svd(const Derived &A) {
     // there are n columns but only p = min(m,n) non-trivial singular values).
 
     // First compute all n column norms.
-    auto all_sigmas = W.colwise().norm().eval();
+    Vector<T, N> all_sigmas(n);
+    for (index_type column = 0; column < n; ++column) {
+        all_sigmas(column) = column_norm(W, column);
+    }
 
     // Build a permutation array sorted by descending singular value.
     std::vector<index_type> perm(n);
@@ -233,24 +247,62 @@ auto svd(const Derived &A) {
     // Gather the top p columns in singular-value order.
     auto sorted_W = W.col_slice(perm);
     Matrix<T, M, P> U_result(m, p);
-    Vector<T, P> S_result(all_sigmas(perm));
-    Matrix<T, P, N> Vt_result(V.col_slice(perm).transpose());
-
     for (index_type k = 0; k < p; ++k) {
-        if (S_result(k) > std::numeric_limits<T>::min()) {
-            U_result.col(k) = sorted_W.col(k) / S_result(k);
+        if (all_sigmas(perm[k]) > T{0}) {
+            for (index_type row = 0; row < m; ++row) {
+                U_result(row, k) =
+                    sorted_W(row, k) / all_sigmas(perm[k]);
+            }
         } else {
-            // Zero singular value — seed with e_k so that Gram-Schmidt
-            // below can orthonormalise it against the other columns.
-            U_result.col(k) =
-                expression::nullary::unit_vector<T>(m, k < m ? k : 0);
+            all_sigmas(perm[k]) = T{0};
+
+            Vector<T, M> best(m);
+            T best_norm{0};
+            bool has_best = false;
+            for (index_type direction = 0; direction < m; ++direction) {
+                Vector<T, M> residual(m);
+                residual =
+                    expression::nullary::Zero<T, M>(residual.extents());
+                residual(direction) = T{1};
+
+                // Reorthogonalization keeps the completion stable when the
+                // preceding singular vectors are only numerically orthogonal.
+                for (index_type pass = 0; pass < 2; ++pass) {
+                    for (index_type previous = 0; previous < k; ++previous) {
+                        auto u = U_result.col(previous);
+                        T projection{0};
+                        for (index_type row = 0; row < m; ++row) {
+                            projection =
+                                projection + residual(row) * u(row);
+                        }
+                        for (index_type row = 0; row < m; ++row) {
+                            residual(row) =
+                                residual(row) - projection * u(row);
+                        }
+                    }
+                }
+
+                T residual_norm{0};
+                for (index_type row = 0; row < m; ++row) {
+                    residual_norm = detail::scalar_math::hypotenuse(
+                        residual_norm, residual(row));
+                }
+                if (!has_best || residual_norm > best_norm) {
+                    best = residual;
+                    best_norm = residual_norm;
+                    has_best = true;
+                }
+            }
+            for (index_type row = 0; row < m; ++row) {
+                U_result(row, k) = best(row) / best_norm;
+            }
         }
     }
-
-    // Orthonormalise U columns.  The non-zero-SV columns are already
-    // orthonormal; Gram-Schmidt will leave them unchanged and make the
-    // zero-SV seed columns orthogonal to everything else.
-    orthogonalization::gram_schmidt_in_place(U_result);
+    Vector<T, P> S_result(p);
+    for (index_type k = 0; k < p; ++k) {
+        S_result(k) = all_sigmas(perm[k]);
+    }
+    Matrix<T, P, N> Vt_result(V.col_slice(perm).transpose());
 
     return SVDResult<T, M, N>{.U = std::move(U_result),
                               .S = std::move(S_result),

@@ -17,10 +17,12 @@
 #define ZIPPER_UTILS_DECOMPOSITION_DETAIL_HOUSEHOLDER_HPP
 
 #include <cmath>
-#include <limits>
 #include <optional>
 #include <type_traits>
 #include <utility>
+
+#include <zipper/utils/decomposition/detail/scalar_math.hpp>
+#include <zipper/utils/max_coeff.hpp>
 
 #include <zipper/Vector.hpp>
 #include <zipper/concepts/Matrix.hpp>
@@ -32,8 +34,8 @@ namespace zipper::utils::decomposition::detail {
 /// Result of computing a Householder vector from an input vector x.
 ///
 /// The Householder reflection P = I - 2 v v^T satisfies P x = sigma * e_0.
-/// `v` is unit-length. If the input was too small (near-zero), the result
-/// is std::nullopt.
+/// `v` is unit-length. If the input is exactly zero, the result is
+/// std::nullopt.
 template <typename T, index_type N>
 struct HouseholderVector {
     /// Unit Householder vector.
@@ -48,8 +50,8 @@ struct HouseholderVector {
 /// choosing the sign of sigma to avoid cancellation.
 ///
 /// @param x  Input vector of length m.
-/// @return   HouseholderVector on success, or std::nullopt if ||x|| is
-///           negligible.
+/// @return   HouseholderVector on success, or std::nullopt if x is exactly
+///           zero.
 template <concepts::Vector VDerived>
 auto householder_vector(const VDerived &x) -> std::optional<
     HouseholderVector<typename std::decay_t<VDerived>::value_type,
@@ -61,17 +63,19 @@ auto householder_vector(const VDerived &x) -> std::optional<
     // Copy x into an owning vector for modification.
     Vector<T, N> v(x);
 
-    T sigma = v.norm();
-    if (sigma < std::numeric_limits<T>::epsilon()) { return std::nullopt; }
+    const T scale = utils::maxCoeff(v.as_array().abs());
+    if (scale == T{0}) { return std::nullopt; }
 
-    // Choose sign to avoid cancellation: v(0) -= sign(v(0)) * ||x||.
-    if (v(0) >= T{0}) { sigma = -sigma; }
+    // Unit scaling keeps x_0 + ||x|| and the normalization representable for
+    // every finite nonzero input.
+    for (index_type i = 0; i < v.extent(0); ++i) { v(i) /= scale; }
+    const T scaled_norm = v.norm();
+    const T scaled_sigma = -scalar_math::copy_sign(scaled_norm, v(0));
+    v(0) -= scaled_sigma;
+    const T v_norm = v.norm();
+    for (index_type i = 0; i < v.extent(0); ++i) { v(i) /= v_norm; }
 
-    v(0) -= sigma;
-
-    T v_norm = v.norm();
-    if (v_norm < std::numeric_limits<T>::min()) { return std::nullopt; }
-    v /= v_norm;
+    const T sigma = scale * scaled_sigma;
 
     return HouseholderVector<T, N>{.v = std::move(v), .sigma = sigma};
 }
@@ -99,7 +103,19 @@ auto apply_householder_left(MDerived &M,
 
     for (index_type j = c0; j < c1; ++j) {
         auto column = M.col(j).segment(r0, len);
-        column -= (T{2} * v.dot(column)) * v;
+        const T scale = utils::maxCoeff(column.as_array().abs());
+        if (scale != T{0}) {
+            Vector<T, dynamic_extent> normalized(len);
+            T projection{0};
+            for (index_type i = 0; i < len; ++i) {
+                normalized(i) = column(i) / scale;
+                projection += v(i) * normalized(i);
+            }
+            for (index_type i = 0; i < len; ++i) {
+                column(i) =
+                    (normalized(i) - T{2} * projection * v(i)) * scale;
+            }
+        }
     }
 }
 
@@ -126,7 +142,18 @@ auto apply_householder_right(MDerived &M,
 
     for (index_type i = r0; i < r1; ++i) {
         auto row = M.row(i).segment(c0, len);
-        row -= (T{2} * v.dot(row)) * v;
+        const T scale = utils::maxCoeff(row.as_array().abs());
+        if (scale != T{0}) {
+            Vector<T, dynamic_extent> normalized(len);
+            T projection{0};
+            for (index_type j = 0; j < len; ++j) {
+                normalized(j) = row(j) / scale;
+                projection += v(j) * normalized(j);
+            }
+            for (index_type j = 0; j < len; ++j) {
+                row(j) = (normalized(j) - T{2} * projection * v(j)) * scale;
+            }
+        }
     }
 }
 
