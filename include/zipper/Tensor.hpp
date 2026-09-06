@@ -55,6 +55,14 @@ class Tensor_ : public TensorBase<expression::nullary::MDArray<
     Tensor_& operator=(Tensor_&& o) = default;
     using Base::operator=;
 };
+template <concepts::Expression E>
+Tensor_(const E &)
+    -> Tensor_<std::decay_t<typename E::value_type>, typename E::extents_type>;
+
+template <concepts::Tensor T>
+Tensor_(const T &)
+    -> Tensor_<std::decay_t<typename T::value_type>, typename T::extents_type>;
+
 template <typename ValueType, index_type... Indxs>
 using Tensor = Tensor_<ValueType, zipper::extents<Indxs...>>;
 }  // namespace zipper

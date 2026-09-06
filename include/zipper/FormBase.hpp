@@ -81,8 +81,16 @@ public:
 
   template <concepts::Form Other>
   FormBase(const Other &other)
-    requires(expression::concepts::WritableExpression<expression_type>)
-      : FormBase(other.expression()) {}
+    requires(expression::concepts::WritableExpression<expression_type> &&
+             !std::is_reference_v<Expr> &&
+             expression::concepts::OwningExpression<Expr>)
+      : Base(other.expression()) {}
+  template <concepts::Form Other>
+  FormBase(const Other &other)
+    requires(expression::concepts::WritableExpression<expression_type> &&
+             (std::is_reference_v<Expr> ||
+              !expression::concepts::OwningExpression<Expr>))
+      : Base(std::in_place, other.expression()) {}
   template <concepts::Form Other>
   auto operator=(const Other &other) -> FormBase &
     requires(expression::concepts::WritableExpression<expression_type>)

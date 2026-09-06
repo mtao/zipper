@@ -55,6 +55,14 @@ public:
   Array_(const zipper::extents<indices...> &e) : Base(e) {}
 };
 
+template <concepts::Expression E>
+Array_(const E &)
+    -> Array_<std::decay_t<typename E::value_type>, typename E::extents_type>;
+
+template <concepts::Array A>
+Array_(const A &)
+    -> Array_<std::decay_t<typename A::value_type>, typename A::extents_type>;
+
 template <concepts::Matrix MB>
 Array_(const MB &o)
     -> Array_<typename MB::value_type, typename MB::extents_type>;

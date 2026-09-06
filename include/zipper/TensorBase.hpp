@@ -48,8 +48,16 @@ public:
 
   template <concepts::Tensor Other>
   TensorBase(const Other &other)
-    requires(expression::concepts::WritableExpression<expression_type>)
-      : TensorBase(other.expression()) {}
+    requires(expression::concepts::WritableExpression<expression_type> &&
+             !std::is_reference_v<Expr> &&
+             expression::concepts::OwningExpression<Expr>)
+      : Base(other.expression()) {}
+  template <concepts::Tensor Other>
+  TensorBase(const Other &other)
+    requires(expression::concepts::WritableExpression<expression_type> &&
+             (std::is_reference_v<Expr> ||
+              !expression::concepts::OwningExpression<Expr>))
+      : Base(std::in_place, other.expression()) {}
   template <concepts::Tensor Other>
   auto operator=(const Other &other) -> TensorBase &
     requires(expression::concepts::WritableExpression<expression_type>)
