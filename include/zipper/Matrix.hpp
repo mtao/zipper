@@ -202,6 +202,11 @@ public:
     return *this;
   }
 };
+template <concepts::MatrixExpression E>
+Matrix(const E &) -> Matrix<std::decay_t<typename E::value_type>,
+                            E::extents_type::static_extent(0),
+                            E::extents_type::static_extent(1)>;
+
 template <concepts::Matrix MB>
 Matrix(const MB &o) -> Matrix<std::decay_t<typename MB::value_type>,
                               MB::extents_type::static_extent(0),

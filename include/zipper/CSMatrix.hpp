@@ -297,6 +297,12 @@ class CSMatrix
 };
 
 // CTAD
+template <concepts::MatrixExpression Other>
+CSMatrix(const Other &)
+    -> CSMatrix<std::decay_t<typename Other::value_type>,
+                Other::extents_type::static_extent(0),
+                Other::extents_type::static_extent(1)>;
+
 template <typename VT, typename E, typename LP>
 CSMatrix(storage::SparseCompressedAccessor<VT, E, LP>)
     -> CSMatrix<VT, E::static_extent(0), E::static_extent(1), LP>;

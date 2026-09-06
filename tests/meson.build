@@ -54,3 +54,9 @@ test('ref', test_ref)
 
 test_sparse_types = executable('test_sparse_types', 'sparse_types.cpp', dependencies: [zipper_test_dep])
 test('sparse_types', test_sparse_types)
+
+test_owning_deduction = executable('test_owning_deduction', 'owning_deduction.cpp', dependencies: [zipper_test_dep])
+test('owning_deduction', test_owning_deduction)
+
+test_sparse_deduction = executable('test_sparse_deduction', 'sparse_deduction.cpp', dependencies: [zipper_test_dep])
+test('sparse_deduction', test_sparse_deduction)
