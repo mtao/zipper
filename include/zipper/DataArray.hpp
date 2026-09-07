@@ -136,6 +136,10 @@ public:
   }
 };
 
+template <concepts::Expression E>
+DataArray_(const E &)
+    -> DataArray_<std::decay_t<typename E::value_type>, typename E::extents_type>;
+
 template <concepts::DataArray CB>
 DataArray_(const CB &o)
     -> DataArray_<typename CB::value_type, typename CB::extents_type>;

@@ -181,6 +181,11 @@ public:
 };
 
 // CTAD
+template <concepts::VectorExpression Other>
+COOVector(const Other &)
+    -> COOVector<std::decay_t<typename Other::value_type>,
+                 Other::extents_type::static_extent(0)>;
+
 template <typename VT, typename E>
 COOVector(storage::SparseCoordinateAccessor<VT, E>)
     -> COOVector<VT, E::static_extent(0)>;

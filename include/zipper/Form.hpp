@@ -39,6 +39,8 @@
 /// @see zipper::Matrix — owning matrix type (rows are accessed as FormBase).
 /// @see zipper::expression::nullary::MDArray — the underlying owning storage.
 
+#include <utility>
+
 #include "FormBase.hxx"
 #include "concepts/Form.hpp"
 #include "detail/extents_check.hpp"
@@ -83,7 +85,7 @@ public:
   Form_(const Other &other) : Base(other) {}
   template <concepts::Expression Other>
     requires(!std::is_same_v<std::decay_t<Other>, Form_>)
-  Form_(Other &&other) : Base(static_cast<const Other&>(other)) {}
+  Form_(Other &&other) : Base(std::as_const(other)) {}
   template <concepts::Form Other>
   Form_(const Other &other) : Base(other) {}
   template <concepts::Index... Args>
@@ -100,6 +102,14 @@ public:
   auto operator=(Form_ &&o) -> Form_ & = default;
   using Base::operator=;
 };
+template <concepts::Expression E>
+Form_(const E &)
+    -> Form_<std::decay_t<typename E::value_type>, typename E::extents_type>;
+
+template <concepts::Form F>
+Form_(const F &)
+    -> Form_<std::decay_t<typename F::value_type>, typename F::extents_type>;
+
 } // namespace detail
 template <typename ValueType, index_type... Indxs>
 using Form = detail::Form_<ValueType, zipper::extents<Indxs...>>;

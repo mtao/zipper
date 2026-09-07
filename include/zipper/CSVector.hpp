@@ -218,6 +218,11 @@ public:
 };
 
 // CTAD
+template <concepts::VectorExpression Other>
+CSVector(const Other &)
+    -> CSVector<std::decay_t<typename Other::value_type>,
+                Other::extents_type::static_extent(0)>;
+
 template <typename VT, typename E, typename LP>
 CSVector(storage::SparseCompressedAccessor<VT, E, LP>)
     -> CSVector<VT, E::static_extent(0)>;
