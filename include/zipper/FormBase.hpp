@@ -68,11 +68,9 @@ public:
   FormBase(Args &&...args)
       : Base(std::in_place, std::forward<Args>(args)...) {}
 
-  auto operator=(concepts::Form auto const &v) -> FormBase & {
-    expression() = v.expression();
-    return *this;
-  }
-  auto operator=(concepts::Form auto &&v) -> FormBase & {
+  auto operator=(concepts::Form auto &&v) -> FormBase &
+    requires(expression::concepts::WritableExpression<expression_type> && !Base::is_const)
+  {
     expression() = v.expression();
     return *this;
   }
@@ -93,20 +91,20 @@ public:
       : Base(std::in_place, other.expression()) {}
   template <concepts::Form Other>
   auto operator=(const Other &other) -> FormBase &
-    requires(expression::concepts::WritableExpression<expression_type>)
+    requires(expression::concepts::WritableExpression<expression_type> && !Base::is_const)
   {
     return operator=(other.expression());
   }
 
   template <typename... Slices, typename Self> auto slice(this Self&& self, Slices &&...slices) {
-    using child_t = detail::member_child_storage_t<Self, expression_type>;
+    using child_t = detail::member_child_storage_t<Self, Expr>;
     using V = expression::unary::Slice<child_t,
                   detail::slice_type_for_t<std::decay_t<Slices>>...>;
     return FormBase<V>(std::in_place, std::forward<Self>(self).expression(),
         Base::filter_args_for_zipperbase(std::forward<Slices>(slices))...);
   }
   template <typename... Slices, typename Self> auto slice(this Self&& self) {
-    using child_t = detail::member_child_storage_t<Self, expression_type>;
+    using child_t = detail::member_child_storage_t<Self, Expr>;
     using V = expression::unary::Slice<child_t, std::decay_t<Slices>...>;
     return FormBase<V>(std::in_place, std::forward<Self>(self).expression(), Slices{}...);
   }

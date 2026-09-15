@@ -41,10 +41,6 @@ public:
   TensorBase(Args &&...args)
       : Base(std::in_place, std::forward<Args>(args)...) {}
 
-  auto operator=(concepts::Tensor auto const &v) -> TensorBase & {
-    expression() = v.expression();
-    return *this;
-  }
 
   template <concepts::Tensor Other>
   TensorBase(const Other &other)
@@ -60,24 +56,26 @@ public:
       : Base(std::in_place, other.expression()) {}
   template <concepts::Tensor Other>
   auto operator=(const Other &other) -> TensorBase &
-    requires(expression::concepts::WritableExpression<expression_type>)
+    requires(expression::concepts::WritableExpression<expression_type> && !Base::is_const)
   {
     return operator=(other.expression());
   }
-  auto operator=(concepts::Tensor auto &&v) -> TensorBase & {
+  auto operator=(concepts::Tensor auto &&v) -> TensorBase &
+    requires(expression::concepts::WritableExpression<expression_type> && !Base::is_const)
+  {
     return Base::operator=(v.expression());
   }
 
   // Slice methods - construct wrapper in-place to avoid moving non-movable expressions
   template <typename... Slices, typename Self> auto slice(this Self&& self, Slices &&...slices) {
-    using child_t = detail::member_child_storage_t<Self, expression_type>;
+    using child_t = detail::member_child_storage_t<Self, Expr>;
     using V = expression::unary::Slice<child_t,
                   detail::slice_type_for_t<std::decay_t<Slices>>...>;
     return TensorBase<V>(std::in_place, std::forward<Self>(self).expression(),
         Base::filter_args_for_zipperbase(std::forward<Slices>(slices))...);
   }
   template <typename... Slices, typename Self> auto slice(this Self&& self) {
-    using child_t = detail::member_child_storage_t<Self, expression_type>;
+    using child_t = detail::member_child_storage_t<Self, Expr>;
     using V = expression::unary::Slice<child_t, std::decay_t<Slices>...>;
     return TensorBase<V>(std::in_place, std::forward<Self>(self).expression(), Slices{}...);
   }

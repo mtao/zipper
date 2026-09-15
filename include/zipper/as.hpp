@@ -1,6 +1,7 @@
 #if !defined(ZIPPER_AS_HPP)
 #define ZIPPER_AS_HPP
 #include "concepts/Zipper.hpp"
+#include "detail/member_child_storage.hpp"
 #include "expression/concepts/capabilities.hpp"
 #include "expression/unary/Slice.hpp"
 #include <utility> // std::in_place
@@ -68,23 +69,26 @@ using squeeze_specifier_t = std::conditional_t<Extents::static_extent(D) == 1,
 #define ZIPPER_AS_IMPL_(NAME_LOWER, NAME_UPPER)                                \
   template <concepts::Zipper ZipperDerived>                                    \
   auto as_##NAME_LOWER(ZipperDerived &v) {                                     \
-    using Expr = typename ZipperDerived::expression_type;                      \
+    using Expr = std::remove_reference_t<decltype(v.expression())>;            \
     constexpr static bool make_const =                                         \
         !expression::concepts::WritableExpression<Expr> ||                     \
         std::is_const_v<ZipperDerived>;                                        \
     using ExprC = std::conditional_t<make_const, const Expr, Expr>;            \
-    return NAME_UPPER##Base<ExprC &>(std::in_place, v.expression());           \
+    using Child = detail::member_child_storage_t<ZipperDerived &, ExprC>;      \
+    return NAME_UPPER##Base<Child>(std::in_place, v.expression());              \
   }                                                                            \
   template <concepts::Zipper ZipperDerived>                                    \
   auto as_##NAME_LOWER(const ZipperDerived &v) {                               \
     using Expr = typename ZipperDerived::expression_type;                      \
-    return NAME_UPPER##Base<const Expr &>(std::in_place, v.expression());      \
+    using Child = detail::member_child_storage_t<const ZipperDerived &, Expr>; \
+    return NAME_UPPER##Base<Child>(std::in_place, v.expression());              \
   }                                                                            \
   template <concepts::Zipper ZipperDerived>                                    \
   auto as_##NAME_LOWER(ZipperDerived &&v)                                      \
     requires(!std::is_lvalue_reference_v<ZipperDerived>)                       \
   {                                                                            \
-    using Expr = typename ZipperDerived::expression_type;                      \
+    using Expr = detail::member_child_storage_t<ZipperDerived,                 \
+        typename ZipperDerived::raw_expression_type>;                         \
     return NAME_UPPER##Base<Expr>(                                             \
       std::in_place, std::forward<ZipperDerived>(v).expression());             \
   }
@@ -120,19 +124,20 @@ template <concepts::Zipper ZipperDerived>
       detail::squeeze_rank<
           typename ZipperDerived::expression_traits::extents_type>() == 1)
 auto as_vector(ZipperDerived &v) {
-  using Expr = typename ZipperDerived::expression_type;
+  using Expr = std::remove_reference_t<decltype(v.expression())>;
   constexpr static bool make_const =
       !ZipperDerived::expression_traits::is_writable ||
       std::is_const_v<ZipperDerived>;
   using ExprC = std::conditional_t<make_const, const Expr, Expr>;
+  using Child = detail::member_child_storage_t<ZipperDerived &, ExprC>;
   using extents_type = typename ZipperDerived::expression_traits::extents_type;
 
   if constexpr (extents_type::rank() == 1) {
-    return VectorBase<ExprC &>(std::in_place, v.expression());
+    return VectorBase<Child>(std::in_place, v.expression());
   } else {
     return [&]<rank_type... Ds>(std::integer_sequence<rank_type, Ds...>) {
       using SliceT = expression::unary::Slice<
-          ExprC &, detail::squeeze_specifier_t<extents_type, Ds>...>;
+          Child, detail::squeeze_specifier_t<extents_type, Ds>...>;
       return VectorBase<SliceT>(
           std::in_place, v.expression(),
           detail::squeeze_specifier_t<extents_type, Ds>{}...);
@@ -148,14 +153,15 @@ template <concepts::Zipper ZipperDerived>
           typename ZipperDerived::expression_traits::extents_type>() == 1)
 auto as_vector(const ZipperDerived &v) {
   using Expr = typename ZipperDerived::expression_type;
+  using Child = detail::member_child_storage_t<const ZipperDerived &, Expr>;
   using extents_type = typename ZipperDerived::expression_traits::extents_type;
 
   if constexpr (extents_type::rank() == 1) {
-    return VectorBase<const Expr &>(std::in_place, v.expression());
+    return VectorBase<Child>(std::in_place, v.expression());
   } else {
     return [&]<rank_type... Ds>(std::integer_sequence<rank_type, Ds...>) {
       using SliceT = expression::unary::Slice<
-          const Expr &, detail::squeeze_specifier_t<extents_type, Ds>...>;
+          Child, detail::squeeze_specifier_t<extents_type, Ds>...>;
       return VectorBase<SliceT>(
           std::in_place, v.expression(),
           detail::squeeze_specifier_t<extents_type, Ds>{}...);
@@ -163,7 +169,7 @@ auto as_vector(const ZipperDerived &v) {
   }
 }
 
-/// @brief Convert an rvalue Zipper wrapper to an owning VectorBase.
+/// @brief Convert an rvalue Zipper wrapper, preserving its expression ownership.
 template <concepts::Zipper ZipperDerived>
   requires(!std::is_lvalue_reference_v<ZipperDerived>
            && (ZipperDerived::expression_traits::extents_type::rank() == 1
@@ -171,7 +177,8 @@ template <concepts::Zipper ZipperDerived>
                     typename ZipperDerived::expression_traits::extents_type>()
                     == 1))
 auto as_vector(ZipperDerived &&v) {
-  using Expr = typename ZipperDerived::expression_type;
+  using Expr = detail::member_child_storage_t<ZipperDerived,
+      typename ZipperDerived::raw_expression_type>;
   using extents_type = typename ZipperDerived::expression_traits::extents_type;
 
   if constexpr (extents_type::rank() == 1) {
@@ -203,19 +210,20 @@ template <concepts::Zipper ZipperDerived>
       detail::squeeze_rank<
           typename ZipperDerived::expression_traits::extents_type>() == 2)
 auto as_matrix(ZipperDerived &v) {
-  using Expr = typename ZipperDerived::expression_type;
+  using Expr = std::remove_reference_t<decltype(v.expression())>;
   constexpr static bool make_const =
       !ZipperDerived::expression_traits::is_writable ||
       std::is_const_v<ZipperDerived>;
   using ExprC = std::conditional_t<make_const, const Expr, Expr>;
+  using Child = detail::member_child_storage_t<ZipperDerived &, ExprC>;
   using extents_type = typename ZipperDerived::expression_traits::extents_type;
 
   if constexpr (extents_type::rank() == 2) {
-    return MatrixBase<ExprC &>(std::in_place, v.expression());
+    return MatrixBase<Child>(std::in_place, v.expression());
   } else {
     return [&]<rank_type... Ds>(std::integer_sequence<rank_type, Ds...>) {
       using SliceT = expression::unary::Slice<
-          ExprC &, detail::squeeze_specifier_t<extents_type, Ds>...>;
+          Child, detail::squeeze_specifier_t<extents_type, Ds>...>;
       return MatrixBase<SliceT>(
           std::in_place, v.expression(),
           detail::squeeze_specifier_t<extents_type, Ds>{}...);
@@ -231,14 +239,15 @@ template <concepts::Zipper ZipperDerived>
           typename ZipperDerived::expression_traits::extents_type>() == 2)
 auto as_matrix(const ZipperDerived &v) {
   using Expr = typename ZipperDerived::expression_type;
+  using Child = detail::member_child_storage_t<const ZipperDerived &, Expr>;
   using extents_type = typename ZipperDerived::expression_traits::extents_type;
 
   if constexpr (extents_type::rank() == 2) {
-    return MatrixBase<const Expr &>(std::in_place, v.expression());
+    return MatrixBase<Child>(std::in_place, v.expression());
   } else {
     return [&]<rank_type... Ds>(std::integer_sequence<rank_type, Ds...>) {
       using SliceT = expression::unary::Slice<
-          const Expr &, detail::squeeze_specifier_t<extents_type, Ds>...>;
+          Child, detail::squeeze_specifier_t<extents_type, Ds>...>;
       return MatrixBase<SliceT>(
           std::in_place, v.expression(),
           detail::squeeze_specifier_t<extents_type, Ds>{}...);
@@ -246,7 +255,7 @@ auto as_matrix(const ZipperDerived &v) {
   }
 }
 
-/// @brief Convert an rvalue Zipper wrapper to an owning MatrixBase.
+/// @brief Convert an rvalue Zipper wrapper, preserving its expression ownership.
 template <concepts::Zipper ZipperDerived>
   requires(!std::is_lvalue_reference_v<ZipperDerived>
            && (ZipperDerived::expression_traits::extents_type::rank() == 2
@@ -254,7 +263,8 @@ template <concepts::Zipper ZipperDerived>
                     typename ZipperDerived::expression_traits::extents_type>()
                     == 2))
 auto as_matrix(ZipperDerived &&v) {
-  using Expr = typename ZipperDerived::expression_type;
+  using Expr = detail::member_child_storage_t<ZipperDerived,
+      typename ZipperDerived::raw_expression_type>;
   using extents_type = typename ZipperDerived::expression_traits::extents_type;
 
   if constexpr (extents_type::rank() == 2) {
@@ -286,19 +296,20 @@ template <concepts::Zipper ZipperDerived>
       detail::squeeze_rank<
           typename ZipperDerived::expression_traits::extents_type>() == 1)
 auto as_quaternion(ZipperDerived &v) {
-  using Expr = typename ZipperDerived::expression_type;
+  using Expr = std::remove_reference_t<decltype(v.expression())>;
   constexpr static bool make_const =
       !ZipperDerived::expression_traits::is_writable ||
       std::is_const_v<ZipperDerived>;
   using ExprC = std::conditional_t<make_const, const Expr, Expr>;
+  using Child = detail::member_child_storage_t<ZipperDerived &, ExprC>;
   using extents_type = typename ZipperDerived::expression_traits::extents_type;
 
   if constexpr (extents_type::rank() == 1) {
-    return QuaternionBase<ExprC &>(std::in_place, v.expression());
+    return QuaternionBase<Child>(std::in_place, v.expression());
   } else {
     return [&]<rank_type... Ds>(std::integer_sequence<rank_type, Ds...>) {
       using SliceT = expression::unary::Slice<
-          ExprC &, detail::squeeze_specifier_t<extents_type, Ds>...>;
+          Child, detail::squeeze_specifier_t<extents_type, Ds>...>;
       return QuaternionBase<SliceT>(
           std::in_place, v.expression(),
           detail::squeeze_specifier_t<extents_type, Ds>{}...);
@@ -314,14 +325,15 @@ template <concepts::Zipper ZipperDerived>
           typename ZipperDerived::expression_traits::extents_type>() == 1)
 auto as_quaternion(const ZipperDerived &v) {
   using Expr = typename ZipperDerived::expression_type;
+  using Child = detail::member_child_storage_t<const ZipperDerived &, Expr>;
   using extents_type = typename ZipperDerived::expression_traits::extents_type;
 
   if constexpr (extents_type::rank() == 1) {
-    return QuaternionBase<const Expr &>(std::in_place, v.expression());
+    return QuaternionBase<Child>(std::in_place, v.expression());
   } else {
     return [&]<rank_type... Ds>(std::integer_sequence<rank_type, Ds...>) {
       using SliceT = expression::unary::Slice<
-          const Expr &, detail::squeeze_specifier_t<extents_type, Ds>...>;
+          Child, detail::squeeze_specifier_t<extents_type, Ds>...>;
       return QuaternionBase<SliceT>(
           std::in_place, v.expression(),
           detail::squeeze_specifier_t<extents_type, Ds>{}...);
@@ -329,7 +341,7 @@ auto as_quaternion(const ZipperDerived &v) {
   }
 }
 
-/// @brief Convert an rvalue Zipper wrapper to an owning QuaternionBase.
+/// @brief Convert an rvalue Zipper wrapper, preserving its expression ownership.
 template <concepts::Zipper ZipperDerived>
   requires(!std::is_lvalue_reference_v<ZipperDerived>
            && (ZipperDerived::expression_traits::extents_type::rank() == 1
@@ -337,7 +349,8 @@ template <concepts::Zipper ZipperDerived>
                     typename ZipperDerived::expression_traits::extents_type>()
                     == 1))
 auto as_quaternion(ZipperDerived &&v) {
-  using Expr = typename ZipperDerived::expression_type;
+  using Expr = detail::member_child_storage_t<ZipperDerived,
+      typename ZipperDerived::raw_expression_type>;
   using extents_type = typename ZipperDerived::expression_traits::extents_type;
 
   if constexpr (extents_type::rank() == 1) {

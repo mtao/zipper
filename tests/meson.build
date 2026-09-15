@@ -52,6 +52,9 @@ test('readme_examples', test_readme_examples)
 test_ref = executable('test_ref', 'ref.cpp', dependencies: [zipper_test_dep])
 test('ref', test_ref)
 
+test_expression_qualification = executable('test_expression_qualification', 'expression_qualification.cpp', dependencies: [zipper_test_dep])
+test('expression_qualification', test_expression_qualification)
+
 test_sparse_types = executable('test_sparse_types', 'sparse_types.cpp', dependencies: [zipper_test_dep])
 test('sparse_types', test_sparse_types)
 

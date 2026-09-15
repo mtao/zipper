@@ -29,6 +29,7 @@
 #include "concepts/Quaternion.hpp"
 #include "concepts/detail/IsZipperBase.hpp"
 #include "detail/assert.hpp"
+#include "detail/declare_operations.hpp"
 #include "detail/member_child_storage.hpp"
 #include "expression/binary/HamiltonProduct.hpp"
 #include "expression/nullary/StlMDArray.hpp"
@@ -71,7 +72,9 @@ public:
       : Base(std::move(v)) {}
   QuaternionBase(const extents_type &e) : Base(e) {}
 
-  auto operator=(concepts::QualifiedExpression auto const &v) -> QuaternionBase & {
+  auto operator=(concepts::QualifiedExpression auto const &v) -> QuaternionBase &
+    requires(expression::concepts::WritableExpression<expression_type> && !Base::is_const)
+  {
     return Base::operator=(v);
   }
 
@@ -82,7 +85,7 @@ public:
 
   template <concepts::Quaternion Other>
   auto operator=(const Other &other) -> QuaternionBase &
-    requires(expression::concepts::WritableExpression<expression_type>)
+    requires(expression::concepts::WritableExpression<expression_type> && !Base::is_const)
   {
     expression().assign(other.expression());
     return *this;
@@ -102,16 +105,16 @@ public:
   auto z() const -> value_type { return (*this)(3); }
 
   auto w() -> decltype(auto)
-    requires(expression::concepts::WritableExpression<expression_type>)
+    requires(expression::concepts::WritableExpression<expression_type> && !Base::is_const)
   { return (*this)(0); }
   auto x() -> decltype(auto)
-    requires(expression::concepts::WritableExpression<expression_type>)
+    requires(expression::concepts::WritableExpression<expression_type> && !Base::is_const)
   { return (*this)(1); }
   auto y() -> decltype(auto)
-    requires(expression::concepts::WritableExpression<expression_type>)
+    requires(expression::concepts::WritableExpression<expression_type> && !Base::is_const)
   { return (*this)(2); }
   auto z() -> decltype(auto)
-    requires(expression::concepts::WritableExpression<expression_type>)
+    requires(expression::concepts::WritableExpression<expression_type> && !Base::is_const)
   { return (*this)(3); }
 
   // ── Quaternion operations ─────────────────────────────────────────────
@@ -149,7 +152,7 @@ public:
 
   /// @brief Normalize in-place.
   void normalize()
-    requires(expression::concepts::WritableExpression<expression_type>)
+    requires(expression::concepts::WritableExpression<expression_type> && !Base::is_const)
   {
     value_type n = norm();
     w() = w() / n;
@@ -206,13 +209,9 @@ public:
 
 namespace detail {
 /// Deduce child expression storage for a forwarded Zipper wrapper.
-/// Lvalue or reference-expression → const ExprType &; rvalue value-expression → ExprType.
+/// Use the same qualification and view-propagation policy as other operators.
 template <typename Wrapper>
-using quat_child_storage_t = std::conditional_t<
-    std::is_lvalue_reference_v<Wrapper> ||
-    std::is_reference_v<typename std::decay_t<Wrapper>::raw_expression_type>,
-    const typename std::decay_t<Wrapper>::expression_type &,
-    typename std::decay_t<Wrapper>::expression_type>;
+using quat_child_storage_t = forwarded_expression_t<Wrapper>;
 } // namespace detail
 
 template <typename ExprType1, typename ExprType2>

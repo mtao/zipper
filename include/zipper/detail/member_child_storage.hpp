@@ -13,23 +13,28 @@ namespace zipper::detail {
 /// Given the deduced `Self` type of the explicit object parameter and the
 /// expression type stored in the wrapper, this trait selects:
 ///
-///   - `ExprType`          when Self is an rvalue  → store by value (safe to return)
-///   - `ExprType`          when ExprType is view-propagating → store by value
-///                         (copying is cheap — just copies a reference wrapper)
-///   - `const ExprType &`  when Self is a const lvalue  → store by const ref
-///   - `ExprType &`        when Self is a mutable lvalue → store by mutable ref
+/// ExprType must be the raw (possibly cvref-qualified) stored expression type.
+/// An rvalue wrapper owns its child only if it owns its expression; moving a
+/// reference-backed wrapper must not move or copy the referent. Const on either
+/// the wrapper or the referent is preserved, including for by-value children.
 ///
 /// The view-propagating case enables derived views (head, tail, row, etc.)
 /// to be Returnable when the source was wrapped with ref().
 template <typename Self, typename ExprType>
-using member_child_storage_t = std::conditional_t<
-    !std::is_lvalue_reference_v<Self> || ViewPropagating<ExprType>,
-    ExprType,                                            // rvalue or view-propagating → by value
-    std::conditional_t<
+struct member_child_storage {
+    using qualified_expression = std::conditional_t<
         std::is_const_v<std::remove_reference_t<Self>>,
-        const ExprType &,                                // const lvalue → const ref
-        ExprType &                                       // mutable lvalue → mutable ref
-    >>;
+        const std::remove_reference_t<ExprType>,
+        std::remove_reference_t<ExprType>>;
+    using type = std::conditional_t<
+        ViewPropagating<ExprType> ||
+            (!std::is_lvalue_reference_v<Self> &&
+             !std::is_reference_v<ExprType>),
+        qualified_expression, qualified_expression &>;
+};
+
+template <typename Self, typename ExprType>
+using member_child_storage_t = typename member_child_storage<Self, ExprType>::type;
 
 } // namespace zipper::detail
 #endif

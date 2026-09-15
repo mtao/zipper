@@ -75,19 +75,23 @@ class MatrixBase : public ZipperBase<MatrixBase, Expr> {
     template<concepts::Matrix Other>
     MatrixBase(const Other &other) : MatrixBase(other.expression()) {}
 
-    auto operator=(concepts::Matrix auto const &v) -> MatrixBase & {
+    auto operator=(concepts::Matrix auto const &v) -> MatrixBase &
+        requires(expression::concepts::WritableExpression<expression_type> && !Base::is_const)
+    {
         return operator=(v.expression());
     }
 
     template<concepts::Expression Other>
     auto operator=(const Other &other) -> MatrixBase &
-        requires(expression::concepts::WritableExpression<expression_type>)
+        requires(expression::concepts::WritableExpression<expression_type> && !Base::is_const)
     {
         Base::operator=(other);
         return *this;
     }
 
-    void resize(index_type rows, index_type cols) {
+    void resize(index_type rows, index_type cols)
+        requires(!Base::is_const)
+    {
         constexpr static bool dynamic_row = extents_traits::is_dynamic_extent(0);
         constexpr static bool dynamic_col = extents_traits::is_dynamic_extent(1);
         if constexpr (dynamic_row && dynamic_col) {
@@ -99,7 +103,7 @@ class MatrixBase : public ZipperBase<MatrixBase, Expr> {
         }
     }
     void resize(index_type size)
-        requires(extents_traits::rank_dynamic == 1)
+        requires(extents_traits::rank_dynamic == 1 && !Base::is_const)
     {
         expression().resize(extents_type{ size });
     }
@@ -116,7 +120,7 @@ class MatrixBase : public ZipperBase<MatrixBase, Expr> {
     template<typename... Args, typename Self>
     auto operator()(this Self &&self, Args &&...idxs) -> decltype(auto) {
         if constexpr (concepts::IndexPack<std::decay_t<Args>...>) {
-            if constexpr (std::is_const_v<std::remove_reference_t<Self>> || !expression::concepts::WritableExpression<expression_type>) {
+            if constexpr (std::is_const_v<std::remove_reference_t<Self>> || Base::is_const || !expression::concepts::WritableExpression<expression_type>) {
                 return std::as_const(self).expression()(
                   Base::filter_args_for_zipperbase(std::forward<Args>(idxs))...);
             } else {
@@ -124,7 +128,7 @@ class MatrixBase : public ZipperBase<MatrixBase, Expr> {
                   Base::filter_args_for_zipperbase(std::forward<Args>(idxs))...);
             }
         } else {
-            using child_t = detail::member_child_storage_t<Self, expression_type>;
+            using child_t = detail::member_child_storage_t<Self, Expr>;
             using R = expression::unary::Slice<child_t,
                                                detail::slice_type_for_t<std::decay_t<Args>>...>;
             if constexpr (R::extents_type::rank() == 1) {
@@ -154,7 +158,7 @@ class MatrixBase : public ZipperBase<MatrixBase, Expr> {
     }
     template<typename... Slices, typename Self>
     auto slice(this Self &&self) {
-        using child_t = detail::member_child_storage_t<Self, expression_type>;
+        using child_t = detail::member_child_storage_t<Self, Expr>;
         using V = expression::unary::Slice<child_t, std::decay_t<Slices>...>;
         if constexpr (V::extents_type::rank() == 2) {
             return MatrixBase<V>(std::in_place, std::forward<Self>(self).expression(), Slices{}...);
@@ -166,7 +170,7 @@ class MatrixBase : public ZipperBase<MatrixBase, Expr> {
 
     template<typename... Slices, typename Self>
     auto slice(this Self &&self, Slices &&...slices) {
-        using child_t = detail::member_child_storage_t<Self, expression_type>;
+        using child_t = detail::member_child_storage_t<Self, Expr>;
         using V = expression::unary::Slice<child_t,
                                            detail::slice_type_for_t<std::decay_t<Slices>>...>;
         if constexpr (V::extents_type::rank() == 2) {
@@ -179,13 +183,13 @@ class MatrixBase : public ZipperBase<MatrixBase, Expr> {
 
     template<rank_type... ranks, typename Self>
     auto swizzle(this Self &&self) {
-        using child_t = detail::member_child_storage_t<Self, expression_type>;
+        using child_t = detail::member_child_storage_t<Self, Expr>;
         using V = expression::unary::Swizzle<child_t, ranks...>;
         return MatrixBase<V>(std::in_place, std::forward<Self>(self).expression());
     }
     template<typename Self>
     auto transpose(this Self &&self) {
-        using child_t = detail::member_child_storage_t<Self, expression_type>;
+        using child_t = detail::member_child_storage_t<Self, Expr>;
         using V = expression::unary::Swizzle<child_t, 1, 0>;
         return MatrixBase<V>(std::in_place, std::forward<Self>(self).expression());
     }
@@ -197,7 +201,7 @@ class MatrixBase : public ZipperBase<MatrixBase, Expr> {
     /// @return A MatrixBase wrapping a TriangularView expression.
     template<expression::TriangularMode Mode, typename Self>
     auto as_triangular(this Self &&self) {
-        using child_t = detail::member_child_storage_t<Self, expression_type>;
+        using child_t = detail::member_child_storage_t<Self, Expr>;
         using ViewType = expression::unary::TriangularView<Mode, child_t>;
         return MatrixBase<ViewType>(std::in_place, std::forward<Self>(self).expression());
     }
@@ -272,14 +276,14 @@ class MatrixBase : public ZipperBase<MatrixBase, Expr> {
 
     template<typename Self>
     auto rowwise(this Self &&self) {
-        using child_t = detail::member_child_storage_t<Self, expression_type>;
+        using child_t = detail::member_child_storage_t<Self, Expr>;
         // we're reducing the first cols
         return detail::PartialReductionDispatcher<VectorBase, child_t, 1>(
           std::forward<Self>(self).expression());
     }
     template<typename Self>
     auto colwise(this Self &&self) {
-        using child_t = detail::member_child_storage_t<Self, expression_type>;
+        using child_t = detail::member_child_storage_t<Self, Expr>;
         // we're reducing the first rows
         return detail::PartialReductionDispatcher<VectorBase, child_t, 0>(
           std::forward<Self>(self).expression());

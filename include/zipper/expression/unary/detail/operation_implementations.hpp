@@ -18,13 +18,13 @@ auto operation_implementation(const Expr& lhs, const Scalar& rhs) {
     return BaseType<OpType>(std::in_place, lhs, rhs);
 }
 
-/// Rvalue expression: child stored by value (non-const for moveability).
+/// Rvalue expression: child stored by value, preserving const qualification.
 template <template <typename, zipper::concepts::QualifiedExpression, bool> class Op,
           template <typename> class BaseType, zipper::concepts::QualifiedExpression Expr,
           typename Scalar>
     requires(!std::is_lvalue_reference_v<Expr>)
 auto operation_implementation(Expr&& lhs, const Scalar& rhs) {
-    using OpType = Op<std::decay_t<Scalar>, std::decay_t<Expr>, true>;
+    using OpType = Op<std::decay_t<Scalar>, Expr, true>;
     return BaseType<OpType>(std::in_place, std::move(lhs), rhs);
 }
 
@@ -39,13 +39,13 @@ auto operation_implementation(const Scalar& lhs, const Expr& rhs) {
     return BaseType<OpType>(std::in_place, lhs, rhs);
 }
 
-/// Rvalue expression: child stored by value (non-const for moveability).
+/// Rvalue expression: child stored by value, preserving const qualification.
 template <template <typename, zipper::concepts::QualifiedExpression, bool> class Op,
           template <typename> class BaseType, zipper::concepts::QualifiedExpression Expr,
           typename Scalar>
     requires(!std::is_lvalue_reference_v<Expr>)
 auto operation_implementation(const Scalar& lhs, Expr&& rhs) {
-    using OpType = Op<std::decay_t<Scalar>, std::decay_t<Expr>, false>;
+    using OpType = Op<std::decay_t<Scalar>, Expr, false>;
     return BaseType<OpType>(std::in_place, lhs, std::move(rhs));
 }
 
@@ -59,12 +59,12 @@ auto operation_implementation(const B& expr) {
     return BaseType<OpType>(std::in_place, expr);
 }
 
-/// Rvalue expression: child stored by value (non-const for moveability).
+/// Rvalue expression: child stored by value, preserving const qualification.
 template <template <zipper::concepts::QualifiedExpression> class Op,
           template <typename> class BaseType, zipper::concepts::QualifiedExpression B>
     requires(!std::is_lvalue_reference_v<B>)
 auto operation_implementation(B&& expr) {
-    using OpType = Op<std::decay_t<B>>;
+    using OpType = Op<B>;
     return BaseType<OpType>(std::in_place, std::move(expr));
 }
 

@@ -73,22 +73,27 @@ public:
 
   constexpr static bool stores_references =
       expression_traits::stores_references || std::is_reference_v<Expression>;
-  constexpr static bool is_const = std::is_const_v<Expression>;
+  constexpr static bool is_const =
+      std::is_const_v<std::remove_reference_t<Expression>>;
   using value_type = typename expression_traits::value_type;
   using extents_type = typename expression_traits::extents_type;
   using extents_traits = detail::ExtentsTraits<extents_type>;
 
-  auto expression() const & -> const Expression & { return m_expression; }
+  auto expression() const & -> const expression_type & { return m_expression; }
   auto expression() & -> Expression & { return m_expression; }
-  auto expression() const && -> const Expression && {
+  auto expression() const && -> std::conditional_t<
+      std::is_reference_v<Expression>, const expression_type &,
+      const expression_type &&> {
     if constexpr (std::is_reference_v<Expression>) {
       return m_expression;
     } else {
       return std::move(m_expression);
     }
   }
-  auto expression() && -> Expression && {
-    if constexpr (std::is_lvalue_reference_v<Expression>) {
+  auto expression() && -> std::conditional_t<
+      std::is_reference_v<Expression>, std::remove_reference_t<Expression> &,
+      Expression &&> {
+    if constexpr (std::is_reference_v<Expression>) {
       return m_expression;
     } else {
       return std::move(m_expression);
@@ -99,7 +104,7 @@ public:
     return m_expression.extent(i);
   }
   static constexpr auto static_extent(rank_type i) -> index_type {
-    return Expression::static_extent(i);
+    return expression_type::static_extent(i);
   }
   // template <typename... Args>
   // ZipperBase(Args&&... v) : m_expression(std::forward<Args>(v)...) {}
@@ -252,19 +257,25 @@ public:
   /// Prefer to_owned() when a safe, owning copy is acceptable.
   ///
   /// Lvalue overloads store a reference to the expression; rvalue
-  /// overloads move-own the expression node (the node itself may still
-  /// hold internal references, e.g. Slice<MDArray&>).
+  /// overloads own value-stored expression nodes and preserve reference-stored
+  /// referents (nodes may also hold internal references, e.g. Slice<MDArray&>).
   auto unsafe() const & {
     using V = expression::unary::UnsafeRef<const expression_type &>;
     return DerivedT<V>(std::in_place, expression());
   }
   auto unsafe() & {
-    using V = expression::unary::UnsafeRef<expression_type &>;
+    using V = expression::unary::UnsafeRef<std::remove_reference_t<Expression> &>;
     return DerivedT<V>(std::in_place, expression());
   }
   auto unsafe() && {
-    using V = expression::unary::UnsafeRef<expression_type>;
-    return DerivedT<V>(std::in_place, std::move(expression()));
+    using child_t = detail::member_child_storage_t<Derived, Expression>;
+    using V = expression::unary::UnsafeRef<child_t>;
+    return DerivedT<V>(std::in_place, std::move(*this).expression());
+  }
+  auto unsafe() const && {
+    using child_t = detail::member_child_storage_t<const Derived, Expression>;
+    using V = expression::unary::UnsafeRef<child_t>;
+    return DerivedT<V>(std::in_place, std::move(*this).expression());
   }
 
   /// Returns a view-propagating wrapper.  Like unsafe(), the caller asserts
@@ -280,16 +291,17 @@ public:
     using V = expression::unary::UnsafeRef<const expression_type &, true>;
     return DerivedT<V>(std::in_place, expression());
   }
-  auto ref() & -> DerivedT<expression::unary::UnsafeRef<expression_type &, true>> {
-    using V = expression::unary::UnsafeRef<expression_type &, true>;
+  auto ref() & -> DerivedT<expression::unary::UnsafeRef<std::remove_reference_t<Expression> &, true>> {
+    using V = expression::unary::UnsafeRef<std::remove_reference_t<Expression> &, true>;
     return DerivedT<V>(std::in_place, expression());
   }
   auto ref() && = delete;  // rvalue ref() is nonsensical — no lvalue to bind
+  auto ref() const && = delete;
 
   template <typename OpType, typename Self>
     requires(expression::unary::concepts::ScalarOperation<value_type, OpType>)
   auto unary_expr(this Self&& self, const OpType &op) {
-    using child_t = detail::member_child_storage_t<Self, expression_type>;
+    using child_t = detail::member_child_storage_t<Self, raw_expression_type>;
     using V = expression::unary::CoefficientWiseOperation<child_t, OpType>;
     return DerivedT<V>(std::in_place, std::forward<Self>(self).expression(), op);
   }
@@ -297,26 +309,26 @@ public:
   template <template <typename> typename BaseType = DerivedT,
             rank_type... ranks, typename Self>
   auto swizzle(this Self&& self) {
-    using child_t = detail::member_child_storage_t<Self, expression_type>;
+    using child_t = detail::member_child_storage_t<Self, raw_expression_type>;
     using V = expression::unary::Swizzle<child_t, ranks...>;
     return BaseType<V>(std::in_place, std::forward<Self>(self).expression());
   }
   template <typename T, typename Self> auto cast(this Self&& self) {
-    using child_t = detail::member_child_storage_t<Self, expression_type>;
+    using child_t = detail::member_child_storage_t<Self, raw_expression_type>;
     using V = expression::unary::Cast<T, child_t>;
     return DerivedT<V>(std::in_place, std::forward<Self>(self).expression());
   }
 
   template <typename Self>
   auto diagonal(this Self&& self) {
-    using child_t = detail::member_child_storage_t<Self, expression_type>;
+    using child_t = detail::member_child_storage_t<Self, raw_expression_type>;
     return VectorBase<expression::unary::DiagonalExtract<child_t>>(
         std::in_place, std::forward<Self>(self).expression());
   }
 
   template <concepts::IndexArgument... Args>
   auto operator()(Args &&...idxs) -> decltype(auto)
-    requires(expression::concepts::WritableExpression<expression_type>)
+    requires(expression::concepts::WritableExpression<expression_type> && !is_const)
   {
     return expression()(
         filter_args_for_zipperbase(std::forward<Args>(idxs))...);
@@ -333,7 +345,7 @@ public:
   template <rank_type Count = 1,
             template <typename> typename BaseType = DerivedT, typename Self>
   auto lift(this Self&& self) {
-    using child_t = detail::member_child_storage_t<Self, expression_type>;
+    using child_t = detail::member_child_storage_t<Self, raw_expression_type>;
     using V = expression::unary::Lift<Count, child_t>;
     return BaseType<V>(std::in_place, std::forward<Self>(self).expression());
   }
@@ -342,7 +354,7 @@ public:
   template <rank_type Count = 1,
             template <typename> typename BaseType = DerivedT, typename Self>
   auto repeat_left(this Self&& self) {
-    using child_t = detail::member_child_storage_t<Self, expression_type>;
+    using child_t = detail::member_child_storage_t<Self, raw_expression_type>;
     using V = expression::unary::Repeat<expression::unary::RepeatMode::Left,
                                         Count, child_t>;
     return BaseType<V>(std::in_place, std::forward<Self>(self).expression());
@@ -351,7 +363,7 @@ public:
   template <rank_type Count = 1,
             template <typename> typename BaseType = DerivedT, typename Self>
   auto repeat_right(this Self&& self) {
-    using child_t = detail::member_child_storage_t<Self, expression_type>;
+    using child_t = detail::member_child_storage_t<Self, raw_expression_type>;
     using V = expression::unary::Repeat<expression::unary::RepeatMode::Right,
                                         Count, child_t>;
     return BaseType<V>(std::in_place, std::forward<Self>(self).expression());
@@ -362,7 +374,7 @@ protected:
   // so we will just return the expression and let base class return things
   template <typename... Slices, typename Self>
   auto slice_expression(this Self&& self, Slices &&...slices) {
-    using child_t = detail::member_child_storage_t<Self, expression_type>;
+    using child_t = detail::member_child_storage_t<Self, raw_expression_type>;
     using my_expression_type =
         expression::unary::Slice<child_t,
                                  detail::slice_type_for_t<std::decay_t<Slices>>...>;
@@ -374,7 +386,7 @@ protected:
 
   template <typename... Slices, typename Self>
   auto slice_expression(this Self&& self) {
-    using child_t = detail::member_child_storage_t<Self, expression_type>;
+    using child_t = detail::member_child_storage_t<Self, raw_expression_type>;
     using my_expression_type =
         expression::unary::Slice<child_t,
                                  detail::slice_type_for_t<std::decay_t<Slices>>...>;

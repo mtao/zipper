@@ -63,10 +63,14 @@ public:
         detail::extents::static_extents_to_integral_sequence_t<extents_type>{});
   }
 
-  auto operator=(concepts::DataArray auto const &v) -> DataArrayBase & {
+  auto operator=(concepts::DataArray auto const &v) -> DataArrayBase &
+    requires(expression::concepts::WritableExpression<expression_type> && !Base::is_const)
+  {
     return Base::operator=(v.expression());
   }
-  auto operator=(concepts::DataArray auto &&v) -> DataArrayBase & {
+  auto operator=(concepts::DataArray auto &&v) -> DataArrayBase &
+    requires(expression::concepts::WritableExpression<expression_type> && !Base::is_const)
+  {
     return Base::operator=(v.expression());
   }
 
@@ -91,7 +95,7 @@ public:
 
   /// Set all elements to the given value.
   void fill(const value_type &value)
-    requires(expression::concepts::WritableExpression<expression_type>)
+    requires(expression::concepts::WritableExpression<expression_type> && !Base::is_const)
   {
     expression::nullary::Constant c(value, extents());
     expression().assign(c);

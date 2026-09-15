@@ -11,7 +11,8 @@ struct AccessFeatures {
   bool is_reference = false;
   template <typename ValueType>
   constexpr static auto from_type() -> AccessFeatures {
-    return {std::is_const_v<ValueType>, std::is_reference_v<ValueType>};
+    return {std::is_const_v<std::remove_reference_t<ValueType>>,
+            std::is_reference_v<ValueType>};
   }
 
   constexpr auto operator||(AccessFeatures o) -> AccessFeatures {
