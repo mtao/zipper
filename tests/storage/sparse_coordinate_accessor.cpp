@@ -602,6 +602,5 @@ TEST_CASE("sparse_index_set_has_index_set_trait", "[sparse][index_set]") {
     using SCA = storage::SparseCoordinateAccessor<double, extents<3, 3>>;
     using traits = expression::detail::ExpressionTraits<SCA>;
     STATIC_REQUIRE(traits::has_index_set);
-    STATIC_REQUIRE(traits::has_known_zeros);
     STATIC_REQUIRE(!traits::access_features.is_reference);
 }

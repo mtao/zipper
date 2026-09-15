@@ -415,7 +415,6 @@ struct detail::ExpressionTraits<
                 zipper::storage::detail::is_span_storage_v<StoragePolicy>},
         zipper::detail::ShapeFeatures{.is_resizable = false}> {
     constexpr static bool has_index_set = true;
-    constexpr static bool has_known_zeros = has_index_set;
 
     /// Sparse compressed leaf → prefer the compressed layout it uses.
     using preferred_layout =

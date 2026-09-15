@@ -33,9 +33,6 @@ struct detail::ExpressionTraits<
         ChildTraits::has_index_set
         && zipper::expression::detail::ZeroPreservingScalarOp<Operation,
                                                               ScalarOnRight>;
-
-    /// Backward-compatible alias for has_index_set.
-    constexpr static bool has_known_zeros = has_index_set;
 };
 
 namespace unary {

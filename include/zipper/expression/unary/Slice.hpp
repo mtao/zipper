@@ -399,9 +399,6 @@ struct detail::ExpressionTraits<unary::Slice<ExprType, Slices...>>
 
     /// Propagate has_index_set from child.
     constexpr static bool has_index_set = _Detail::Base::has_index_set;
-
-    /// Backward-compatible alias for has_index_set.
-    constexpr static bool has_known_zeros = has_index_set;
 };
 
 namespace unary {

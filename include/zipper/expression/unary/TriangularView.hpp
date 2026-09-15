@@ -97,9 +97,6 @@ struct detail::ExpressionTraits<unary::TriangularView<Mode, ExpressionType>>
 
     /// TriangularView has structurally known zero regions.
     constexpr static bool has_index_set = true;
-
-    /// Backward-compatible alias.
-    constexpr static bool has_known_zeros = has_index_set;
 };
 
 namespace unary {

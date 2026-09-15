@@ -83,7 +83,6 @@ TEST_CASE("lift_has_index_set_propagation", "[expression][unary][lift][indexset]
     using unit_type = std::decay_t<decltype(expression::nullary::unit_vector<double, 5, 2>())>;
     using unit_lift = unary::Lift<1, const unit_type>;
     STATIC_REQUIRE(ExpressionTraits<unit_lift>::has_index_set);
-    STATIC_REQUIRE(ExpressionTraits<unit_lift>::has_known_zeros);
 
     // Identity matrix DOES have index_set
     using identity_type = expression::nullary::Identity<double, 4, 4>;

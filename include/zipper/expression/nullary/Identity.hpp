@@ -193,9 +193,6 @@ struct detail::ExpressionTraits<nullary::Identity<T, Indices...>>
 
   /// Identity has structurally known zero regions (off-diagonal is zero).
   constexpr static bool has_index_set = true;
-
-  /// Backward-compatible alias for has_index_set.
-  constexpr static bool has_known_zeros = has_index_set;
 };
 } // namespace zipper::expression
 

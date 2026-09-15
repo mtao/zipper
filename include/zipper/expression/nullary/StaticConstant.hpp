@@ -140,9 +140,6 @@ struct detail::ExpressionTraits<nullary::StaticConstant<T, Value, Indices...>>
   /// Zero expressions have structurally known zero regions (everything is
   /// zero).
   constexpr static bool has_index_set = (Value == 0);
-
-  /// Backward-compatible alias.
-  constexpr static bool has_known_zeros = has_index_set;
 };
 
 } // namespace zipper::expression

@@ -45,9 +45,6 @@ struct detail::ExpressionTraits<unary::Swizzle<QualifiedExprType, Indices...>>
     /// but does not change the sparsity structure.
     constexpr static bool has_index_set = Base::has_index_set;
 
-    /// Backward-compatible alias for has_index_set.
-    constexpr static bool has_known_zeros = has_index_set;
-
   private:
     /// True when Indices... is exactly {1, 0} — a matrix transpose.
     consteval static bool _is_transpose() {

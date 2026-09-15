@@ -77,7 +77,6 @@ struct detail::ExpressionTraits<unary::DiagonalEmbed<ExpressionType>>
 
   // Structural sparsity: only the diagonal is non-zero.
   constexpr static bool has_index_set = true;
-  constexpr static bool has_known_zeros = has_index_set;
 };
 
 // ── DiagonalEmbed class ────────────────────────────────────────────────────
