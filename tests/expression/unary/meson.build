@@ -4,6 +4,7 @@ sources = [
   'repeat.cpp',
   'lift.cpp',
   'cast.cpp',
+  'callback_constraints.cpp',
   'scalar_arithmetic.cpp',
   'reshape.cpp',
   'cofactor.cpp',

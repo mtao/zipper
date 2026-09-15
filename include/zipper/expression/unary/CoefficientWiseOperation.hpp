@@ -2,6 +2,7 @@
 #define ZIPPER_EXPRESSION_UNARY_COEFFICIENTWISE_OPERATION_HPP
 
 #include "UnaryExpressionBase.hpp"
+#include "concepts/ScalarOperation.hpp"
 #include "detail/ZeroPreserving.hpp"
 #include "zipper/expression/detail/ExpressionTraits.hpp"
 #include "zipper/expression/detail/IndexSet.hpp"
@@ -9,6 +10,9 @@
 namespace zipper::expression {
 namespace unary {
     template <zipper::concepts::QualifiedExpression Child, typename Op>
+        requires concepts::ScalarOperation<
+            typename detail::DefaultUnaryExpressionDetail<Child>::base_value_type,
+            Op>
     class CoefficientWiseOperation;
 
 } // namespace unary
@@ -19,8 +23,8 @@ struct expression::detail::ExpressionTraits<
         Child,
         zipper::detail::AccessFeatures::const_value()> {
     using child_traits = ExpressionTraits<std::decay_t<Child>>;
-    using value_type = std::decay_t<decltype(std::declval<Op>()(
-        std::declval<typename child_traits::value_type>()))>;
+    using value_type = std::decay_t<decltype(std::declval<const Op &>()(
+        std::declval<const typename child_traits::value_type &>()))>;
 
     /// Propagate has_index_set when the Op preserves zeros.
     constexpr static bool has_index_set =
@@ -35,6 +39,9 @@ struct expression::detail::ExpressionTraits<
 namespace unary {
 
     template <zipper::concepts::QualifiedExpression Child, typename Operation>
+        requires concepts::ScalarOperation<
+            typename detail::DefaultUnaryExpressionDetail<Child>::base_value_type,
+            Operation>
     class CoefficientWiseOperation
       : public UnaryExpressionBase<CoefficientWiseOperation<Child, Operation>,
                                    Child> {
@@ -51,8 +58,15 @@ namespace unary {
 
         template <typename U>
             requires std::constructible_from<typename Base::storage_type, U &&>
-        CoefficientWiseOperation(U &&v, Operation const &op = {})
+                && std::constructible_from<Operation, const Operation &>
+        CoefficientWiseOperation(U &&v, Operation const &op)
           : Base(std::forward<U>(v)), m_op(op) {}
+
+        template <typename U>
+            requires std::default_initializable<Operation>
+                && std::constructible_from<self_type, U &&, const Operation &>
+        CoefficientWiseOperation(U &&v)
+          : CoefficientWiseOperation(std::forward<U>(v), Operation{}) {}
 
         using child_value_type = traits::base_value_type;
 

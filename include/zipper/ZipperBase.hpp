@@ -287,7 +287,8 @@ public:
   auto ref() && = delete;  // rvalue ref() is nonsensical — no lvalue to bind
 
   template <typename OpType, typename Self>
-    requires(expression::unary::concepts::ScalarOperation<value_type, OpType>)
+    requires(expression::unary::concepts::ScalarOperation<value_type, OpType> &&
+             std::constructible_from<OpType, const OpType &>)
   auto unary_expr(this Self&& self, const OpType &op) {
     using child_t = detail::member_child_storage_t<Self, expression_type>;
     using V = expression::unary::CoefficientWiseOperation<child_t, OpType>;
