@@ -2,15 +2,33 @@
 #define ZIPPER_expression_UNARY_SCALAROPERATIONVIEW_HPP
 
 #include "UnaryExpressionBase.hpp"
+#include "concepts/ScalarOperation.hpp"
 #include "detail/ZeroPreserving.hpp"
 #include "zipper/expression/detail/IndexSet.hpp"
 
 namespace zipper::expression {
 namespace unary {
+    namespace detail {
+        template <zipper::concepts::QualifiedExpression Child, typename Scalar,
+                  bool ScalarOnRight>
+        struct scalar_operation_types {
+            using child_value_type =
+                typename DefaultUnaryExpressionDetail<Child>::base_value_type;
+            using left_type = std::conditional_t<ScalarOnRight, child_value_type, Scalar>;
+            using right_type = std::conditional_t<ScalarOnRight, Scalar, child_value_type>;
+
+            template <typename Operation>
+            static constexpr bool callable =
+                concepts::ScalarOperation<left_type, Operation, right_type>;
+        };
+    } // namespace detail
+
     template <zipper::concepts::QualifiedExpression Child,
               typename Operation,
               typename Scalar,
               bool ScalarOnRight = false>
+        requires detail::scalar_operation_types<Child, Scalar, ScalarOnRight>::
+            template callable<Operation>
     class ScalarOperation;
 
 }
@@ -24,9 +42,11 @@ struct detail::ExpressionTraits<
         Child,
         zipper::detail::AccessFeatures::const_value()> {
     using ChildTraits = ExpressionTraits<std::decay_t<Child>>;
-    using value_type = decltype(std::declval<Operation>()(
-        std::declval<typename ChildTraits::value_type>(),
-        std::declval<Scalar>()));
+    using operand_types = unary::detail::scalar_operation_types<Child, Scalar, ScalarOnRight>;
+    using left_type = typename operand_types::left_type;
+    using right_type = typename operand_types::right_type;
+    using value_type = std::decay_t<decltype(std::declval<const Operation &>()(
+        std::declval<const left_type &>(), std::declval<const right_type &>()))>;
 
     /// Propagate has_index_set when the scalar Op preserves zeros.
     constexpr static bool has_index_set =
@@ -40,6 +60,8 @@ namespace unary {
               typename Operation,
               typename Scalar,
               bool ScalarOnRight>
+        requires detail::scalar_operation_types<Child, Scalar, ScalarOnRight>::
+            template callable<Operation>
     class ScalarOperation
       : public UnaryExpressionBase<
             ScalarOperation<Child, Operation, Scalar, ScalarOnRight>,
@@ -54,26 +76,42 @@ namespace unary {
         using Base = UnaryExpressionBase<self_type, Child>;
         using Base::expression;
 
+      private:
         template <typename U>
-            requires(ScalarOnRight
-                     && std::constructible_from<typename Base::storage_type,
-                                                U &&>)
-        ScalarOperation(U &&a, const Scalar &b, const Operation &op = {})
+        static constexpr bool can_construct =
+            std::constructible_from<typename Base::storage_type, U &&>
+            && std::constructible_from<Operation, const Operation &>
+            && std::constructible_from<Scalar, const Scalar &>;
+
+      public:
+        template <typename U>
+            requires(ScalarOnRight && can_construct<U>)
+        ScalarOperation(U &&a, const Scalar &b, const Operation &op)
           : Base(std::forward<U>(a)), m_op(op), m_scalar(b) {}
         template <typename U>
-            requires(!ScalarOnRight
-                     && std::constructible_from<typename Base::storage_type,
-                                                U &&>)
-        ScalarOperation(const Scalar &a, U &&b, const Operation &op = {})
+            requires(!ScalarOnRight && can_construct<U>)
+        ScalarOperation(const Scalar &a, U &&b, const Operation &op)
           : Base(std::forward<U>(b)), m_op(op), m_scalar(a) {}
 
-        // using child_value_type = traits::base_value_type;
+        template <typename U>
+            requires(ScalarOnRight && can_construct<U>
+                     && std::default_initializable<Operation>)
+        ScalarOperation(U &&a, const Scalar &b)
+          : ScalarOperation(std::forward<U>(a), b, Operation{}) {}
 
-        auto get_value(const auto &value) const -> value_type {
+        template <typename U>
+            requires(!ScalarOnRight && can_construct<U>
+                     && std::default_initializable<Operation>)
+        ScalarOperation(const Scalar &a, U &&b)
+          : ScalarOperation(a, std::forward<U>(b), Operation{}) {}
+
+        using child_value_type = traits::base_value_type;
+
+        auto get_value(const child_value_type &value) const -> value_type {
             if constexpr (ScalarOnRight) {
-                return m_op(value, m_scalar);
+                return value_type(m_op(value, m_scalar));
             } else {
-                return m_op(m_scalar, value);
+                return value_type(m_op(m_scalar, value));
             }
         }
 
