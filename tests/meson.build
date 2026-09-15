@@ -66,3 +66,6 @@ test('sparse_deduction', test_sparse_deduction)
 
 test_sparse_support_contract = executable('test_sparse_support_contract', 'sparse_support_contract.cpp', dependencies: [zipper_test_dep])
 test('sparse_support_contract', test_sparse_support_contract)
+
+test_noalias = executable('test_noalias', 'noalias.cpp', dependencies: [zipper_test_dep])
+test('noalias', test_noalias)

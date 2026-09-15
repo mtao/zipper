@@ -16,6 +16,29 @@
 
 #include "catch_include.hpp"
 
+TEST_CASE("compressed_assignment_keeps_sparse_alias_snapshot",
+          "[sparse][assignment]") {
+    using namespace zipper;
+    auto check = []<typename Layout>() {
+        COOMatrix<double, dynamic_extent, dynamic_extent> coo(200, 300);
+        coo.emplace(0, 299) = 2.0;
+        coo.emplace(199, 1) = 5.0;
+        coo.compress();
+        CSMatrix<double, dynamic_extent, dynamic_extent, Layout> A(coo);
+        // Scaling a transpose uses the generic support-aware COO fallback,
+        // not the specialized compressed transpose evaluator.
+        A = 2.0 * A.transpose();
+        REQUIRE(A.rows() == 300);
+        REQUIRE(A.cols() == 200);
+        CHECK(A.expression().compressed_data().m_values.size() == 2);
+        CHECK(std::as_const(A)(299, 0) == 4.0);
+        CHECK(std::as_const(A)(1, 199) == 10.0);
+        CHECK(std::as_const(A)(0, 0) == 0.0);
+    };
+    check.template operator()<storage::layout_right>();
+    check.template operator()<storage::layout_left>();
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 //  SparseEntry
 // ═══════════════════════════════════════════════════════════════════════════

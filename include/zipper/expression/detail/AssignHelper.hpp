@@ -3,8 +3,12 @@
 #include "zipper/concepts/Expression.hpp"
 #include "zipper/detail/ExtentsTraits.hpp"
 #include "zipper/detail/assert.hpp"
+#include "zipper/expression/concepts/capabilities.hpp"
 #include "zipper/expression/detail/AssignStrategy.hpp"
+#include "zipper/expression/detail/AssignmentSafety.hpp"
 #include "zipper/expression/detail/ExpressionTraits.hpp"
+#include "zipper/expression/detail/RankZeroEvaluation.hpp"
+#include "zipper/utils/extents/assignable_extents.hpp"
 #include "zipper/utils/extents/for_each_index.hpp"
 #include <tuple>
 
@@ -30,11 +34,11 @@ concept HasAssignTo = requires(const From &from, To &to) {
 };
 
 template <zipper::concepts::Expression From, zipper::concepts::Expression To>
-    requires(ExpressionTraits<To>::is_writable
-             && zipper::detail::ExtentsTraits<
-                 typename ExpressionTraits<To>::extents_type>::
-                 template is_convertable_from<
-                     typename ExpressionTraits<From>::extents_type>())
+    requires(concepts::WritableExpression<To>
+             && !std::is_const_v<std::remove_reference_t<To>>
+             && zipper::utils::extents::assignable_extents_v<
+                 typename ExpressionTraits<From>::extents_type,
+                 typename ExpressionTraits<To>::extents_type>)
 struct AssignHelper {
     using to_traits = ExpressionTraits<To>;
     using from_traits = ExpressionTraits<From>;
@@ -53,22 +57,37 @@ struct AssignHelper {
     using from_extents_traits =
         zipper::detail::ExtentsTraits<from_extents_type>;
 
+    static constexpr bool scalar_broadcast = from_extents_type::rank() == 0
+        && RankZeroEvaluation<From, to_extents_type::rank()>::is_scalar;
+
     /// Element-by-element copy, iterating in the target's preferred layout.
     static void assign_direct(const From &from, To &to);
+
+    /// Evaluate into a prepared target; the caller handles shape and aliasing.
+    static void evaluate_to(const From &from, To &to);
+
+    /// Prepare shape and evaluate; the caller guarantees storage independence.
+    static void assign_independent(const From &from, To &to);
 
     /// Main entry point: handles resizing, aliasing, and strategy dispatch.
     static void assign(const From &from, To &to);
 };
 
 template <zipper::concepts::Expression From, zipper::concepts::Expression To>
-    requires(ExpressionTraits<To>::is_writable
-             && zipper::detail::ExtentsTraits<
-                 typename ExpressionTraits<To>::extents_type>::
-                 template is_convertable_from<
-                     typename ExpressionTraits<From>::extents_type>())
+    requires(concepts::WritableExpression<To>
+             && !std::is_const_v<std::remove_reference_t<To>>
+             && zipper::utils::extents::assignable_extents_v<
+                 typename ExpressionTraits<From>::extents_type,
+                 typename ExpressionTraits<To>::extents_type>)
 void AssignHelper<From, To>::assign_direct(const From &from, To &to) {
     if constexpr (extents_type::rank() == 0) {
         to() = from();
+    } else if constexpr (scalar_broadcast) {
+        // Convert proxies to the destination value before the first write.
+        const value_type value = from();
+        using target_layout_pref = typename to_traits::preferred_layout;
+        zipper::utils::extents::for_each_index<target_layout_pref>(
+            to.extents(), [&](auto... idxs) { to(idxs...) = value; });
     } else {
         // Use layout-aware iteration: respect the target's preferred layout
         // for cache-friendly traversal order. NoLayoutPreference and
@@ -81,11 +100,44 @@ void AssignHelper<From, To>::assign_direct(const From &from, To &to) {
 }
 
 template <zipper::concepts::Expression From, zipper::concepts::Expression To>
-    requires(ExpressionTraits<To>::is_writable
-             && zipper::detail::ExtentsTraits<
-                 typename ExpressionTraits<To>::extents_type>::
-                 template is_convertable_from<
-                     typename ExpressionTraits<From>::extents_type>())
+    requires(concepts::WritableExpression<To>
+             && !std::is_const_v<std::remove_reference_t<To>>
+             && zipper::utils::extents::assignable_extents_v<
+                 typename ExpressionTraits<From>::extents_type,
+                 typename ExpressionTraits<To>::extents_type>)
+void AssignHelper<From, To>::evaluate_to(const From &from, To &to) {
+    if constexpr (HasCustomAssignStrategy<from_traits>
+                  && HasAssignTo<From, To>) {
+        from.assign_to(to);
+    } else {
+        assign_direct(from, to);
+    }
+}
+
+template <zipper::concepts::Expression From, zipper::concepts::Expression To>
+    requires(concepts::WritableExpression<To>
+             && !std::is_const_v<std::remove_reference_t<To>>
+             && zipper::utils::extents::assignable_extents_v<
+                 typename ExpressionTraits<From>::extents_type,
+                 typename ExpressionTraits<To>::extents_type>)
+void AssignHelper<From, To>::assign_independent(const From &from, To &to) {
+    if constexpr (from_extents_type::rank() != 0) {
+        const auto extents = to_extents_traits::convert_from(from.extents());
+        if constexpr (to_traits::is_resizable()) {
+            to.resize(extents);
+        } else {
+            ZIPPER_ASSERT(to.extents() == extents);
+        }
+    }
+    evaluate_to(from, to);
+}
+
+template <zipper::concepts::Expression From, zipper::concepts::Expression To>
+    requires(concepts::WritableExpression<To>
+             && !std::is_const_v<std::remove_reference_t<To>>
+             && zipper::utils::extents::assignable_extents_v<
+                 typename ExpressionTraits<From>::extents_type,
+                 typename ExpressionTraits<To>::extents_type>)
 void AssignHelper<From, To>::assign(const From &from, To &to) {
     using FromTraits = zipper::expression::detail::ExpressionTraits<From>;
     using ToTraits = zipper::expression::detail::ExpressionTraits<To>;
@@ -94,44 +146,41 @@ void AssignHelper<From, To>::assign(const From &from, To &to) {
     constexpr static bool should_resize =
         !assigning_from_infinite && ToTraits::is_resizable();
 
-    // ── Strategy dispatch ────────────────────────────────────────────
-    //
-    // If the source expression declares a custom assign strategy AND
-    // provides an assign_to() method, use it. This allows expressions
-    // like PartialTransform to perform fiber-by-fiber assignment
-    // (calling fn once per fiber instead of once per element).
-    //
-    // Custom strategies are also inherently alias-safe (for fiber
-    // strategies, fibers don't overlap), so we skip the aliasing
-    // temporary path.
-    if constexpr (HasCustomAssignStrategy<FromTraits>
-                  && HasAssignTo<From, To>) {
-        if constexpr (should_resize) {
-            to.resize(to_extents_traits::convert_from(from.extents()));
-        } else if constexpr (to_extents_traits::is_dynamic
-                             && !assigning_from_infinite) {
-            ZIPPER_ASSERT(to.extents() == from.extents());
+    // A pointwise proof covers coefficient evaluation, not a custom evaluator's
+    // write order. Prove against live storage before any resize or mutation.
+    if constexpr (!HasCustomAssignStrategy<FromTraits>) {
+        if (assignment_is_safe(from, to)) {
+            evaluate_to(from, to);
+            return;
         }
-        from.assign_to(to);
-    } else if constexpr (get_is_coefficient_consistent<FromTraits>()) {
-        // ── Default path: coefficient-consistent (no aliasing) ─────────
-        if constexpr (should_resize) {
-            to.resize(to_extents_traits::convert_from(from.extents()));
-        } else if constexpr (to_extents_traits::is_dynamic
-                             && !assigning_from_infinite) {
-            ZIPPER_ASSERT(to.extents() == from.extents());
-        }
+    }
 
+    if constexpr (scalar_broadcast && !HasCustomAssignStrategy<FromTraits>) {
         assign_direct(from, to);
     } else {
-        // ── Aliasing path: materialize to temporary first ──────────────
+        // This is the dense assignment coordinator. Sparse storage assignment
+        // keeps its own support-aware path through SparseAssignHelper.
+        // Evaluate before any destination resize or write, including callbacks
+        // that return lazy expressions reading across/within source fibers.
+        const auto snapshot_extents = [&] {
+            if constexpr (assigning_from_infinite) {
+                // Generators and custom evaluators need destination coordinates,
+                // not a rank-zero temporary. Never resize for rank-zero input.
+                return to.extents();
+            } else {
+                return to_extents_traits::convert_from(from.extents());
+            }
+        }();
+        if constexpr (!should_resize && to_extents_traits::is_dynamic) {
+            ZIPPER_ASSERT(to.extents() == snapshot_extents);
+        }
         using POS = nullary::
             MDArray<value_type, extents_type, layout_policy, accessor_policy>;
-        POS pos(to_extents_traits::convert_from(from.extents()));
+        POS pos(snapshot_extents);
 
-        AssignHelper<From, POS>::assign_direct(from, pos);
+        AssignHelper<From, POS>::evaluate_to(from, pos);
         if constexpr (should_resize) {
-            to.resize(to_extents_traits::convert_from(from.extents()));
+            to.resize(snapshot_extents);
         }
         AssignHelper<POS, To>::assign_direct(pos, to);
     }

@@ -18,3 +18,6 @@ test('index_set', test_index_set)
 
 test_zero_aware_operation = executable('test_zero_aware_operation', 'test_zero_aware_operation.cpp', dependencies: [zipper_test_dep])
 test('zero_aware_operation', test_zero_aware_operation)
+
+test_assignment_safety = executable('test_assignment_safety', 'assignment_safety.cpp', dependencies: [zipper_test_dep])
+test('assignment_safety', test_assignment_safety)
