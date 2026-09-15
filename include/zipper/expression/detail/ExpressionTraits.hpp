@@ -63,10 +63,10 @@ struct BasicExpressionTraits {
     /// (`col_range_for_row`, `row_range_for_col`, `nonzero_segment`).
     /// This enables zero-aware optimizations in addition, subtraction, and
     /// matrix products.
+    /// The set is a support bound: entries outside it are algebraic implicit
+    /// zeros; entries inside it may also evaluate to zero. This does not imply
+    /// that every coefficient has storage suitable for reference access.
     constexpr static bool has_index_set = false;
-
-    /// Backward-compatible alias for has_index_set.
-    constexpr static bool has_known_zeros = has_index_set;
 
     /// Whether copying this expression propagates view semantics.
     /// When true, `member_child_storage_t` and `expression_storage_t` store
@@ -153,10 +153,6 @@ consteval auto get_is_coefficient_consistent() -> bool {
 /// Uses the ExpressionTraits<T>::has_index_set flag.
 template <typename T>
 concept HasIndexSet = ExpressionTraits<std::remove_cvref_t<T>>::has_index_set;
-
-/// Backward-compatible alias for the old concept name.
-template <typename T>
-concept HasKnownZeros = HasIndexSet<T>;
 
 } // namespace zipper::expression::detail
 #endif

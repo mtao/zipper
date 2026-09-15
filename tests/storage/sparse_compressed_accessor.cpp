@@ -170,7 +170,6 @@ TEST_CASE("sparse_compressed_accessor_traits", "[sparse][compressed]") {
         storage::SparseCompressedAccessor<double, extents<3, 3>>;
     using traits = expression::detail::ExpressionTraits<SCA>;
     STATIC_REQUIRE(traits::has_index_set);
-    STATIC_REQUIRE(traits::has_known_zeros);
     STATIC_REQUIRE(!traits::access_features.is_reference);
     STATIC_REQUIRE(!traits::access_features.is_const);
 }

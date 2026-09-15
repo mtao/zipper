@@ -26,9 +26,6 @@ struct expression::detail::ExpressionTraits<
     constexpr static bool has_index_set =
         child_traits::has_index_set
         && zipper::expression::detail::ZeroPreservingUnaryOp<Op>;
-
-    /// Backward-compatible alias for has_index_set.
-    constexpr static bool has_known_zeros = has_index_set;
 };
 
 // represents a coefficient-wise transformation of an underlyng expression

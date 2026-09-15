@@ -410,7 +410,6 @@ struct detail::ExpressionTraits<
           zipper::detail::AccessFeatures{std::is_const_v<ValueType>, false},
           zipper::detail::ShapeFeatures::fixed()> {
   constexpr static bool has_index_set = true;
-  constexpr static bool has_known_zeros = has_index_set;
 
   /// COO has no compressed layout bias → no preference.
   using preferred_layout = zipper::detail::NoLayoutPreference;

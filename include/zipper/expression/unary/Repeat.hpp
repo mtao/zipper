@@ -83,9 +83,6 @@ struct detail::ExpressionTraits<unary::Repeat<Mode, Count, Child>>
     /// Repeated (broadcast) dimensions are fully dense.
     using child_traits = ExpressionTraits<std::decay_t<Child>>;
     constexpr static bool has_index_set = child_traits::has_index_set;
-
-    /// Backward-compatible alias for has_index_set.
-    constexpr static bool has_known_zeros = has_index_set;
 };
 namespace unary {
 template <RepeatMode Mode, rank_type Count,

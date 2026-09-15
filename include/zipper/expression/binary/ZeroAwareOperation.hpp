@@ -84,9 +84,6 @@ struct detail::ExpressionTraits<binary::ZeroAwareOperation<A, B, Op>>
 
     /// The result expression always tracks structural zeros.
     constexpr static bool has_index_set = true;
-
-    /// Backward-compatible alias for has_index_set.
-    constexpr static bool has_known_zeros = has_index_set;
 };
 
 // ─── ZeroAwareOperation class ────────────────────────────────────────────────

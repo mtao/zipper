@@ -99,7 +99,8 @@ template <zipper::concepts::Index... Args>
 auto ExpressionBase<Derived>::const_access_index_pack(Args &&...idxs) const
     -> decltype(auto) {
   ZIPPER_ASSERT(zipper::utils::extents::indices_in_range(extents(), idxs...));
-  if constexpr (traits::is_referrable() && !traits::has_known_zeros) {
+  // Structural zeros need value access: an implicit entry has no reference.
+  if constexpr (traits::is_referrable() && !traits::has_index_set) {
     return const_coeff_ref(std::forward<Args>(idxs)...);
   } else {
     return coeff(std::forward<Args>(idxs)...);
