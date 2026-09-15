@@ -100,7 +100,7 @@ auto MDSpan<ElementType, Extents, LayoutPolicy, AccessorPolicy>::make_owned() co
   using owned_type = MDArray<non_const_element, Extents, LayoutPolicy,
                              default_accessor_policy<non_const_element>>;
   owned_type result(this->extents());
-  expression::detail::AssignHelper<self_type, owned_type>::assign(*this, result);
+  expression::detail::AssignHelper<self_type, owned_type>::evaluate_to(*this, result);
   return result;
 }
 } // namespace zipper::expression::nullary

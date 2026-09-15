@@ -1,10 +1,90 @@
 
 #include "catch_include.hpp"
+#include <zipper/Matrix.hpp>
+#include <zipper/Tensor.hpp>
 #include <mdspan/mdspan.hpp>
 #include <zipper/expression/nullary/Constant.hpp>
 #include <zipper/expression/nullary/Identity.hpp>
 #include <zipper/expression/nullary/MDSpan.hpp>
 #include <zipper/expression/nullary/Random.hpp>
+
+namespace {
+struct Twice {
+    const double *p;
+    operator double() const { return 2 * *p; }
+};
+struct ScalarProxy;
+} // namespace
+
+namespace zipper::expression::detail {
+template <>
+struct ExpressionTraits<ScalarProxy>
+    : BasicExpressionTraits<Twice, zipper::extents<>> {
+    constexpr static bool is_coefficient_consistent = false;
+};
+} // namespace zipper::expression::detail
+
+namespace {
+struct ScalarProxy : zipper::expression::ExpressionBase<ScalarProxy> {
+    explicit ScalarProxy(const double *p) : m_p(p) {}
+    auto extents() const -> extents_type { return {}; }
+    auto coeff() const -> Twice { return {m_p}; }
+
+    const double *m_p;
+};
+} // namespace
+
+TEST_CASE("assignment_materializes_scalar_proxy_before_writing",
+          "[mdspan][nullary][assignment]") {
+    zipper::Matrix<double, 1, 2> a{{7, 7}};
+    // Point directly at live storage, not a unary callback's value temporary.
+    const ScalarProxy source(&a(0, 0));
+    a = source;
+    CHECK(a(0, 0) == 14.0);
+    CHECK(a(0, 1) == 14.0);
+}
+
+TEST_CASE("assignment_snapshots_aliasing_scalar_without_resizing",
+          "[mdspan][nullary][assignment]") {
+    using namespace zipper;
+    auto check = [](auto &destination) {
+        destination = expression::nullary::Constant<double>(7.0);
+        const auto shape = destination.extents();
+        auto tensor = as_tensor(destination);
+        auto scalar = tensor.slice(0, 0);
+        destination = (scalar * 2.0).expression();
+        CHECK(destination.extents() == shape);
+        CHECK((destination.as_array() == 14.0).all());
+    };
+    Matrix<double, 2, 3> fixed;
+    MatrixXX<double> dynamic(2, 3);
+    check(fixed);
+    check(dynamic);
+    auto view = dynamic.as_span();
+    check(view);
+    Tensor<double> scalar;
+    scalar() = 7.0;
+    scalar = scalar * 2.0;
+    CHECK(scalar() == 14.0);
+}
+
+TEST_CASE("assignment_rank_zero_generator_remains_per_coefficient",
+          "[mdspan][nullary][assignment]") {
+    using namespace zipper;
+    auto random = expression::nullary::uniform_random<double>(
+        extents<>{}, 0.0, 1.0, std::default_random_engine{123});
+    auto expected = random;
+    MatrixXX<double> destination(2, 3);
+    destination = random;
+    CHECK(destination.rows() == 2);
+    CHECK(destination.cols() == 3);
+    for (index_type i = 0; i < 2; ++i) {
+        for (index_type j = 0; j < 3; ++j) {
+            CHECK(destination(i, j) == expected());
+        }
+    }
+}
+
 TEST_CASE("test_mdspan_construction", "[mdspan][nullary][dense]") {
 
   std::array<double, 3> arr = {2, 3, 4};

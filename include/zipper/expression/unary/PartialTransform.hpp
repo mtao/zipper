@@ -28,7 +28,9 @@
 #include "zipper/detail/extents/static_extents_to_array.hpp"
 #include "zipper/detail/pack_index.hpp"
 #include "zipper/detail/wrap_in_base.hpp"
+#include "zipper/expression/concepts/capabilities.hpp"
 #include "zipper/expression/detail/AssignStrategy.hpp"
+#include "zipper/utils/extents/assignable_extents.hpp"
 #include "zipper/utils/extents/for_each_index.hpp"
 
 namespace zipper::expression {
@@ -74,6 +76,16 @@ struct detail::ExpressionTraits<
 
     constexpr static bool is_coefficient_consistent = false;
     constexpr static bool is_value_based = false;
+
+    // Arbitrary callbacks may fill structural zeros. Sparse child storage is
+    // not evidence of sparse output; a support-preserving opt-in is future work.
+    constexpr static bool has_index_set = false;
+    constexpr static bool has_known_zeros = false;
+    using preferred_layout = std::conditional_t<
+        zipper::detail::is_sparse_layout_preference_v<
+            typename _Detail::Base::preferred_layout>,
+        zipper::detail::NoLayoutPreference,
+        typename _Detail::Base::preferred_layout>;
 
     using assign_strategy = detail::FiberAssignStrategy<Indices...>;
 };
@@ -233,11 +245,17 @@ namespace unary {
 
         // ── assign_to() — fast fiber-by-fiber path ─────────────────────────
         //
-        // Called by AssignHelper when it detects HasCustomAssignStrategy.
+        // Evaluation only: the caller must provide a correctly shaped target
+        // independent of all callback/source reads. AssignHelper snapshots
+        // here before modifying a possibly overlapping destination.
         // Iterates over non-fiber index combinations, applies fn once per
         // fiber, writes the result to the target.
 
         template <zipper::concepts::Expression To>
+            requires(zipper::expression::concepts::WritableExpression<To>
+                     && !std::is_const_v<std::remove_reference_t<To>>
+                     && zipper::utils::extents::assignable_extents_v<
+                         extents_type, typename To::extents_type>)
         void assign_to(To &to) const {
             auto non_fiber_ext =
                 index_remover::get_extents(expression().extents());

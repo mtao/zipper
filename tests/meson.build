@@ -60,3 +60,6 @@ test('owning_deduction', test_owning_deduction)
 
 test_sparse_deduction = executable('test_sparse_deduction', 'sparse_deduction.cpp', dependencies: [zipper_test_dep])
 test('sparse_deduction', test_sparse_deduction)
+
+test_noalias = executable('test_noalias', 'noalias.cpp', dependencies: [zipper_test_dep])
+test('noalias', test_noalias)

@@ -12,6 +12,8 @@
 //   };
 //
 // If no assign_strategy is declared, DefaultAssignStrategy is assumed.
+// A strategy is not an alias-safety promise. AssignHelper prepares the target
+// and snapshots the result when safety has not been established independently.
 
 #include "zipper/types.hpp"
 #include <type_traits>
@@ -30,20 +32,20 @@ struct DefaultAssignStrategy {};
 ///
 /// Instead of evaluating the source expression once per coefficient
 /// (O(m*n) calls), this strategy iterates over the "non-fiber" indices
-/// and evaluates the transform function once per fiber (O(m) calls for
+/// and evaluates the transform function once per fiber (O(n) calls for
 /// an m x n matrix with column fibers).
 ///
 /// FiberIndices... are the dimension indices that form the fiber
-/// (e.g., {0} for column fibers = rowwise transform,
-///        {1} for row fibers = colwise transform).
+/// (e.g., {0} for column fibers = colwise transform,
+///        {1} for row fibers = rowwise transform).
 ///
 /// The assignment loop:
 ///   for each combination of non-fiber indices:
 ///     result_fiber = fn(source_fiber)
 ///     write result_fiber to target at those non-fiber indices
 ///
-/// This is naturally alias-safe when fibers don't overlap (which they
-/// don't for standard rowwise/colwise transforms).
+/// Disjoint logical fibers do not prove storage independence: a child may
+/// reindex or overlap the target, and a lazy result may still read its fiber.
 template <rank_type... FiberIndices>
 struct FiberAssignStrategy {};
 

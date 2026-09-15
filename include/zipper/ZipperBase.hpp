@@ -5,6 +5,7 @@
 #include "concepts/IndexArgument.hpp"
 #include "concepts/Zipper.hpp"
 #include "detail/NonReturnable.hpp"
+#include "detail/NoAliasProxy.hpp"
 #include "expression/concepts/capabilities.hpp"
 #include "expression/unary/Cast.hpp"
 #include "expression/unary/CoefficientWiseOperation.hpp"
@@ -152,7 +153,23 @@ public:
              zipper::utils::extents::assignable_extents_v<
                  typename Other::extents_type, extents_type>)
       : m_expression(extents_traits::convert_from(other.extents())) {
-    m_expression.assign(other);
+    if constexpr (detail::is_fresh_mdarray_v<expression_type>) {
+      // Fresh owning storage is already shaped and cannot alias the source.
+      expression::detail::AssignHelper<Other, expression_type>::evaluate_to(
+          other, m_expression);
+    } else {
+      m_expression.assign(other);
+    }
+  }
+
+  /// Explicitly promise that RHS reads do not alias this destination's storage.
+  /// Available only on mutable lvalue MDArray/MDSpan wrappers, not sparse
+  /// destinations or arbitrary views. Rank-zero RHS preserves the shape.
+  template <typename Self>
+  auto noalias(this Self &self) -> detail::NoAliasProxy<Self>
+    requires detail::NoAliasDestination<Self>
+  {
+    return detail::NoAliasProxy<Self>(self);
   }
 
   // Removed: variadic forwarding constructor that silently enabled CTAD
