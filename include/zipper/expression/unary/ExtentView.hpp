@@ -1,6 +1,7 @@
 #if !defined(ZIPPER_EXPRESSION_UNARY_EXTENTVIEW_HPP)
 #define ZIPPER_EXPRESSION_UNARY_EXTENTVIEW_HPP
 
+#include "zipper/detail/NoAliasTraits.hpp"
 #include "UnaryExpressionBase.hpp"
 #include "zipper/concepts/Expression.hpp"
 #include "zipper/detail/assert.hpp"
@@ -240,5 +241,13 @@ auto as_extents(const E &expr) {
 }
 
 } // namespace zipper
+
+namespace zipper::detail {
+// ExtentView writes forward to its child unchanged (extents retyped only).
+template <typename Child, typename NewExtents>
+inline constexpr bool
+    supports_noalias_v<expression::unary::ExtentView<Child, NewExtents>> =
+        forwards_noalias_v<Child>;
+} // namespace zipper::detail
 
 #endif

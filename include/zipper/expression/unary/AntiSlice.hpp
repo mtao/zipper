@@ -1,6 +1,7 @@
 #if !defined(ZIPPER_EXPRESSION_UNARY_ANTISLICE_HPP)
 #define ZIPPER_EXPRESSION_UNARY_ANTISLICE_HPP
 
+#include "zipper/detail/NoAliasTraits.hpp"
 #include "UnaryExpressionBase.hpp"
 #include "zipper/concepts/Expression.hpp"
 #include "zipper/detail/pack_index.hpp"
@@ -288,4 +289,12 @@ AntiSlice(ExprType &) -> AntiSlice<ExprType&, InsertedDims...>;
 
 }  // namespace unary
 }  // namespace zipper::expression
+namespace zipper::detail {
+// AntiSlice writes forward to its child (inserted size-1 dimensions dropped).
+template <typename Child, rank_type... InsertedDims>
+inline constexpr bool
+    supports_noalias_v<expression::unary::AntiSlice<Child, InsertedDims...>> =
+        forwards_noalias_v<Child>;
+} // namespace zipper::detail
+
 #endif

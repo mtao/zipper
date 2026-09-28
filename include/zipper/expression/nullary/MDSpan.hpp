@@ -1,6 +1,7 @@
 #if !defined(ZIPPER_EXPRESSION_NULLARY_MDSPAN_HPP)
 #define ZIPPER_EXPRESSION_NULLARY_MDSPAN_HPP
 
+#include "zipper/detail/NoAliasTraits.hpp"
 #include "LinearLayoutExpression.hpp"
 #include "zipper/detail/ExtentsTraits.hpp"
 #include "zipper/expression/detail/AssignHelper.hpp"
@@ -141,5 +142,13 @@ struct detail::ExpressionTraits<nullary::MDSpan<
   constexpr static bool stores_references = true;
 };
 } // namespace zipper::expression
+
+namespace zipper::detail {
+// Mutable dense views over external storage support noalias destinations.
+template <typename T, typename E, typename L, typename A>
+inline constexpr bool
+    supports_noalias_v<expression::nullary::MDSpan<T, E, L, A>> =
+        !std::is_const_v<T>;
+} // namespace zipper::detail
 
 #endif

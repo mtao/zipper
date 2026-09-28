@@ -2,36 +2,23 @@
 
 #include "zipper/concepts/Zipper.hpp"
 #include "zipper/expression/concepts/capabilities.hpp"
+#include "zipper/detail/NoAliasTraits.hpp"
 #include "zipper/expression/detail/AssignHelper.hpp"
 #include <type_traits>
 #include <utility>
 
-namespace zipper::expression::nullary {
-template <typename ElementType, typename Extents, typename LayoutPolicy,
-          typename AccessorPolicy>
-class MDSpan;
-} // namespace zipper::expression::nullary
-
 namespace zipper::detail {
 
-// Only these storage types have a known dense assignment contract. In
-// particular, sparse destinations must retain their support-building path.
+// Fresh owning storage cannot alias a source, so construction may evaluate
+// straight into it (see ZipperBase's converting constructor).
 template <typename T>
 inline constexpr bool is_fresh_mdarray_v = false;
 
 template <typename T, typename E, typename L, typename A>
 inline constexpr bool is_fresh_mdarray_v<expression::nullary::MDArray<T, E, L, A>> = true;
 
-template <typename T>
-inline constexpr bool supports_noalias_v = false;
-
-template <typename T, typename E, typename L, typename A>
-inline constexpr bool supports_noalias_v<expression::nullary::MDArray<T, E, L, A>> =
-    !std::is_const_v<T>;
-
-template <typename T, typename E, typename L, typename A>
-inline constexpr bool supports_noalias_v<expression::nullary::MDSpan<T, E, L, A>> =
-    !std::is_const_v<T>;
+// Which destination expressions support noalias is opted into by each
+// expression's own header via supports_noalias_v (see NoAliasTraits.hpp).
 
 template <typename Destination>
 concept NoAliasDestination =

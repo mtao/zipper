@@ -1,6 +1,7 @@
 #if !defined(ZIPPER_EXPRESSION_UNARY_RESHAPE_HPP)
 #define ZIPPER_EXPRESSION_UNARY_RESHAPE_HPP
 
+#include "zipper/detail/NoAliasTraits.hpp"
 #include "UnaryExpressionBase.hpp"
 #include "zipper/concepts/Expression.hpp"
 #include "zipper/detail/assert.hpp"
@@ -182,4 +183,12 @@ Reshape(const E &, const Ext &) -> Reshape<const E&, Ext>;
 
 } // namespace unary
 } // namespace zipper::expression
+namespace zipper::detail {
+// Reshape writes forward to its child (linear index remapping only).
+template <typename Child, typename NewExtents>
+inline constexpr bool
+    supports_noalias_v<expression::unary::Reshape<Child, NewExtents>> =
+        forwards_noalias_v<Child>;
+} // namespace zipper::detail
+
 #endif

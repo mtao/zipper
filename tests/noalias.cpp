@@ -6,6 +6,9 @@
 #include <zipper/expression/nullary/Constant.hpp>
 #include <zipper/expression/nullary/Identity.hpp>
 #include <zipper/expression/nullary/Random.hpp>
+#include <zipper/expression/unary/AntiSlice.hpp>
+#include <zipper/expression/unary/ExtentView.hpp>
+#include <zipper/expression/unary/Reshape.hpp>
 #include <cstdlib>
 #include <new>
 #include <utility>
@@ -595,4 +598,226 @@ TEST_CASE("unproven_assignment_snapshots_before_mutation", "[assignment][alias_s
         CHECK(allocations == 1);
         CHECK(a == Matrix<int, 3, 2>{{1, 4}, {2, 5}, {3, 6}});
     }
+}
+
+TEST_CASE("noalias_slice_destination_contract", "[assignment][noalias][slice]") {
+    using namespace zipper;
+    using Buffer = Matrix<int, 4, dynamic_extent, false>;
+    using Columns = decltype(zipper::slice(index_type{0}, index_type{0}));
+    using Rows2 = decltype(zipper::slice(
+        index_type{0}, std::integral_constant<index_type, 2>{}));
+    using Block = decltype(std::declval<Buffer &>()(full_extent_t{},
+                                                    std::declval<Columns>()));
+    using ConstBlock = decltype(std::declval<const Buffer &>()(
+        full_extent_t{}, std::declval<Columns>()));
+    using NestedBlock = decltype(std::declval<Block &>()(
+        std::declval<Rows2>(), full_extent_t{}));
+    using SpanBlock = decltype(std::declval<Buffer::span_type &>()(
+        full_extent_t{}, std::declval<Columns>()));
+    using ConstSpanBlock = decltype(std::declval<Buffer::const_span_type &>()(
+        full_extent_t{}, std::declval<Columns>()));
+
+    STATIC_CHECK(HasNoAlias<Block &>);
+    STATIC_CHECK(HasNoAlias<NestedBlock &>);
+    STATIC_CHECK(HasNoAlias<SpanBlock &>);
+    STATIC_CHECK_FALSE(HasNoAlias<const Block &>);
+    STATIC_CHECK_FALSE(HasNoAlias<ConstBlock &>);
+    STATIC_CHECK_FALSE(HasNoAlias<ConstSpanBlock &>);
+    STATIC_CHECK(NoAliasAssignable<Block, Matrix<int, 4, 3>>);
+    STATIC_CHECK_FALSE(NoAliasAssignable<Block, Matrix<int, 3, 3>>);
+}
+
+TEST_CASE("noalias_slice_packs_without_snapshot", "[assignment][noalias][slice]") {
+    using namespace zipper;
+    // Pack a 4-row strip of a column-major source into one panel of a larger
+    // buffer, as GEMM packing does. Both slices have a dynamic column extent.
+    Matrix<int, dynamic_extent, dynamic_extent, false> source(6, 5);
+    for (index_type j = 0; j < 5; ++j) {
+        for (index_type i = 0; i < 6; ++i) {
+            source(i, j) = static_cast<int>(10 * i + j);
+        }
+    }
+    Matrix<int, 4, dynamic_extent, false> buffer(4, 10);
+    auto panel = buffer(full_extent_t{}, zipper::slice(index_type{5}, index_type{5}));
+    const auto strip = source(
+        zipper::slice(index_type{1}, std::integral_constant<index_type, 4>{}),
+        full_extent_t{});
+
+    bool conservative = false;
+    SECTION("conservative_assignment_snapshots") {
+        Measurement measurement;
+        panel = strip;
+        conservative = true;
+    }
+    SECTION("noalias") {
+        Measurement measurement;
+        CHECK(&(panel.noalias() = strip) == &panel);
+    }
+    if (conservative) {
+        CHECK(allocations > 0);
+    } else {
+        CHECK(allocations == 0);
+    }
+    for (index_type p = 0; p < 5; ++p) {
+        for (index_type r = 0; r < 4; ++r) {
+            CHECK(buffer(r, p) == 0);                  // untouched panel
+            CHECK(buffer(r, 5 + p) == source(1 + r, p)); // packed panel
+        }
+    }
+}
+
+TEST_CASE("noalias_nested_slice_writes_through", "[assignment][noalias][slice]") {
+    using namespace zipper;
+    Matrix<int, dynamic_extent, dynamic_extent, false> target(4, 4);
+    auto block = target(zipper::slice(index_type{1}, index_type{3}),
+                        zipper::slice(index_type{1}, index_type{3}));
+    auto inner = block(zipper::slice(index_type{1}, index_type{2}), full_extent_t{});
+    {
+        Measurement measurement;
+        inner.noalias() = Matrix<int, 2, 3>{{1, 2, 3}, {4, 5, 6}};
+    }
+    CHECK(allocations == 0);
+    CHECK(target == Matrix<int, 4, 4>{{0, 0, 0, 0},
+                                      {0, 0, 0, 0},
+                                      {0, 1, 2, 3},
+                                      {0, 4, 5, 6}});
+}
+
+TEST_CASE("noalias_slice_uses_custom_evaluator_once", "[assignment][noalias][slice]") {
+    using namespace zipper;
+    int calls = 0;
+    int reads = 0;
+    CustomEvaluator source(extents<dynamic_extent>(4), calls, reads);
+    VectorX<Counted> target(6);
+    auto middle = target.segment(1, 4);
+    {
+        Measurement measurement;
+        middle.noalias() = source;
+    }
+    CHECK(allocations == 0);
+    CHECK(Counted::writes == 4);
+    CHECK(Counted::copies == 0);
+    CHECK(calls == 1);
+    CHECK(reads == 0);
+    CHECK(target(0).value == 0);
+    CHECK(target(1).value == 7);
+    CHECK(target(4).value == 7);
+    CHECK(target(5).value == 0);
+}
+
+TEST_CASE("noalias_forwarding_view_contract", "[assignment][noalias][views]") {
+    using namespace zipper;
+    namespace unary = expression::unary;
+    using Dense = Matrix<int, dynamic_extent, dynamic_extent, false>;
+    using Expr = Dense::expression_type;
+    using Columns = decltype(zipper::slice(index_type{0}, index_type{0}));
+    using Transposed = decltype(std::declval<Dense &>().transpose());
+    using Swizzled = decltype(std::declval<Dense &>().template swizzle<1, 0>());
+    using Diagonal = decltype(std::declval<Dense &>().diagonal());
+    using Ref = decltype(std::declval<Dense &>().ref());
+    using SliceOfTranspose = decltype(std::declval<Transposed &>()(
+        full_extent_t{}, std::declval<Columns>()));
+    using TransposeOfSlice = decltype(std::declval<Dense &>()(
+        full_extent_t{}, std::declval<Columns>()).transpose());
+    using Reshaped = MatrixBase<unary::Reshape<Expr &, dextents<2>>>;
+    using Retyped = MatrixBase<unary::ExtentView<Expr &, dextents<2>>>;
+    using Column = MatrixBase<unary::AntiSlice<VectorX<int>::expression_type &, 1>>;
+
+    STATIC_CHECK(HasNoAlias<Transposed &>);
+    STATIC_CHECK(HasNoAlias<Swizzled &>);
+    STATIC_CHECK(HasNoAlias<Diagonal &>);
+    STATIC_CHECK(HasNoAlias<Ref &>);
+    STATIC_CHECK(HasNoAlias<SliceOfTranspose &>);
+    STATIC_CHECK(HasNoAlias<TransposeOfSlice &>);
+    STATIC_CHECK(HasNoAlias<Reshaped &>);
+    STATIC_CHECK(HasNoAlias<Retyped &>);
+    STATIC_CHECK(HasNoAlias<Column &>);
+
+    STATIC_CHECK_FALSE(HasNoAlias<decltype(std::declval<const Dense &>().transpose()) &>);
+    STATIC_CHECK_FALSE(HasNoAlias<decltype(std::declval<const Dense &>().diagonal()) &>);
+    STATIC_CHECK_FALSE(HasNoAlias<decltype(std::declval<const Dense &>().ref()) &>);
+    STATIC_CHECK_FALSE(HasNoAlias<MatrixBase<unary::Reshape<const Expr &, dextents<2>>> &>);
+    STATIC_CHECK_FALSE(HasNoAlias<MatrixBase<unary::ExtentView<const Expr &, dextents<2>>> &>);
+    STATIC_CHECK_FALSE(HasNoAlias<const Transposed &>);
+}
+
+TEST_CASE("noalias_forwarding_views_write_through", "[assignment][noalias][views]") {
+    using namespace zipper;
+    namespace unary = expression::unary;
+    using Dense = Matrix<int, dynamic_extent, dynamic_extent, false>;
+    Dense target(3, 3);
+    const Matrix<int, 3, 3> source{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
+
+    SECTION("transpose") {
+        auto view = target.transpose();
+        {
+            Measurement measurement;
+            CHECK(&(view.noalias() = source) == &view);
+        }
+        CHECK(target == Matrix<int, 3, 3>{{1, 4, 7}, {2, 5, 8}, {3, 6, 9}});
+    }
+    SECTION("diagonal") {
+        auto view = target.diagonal();
+        {
+            Measurement measurement;
+            view.noalias() = Vector<int, 3>{1, 2, 3};
+        }
+        CHECK(target == Matrix<int, 3, 3>{{1, 0, 0}, {0, 2, 0}, {0, 0, 3}});
+    }
+    SECTION("slice_of_transpose") {
+        auto transposed = target.transpose();
+        auto view = transposed(full_extent_t{}, zipper::slice(index_type{1}, index_type{2}));
+        {
+            Measurement measurement;
+            view.noalias() = Matrix<int, 3, 2>{{1, 2}, {3, 4}, {5, 6}};
+        }
+        CHECK(target == Matrix<int, 3, 3>{{0, 0, 0}, {1, 3, 5}, {2, 4, 6}});
+    }
+    SECTION("transpose_of_slice") {
+        auto view = target(full_extent_t{}, zipper::slice(index_type{1}, index_type{2}))
+                        .transpose();
+        {
+            Measurement measurement;
+            view.noalias() = Matrix<int, 2, 3>{{1, 2, 3}, {4, 5, 6}};
+        }
+        CHECK(target == Matrix<int, 3, 3>{{0, 1, 4}, {0, 2, 5}, {0, 3, 6}});
+    }
+    SECTION("ref") {
+        auto view = target.ref();
+        {
+            Measurement measurement;
+            view.noalias() = source;
+        }
+        CHECK(target == source);
+    }
+    SECTION("reshape") {
+        MatrixBase<unary::Reshape<Dense::expression_type &, dextents<2>>> view(
+            std::in_place, target.expression(), dextents<2>(1, 9));
+        {
+            Measurement measurement;
+            view.noalias() = Matrix<int, 1, 9>{{1, 2, 3, 4, 5, 6, 7, 8, 9}};
+        }
+        // Reshape unravels row-major into the child's (row, column) indices.
+        CHECK(target == source);
+    }
+    SECTION("extent_view") {
+        MatrixBase<unary::ExtentView<Dense::expression_type &, extents<3, 3>>> view(
+            std::in_place, target.expression());
+        {
+            Measurement measurement;
+            view.noalias() = source;
+        }
+        CHECK(target == source);
+    }
+    SECTION("antislice") {
+        VectorX<int> column(3);
+        MatrixBase<unary::AntiSlice<VectorX<int>::expression_type &, 1>> view(
+            std::in_place, column.expression());
+        {
+            Measurement measurement;
+            view.noalias() = Matrix<int, 3, 1>{{1}, {2}, {3}};
+        }
+        CHECK(column == Vector<int, 3>{1, 2, 3});
+    }
+    CHECK(allocations == 0);
 }

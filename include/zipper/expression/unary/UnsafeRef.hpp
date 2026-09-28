@@ -1,6 +1,7 @@
 #if !defined(ZIPPER_EXPRESSION_UNARY_UNSAFEREF_HPP)
 #define ZIPPER_EXPRESSION_UNARY_UNSAFEREF_HPP
 
+#include "zipper/detail/NoAliasTraits.hpp"
 #include "UnaryExpressionBase.hpp"
 #include "zipper/concepts/Expression.hpp"
 #include "zipper/expression/detail/ExpressionTraits.hpp"
@@ -172,4 +173,12 @@ UnsafeRef(ExprType &) -> UnsafeRef<ExprType &, false>;
 
 } // namespace unary
 } // namespace zipper::expression
+namespace zipper::detail {
+// UnsafeRef writes forward to its child unchanged.
+template <typename Child, bool ViewPropagating>
+inline constexpr bool
+    supports_noalias_v<expression::unary::UnsafeRef<Child, ViewPropagating>> =
+        forwards_noalias_v<Child>;
+} // namespace zipper::detail
+
 #endif

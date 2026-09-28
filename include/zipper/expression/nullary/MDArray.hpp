@@ -1,6 +1,7 @@
 #if !defined(ZIPPER_EXPRESSION_NULLARY_MDARRAY_HPP)
 #define ZIPPER_EXPRESSION_NULLARY_MDARRAY_HPP
 
+#include "zipper/detail/NoAliasTraits.hpp"
 #include "LinearLayoutExpression.hpp"
 #include "MDSpan.hpp"
 #include "zipper/detail/ExtentsTraits.hpp"
@@ -104,5 +105,13 @@ auto MDSpan<ElementType, Extents, LayoutPolicy, AccessorPolicy>::make_owned() co
   return result;
 }
 } // namespace zipper::expression::nullary
+
+namespace zipper::detail {
+// Mutable dense owning storage supports noalias destinations.
+template <typename T, typename E, typename L, typename A>
+inline constexpr bool
+    supports_noalias_v<expression::nullary::MDArray<T, E, L, A>> =
+        !std::is_const_v<T>;
+} // namespace zipper::detail
 
 #endif

@@ -1,6 +1,7 @@
 #if !defined(ZIPPER_EXPRESSION_UNARY_SWIZZLE_HPP)
 #define ZIPPER_EXPRESSION_UNARY_SWIZZLE_HPP
 
+#include "zipper/detail/NoAliasTraits.hpp"
 #include "UnaryExpressionBase.hpp"
 #include "zipper/concepts/Expression.hpp"
 #include "zipper/detail/extents/swizzle_extents.hpp"
@@ -225,4 +226,12 @@ namespace unary {
 
 } // namespace unary
 } // namespace zipper::expression
+namespace zipper::detail {
+// Swizzle writes forward to its child (dimension permutation only).
+template <typename Child, index_type... Indices>
+inline constexpr bool
+    supports_noalias_v<expression::unary::Swizzle<Child, Indices...>> =
+        forwards_noalias_v<Child>;
+} // namespace zipper::detail
+
 #endif

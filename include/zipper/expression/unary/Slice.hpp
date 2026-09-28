@@ -1,6 +1,7 @@
 #if !defined(ZIPPER_EXPRESSION_UNARY_SLICE_HPP)
 #define ZIPPER_EXPRESSION_UNARY_SLICE_HPP
 
+#include "zipper/detail/NoAliasTraits.hpp"
 #include "UnaryExpressionBase.hpp"
 #include "zipper/concepts/IndexSlice.hpp"
 #include <utility>
@@ -753,4 +754,12 @@ Slice(ExprType &expr, Slices &&...)
 
 }  // namespace unary
 }  // namespace zipper::expression
+namespace zipper::detail {
+// Slice writes forward to its child (index remapping only).
+template <typename Child, typename... Slices>
+inline constexpr bool
+    supports_noalias_v<expression::unary::Slice<Child, Slices...>> =
+        forwards_noalias_v<Child>;
+} // namespace zipper::detail
+
 #endif
