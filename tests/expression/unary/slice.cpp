@@ -7,14 +7,14 @@
 #include <zipper/VectorBase.hxx>
 #include <zipper/detail/extents/dynamic_extents_indices.hpp>
 #include <zipper/detail/extents/swizzle_extents.hpp>
-#include <zipper/types.hpp>
 #include <zipper/expression/nullary/Constant.hpp>
 #include <zipper/expression/nullary/Random.hpp>
+#include <zipper/types.hpp>
 
 #include "../../catch_include.hpp"
 
 namespace {
-void print(zipper::concepts::Matrix auto const& M) {
+void print(zipper::concepts::Matrix auto const &M) {
     for (zipper::index_type j = 0; j < M.extent(0); ++j) {
         for (zipper::index_type k = 0; k < M.extent(1); ++k) {
             std::print("{} ", M(j, k));
@@ -22,7 +22,7 @@ void print(zipper::concepts::Matrix auto const& M) {
         std::println("");
     }
 }
-void print(zipper::concepts::Array auto const& M) {
+void print(zipper::concepts::Array auto const &M) {
     for (zipper::index_type j = 0; j < M.extent(0); ++j) {
         for (zipper::index_type k = 0; k < M.extent(1); ++k) {
             std::print("{} ", M(j, k));
@@ -30,13 +30,13 @@ void print(zipper::concepts::Array auto const& M) {
         std::println("");
     }
 }
-void print(zipper::concepts::Vector auto const& M) {
+void print(zipper::concepts::Vector auto const &M) {
     for (zipper::index_type j = 0; j < M.extent(0); ++j) {
         std::print("{} ", M(j));
     }
     std::println("");
 }
-}  // namespace
+} // namespace
 
 // === From expression/test_slicing.cpp ===
 
@@ -65,20 +65,23 @@ TEST_CASE("test_matrix_slice_shapes", "[extents][matrix][slice]") {
         using T = ST::slice_storage_type;
 
         STATIC_CHECK(std::is_same_v<zipper::full_extent_t,
-                                     std::tuple_element_t<1, T>::type>);
+                                    std::tuple_element_t<1, T>::type>);
 
         STATIC_CHECK(
             std::is_same_v<std::integral_constant<zipper::index_type, 1>,
                            std::tuple_element_t<0, T>::type>);
 
-        STATIC_CHECK(zipper::concepts::IndexSlice<std::tuple_element_t<0, T>::type>);
-        STATIC_CHECK(zipper::concepts::IndexSlice<std::tuple_element_t<1, T>::type>);
+        STATIC_CHECK(
+            zipper::concepts::IndexSlice<std::tuple_element_t<0, T>::type>);
+        STATIC_CHECK(
+            zipper::concepts::IndexSlice<std::tuple_element_t<1, T>::type>);
 
         STATIC_CHECK(zipper::concepts::Index<std::tuple_element_t<0, T>::type>);
-        STATIC_CHECK_FALSE(zipper::concepts::Index<std::tuple_element_t<1, T>::type>);
+        STATIC_CHECK_FALSE(
+            zipper::concepts::Index<std::tuple_element_t<1, T>::type>);
 
         STATIC_CHECK(std::is_same_v<zipper::full_extent_t,
-                                     std::tuple_element_t<1, T>::type>);
+                                    std::tuple_element_t<1, T>::type>);
         STATIC_CHECK(ST::actionable_indices.size() == 2);
         STATIC_CHECK(ST::actionable_indices[0] == std::dynamic_extent);
         STATIC_CHECK(ST::actionable_indices[1] == 0);
@@ -96,20 +99,23 @@ TEST_CASE("test_matrix_slice_shapes", "[extents][matrix][slice]") {
         using T = ST::slice_storage_type;
 
         STATIC_CHECK(std::is_same_v<zipper::full_extent_t,
-                                     std::tuple_element_t<0, T>::type>);
+                                    std::tuple_element_t<0, T>::type>);
 
         STATIC_CHECK(
             std::is_same_v<std::integral_constant<zipper::index_type, 1>,
                            std::tuple_element_t<1, T>::type>);
 
-        STATIC_CHECK(zipper::concepts::IndexSlice<std::tuple_element_t<0, T>::type>);
-        STATIC_CHECK(zipper::concepts::IndexSlice<std::tuple_element_t<1, T>::type>);
+        STATIC_CHECK(
+            zipper::concepts::IndexSlice<std::tuple_element_t<0, T>::type>);
+        STATIC_CHECK(
+            zipper::concepts::IndexSlice<std::tuple_element_t<1, T>::type>);
 
         STATIC_CHECK(zipper::concepts::Index<std::tuple_element_t<1, T>::type>);
-        STATIC_CHECK_FALSE(zipper::concepts::Index<std::tuple_element_t<0, T>::type>);
+        STATIC_CHECK_FALSE(
+            zipper::concepts::Index<std::tuple_element_t<0, T>::type>);
 
         STATIC_CHECK(std::is_same_v<zipper::full_extent_t,
-                                     std::tuple_element_t<0, T>::type>);
+                                    std::tuple_element_t<0, T>::type>);
         STATIC_CHECK(ST::actionable_indices.size() == 2);
         STATIC_CHECK(ST::actionable_indices[1] == std::dynamic_extent);
         STATIC_CHECK(ST::actionable_indices[0] == 0);
@@ -135,9 +141,8 @@ TEST_CASE("test_matrix_slicing", "[extents][matrix][slice]") {
     print(MN);
     print(MN.slice<zipper::full_extent_t, zipper::full_extent_t>());
     print(MN.slice<zipper::full_extent_t, zipper::full_extent_t>());
-    print(
-        (MN.slice<zipper::full_extent_t, zipper::full_extent_t>().as_array() ==
-         MN.as_array()));
+    print((MN.slice<zipper::full_extent_t, zipper::full_extent_t>().as_array()
+           == MN.as_array()));
 
     CHECK((MN.slice<zipper::full_extent_t, zipper::full_extent_t>() == MN));
     CHECK((MN.slice(zipper::full_extent_t{}, zipper::full_extent_t{}) == MN));
@@ -156,16 +161,14 @@ TEST_CASE("test_matrix_slicing", "[extents][matrix][slice]") {
         REQUIRE(S.extent(1) == MN.extent(1));
 
         REQUIRE(SD.extents() == S.extents());
-        for (const auto& [a, b] :
+        for (const auto &[a, b] :
              zipper::utils::extents::all_extents_indices(S.extents())) {
             STATIC_CHECK(std::is_integral_v<std::decay_t<decltype(a)>>);
             STATIC_CHECK(std::is_integral_v<std::decay_t<decltype(b)>>);
             CHECK(S(a, b) == MN(a + 1, b));
             CHECK(SD(a, b) == S(a, b));
+        }
     }
-    }
-
-
 
     auto slice = MN.slice<std::integral_constant<zipper::index_type, 1>,
                           zipper::full_extent_t>();
@@ -318,9 +321,9 @@ TEST_CASE("partial_tensor_slice_maps_values", "[extents][tensor][slice]") {
     }
 }
 
-// test_span_array_access uses std::array/std::vector which already satisfy IndexSlice.
-// test_span_view_access uses Vector<index_type> which satisfies IndexSlice
-// via the IsZipperBase specialization in IndexSlice.hpp.
+// test_span_array_access uses std::array/std::vector which already satisfy
+// IndexSlice. test_span_view_access uses Vector<index_type> which satisfies
+// IndexSlice via the IsZipperBase specialization in IndexSlice.hpp.
 TEST_CASE("test_span_array_access", "[vector][storage][dense][span]") {
     {
         zipper::Vector<double, 3> x = {1, 2, 3};
@@ -334,21 +337,18 @@ TEST_CASE("test_span_array_access", "[vector][storage][dense][span]") {
     {
         zipper::Vector<double, std::dynamic_extent> x = {1, 2, 3};
 
-        std::vector<zipper::index_type> a{{0,2}};
+        std::vector<zipper::index_type> a{{0, 2}};
         auto s = x(a);
         REQUIRE(s.extents().rank() == 1);
         CHECK(s(0) == 1);
         CHECK(s(1) == 3);
-
-
-
     }
 }
 TEST_CASE("test_span_view_access", "[vector][storage][dense][span]") {
     {
         zipper::Vector<double, 3> x = {1, 2, 3};
 
-        zipper::Vector<zipper::index_type,2> a = {{0,2}};
+        zipper::Vector<zipper::index_type, 2> a = {{0, 2}};
         auto s = x(a);
         REQUIRE(s.extents().rank() == 1);
         CHECK(s(0) == 1);
@@ -357,24 +357,22 @@ TEST_CASE("test_span_view_access", "[vector][storage][dense][span]") {
     {
         zipper::Vector<double, std::dynamic_extent> x = {1, 2, 3};
 
-        zipper::Vector<zipper::index_type,std::dynamic_extent> a = {{0,2}};
+        zipper::Vector<zipper::index_type, std::dynamic_extent> a = {{0, 2}};
         auto s = x(a);
         REQUIRE(s.extents().rank() == 1);
         CHECK(s(0) == 1);
         CHECK(s(1) == 3);
-
-
-
     }
     {
-        zipper::Matrix<double, 2,std::dynamic_extent> V = {{1, 2, 3},{0,2,1}};
+        zipper::Matrix<double, 2, std::dynamic_extent> V = {{1, 2, 3},
+                                                            {0, 2, 1}};
 
-        zipper::Vector<zipper::index_type,2> a = {{0,2}};
-        auto s = V(0,a);
+        zipper::Vector<zipper::index_type, 2> a = {{0, 2}};
+        auto s = V(0, a);
         REQUIRE(s.extents().rank() == 1);
         CHECK(s(0) == 1);
         CHECK(s(1) == 3);
-        auto r = V(1,a);
+        auto r = V(1, a);
         REQUIRE(r.extents().rank() == 1);
         CHECK(r(0) == 0);
         CHECK(r(1) == 1);
@@ -412,223 +410,224 @@ TEST_CASE("test_head_tail", "[vector][homogeneous]") {
 
 using namespace zipper;
 TEST_CASE("test_vector_slicing", "[vector][storage][dense]") {
-  Vector<double, 5> a{{0, 2, 4, 6, 8}};
-  Vector<double, std::dynamic_extent> b{{1, 3, 5, 7, 9}};
+    Vector<double, 5> a{{0, 2, 4, 6, 8}};
+    Vector<double, std::dynamic_extent> b{{1, 3, 5, 7, 9}};
 
-  {
-    auto av = a.head<2>();
-    auto bv = b.head<2>();
-    REQUIRE(av.extents() == create_dextents(2));
-    REQUIRE(bv.extents() == create_dextents(2));
-    CHECK(av(0) == 0);
-    CHECK(av(1) == 2);
-    CHECK(bv(0) == 1);
-    CHECK(bv(1) == 3);
-  }
+    {
+        auto av = a.head<2>();
+        auto bv = b.head<2>();
+        REQUIRE(av.extents() == create_dextents(2));
+        REQUIRE(bv.extents() == create_dextents(2));
+        CHECK(av(0) == 0);
+        CHECK(av(1) == 2);
+        CHECK(bv(0) == 1);
+        CHECK(bv(1) == 3);
+    }
 
-  {
-    auto av = a.head(2);
-    auto bv = b.head(2);
-    REQUIRE(av.extents() == create_dextents(2));
-    REQUIRE(bv.extents() == create_dextents(2));
-    CHECK(av(0) == 0);
-    CHECK(av(1) == 2);
-    CHECK(bv(0) == 1);
-    CHECK(bv(1) == 3);
-  }
-  {
-    auto av = a.tail<2>();
-    auto bv = b.tail<2>();
-    REQUIRE(av.extents() == create_dextents(2));
-    REQUIRE(bv.extents() == create_dextents(2));
-    CHECK(av(0) == 6);
-    CHECK(av(1) == 8);
-    CHECK(bv(0) == 7);
-    CHECK(bv(1) == 9);
-  }
+    {
+        auto av = a.head(2);
+        auto bv = b.head(2);
+        REQUIRE(av.extents() == create_dextents(2));
+        REQUIRE(bv.extents() == create_dextents(2));
+        CHECK(av(0) == 0);
+        CHECK(av(1) == 2);
+        CHECK(bv(0) == 1);
+        CHECK(bv(1) == 3);
+    }
+    {
+        auto av = a.tail<2>();
+        auto bv = b.tail<2>();
+        REQUIRE(av.extents() == create_dextents(2));
+        REQUIRE(bv.extents() == create_dextents(2));
+        CHECK(av(0) == 6);
+        CHECK(av(1) == 8);
+        CHECK(bv(0) == 7);
+        CHECK(bv(1) == 9);
+    }
 
-  {
-    auto av = a.tail(2);
-    auto bv = b.tail(2);
-    REQUIRE(av.extents() == create_dextents(2));
-    REQUIRE(bv.extents() == create_dextents(2));
-    CHECK(av(0) == 6);
-    CHECK(av(1) == 8);
-    CHECK(bv(0) == 7);
-    CHECK(bv(1) == 9);
-  }
-  {
-    auto av = a.segment<1, 2>();
-    auto bv = b.segment<1, 2>();
-    REQUIRE(av.extents() == create_dextents(2));
-    REQUIRE(bv.extents() == create_dextents(2));
-    CHECK(av(0) == 2);
-    CHECK(av(1) == 4);
-    CHECK(bv(0) == 3);
-    CHECK(bv(1) == 5);
-  }
+    {
+        auto av = a.tail(2);
+        auto bv = b.tail(2);
+        REQUIRE(av.extents() == create_dextents(2));
+        REQUIRE(bv.extents() == create_dextents(2));
+        CHECK(av(0) == 6);
+        CHECK(av(1) == 8);
+        CHECK(bv(0) == 7);
+        CHECK(bv(1) == 9);
+    }
+    {
+        auto av = a.segment<1, 2>();
+        auto bv = b.segment<1, 2>();
+        REQUIRE(av.extents() == create_dextents(2));
+        REQUIRE(bv.extents() == create_dextents(2));
+        CHECK(av(0) == 2);
+        CHECK(av(1) == 4);
+        CHECK(bv(0) == 3);
+        CHECK(bv(1) == 5);
+    }
 
-  {
-    auto av = a.segment<2>(1);
-    auto bv = b.segment<2>(1);
-    REQUIRE(av.extents() == create_dextents(2));
-    REQUIRE(bv.extents() == create_dextents(2));
-    CHECK(av(0) == 2);
-    CHECK(av(1) == 4);
-    CHECK(bv(0) == 3);
-    CHECK(bv(1) == 5);
-  }
-  {
-    auto av = a.segment(1, 2);
-    auto bv = b.segment(1, 2);
-    REQUIRE(av.extents() == create_dextents(2));
-    REQUIRE(bv.extents() == create_dextents(2));
-    CHECK(av(0) == 2);
-    CHECK(av(1) == 4);
-    CHECK(bv(0) == 3);
-    CHECK(bv(1) == 5);
-  }
+    {
+        auto av = a.segment<2>(1);
+        auto bv = b.segment<2>(1);
+        REQUIRE(av.extents() == create_dextents(2));
+        REQUIRE(bv.extents() == create_dextents(2));
+        CHECK(av(0) == 2);
+        CHECK(av(1) == 4);
+        CHECK(bv(0) == 3);
+        CHECK(bv(1) == 5);
+    }
+    {
+        auto av = a.segment(1, 2);
+        auto bv = b.segment(1, 2);
+        REQUIRE(av.extents() == create_dextents(2));
+        REQUIRE(bv.extents() == create_dextents(2));
+        CHECK(av(0) == 2);
+        CHECK(av(1) == 4);
+        CHECK(bv(0) == 3);
+        CHECK(bv(1) == 5);
+    }
 }
 
-// === From test_matrix.cpp (block tests: topRows, bottomRows, leftCols, rightCols) ===
+// === From test_matrix.cpp (block tests: topRows, bottomRows, leftCols,
+// rightCols) ===
 
 TEST_CASE("test_blocks", "[matrix][storage][dense]") {
-  zipper::Matrix<zipper::index_type, 3, 6> C;
-  zipper::Matrix<zipper::index_type, std::dynamic_extent, std::dynamic_extent>
-      R(3, 6);
+    zipper::Matrix<zipper::index_type, 3, 6> C;
+    zipper::Matrix<zipper::index_type, std::dynamic_extent, std::dynamic_extent>
+        R(3, 6);
 
-  {
-    for (zipper::index_type j = 0; j < 3; ++j) {
-      for (zipper::index_type k = 0; k < 6; ++k) {
-        C(j, k) = j;
-        R(j, k) = j;
-      }
+    {
+        for (zipper::index_type j = 0; j < 3; ++j) {
+            for (zipper::index_type k = 0; k < 6; ++k) {
+                C(j, k) = j;
+                R(j, k) = j;
+            }
+        }
+        auto CR = C.topRows(2);
+        auto CC = C.topRows(zipper::static_index_t<2>{});
+        auto RR = R.topRows(2);
+        auto RC = R.topRows(zipper::static_index_t<2>{});
+        STATIC_CHECK(CC.static_extent(0) == 2);
+        STATIC_CHECK(CR.static_extent(0) == std::dynamic_extent);
+        STATIC_CHECK(RC.static_extent(0) == 2);
+        STATIC_CHECK(RR.static_extent(0) == std::dynamic_extent);
+        REQUIRE(CR.extents() == zipper::create_dextents(2, 6));
+        REQUIRE(CR.extents() == CC.extents());
+        REQUIRE(CR.extents() == CC.extents());
+        REQUIRE(RR.extents() == CC.extents());
+        REQUIRE(RR.extents() == CC.extents());
+        for (zipper::index_type j = 0; j < 2; ++j) {
+            for (zipper::index_type k = 0; k < 6; ++k) {
+                CHECK(CC(j, k) == j);
+                CHECK(CR(j, k) == j);
+                CHECK(RC(j, k) == j);
+                CHECK(RR(j, k) == j);
+            }
+        }
     }
-    auto CR = C.topRows(2);
-    auto CC = C.topRows(zipper::static_index_t<2>{});
-    auto RR = R.topRows(2);
-    auto RC = R.topRows(zipper::static_index_t<2>{});
-    STATIC_CHECK(CC.static_extent(0) == 2);
-    STATIC_CHECK(CR.static_extent(0) == std::dynamic_extent);
-    STATIC_CHECK(RC.static_extent(0) == 2);
-    STATIC_CHECK(RR.static_extent(0) == std::dynamic_extent);
-    REQUIRE(CR.extents() == zipper::create_dextents(2, 6));
-    REQUIRE(CR.extents() == CC.extents());
-    REQUIRE(CR.extents() == CC.extents());
-    REQUIRE(RR.extents() == CC.extents());
-    REQUIRE(RR.extents() == CC.extents());
-    for (zipper::index_type j = 0; j < 2; ++j) {
-      for (zipper::index_type k = 0; k < 6; ++k) {
-        CHECK(CC(j, k) == j);
-        CHECK(CR(j, k) == j);
-        CHECK(RC(j, k) == j);
-        CHECK(RR(j, k) == j);
-      }
-    }
-  }
 
-  {
-    for (zipper::index_type j = 0; j < 3; ++j) {
-      for (zipper::index_type k = 0; k < 6; ++k) {
-        C(j, k) = k;
-        R(j, k) = k;
-      }
+    {
+        for (zipper::index_type j = 0; j < 3; ++j) {
+            for (zipper::index_type k = 0; k < 6; ++k) {
+                C(j, k) = k;
+                R(j, k) = k;
+            }
+        }
+        auto CR = C.leftCols(5);
+        auto CC = C.leftCols(zipper::static_index_t<5>{});
+        auto RR = R.leftCols(5);
+        auto RC = R.leftCols(zipper::static_index_t<5>{});
+        STATIC_CHECK(CC.static_extent(1) == 5);
+        STATIC_CHECK(CR.static_extent(1) == std::dynamic_extent);
+        STATIC_CHECK(RC.static_extent(1) == 5);
+        STATIC_CHECK(RR.static_extent(1) == std::dynamic_extent);
+        REQUIRE(CR.extents() == zipper::create_dextents(3, 5));
+        REQUIRE(CR.extents() == CC.extents());
+        REQUIRE(CR.extents() == CC.extents());
+        REQUIRE(RR.extents() == CC.extents());
+        REQUIRE(RR.extents() == CC.extents());
+        for (zipper::index_type j = 0; j < 3; ++j) {
+            for (zipper::index_type k = 0; k < 5; ++k) {
+                CHECK(CC(j, k) == k);
+                CHECK(CR(j, k) == k);
+                CHECK(RC(j, k) == k);
+                CHECK(RR(j, k) == k);
+            }
+        }
     }
-    auto CR = C.leftCols(5);
-    auto CC = C.leftCols(zipper::static_index_t<5>{});
-    auto RR = R.leftCols(5);
-    auto RC = R.leftCols(zipper::static_index_t<5>{});
-    STATIC_CHECK(CC.static_extent(1) == 5);
-    STATIC_CHECK(CR.static_extent(1) == std::dynamic_extent);
-    STATIC_CHECK(RC.static_extent(1) == 5);
-    STATIC_CHECK(RR.static_extent(1) == std::dynamic_extent);
-    REQUIRE(CR.extents() == zipper::create_dextents(3, 5));
-    REQUIRE(CR.extents() == CC.extents());
-    REQUIRE(CR.extents() == CC.extents());
-    REQUIRE(RR.extents() == CC.extents());
-    REQUIRE(RR.extents() == CC.extents());
-    for (zipper::index_type j = 0; j < 3; ++j) {
-      for (zipper::index_type k = 0; k < 5; ++k) {
-        CHECK(CC(j, k) == k);
-        CHECK(CR(j, k) == k);
-        CHECK(RC(j, k) == k);
-        CHECK(RR(j, k) == k);
-      }
-    }
-  }
-  {
-    for (zipper::index_type j = 0; j < 3; ++j) {
-      for (zipper::index_type k = 0; k < 6; ++k) {
-        C(j, k) = j;
-        R(j, k) = j;
-      }
-    }
-    auto CR = C.bottomRows(2);
-    auto CC = C.bottomRows(zipper::static_index_t<2>{});
-    auto RR = R.bottomRows(2);
-    auto RC = R.bottomRows(zipper::static_index_t<2>{});
+    {
+        for (zipper::index_type j = 0; j < 3; ++j) {
+            for (zipper::index_type k = 0; k < 6; ++k) {
+                C(j, k) = j;
+                R(j, k) = j;
+            }
+        }
+        auto CR = C.bottomRows(2);
+        auto CC = C.bottomRows(zipper::static_index_t<2>{});
+        auto RR = R.bottomRows(2);
+        auto RC = R.bottomRows(zipper::static_index_t<2>{});
 
-    using CRT = std::decay_t<decltype(CR)>;
-    using CRT_Detail =
-        zipper::expression::detail::ExpressionDetail<CRT::expression_type>;
-    using CRT_R =
-        CRT_Detail::extents_helper::single_slice_helper<0>;
-    using CRT_C =
-        CRT_Detail::extents_helper::single_slice_helper<1>;
+        using CRT = std::decay_t<decltype(CR)>;
+        using CRT_Detail =
+            zipper::expression::detail::ExpressionDetail<CRT::expression_type>;
+        using CRT_R = CRT_Detail::extents_helper::single_slice_helper<0>;
+        using CRT_C = CRT_Detail::extents_helper::single_slice_helper<1>;
 
-    STATIC_CHECK(
-        std::is_same_v<CRT_R::type,
-                       zipper::slice_t<zipper::index_type, zipper::index_type,
-                                       zipper::index_type>>);
+        STATIC_CHECK(
+            std::is_same_v<CRT_R::type,
+                           zipper::slice_t<
+                               zipper::index_type,
+                               zipper::index_type,
+                               std::integral_constant<zipper::index_type, 1>>>);
 
-    STATIC_CHECK(std::is_same_v<CRT_C::type, zipper::full_extent_t>);
-    // static_assert(
-    STATIC_CHECK(CC.static_extent(0) == 2);
-    STATIC_CHECK(CR.static_extent(0) == std::dynamic_extent);
-    STATIC_CHECK(RC.static_extent(0) == std::dynamic_extent);
-    STATIC_CHECK(RR.static_extent(0) == std::dynamic_extent);
-    REQUIRE(CR.extents() == zipper::create_dextents(2, 6));
-    REQUIRE(CR.extents() == CC.extents());
-    REQUIRE(CR.extents() == CC.extents());
-    REQUIRE(RR.extents() == CC.extents());
-    REQUIRE(RR.extents() == CC.extents());
-    for (zipper::index_type j = 0; j < 2; ++j) {
-      for (zipper::index_type k = 0; k < 6; ++k) {
-        CHECK(CC(j, k) == j + 1);
-        CHECK(CR(j, k) == j + 1);
-        CHECK(RC(j, k) == j + 1);
-        CHECK(RR(j, k) == j + 1);
-      }
+        STATIC_CHECK(std::is_same_v<CRT_C::type, zipper::full_extent_t>);
+        // static_assert(
+        STATIC_CHECK(CC.static_extent(0) == 2);
+        STATIC_CHECK(CR.static_extent(0) == std::dynamic_extent);
+        STATIC_CHECK(RC.static_extent(0) == 2);
+        STATIC_CHECK(RR.static_extent(0) == std::dynamic_extent);
+        REQUIRE(CR.extents() == zipper::create_dextents(2, 6));
+        REQUIRE(CR.extents() == CC.extents());
+        REQUIRE(CR.extents() == CC.extents());
+        REQUIRE(RR.extents() == CC.extents());
+        REQUIRE(RR.extents() == CC.extents());
+        for (zipper::index_type j = 0; j < 2; ++j) {
+            for (zipper::index_type k = 0; k < 6; ++k) {
+                CHECK(CC(j, k) == j + 1);
+                CHECK(CR(j, k) == j + 1);
+                CHECK(RC(j, k) == j + 1);
+                CHECK(RR(j, k) == j + 1);
+            }
+        }
     }
-  }
 
-  {
-    for (zipper::index_type j = 0; j < 3; ++j) {
-      for (zipper::index_type k = 0; k < 6; ++k) {
-        C(j, k) = k;
-        R(j, k) = k;
-      }
+    {
+        for (zipper::index_type j = 0; j < 3; ++j) {
+            for (zipper::index_type k = 0; k < 6; ++k) {
+                C(j, k) = k;
+                R(j, k) = k;
+            }
+        }
+        auto CR = C.rightCols(5);
+        auto CC = C.rightCols(zipper::static_index_t<5>{});
+        auto RR = R.rightCols(5);
+        auto RC = R.rightCols(zipper::static_index_t<5>{});
+        STATIC_CHECK(CC.static_extent(1) == 5);
+        STATIC_CHECK(CR.static_extent(1) == std::dynamic_extent);
+        STATIC_CHECK(RC.static_extent(1) == 5);
+        STATIC_CHECK(RR.static_extent(1) == std::dynamic_extent);
+        REQUIRE(CR.extents() == zipper::create_dextents(3, 5));
+        REQUIRE(CR.extents() == CC.extents());
+        REQUIRE(CR.extents() == CC.extents());
+        REQUIRE(RR.extents() == CC.extents());
+        REQUIRE(RR.extents() == CC.extents());
+        for (zipper::index_type j = 0; j < 3; ++j) {
+            for (zipper::index_type k = 0; k < 5; ++k) {
+                CHECK(CC(j, k) == k + 1);
+                CHECK(CR(j, k) == k + 1);
+                CHECK(RC(j, k) == k + 1);
+                CHECK(RR(j, k) == k + 1);
+            }
+        }
     }
-    auto CR = C.rightCols(5);
-    auto CC = C.rightCols(zipper::static_index_t<5>{});
-    auto RR = R.rightCols(5);
-    auto RC = R.rightCols(zipper::static_index_t<5>{});
-    STATIC_CHECK(CC.static_extent(1) == 5);
-    STATIC_CHECK(CR.static_extent(1) == std::dynamic_extent);
-    STATIC_CHECK(RC.static_extent(1) == std::dynamic_extent);
-    STATIC_CHECK(RR.static_extent(1) == std::dynamic_extent);
-    REQUIRE(CR.extents() == zipper::create_dextents(3, 5));
-    REQUIRE(CR.extents() == CC.extents());
-    REQUIRE(CR.extents() == CC.extents());
-    REQUIRE(RR.extents() == CC.extents());
-    REQUIRE(RR.extents() == CC.extents());
-    for (zipper::index_type j = 0; j < 3; ++j) {
-      for (zipper::index_type k = 0; k < 5; ++k) {
-        CHECK(CC(j, k) == k + 1);
-        CHECK(CR(j, k) == k + 1);
-        CHECK(RC(j, k) == k + 1);
-        CHECK(RR(j, k) == k + 1);
-      }
-    }
-  }
 }
