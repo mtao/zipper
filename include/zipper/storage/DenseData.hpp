@@ -1,11 +1,12 @@
 #if !defined(ZIPPER_STORAGE_DENSEDATA_HPP)
 #define ZIPPER_STORAGE_DENSEDATA_HPP
-#include "DynamicDenseData.hpp"
 #include "LinearAccessorTraits.hpp"
-#include "StaticDenseData.hpp"
 #include "zipper/detail/ExtentsTraits.hpp"
 
 #include <array>
+#include <span>
+#include <type_traits>
+#include <vector>
 #include <zipper/types.hpp>
 
 namespace zipper::storage {
@@ -19,6 +20,9 @@ class DenseData<ElementType, N> {
     using value_type = std::remove_cv_t<ElementType>;
     using storage_type = std::array<element_type, N>;
     constexpr static index_type static_size = N;
+
+    DenseData() = default;
+    DenseData(storage_type data) : m_data(std::move(data)) {}
 
     constexpr static auto size() -> std::size_t { return N; }
     element_type coeff(index_type i) const { return data()[i]; }
