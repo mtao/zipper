@@ -117,7 +117,7 @@ inline constexpr auto
                                   index_type,
                                   std::decay_t<ExtentType>>;
     static_assert(concepts::Index<ET>);
-    using ST = std::conditional_t<std::is_integral_v<OffsetType>,
+    using ST = std::conditional_t<std::is_integral_v<StrideType>,
                                   index_type,
                                   std::decay_t<StrideType>>;
     static_assert(concepts::Index<ST>);
