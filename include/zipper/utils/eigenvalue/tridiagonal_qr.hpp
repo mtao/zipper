@@ -87,7 +87,7 @@ auto tridiagonal_qr_eigen(const Derived &T_in, index_type max_iter = 0)
 
     // Extract diagonal (d) and sub-diagonal (e) into working arrays.
     VectorX<T> d(T_in.diagonal());
-    VectorX<T> e(n); // e[0..n-2] are the sub-diagonal, e[n-1] = 0
+    VectorX<T> e(zipper::uninitialized, n); // e[0..n-2] are the sub-diagonal, e[n-1] = 0
     for (index_type i = 0; i + 1 < n; ++i) { e(i) = T_in(i + 1, i); }
     e(n - 1) = T{0};
 
@@ -185,8 +185,8 @@ auto tridiagonal_qr_eigen(const Derived &T_in, index_type max_iter = 0)
         return d(a) < d(b);
     });
 
-    Vector<T, dynamic_extent> sorted_evals(n);
-    Matrix<T, dynamic_extent, dynamic_extent> sorted_evecs(n, n);
+    Vector<T, dynamic_extent> sorted_evals(zipper::uninitialized, n);
+    Matrix<T, dynamic_extent, dynamic_extent> sorted_evecs(zipper::uninitialized, n, n);
     for (index_type i = 0; i < n; ++i) {
         sorted_evals(i) = d(perm[i]);
         sorted_evecs.col(i) = Z.col(perm[i]);
