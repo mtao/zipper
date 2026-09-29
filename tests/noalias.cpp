@@ -30,6 +30,11 @@ auto operator new(std::size_t size) -> void * {
 }
 void operator delete(void *ptr) noexcept { std::free(ptr); }
 void operator delete(void *ptr, std::size_t) noexcept { std::free(ptr); }
+// Array forms: dynamic DenseData allocates via new[]. Some runtimes (e.g.
+// ASan) do not route the default new[] through the replaced operator new.
+auto operator new[](std::size_t size) -> void * { return operator new(size); }
+void operator delete[](void *ptr) noexcept { std::free(ptr); }
+void operator delete[](void *ptr, std::size_t) noexcept { std::free(ptr); }
 
 namespace {
 struct Counted {

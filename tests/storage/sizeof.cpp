@@ -57,11 +57,11 @@ TEST_CASE("sizeof SpanData", "[sizeof][storage]") {
 TEST_CASE("sizeof dynamic DenseData", "[sizeof][storage]") {
   using zipper::storage::DenseData;
 
-  // DenseData<T, dynamic_extent> wraps std::vector<T> — should be same size.
+  // DenseData<T, dynamic_extent> is a heap buffer + size + capacity.
   STATIC_REQUIRE(sizeof(DenseData<float, std::dynamic_extent>) ==
-                 sizeof(std::vector<float>));
+                 sizeof(float *) + 2 * sizeof(std::size_t));
   STATIC_REQUIRE(sizeof(DenseData<double, std::dynamic_extent>) ==
-                 sizeof(std::vector<double>));
+                 sizeof(double *) + 2 * sizeof(std::size_t));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -219,7 +219,7 @@ TEST_CASE("sizeof DataArray", "[sizeof][user_types]") {
 // (e.g. GPU upload, placement-new, type-erased storage).
 //
 // Dynamic-extent types (VectorX, MatrixXX, etc.) are NOT trivially
-// copyable because they contain std::vector — this is correct behaviour.
+// copyable because they own a heap buffer — this is correct behaviour.
 // ═══════════════════════════════════════════════════════════════════════════
 
 TEST_CASE("trivially_copyable static-extent types",
@@ -264,7 +264,7 @@ TEST_CASE("trivially_copyable static-extent types",
 
 TEST_CASE("dynamic-extent types are NOT trivially copyable",
           "[trivially_copyable][user_types]") {
-  // Dynamic types contain std::vector — they should not be trivially copyable.
+  // Dynamic types own a heap buffer — they should not be trivially copyable.
   STATIC_REQUIRE_FALSE(
       std::is_trivially_copyable_v<zipper::VectorX<double>>);
 }
