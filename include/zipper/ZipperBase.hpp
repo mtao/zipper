@@ -170,10 +170,12 @@ class ZipperBase
                  && zipper::utils::extents::assignable_extents_v<
                      typename Other::extents_type,
                      extents_type>)
-      : m_expression(extents_traits::convert_from(other.extents())) {
+      : m_expression(make_destination(
+            extents_traits::convert_from(other.extents()))) {
         if constexpr (detail::is_fresh_mdarray_v<expression_type>) {
             // Fresh owning storage is already shaped and cannot alias the
-            // source.
+            // source. evaluate_to writes every coefficient, so the storage
+            // was allocated without a zero-fill (see make_destination).
             expression::detail::AssignHelper<Other, expression_type>::
                 evaluate_to(other, m_expression);
         } else {
@@ -470,6 +472,17 @@ class ZipperBase
     }
 
   private:
+    /// Builds the destination for the converting constructor. Fresh
+    /// MDArray storage is fully overwritten by evaluate_to, so it skips the
+    /// zero-fill; any other expression type is constructed normally.
+    static auto make_destination(const extents_type &e) -> expression_type {
+        if constexpr (detail::is_fresh_mdarray_v<expression_type>) {
+            return expression_type(zipper::uninitialized, e);
+        } else {
+            return expression_type(e);
+        }
+    }
+
     Expression m_expression;
 };
 

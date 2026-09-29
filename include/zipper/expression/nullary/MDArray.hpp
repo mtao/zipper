@@ -112,7 +112,8 @@ auto MDSpan<ElementType, Extents, LayoutPolicy, AccessorPolicy>::make_owned() co
   using non_const_element = std::remove_const_t<ElementType>;
   using owned_type = MDArray<non_const_element, Extents, LayoutPolicy,
                              default_accessor_policy<non_const_element>>;
-  owned_type result(this->extents());
+  // evaluate_to overwrites every coefficient: skip the zero-fill.
+  owned_type result(zipper::uninitialized, this->extents());
   expression::detail::AssignHelper<self_type, owned_type>::evaluate_to(*this, result);
   return result;
 }

@@ -138,7 +138,9 @@ public:
    template <typename T>
    Matrix(const std::initializer_list<std::initializer_list<T>> &l)
      requires(extents_traits::rank_dynamic == 2)
-       : Base(extents_type(l.size(), l.begin()->size())) {
+       // every row is written; ragged rows throw
+       : Base(zipper::uninitialized,
+              extents_type(l.size(), l.begin()->size())) {
      auto it = l.begin();
      for (index_type j = 0; j < l.size(); ++j, ++it) {
        if (it->size() != extent(1)) {

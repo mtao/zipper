@@ -353,3 +353,112 @@ TEST_CASE("dense_data_dynamic_value_semantics", "[uninitialized][storage]") {
     CHECK(a.size() == 10);
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Internal use: paths that allocate uninitialized and fully overwrite
+// ─────────────────────────────────────────────────────────────────────────────
+
+TEST_CASE("internal_construction_from_expression",
+          "[uninitialized][internal]") {
+  // ZipperBase converting constructor / eval() allocate without zero-fill
+  // and rely on evaluation writing every coefficient.
+  SECTION("dynamic") {
+    VectorX<double> a(uninitialized, 1000);
+    std::iota(a.begin(), a.end(), 0.0);
+    VectorX<double> b = (2.0 * a).eval();
+    CHECK(b.size() == 1000);
+    for (index_type i = 0; i < 1000; ++i) {
+      CHECK(b(i) == 2.0 * double(i));
+    }
+    VectorX<double> c(a + b);
+    CHECK(c(999) == 3.0 * 999.0);
+  }
+  SECTION("static") {
+    Matrix<double, 3, 3> A{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
+    Matrix<double, 3, 3> At = A.transpose();
+    CHECK(At(0, 2) == 7.0);
+    CHECK(At(2, 0) == 3.0);
+    Matrix<double, 3, 3> AAt = (A * At).eval();
+    CHECK(AAt(0, 0) == 14.0);
+  }
+  SECTION("non_trivial_value_type") {
+    VectorX<std::string> s(3);
+    s(0) = "a";
+    s(1) = "b";
+    s(2) = "c";
+    VectorX<std::string> t(s.as_span());
+    CHECK(t(0) == "a");
+    CHECK(t(2) == "c");
+  }
+}
+
+TEST_CASE("internal_span_make_owned", "[uninitialized][internal]") {
+  VectorX<double> a(uninitialized, 16);
+  std::iota(a.begin(), a.end(), 1.0);
+  auto span = a.as_span();
+  auto owned = span.expression().make_owned();
+  CHECK(owned.extent(0) == 16);
+  CHECK(owned(0) == 1.0);
+  CHECK(owned(15) == 16.0);
+  a(0) = -1.0;
+  CHECK(owned(0) == 1.0); // independent storage
+}
+
+TEST_CASE("internal_assignment_resizes", "[uninitialized][internal]") {
+  SECTION("grow_via_assignment") {
+    VectorX<double> small(2);
+    VectorX<double> big(uninitialized, 50);
+    std::iota(big.begin(), big.end(), 0.0);
+    small = big * 1.0;
+    CHECK(small.size() == 50);
+    CHECK(small(49) == 49.0);
+  }
+  SECTION("shrink_then_regrow_overwrites_stale_values") {
+    VectorX<double> v(10);
+    std::ranges::fill(v, 99.0);
+    VectorX<double> two{1.0, 2.0};
+    v = two;
+    CHECK(v.size() == 2);
+    VectorX<double> ten(uninitialized, 10);
+    std::iota(ten.begin(), ten.end(), 0.0);
+    v = ten + 0.0 * ten; // non-trivial expression -> snapshot path
+    CHECK(v.size() == 10);
+    for (index_type i = 0; i < 10; ++i) {
+      CHECK(v(i) == double(i));
+    }
+  }
+  SECTION("self_aliasing_snapshot") {
+    MatrixXX<double> M{{1, 2}, {3, 4}};
+    M = (M * M).eval();
+    CHECK(M(0, 0) == 7.0);
+    CHECK(M(1, 1) == 22.0);
+    MatrixXX<double> N{{1, 2}, {3, 4}};
+    N = N * N; // aliasing product: snapshot temporary is allocated uninitialized
+    CHECK(N(0, 1) == 10.0);
+    CHECK(N(1, 0) == 15.0);
+  }
+  SECTION("scalar_broadcast_fills_everything") {
+    VectorX<double> v(uninitialized, 8);
+    v = expression::nullary::Constant<double>(3.0);
+    CHECK(all_zero(v) == false);
+    CHECK(std::ranges::all_of(v, [](double x) { return x == 3.0; }));
+  }
+}
+
+TEST_CASE("internal_initializer_lists_and_components",
+          "[uninitialized][internal]") {
+  Vector<double, 3> v{1, 2, 3};
+  CHECK(v(2) == 3.0);
+  CHECK_THROWS(Vector<double, 3>{1, 2});
+  VectorX<double> vx{4, 5, 6, 7};
+  CHECK(vx.size() == 4);
+  CHECK(vx(3) == 7.0);
+  MatrixXX<double> m{{1, 2, 3}, {4, 5, 6}};
+  CHECK(m(1, 2) == 6.0);
+  CHECK_THROWS(MatrixXX<double>{{1, 2, 3}, {4, 5}});
+  Quaternion<double> q(1.0, 2.0, 3.0, 4.0);
+  CHECK(q(0) == 1.0);
+  CHECK(q(3) == 4.0);
+  CHECK(all_zero(DataArray<double, 3>::zero()));
+  CHECK(all_zero(DataArray<double, dynamic_extent>::zero(5)));
+}

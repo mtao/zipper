@@ -31,6 +31,9 @@ struct empty {};
 /// are left indeterminate -- reading one before writing it is undefined
 /// behaviour. Non-trivial value types are default-constructed.
 ///
+/// zipper uses this internally wherever a buffer is fully overwritten
+/// (evaluating an expression into fresh storage, assignment temporaries).
+///
 /// @code
 /// zipper::VectorX<double> v(zipper::uninitialized, n);
 /// @endcode

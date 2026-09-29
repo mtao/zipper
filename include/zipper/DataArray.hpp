@@ -121,9 +121,7 @@ public:
   static auto zero() -> DataArray_
     requires(is_static)
   {
-    DataArray_ result;
-    result.fill(value_type{});
-    return result;
+    return DataArray_{}; // plain construction value-initializes
   }
 
   /// Returns a zero-initialized DataArray (dynamic extents).
@@ -132,9 +130,8 @@ public:
   static auto zero(Args &&...args) -> DataArray_
     requires(!is_static && (std::is_convertible_v<Args, index_type> && ...))
   {
-    DataArray_ result(std::forward<Args>(args)...);
-    result.fill(value_type{});
-    return result;
+    // plain construction value-initializes
+    return DataArray_(std::forward<Args>(args)...);
   }
 
   /// Returns a new DataArray with reinterpreted extents.

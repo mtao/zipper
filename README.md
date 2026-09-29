@@ -255,6 +255,10 @@ left indeterminate, and reading one before writing it is undefined behaviour;
 non-trivial types such as `std::string` are default-constructed. Plain
 constructors and `resize(n)` are unchanged and always zero-fill.
 
+zipper applies the same optimization internally wherever a buffer is fully
+overwritten -- e.g. evaluating an expression into a new `Vector`/`Matrix`
+(`.eval()`, `Vector v = expr;`) and assignment temporaries.
+
 ## DataArray
 
 `DataArray<T, N...>` is the plain-data storage type in Zipper. It owns a

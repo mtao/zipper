@@ -133,14 +133,15 @@ public:
   template <typename T>
   Vector(const std::initializer_list<T> &l)
     requires(extents_traits::is_static)
-  {
+      // check_extents throws unless l fills every element
+      : Base(zipper::uninitialized) {
     detail::check_extents<extents_type>(l.size());
     std::ranges::copy(l, begin());
   }
   template <typename T>
   Vector(const std::initializer_list<T> &l)
     requires(extents_traits::is_dynamic)
-      : Base(extents_type(l.size())) {
+      : Base(zipper::uninitialized, extents_type(l.size())) {
     std::ranges::copy(l, begin());
   }
 
