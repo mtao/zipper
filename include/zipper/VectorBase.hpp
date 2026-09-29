@@ -115,6 +115,8 @@ public:
   {
     if constexpr (expression_traits::is_resizable()) {
       expression().resize(extents_type(l.size()));
+    } else {
+      ZIPPER_ASSERT(l.size() == extent(0));
     }
     for (index_type j = 0; j < extent(0); ++j) {
       (*this)(j) = std::data(l)[j];
