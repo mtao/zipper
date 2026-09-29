@@ -105,46 +105,15 @@ public:
       // requires(extents_traits::is_static)
       = default;
 
+  /// Throws std::invalid_argument on ragged rows or a static-extent mismatch.
   template <typename T>
   Matrix(const std::initializer_list<std::initializer_list<T>> &l)
-    requires(extents_traits::is_static)
-  {
-    detail::check_extents<extents_type>(l.size(), l.begin()->size());
+      : Base(initializer_list_extents(l)) {
     auto it = l.begin();
     for (index_type j = 0; j < l.size(); ++j, ++it) {
       row(j) = *it;
     }
   }
-  template <typename T>
-  Matrix(const std::initializer_list<std::initializer_list<T>> &l)
-    requires(extents_traits::rank_dynamic == 1)
-      : Base(extents_type(extents_traits::is_dynamic_extent(0)
-                              ? l.size()
-                              : l.begin()->size())) {
-     auto it = l.begin();
-     for (index_type j = 0; j < l.size(); ++j, ++it) {
-       if (it->size() != extent(1)) {
-         throw std::invalid_argument(std::format(
-             "Matrix initializer_list: row {} has size {} but expected {}",
-             j, it->size(), extent(1)));
-       }
-       row(j) = *it;
-     }
-   }
-   template <typename T>
-   Matrix(const std::initializer_list<std::initializer_list<T>> &l)
-     requires(extents_traits::rank_dynamic == 2)
-       : Base(extents_type(l.size(), l.begin()->size())) {
-     auto it = l.begin();
-     for (index_type j = 0; j < l.size(); ++j, ++it) {
-       if (it->size() != extent(1)) {
-         throw std::invalid_argument(std::format(
-             "Matrix initializer_list: row {} has size {} but expected {}",
-             j, it->size(), extent(1)));
-       }
-       row(j) = *it;
-     }
-   }
 
   auto as_span() -> span_type {
     if constexpr (is_static) {
@@ -200,6 +169,29 @@ public:
   auto operator=(const Matrix<value_type, R2, C2> &other) -> Matrix & {
     Base::operator=(other.expression());
     return *this;
+  }
+
+private:
+  template <typename T>
+  static auto initializer_list_extents(
+      const std::initializer_list<std::initializer_list<T>> &l)
+      -> extents_type {
+    const index_type rows = l.size();
+    const index_type cols = rows > 0 ? l.begin()->size()
+                            : extents_traits::is_dynamic_extent(1)
+                                ? index_type{0}
+                                : extents_type::static_extent(1);
+    index_type j = 0;
+    for (const auto &r : l) {
+      if (r.size() != cols) {
+        throw std::invalid_argument(std::format(
+            "Matrix initializer_list: row {} has size {} but expected {}", j,
+            r.size(), cols));
+      }
+      ++j;
+    }
+    detail::check_extents<extents_type>(rows, cols);
+    return extents_type(rows, cols);
   }
 };
 template <concepts::MatrixExpression E>
