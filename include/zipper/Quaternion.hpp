@@ -15,6 +15,8 @@
 ///
 /// Construction:
 ///   - Default: `Quaternion<double> q;` (zero-initialised).
+///   - Uninitialized (opt-in, skips the zero-fill; write before reading):
+///     `Quaternion<double> q(zipper::uninitialized);`
 ///   - From components: `Quaternion<double> q(1.0, 0.0, 0.0, 0.0);` (identity).
 ///   - From initializer list: `Quaternion<double> q({1.0, 0.0, 0.0, 0.0});`
 ///   - Copy from expression: `Quaternion<double> q(some_expression);`
@@ -58,6 +60,11 @@ public:
   Quaternion &operator=(const Quaternion &o) = default;
   Quaternion(Quaternion &&o) = default;
   Quaternion &operator=(Quaternion &&o) = default;
+
+  /// Allocates storage without initializing the components; all four must
+  /// be written before they are read. See zipper::uninitialized_t.
+  explicit Quaternion(uninitialized_t)
+      : Base(uninitialized) {}
 
   /// @brief Return the identity quaternion (1, 0, 0, 0).
   static Quaternion identity() { return Quaternion(value_type(1), value_type(0), value_type(0), value_type(0)); }

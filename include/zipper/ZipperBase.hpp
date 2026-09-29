@@ -144,6 +144,13 @@ class ZipperBase
     template <typename... Args>
     ZipperBase(std::in_place_t, Args &&...args)
       : m_expression(std::forward<Args>(args)...) {}
+
+    /// Uninitialized constructor: forwards zipper::uninitialized (plus any
+    /// extents arguments) to the owned expression, skipping zero-fill.
+    template <typename... Args>
+        requires(std::is_constructible_v<Expression, uninitialized_t, Args...>)
+    explicit ZipperBase(uninitialized_t, Args &&...args)
+      : m_expression(uninitialized, std::forward<Args>(args)...) {}
     // Derived& operator=(concepts::ExpressionDerived auto const& v) {
     //     m_expression = v;
     //     return derived();

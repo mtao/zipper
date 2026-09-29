@@ -174,3 +174,29 @@ TEST_CASE("readme_unsafe_lvalue", "[readme]") {
     CHECK(r(1) == 2.0);
     CHECK(r(2) == 3.0);
 }
+
+// ============================================================
+// README Section: "Uninitialized Construction"
+// ============================================================
+TEST_CASE("readme_uninitialized_construction", "[readme][uninitialized]") {
+    const zipper::index_type n = 8;
+    const zipper::index_type rows = 2;
+    const zipper::index_type cols = 5;
+    auto f = [](zipper::index_type i) { return double(i) * 0.5; };
+
+    zipper::VectorX<double> v(zipper::uninitialized, n);
+    for (zipper::index_type i = 0; i < n; ++i) {
+        v(i) = f(i);
+    }
+
+    zipper::Matrix<double, 3, 3> R(zipper::uninitialized);
+    zipper::MatrixXX<double> A(zipper::uninitialized, rows, cols);
+
+    v.resize(zipper::uninitialized, 2 * n);
+
+    CHECK(v.size() == 2 * n);
+    CHECK(v(n - 1) == f(n - 1));
+    CHECK(A.rows() == rows);
+    CHECK(A.cols() == cols);
+    static_assert(sizeof(R) == 9 * sizeof(double));
+}

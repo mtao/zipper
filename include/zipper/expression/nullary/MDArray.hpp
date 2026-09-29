@@ -72,6 +72,18 @@ public:
     linear_accessor().container().resize(
         zipper::detail::ExtentsTraits<E2>::size(e));
   }
+
+  /// Resize without initializing newly added elements. See
+  /// zipper::uninitialized_t.
+  template <zipper::concepts::Extents E2>
+  void resize(uninitialized_t, const E2 &e)
+    requires(extents_traits::template is_convertable_from<E2>() && !IsStatic &&
+             E2::rank() != 0 && base_type::uninitialized_constructible)
+  {
+    this->resize_extents(e);
+    linear_accessor().container().resize(
+        uninitialized, zipper::detail::ExtentsTraits<E2>::size(e));
+  }
 };
 
 } // namespace zipper::expression::nullary

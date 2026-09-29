@@ -96,6 +96,16 @@ public:
   {
     expression().resize(extents_type{size});
   }
+  /// Resize without initializing newly added elements. See
+  /// zipper::uninitialized_t.
+  void resize(uninitialized_t, index_type size)
+    requires(extents_traits::is_dynamic && !Base::is_const &&
+             requires(expression_type &e) {
+               e.resize(uninitialized_t{}, extents_type{size});
+             })
+  {
+    expression().resize(uninitialized_t{}, extents_type{size});
+  }
 
   template <typename T>
   auto operator=(const std::initializer_list<T> &l) -> VectorBase &
