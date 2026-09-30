@@ -11,9 +11,7 @@ handles the multidimensional-to-linear mapping.
 
 | Header | Description |
 |--------|-------------|
-| `DenseData.hpp` | Dispatch header: selects static or dynamic specialisation |
-| `StaticDenseData.hpp` | `DenseData<T, N>` for `N > 0`: backed by `std::array<T, N>` |
-| `DynamicDenseData.hpp` | `DenseData<T, dynamic_extent>`: backed by `std::vector<T>` |
+| `DenseData.hpp` | Owning dense storage. `DenseData<T, N>` (`N > 0`) is backed by `std::array<T, N>`; `DenseData<T, dynamic_extent>` owns a heap buffer (`std::unique_ptr<T[]>` + size + capacity); `DenseData(uninitialized, n)` and `resize(uninitialized, n)` default-initialize instead of zero-filling |
 
 `DenseData` provides:
 - `coeff(i)`, `coeff_ref(i)`, `const_coeff_ref(i)` -- element access

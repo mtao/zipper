@@ -58,6 +58,17 @@ public:
   using const_mdspan_type = zipper::mdspan<const value_type, extents_type,
                                            layout_policy, accessor_policy>;
 
+  /// Whether the linear accessor supports zipper::uninitialized
+  /// construction for these extents.
+  constexpr static bool uninitialized_constructible = [] {
+    if constexpr (extents_traits::is_static) {
+      return std::is_constructible_v<linear_accessor_type, uninitialized_t>;
+    } else {
+      return std::is_constructible_v<linear_accessor_type, uninitialized_t,
+                                     index_type>;
+    }
+  }();
+
   constexpr auto mapping() const -> const mapping_type & { return m_mapping; }
   constexpr auto extents() const -> extents_type { return mapping().extents(); }
   [[nodiscard]] static constexpr auto rank() -> rank_type {
@@ -76,20 +87,22 @@ public:
 
   LinearLayoutExpression()
     requires(std::is_default_constructible_v<linear_accessor_type>)
-      : m_linear_accessor(), m_mapping(extents_type{}) {
-    if constexpr (!extents_traits::is_static) {
-      m_linear_accessor =
-          linear_accessor_type(extents_traits::size(extents_type{}));
-    }
-  }
+      : LinearLayoutExpression(extents_type{}) {}
 
   explicit LinearLayoutExpression(const extents_type &extents)
     requires(std::is_default_constructible_v<linear_accessor_type>)
-      : m_linear_accessor(), m_mapping(extents) {
-    if constexpr (!extents_traits::is_static) {
-      m_linear_accessor = linear_accessor_type(extents_traits::size(extents));
-    }
-  }
+      : m_linear_accessor(make_linear_accessor(extents)), m_mapping(extents) {}
+
+  /// Allocates storage without initializing its elements. See
+  /// zipper::uninitialized_t.
+  explicit LinearLayoutExpression(uninitialized_t)
+    requires(uninitialized_constructible)
+      : LinearLayoutExpression(uninitialized, extents_type{}) {}
+
+  LinearLayoutExpression(uninitialized_t, const extents_type &extents)
+    requires(uninitialized_constructible)
+      : m_linear_accessor(make_linear_accessor(uninitialized, extents)),
+        m_mapping(extents) {}
 
   // Constructor just forwards everything to the linear accessor. If a dynamic
   // sized attribute is used then linear access must come with extents
@@ -183,6 +196,25 @@ public:
   }
 
 private:
+  static auto make_linear_accessor(const extents_type &extents)
+      -> linear_accessor_type {
+    if constexpr (extents_traits::is_static) {
+      return linear_accessor_type{};
+    } else {
+      return linear_accessor_type(extents_traits::size(extents));
+    }
+  }
+  static auto make_linear_accessor(uninitialized_t,
+                                   const extents_type &extents)
+      -> linear_accessor_type {
+    if constexpr (extents_traits::is_static) {
+      return linear_accessor_type(uninitialized);
+    } else {
+      return linear_accessor_type(uninitialized,
+                                  extents_traits::size(extents));
+    }
+  }
+
   LinearAccessorType m_linear_accessor;
   ZIPPER_NO_UNIQUE_ADDRESS mapping_type m_mapping;
 };

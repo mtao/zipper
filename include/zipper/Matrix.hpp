@@ -20,6 +20,10 @@
 ///   - Default: `Matrix<double, 3, 3> A;` (static, zero-initialised).
 ///   - From initializer lists: `Matrix<double, 3, 3> A({{1,2,3},{4,5,6},{7,8,9}});`
 ///   - Dynamic: `Matrix<double, dynamic_extent, dynamic_extent> A(m, n);`
+///     (zero-initialised)
+///   - Uninitialized (opt-in, skips the zero-fill; write before reading):
+///     `Matrix<double, 3, 3> A(zipper::uninitialized);`,
+///     `MatrixXX<double> A(zipper::uninitialized, m, n);`
 ///   - Copy from expression: `Matrix<double, 3, 3> A(some_expression);`
 ///
 /// @code
@@ -134,7 +138,9 @@ public:
    template <typename T>
    Matrix(const std::initializer_list<std::initializer_list<T>> &l)
      requires(extents_traits::rank_dynamic == 2)
-       : Base(extents_type(l.size(), l.begin()->size())) {
+       // every row is written; ragged rows throw
+       : Base(zipper::uninitialized,
+              extents_type(l.size(), l.begin()->size())) {
      auto it = l.begin();
      for (index_type j = 0; j < l.size(); ++j, ++it) {
        if (it->size() != extent(1)) {
@@ -161,6 +167,28 @@ public:
     }
   }
   auto as_span() const -> const_span_type { return as_const_span(); }
+
+  /// Allocates storage without initializing the elements; every element
+  /// must be written before it is read. Accepts either all extents or only
+  /// the dynamic ones (none for fully static types). See
+  /// zipper::uninitialized_t.
+  template <typename... Args>
+    requires((std::is_convertible_v<Args, index_type> && ...) &&
+             (sizeof...(Args) == extents_type::rank() ||
+              sizeof...(Args) == extents_type::rank_dynamic()) &&
+             std::is_constructible_v<typename Base::expression_type,
+                                     uninitialized_t, const extents_type &>)
+  explicit Matrix(uninitialized_t, Args &&...args)
+      : Base(uninitialized,
+             extents_type(static_cast<index_type>(args)...)) {
+    if constexpr (sizeof...(Args) == extents_type::rank() && sizeof...(Args) > 0) {
+      detail::check_extents<extents_type>(static_cast<index_type>(args)...);
+    }
+  }
+  Matrix(uninitialized_t, const extents_type &e)
+    requires(std::is_constructible_v<typename Base::expression_type,
+                                     uninitialized_t, const extents_type &>)
+      : Base(uninitialized, e) {}
 
   Matrix(index_type dyn_size)
     requires(extents_traits::rank_dynamic == 1)

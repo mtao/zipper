@@ -69,3 +69,6 @@ test('sparse_support_contract', test_sparse_support_contract)
 
 test_noalias = executable('test_noalias', 'noalias.cpp', dependencies: [zipper_test_dep])
 test('noalias', test_noalias)
+
+test_uninitialized = executable('test_uninitialized', 'uninitialized.cpp', dependencies: [zipper_test_dep])
+test('uninitialized', test_uninitialized)

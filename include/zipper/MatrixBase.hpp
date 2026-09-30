@@ -108,6 +108,32 @@ class MatrixBase : public ZipperBase<MatrixBase, Expr> {
         expression().resize(extents_type{ size });
     }
 
+    /// Resize without initializing newly added elements. See
+    /// zipper::uninitialized_t.
+    void resize(uninitialized_t, index_type rows, index_type cols)
+        requires(!Base::is_const && requires(expression_type &e) {
+            e.resize(uninitialized_t{}, extents_type{});
+        })
+    {
+        constexpr static bool dynamic_row = extents_traits::is_dynamic_extent(0);
+        constexpr static bool dynamic_col = extents_traits::is_dynamic_extent(1);
+        if constexpr (dynamic_row && dynamic_col) {
+            expression().resize(uninitialized_t{}, extents_type{ rows, cols });
+        } else if constexpr (dynamic_row) {
+            expression().resize(uninitialized_t{}, extents_type{ rows });
+        } else if constexpr (dynamic_col) {
+            expression().resize(uninitialized_t{}, extents_type{ cols });
+        }
+    }
+    void resize(uninitialized_t, index_type size)
+        requires(extents_traits::rank_dynamic == 1 && !Base::is_const &&
+                 requires(expression_type &e) {
+                     e.resize(uninitialized_t{}, extents_type{ size });
+                 })
+    {
+        expression().resize(uninitialized_t{}, extents_type{ size });
+    }
+
     auto as_array() & { return zipper::as_array(*this); }
     auto as_array() const & { return zipper::as_array(*this); }
     auto as_array() && { return zipper::as_array(std::move(*this)); }

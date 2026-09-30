@@ -15,9 +15,8 @@
 #include <zipper/expression/nullary/MDSpan.hpp>
 #include <zipper/expression/nullary/Unit.hpp>
 
-#include <zipper/storage/DynamicDenseData.hpp>
+#include <zipper/storage/DenseData.hpp>
 #include <zipper/storage/SpanData.hpp>
-#include <zipper/storage/StaticDenseData.hpp>
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Layer 1: Leaf Storage Types
@@ -26,19 +25,16 @@
 // underlying std container — no extra members, no vtable, no overhead.
 // ═══════════════════════════════════════════════════════════════════════════
 
-TEST_CASE("sizeof StaticDenseData", "[sizeof][storage]") {
-  using zipper::storage::StaticDenseData;
+TEST_CASE("sizeof static DenseData", "[sizeof][storage]") {
+  using zipper::storage::DenseData;
 
-  // StaticDenseData<T,N> wraps std::array<T,N> and nothing else.
-  STATIC_REQUIRE(sizeof(StaticDenseData<float, 1>) == sizeof(float) * 1);
-  STATIC_REQUIRE(sizeof(StaticDenseData<float, 3>) == sizeof(float) * 3);
-  STATIC_REQUIRE(sizeof(StaticDenseData<float, 4>) == sizeof(float) * 4);
-  STATIC_REQUIRE(sizeof(StaticDenseData<double, 3>) == sizeof(double) * 3);
-  STATIC_REQUIRE(sizeof(StaticDenseData<double, 9>) == sizeof(double) * 9);
-  STATIC_REQUIRE(sizeof(StaticDenseData<double, 16>) == sizeof(double) * 16);
-
-  // Edge: N=0 clamps to 1 element (see StaticDenseData implementation)
-  STATIC_REQUIRE(sizeof(StaticDenseData<double, 0>) == sizeof(double) * 1);
+  // DenseData<T,N> wraps std::array<T,N> and nothing else.
+  STATIC_REQUIRE(sizeof(DenseData<float, 1>) == sizeof(float) * 1);
+  STATIC_REQUIRE(sizeof(DenseData<float, 3>) == sizeof(float) * 3);
+  STATIC_REQUIRE(sizeof(DenseData<float, 4>) == sizeof(float) * 4);
+  STATIC_REQUIRE(sizeof(DenseData<double, 3>) == sizeof(double) * 3);
+  STATIC_REQUIRE(sizeof(DenseData<double, 9>) == sizeof(double) * 9);
+  STATIC_REQUIRE(sizeof(DenseData<double, 16>) == sizeof(double) * 16);
 }
 
 TEST_CASE("sizeof SpanData", "[sizeof][storage]") {
@@ -58,13 +54,14 @@ TEST_CASE("sizeof SpanData", "[sizeof][storage]") {
                  sizeof(std::span<float, std::dynamic_extent>));
 }
 
-TEST_CASE("sizeof DynamicDenseData", "[sizeof][storage]") {
-  using zipper::storage::DynamicDenseData;
+TEST_CASE("sizeof dynamic DenseData", "[sizeof][storage]") {
+  using zipper::storage::DenseData;
 
-  // DynamicDenseData<T> wraps std::vector<T> — should be same size.
-  STATIC_REQUIRE(sizeof(DynamicDenseData<float>) == sizeof(std::vector<float>));
-  STATIC_REQUIRE(sizeof(DynamicDenseData<double>) ==
-                 sizeof(std::vector<double>));
+  // DenseData<T, dynamic_extent> is a heap buffer + size + capacity.
+  STATIC_REQUIRE(sizeof(DenseData<float, std::dynamic_extent>) ==
+                 sizeof(float *) + 2 * sizeof(std::size_t));
+  STATIC_REQUIRE(sizeof(DenseData<double, std::dynamic_extent>) ==
+                 sizeof(double *) + 2 * sizeof(std::size_t));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -222,7 +219,7 @@ TEST_CASE("sizeof DataArray", "[sizeof][user_types]") {
 // (e.g. GPU upload, placement-new, type-erased storage).
 //
 // Dynamic-extent types (VectorX, MatrixXX, etc.) are NOT trivially
-// copyable because they contain std::vector — this is correct behaviour.
+// copyable because they own a heap buffer — this is correct behaviour.
 // ═══════════════════════════════════════════════════════════════════════════
 
 TEST_CASE("trivially_copyable static-extent types",
@@ -267,7 +264,7 @@ TEST_CASE("trivially_copyable static-extent types",
 
 TEST_CASE("dynamic-extent types are NOT trivially copyable",
           "[trivially_copyable][user_types]") {
-  // Dynamic types contain std::vector — they should not be trivially copyable.
+  // Dynamic types own a heap buffer — they should not be trivially copyable.
   STATIC_REQUIRE_FALSE(
       std::is_trivially_copyable_v<zipper::VectorX<double>>);
 }

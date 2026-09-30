@@ -105,7 +105,7 @@ auto apply_householder_left(MDerived &M,
         auto column = M.col(j).segment(r0, len);
         const T scale = utils::maxCoeff(column.as_array().abs());
         if (scale != T{0}) {
-            Vector<T, dynamic_extent> normalized(len);
+            Vector<T, dynamic_extent> normalized(zipper::uninitialized, len);
             T projection{0};
             for (index_type i = 0; i < len; ++i) {
                 normalized(i) = column(i) / scale;
@@ -144,7 +144,7 @@ auto apply_householder_right(MDerived &M,
         auto row = M.row(i).segment(c0, len);
         const T scale = utils::maxCoeff(row.as_array().abs());
         if (scale != T{0}) {
-            Vector<T, dynamic_extent> normalized(len);
+            Vector<T, dynamic_extent> normalized(zipper::uninitialized, len);
             T projection{0};
             for (index_type j = 0; j < len; ++j) {
                 normalized(j) = row(j) / scale;

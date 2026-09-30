@@ -86,7 +86,7 @@ struct SSORPreconditioner {
 
         // Step 1: Forward sweep -- solve (D + omega*L) y = r
         // y_i = (r_i - omega * sum_{j<i} A_{ij} * y_j) / A_{ii}
-        Vector<T, Dim> y(n);
+        Vector<T, Dim> y(zipper::uninitialized, n); // sweep writes y(i) before any read
         for (index_type i = 0; i < n; ++i) {
             T sum = T{0};
             for (index_type j = 0; j < i; ++j) { sum += A_copy(i, j) * y(j); }
@@ -99,7 +99,7 @@ struct SSORPreconditioner {
 
         // Step 3: Backward sweep -- solve (D + omega*U) w = z
         // w_i = (z_i - omega * sum_{j>i} A_{ij} * w_j) / A_{ii}
-        Vector<T, Dim> w(n);
+        Vector<T, Dim> w(zipper::uninitialized, n); // sweep writes w(i) before any read
         for (index_type i = n; i-- > 0;) {
             T sum = T{0};
             for (index_type j = i + 1; j < n; ++j) {

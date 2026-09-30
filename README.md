@@ -230,6 +230,35 @@ auto r = row_view.unsafe();
 | `to_owned()` | Lazy expression tree (deep copy) | Fully independent | You want to snapshot a lazy expression |
 | `unsafe()` | Returnable view wrapper | References original data | You need to copy or return a view |
 
+## Uninitialized Construction
+
+Owning types (`Vector`, `Matrix`, `Array`, `Tensor`, `Form`, `DataArray`,
+`Quaternion`) zero-fill their storage by default. When every element is about
+to be overwritten anyway, pass the `zipper::uninitialized` tag to skip that
+pass over the data:
+
+```cpp
+zipper::VectorX<double> v(zipper::uninitialized, n);
+for (zipper::index_type i = 0; i < n; ++i) {
+    v(i) = f(i);
+}
+
+zipper::Matrix<double, 3, 3> R(zipper::uninitialized);
+zipper::MatrixXX<double> A(zipper::uninitialized, rows, cols);
+
+v.resize(zipper::uninitialized, 2 * n); // new tail left uninitialized
+```
+
+Elements are default-initialized rather than value-initialized (like
+`std::make_unique_for_overwrite`): trivial value types such as `double` are
+left indeterminate, and reading one before writing it is undefined behaviour;
+non-trivial types such as `std::string` are default-constructed. Plain
+constructors and `resize(n)` are unchanged and always zero-fill.
+
+zipper applies the same optimization internally wherever a buffer is fully
+overwritten -- e.g. evaluating an expression into a new `Vector`/`Matrix`
+(`.eval()`, `Vector v = expr;`) and assignment temporaries.
+
 ## DataArray
 
 `DataArray<T, N...>` is the plain-data storage type in Zipper. It owns a

@@ -100,7 +100,7 @@ namespace multigrid_detail {
         for (index_type sweep = 0; sweep < num_sweeps; ++sweep) {
             // residual = b - A*x
             VectorX<T> Ax(A * x);
-            VectorX<T> x_new(n);
+            VectorX<T> x_new(zipper::uninitialized, n);
             for (index_type i = 0; i < n; ++i) {
                 // x_new_i = x_i + omega * (b_i - (A*x)_i) / A_ii
                 x_new(i) = x(i) + omega * (b(i) - Ax(i)) / A(i, i);

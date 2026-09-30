@@ -231,7 +231,7 @@ auto svd(const Derived &A)
     // there are n columns but only p = min(m,n) non-trivial singular values).
 
     // First compute all n column norms.
-    Vector<T, N> all_sigmas(n);
+    Vector<T, N> all_sigmas(zipper::uninitialized, n);
     for (index_type column = 0; column < n; ++column) {
         all_sigmas(column) = column_norm(W, column);
     }
@@ -246,7 +246,8 @@ auto svd(const Derived &A)
 
     // Gather the top p columns in singular-value order.
     auto sorted_W = W.col_slice(perm);
-    Matrix<T, M, P> U_result(m, p);
+    // Both branches below write every row of column k.
+    Matrix<T, M, P> U_result(zipper::uninitialized, m, p);
     for (index_type k = 0; k < p; ++k) {
         if (all_sigmas(perm[k]) > T{0}) {
             for (index_type row = 0; row < m; ++row) {
@@ -298,7 +299,7 @@ auto svd(const Derived &A)
             }
         }
     }
-    Vector<T, P> S_result(p);
+    Vector<T, P> S_result(zipper::uninitialized, p);
     for (index_type k = 0; k < p; ++k) {
         S_result(k) = all_sigmas(perm[k]);
     }

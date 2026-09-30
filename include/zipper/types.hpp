@@ -21,6 +21,27 @@
 
 namespace zipper {
 struct empty {};
+
+/// Tag type requesting that owning storage be default-initialized rather
+/// than value-initialized (cf. std::make_unique_for_overwrite).
+///
+/// Plain constructors (e.g. `VectorX<double>(n)`) always zero-fill.
+/// Passing `zipper::uninitialized` skips that fill when every element will
+/// be written before it is read. Trivial value types (`double`, `int`, ...)
+/// are left indeterminate -- reading one before writing it is undefined
+/// behaviour. Non-trivial value types are default-constructed.
+///
+/// zipper uses this internally wherever a buffer is fully overwritten
+/// (evaluating an expression into fresh storage, assignment temporaries).
+///
+/// @code
+/// zipper::VectorX<double> v(zipper::uninitialized, n);
+/// @endcode
+struct uninitialized_t {
+    explicit uninitialized_t() = default;
+};
+inline constexpr uninitialized_t uninitialized{};
+
 using index_type = std::size_t;
 using rank_type = std::size_t;
 constexpr static index_type dynamic_extent = std::dynamic_extent;

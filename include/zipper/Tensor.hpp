@@ -52,6 +52,28 @@ class Tensor_ : public TensorBase<expression::nullary::MDArray<
     Tensor_(Tensor_&&) = default;
     template <index_type... indices>
     Tensor_(const zipper::extents<indices...>& e) : Base(e) {}
+
+    /// Allocates storage without initializing the elements; every element
+    /// must be written before it is read. Accepts either all extents or only
+    /// the dynamic ones (none for fully static types). See
+    /// zipper::uninitialized_t.
+    template <typename... Args>
+      requires((std::is_convertible_v<Args, index_type> && ...) &&
+               (sizeof...(Args) == Extents::rank() ||
+                sizeof...(Args) == Extents::rank_dynamic()) &&
+               std::is_constructible_v<typename Base::expression_type,
+                                       uninitialized_t, const Extents &>)
+    explicit Tensor_(uninitialized_t, Args &&...args)
+        : Base(uninitialized,
+               Extents(static_cast<index_type>(args)...)) {
+      if constexpr (sizeof...(Args) == Extents::rank() && sizeof...(Args) > 0) {
+        detail::check_extents<Extents>(static_cast<index_type>(args)...);
+      }
+    }
+    Tensor_(uninitialized_t, const Extents &e)
+      requires(std::is_constructible_v<typename Base::expression_type,
+                                       uninitialized_t, const Extents &>)
+        : Base(uninitialized, e) {}
     Tensor_& operator=(Tensor_&& o) = default;
     using Base::operator=;
 };

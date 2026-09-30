@@ -1,7 +1,6 @@
 #include "../catch_include.hpp"
-#include <zipper/storage/DynamicDenseData.hpp>
+#include <zipper/storage/DenseData.hpp>
 #include <zipper/storage/SpanData.hpp>
-#include <zipper/storage/StaticDenseData.hpp>
 #include <zipper/storage/concepts/Data.hpp>
 #include <zipper/storage/concepts/DenseData.hpp>
 #include <zipper/storage/concepts/DynamicData.hpp>
@@ -62,14 +61,14 @@ void test_dense(zipper::storage::concepts::DenseData auto &data) {
 
 using namespace zipper;
 TEST_CASE("static_dense_data_iteration", "[data]") {
-  zipper::storage::StaticDenseData<double, 5> A;
+  zipper::storage::DenseData<double, 5> A;
   test_static<5>(A);
   test_dense<5>(A);
 }
 
 TEST_CASE("dynamic_dense_data_iteration", "[data]") {
   {
-    zipper::storage::DynamicDenseData<double> A(5);
+    zipper::storage::DenseData<double, std::dynamic_extent> A(5);
     test_dense<5>(A);
     test_dynamic(A, 5);
     // dynamic resizes to 20

@@ -144,6 +144,13 @@ class ZipperBase
     template <typename... Args>
     ZipperBase(std::in_place_t, Args &&...args)
       : m_expression(std::forward<Args>(args)...) {}
+
+    /// Uninitialized constructor: forwards zipper::uninitialized (plus any
+    /// extents arguments) to the owned expression, skipping zero-fill.
+    template <typename... Args>
+        requires(std::is_constructible_v<Expression, uninitialized_t, Args...>)
+    explicit ZipperBase(uninitialized_t, Args &&...args)
+      : m_expression(uninitialized, std::forward<Args>(args)...) {}
     // Derived& operator=(concepts::ExpressionDerived auto const& v) {
     //     m_expression = v;
     //     return derived();
@@ -163,10 +170,12 @@ class ZipperBase
                  && zipper::utils::extents::assignable_extents_v<
                      typename Other::extents_type,
                      extents_type>)
-      : m_expression(extents_traits::convert_from(other.extents())) {
+      : m_expression(make_destination(
+            extents_traits::convert_from(other.extents()))) {
         if constexpr (detail::is_fresh_mdarray_v<expression_type>) {
             // Fresh owning storage is already shaped and cannot alias the
-            // source.
+            // source. evaluate_to writes every coefficient, so the storage
+            // was allocated without a zero-fill (see make_destination).
             expression::detail::AssignHelper<Other, expression_type>::
                 evaluate_to(other, m_expression);
         } else {
@@ -463,6 +472,17 @@ class ZipperBase
     }
 
   private:
+    /// Builds the destination for the converting constructor. Fresh
+    /// MDArray storage is fully overwritten by evaluate_to, so it skips the
+    /// zero-fill; any other expression type is constructed normally.
+    static auto make_destination(const extents_type &e) -> expression_type {
+        if constexpr (detail::is_fresh_mdarray_v<expression_type>) {
+            return expression_type(zipper::uninitialized, e);
+        } else {
+            return expression_type(e);
+        }
+    }
+
     Expression m_expression;
 };
 

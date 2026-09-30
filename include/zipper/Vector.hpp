@@ -16,7 +16,10 @@
 /// Construction:
 ///   - Default: `Vector<double, 3> v;` (static, zero-initialised).
 ///   - From initializer list: `Vector<double, 3> v({1.0, 2.0, 3.0});`
-///   - Dynamic: `Vector<double, dynamic_extent> v(n);`
+///   - Dynamic: `Vector<double, dynamic_extent> v(n);` (zero-initialised)
+///   - Uninitialized (opt-in, skips the zero-fill; write before reading):
+///     `Vector<double, 3> v(zipper::uninitialized);`,
+///     `VectorX<double> v(zipper::uninitialized, n);`
 ///   - Copy from expression: `Vector<double, 3> v(some_expression);`
 ///
 /// @code
@@ -86,6 +89,28 @@ public:
   Vector &operator=(const Vector &o) = default;
   Vector(Vector &&o) = default;
   Vector &operator=(Vector &&o) = default;
+  /// Allocates storage without initializing the elements; every element
+  /// must be written before it is read. Accepts either all extents or only
+  /// the dynamic ones (none for fully static types). See
+  /// zipper::uninitialized_t.
+  template <typename... Args>
+    requires((std::is_convertible_v<Args, index_type> && ...) &&
+             (sizeof...(Args) == extents_type::rank() ||
+              sizeof...(Args) == extents_type::rank_dynamic()) &&
+             std::is_constructible_v<typename Base::expression_type,
+                                     uninitialized_t, const extents_type &>)
+  explicit Vector(uninitialized_t, Args &&...args)
+      : Base(uninitialized,
+             extents_type(static_cast<index_type>(args)...)) {
+    if constexpr (sizeof...(Args) == extents_type::rank() && sizeof...(Args) > 0) {
+      detail::check_extents<extents_type>(static_cast<index_type>(args)...);
+    }
+  }
+  Vector(uninitialized_t, const extents_type &e)
+    requires(std::is_constructible_v<typename Base::expression_type,
+                                     uninitialized_t, const extents_type &>)
+      : Base(uninitialized, e) {}
+
   Vector(index_type size)
     requires(extents_traits::is_dynamic)
       : Base(zipper::extents<Rows>(size)) {}
@@ -108,14 +133,15 @@ public:
   template <typename T>
   Vector(const std::initializer_list<T> &l)
     requires(extents_traits::is_static)
-  {
+      // check_extents throws unless l fills every element
+      : Base(zipper::uninitialized) {
     detail::check_extents<extents_type>(l.size());
     std::ranges::copy(l, begin());
   }
   template <typename T>
   Vector(const std::initializer_list<T> &l)
     requires(extents_traits::is_dynamic)
-      : Base(extents_type(l.size())) {
+      : Base(zipper::uninitialized, extents_type(l.size())) {
     std::ranges::copy(l, begin());
   }
 

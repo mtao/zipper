@@ -72,6 +72,18 @@ public:
     linear_accessor().container().resize(
         zipper::detail::ExtentsTraits<E2>::size(e));
   }
+
+  /// Resize without initializing newly added elements. See
+  /// zipper::uninitialized_t.
+  template <zipper::concepts::Extents E2>
+  void resize(uninitialized_t, const E2 &e)
+    requires(extents_traits::template is_convertable_from<E2>() && !IsStatic &&
+             E2::rank() != 0 && base_type::uninitialized_constructible)
+  {
+    this->resize_extents(e);
+    linear_accessor().container().resize(
+        uninitialized, zipper::detail::ExtentsTraits<E2>::size(e));
+  }
 };
 
 } // namespace zipper::expression::nullary
@@ -100,7 +112,8 @@ auto MDSpan<ElementType, Extents, LayoutPolicy, AccessorPolicy>::make_owned() co
   using non_const_element = std::remove_const_t<ElementType>;
   using owned_type = MDArray<non_const_element, Extents, LayoutPolicy,
                              default_accessor_policy<non_const_element>>;
-  owned_type result(this->extents());
+  // evaluate_to overwrites every coefficient: skip the zero-fill.
+  owned_type result(zipper::uninitialized, this->extents());
   expression::detail::AssignHelper<self_type, owned_type>::evaluate_to(*this, result);
   return result;
 }

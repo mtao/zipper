@@ -69,6 +69,28 @@ public:
   template <index_type... indices>
   DataArray_(const zipper::extents<indices...> &e) : Base(e) {}
 
+  /// Allocates storage without initializing the elements; every element
+  /// must be written before it is read. Accepts either all extents or only
+  /// the dynamic ones (none for fully static types). See
+  /// zipper::uninitialized_t.
+  template <typename... Args>
+    requires((std::is_convertible_v<Args, index_type> && ...) &&
+             (sizeof...(Args) == Extents::rank() ||
+              sizeof...(Args) == Extents::rank_dynamic()) &&
+             std::is_constructible_v<typename Base::expression_type,
+                                     uninitialized_t, const Extents &>)
+  explicit DataArray_(uninitialized_t, Args &&...args)
+      : Base(uninitialized,
+             Extents(static_cast<index_type>(args)...)) {
+    if constexpr (sizeof...(Args) == Extents::rank() && sizeof...(Args) > 0) {
+      detail::check_extents<Extents>(static_cast<index_type>(args)...);
+    }
+  }
+  DataArray_(uninitialized_t, const Extents &e)
+    requires(std::is_constructible_v<typename Base::expression_type,
+                                     uninitialized_t, const Extents &>)
+      : Base(uninitialized, e) {}
+
   auto as_span() -> span_type {
     if constexpr (is_static) {
       return span_type(expression().as_std_span());
@@ -99,9 +121,7 @@ public:
   static auto zero() -> DataArray_
     requires(is_static)
   {
-    DataArray_ result;
-    result.fill(value_type{});
-    return result;
+    return DataArray_{}; // plain construction value-initializes
   }
 
   /// Returns a zero-initialized DataArray (dynamic extents).
@@ -110,9 +130,8 @@ public:
   static auto zero(Args &&...args) -> DataArray_
     requires(!is_static && (std::is_convertible_v<Args, index_type> && ...))
   {
-    DataArray_ result(std::forward<Args>(args)...);
-    result.fill(value_type{});
-    return result;
+    // plain construction value-initializes
+    return DataArray_(std::forward<Args>(args)...);
   }
 
   /// Returns a new DataArray with reinterpreted extents.

@@ -193,7 +193,7 @@ auto gmres(const ADerived &A, const BDerived &b, const XDerived &x0,
         }
       }
 
-      Vector<T, dynamic_extent> g_vec(m);
+      Vector<T, dynamic_extent> g_vec(zipper::uninitialized, m);
       for (index_type k = 0; k < m; ++k) {
         g_vec(k) = g[k];
       }

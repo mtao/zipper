@@ -64,7 +64,16 @@ struct AssignHelper {
     static void assign_direct(const From &from, To &to);
 
     /// Evaluate into a prepared target; the caller handles shape and aliasing.
+    ///
+    /// Contract: writes every coefficient of `to` (custom `assign_to`
+    /// strategies must too). Callers rely on this to allocate `to` without
+    /// a zero-fill (zipper::uninitialized).
     static void evaluate_to(const From &from, To &to);
+
+    /// Resize `to` ahead of a full overwrite, skipping value-initialization
+    /// of new elements when the destination supports it.
+    template <typename E>
+    static void resize_for_overwrite(To &to, const E &extents);
 
     /// Prepare shape and evaluate; the caller guarantees storage independence.
     static void assign_independent(const From &from, To &to);
@@ -120,11 +129,26 @@ template <zipper::concepts::Expression From, zipper::concepts::Expression To>
              && zipper::utils::extents::assignable_extents_v<
                  typename ExpressionTraits<From>::extents_type,
                  typename ExpressionTraits<To>::extents_type>)
+template <typename E>
+void AssignHelper<From, To>::resize_for_overwrite(To &to, const E &extents) {
+    if constexpr (requires { to.resize(zipper::uninitialized, extents); }) {
+        to.resize(zipper::uninitialized, extents);
+    } else {
+        to.resize(extents);
+    }
+}
+
+template <zipper::concepts::Expression From, zipper::concepts::Expression To>
+    requires(concepts::WritableExpression<To>
+             && !std::is_const_v<std::remove_reference_t<To>>
+             && zipper::utils::extents::assignable_extents_v<
+                 typename ExpressionTraits<From>::extents_type,
+                 typename ExpressionTraits<To>::extents_type>)
 void AssignHelper<From, To>::assign_independent(const From &from, To &to) {
     if constexpr (from_extents_type::rank() != 0) {
         const auto extents = to_extents_traits::convert_from(from.extents());
         if constexpr (to_traits::is_resizable()) {
-            to.resize(extents);
+            resize_for_overwrite(to, extents);
         } else {
             ZIPPER_ASSERT(to.extents() == extents);
         }
@@ -176,11 +200,12 @@ void AssignHelper<From, To>::assign(const From &from, To &to) {
         }
         using POS = nullary::
             MDArray<value_type, extents_type, layout_policy, accessor_policy>;
-        POS pos(snapshot_extents);
+        // Both pos and a resized `to` are fully overwritten below.
+        POS pos(zipper::uninitialized, snapshot_extents);
 
         AssignHelper<From, POS>::evaluate_to(from, pos);
         if constexpr (should_resize) {
-            to.resize(snapshot_extents);
+            resize_for_overwrite(to, snapshot_extents);
         }
         AssignHelper<POS, To>::assign_direct(pos, to);
     }

@@ -164,13 +164,14 @@ auto inverse_general(const D& M) {
     using extents_type = std::decay_t<decltype(extents)>;
     constexpr index_type static_rows = extents_type::static_extent(0);
     constexpr index_type static_cols = extents_type::static_extent(1);
-    Matrix<T, static_rows, static_cols> Inv(extents);
+    // Every column is written below (or the function throws).
+    Matrix<T, static_rows, static_cols> Inv(zipper::uninitialized, extents);
 
     // Solve R * x_j = Q^T * e_j  for each column j.
     for (index_type j = 0; j < n; ++j) {
         // Compute c = Q^T * e_j = column j of Q^T = row j of Q... no.
         // c(i) = sum_k Q(k, i) * e_j(k) = Q(j, i).
-        Vector<T, N> c(n);
+        Vector<T, N> c(zipper::uninitialized, n);
         for (index_type i = 0; i < n; ++i) {
             c(i) = Q(j, i);
         }
