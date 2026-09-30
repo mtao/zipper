@@ -18,7 +18,8 @@
 ///
 /// Construction:
 ///   - Default: `Matrix<double, 3, 3> A;` (static, zero-initialised).
-///   - From initializer lists: `Matrix<double, 3, 3> A({{1,2,3},{4,5,6},{7,8,9}});`
+///   - From initializer lists: `Matrix<double, 3, 3>
+///   A({{1,2,3},{4,5,6},{7,8,9}});`
 ///   - Dynamic: `Matrix<double, dynamic_extent, dynamic_extent> A(m, n);`
 ///     (zero-initialised)
 ///   - Uninitialized (opt-in, skips the zero-fill; write before reading):
@@ -72,163 +73,163 @@ namespace zipper {
 // Default choice of RowMajor is defined in MatrixBase
 template <typename ValueType, index_type Rows, index_type Cols, bool RowMajor>
 class Matrix
-    : public MatrixBase<
-          expression::nullary::MDArray<ValueType, zipper::extents<Rows, Cols>,
-                                       storage::matrix_layout<RowMajor>,
-                                       default_accessor_policy<ValueType>>> {
-public:
-  using layout_type = storage::matrix_layout<RowMajor>;
-  using expression_type =
-      expression::nullary::MDArray<ValueType, zipper::extents<Rows, Cols>,
-                                   storage::matrix_layout<RowMajor>,
-                                   default_accessor_policy<ValueType>>;
-  using Base = MatrixBase<expression_type>;
+  : public MatrixBase<
+        expression::nullary::MDArray<ValueType,
+                                     zipper::extents<Rows, Cols>,
+                                     storage::matrix_layout<RowMajor>,
+                                     default_accessor_policy<ValueType>>> {
+  public:
+    using layout_type = storage::matrix_layout<RowMajor>;
+    using expression_type =
+        expression::nullary::MDArray<ValueType,
+                                     zipper::extents<Rows, Cols>,
+                                     storage::matrix_layout<RowMajor>,
+                                     default_accessor_policy<ValueType>>;
+    using Base = MatrixBase<expression_type>;
 
-  using Base::expression;
-  using value_type = Base::value_type;
-  using extents_type = Base::extents_type;
-  using Base::col;
-  using Base::extent;
-  using Base::extents;
-  using Base::row;
-  using extents_traits = detail::ExtentsTraits<extents_type>;
-  using span_expression_type =
-      expression::nullary::MDSpan<ValueType, zipper::extents<Rows, Cols>,
-                                  storage::matrix_layout<RowMajor>,
-                                  default_accessor_policy<ValueType>>;
-  using const_span_expression_type =
-      expression::nullary::MDSpan<const ValueType, zipper::extents<Rows, Cols>,
-                                  storage::matrix_layout<RowMajor>,
-                                  default_accessor_policy<ValueType>>;
-  using span_type = MatrixBase<span_expression_type>;
-  using const_span_type = MatrixBase<const_span_expression_type>;
-  using Base::transpose;
-  constexpr static bool is_static = extents_traits::is_static;
+    using Base::expression;
+    using value_type = Base::value_type;
+    using extents_type = Base::extents_type;
+    using Base::col;
+    using Base::extent;
+    using Base::extents;
+    using Base::row;
+    using extents_traits = detail::ExtentsTraits<extents_type>;
+    using span_expression_type =
+        expression::nullary::MDSpan<ValueType,
+                                    zipper::extents<Rows, Cols>,
+                                    storage::matrix_layout<RowMajor>,
+                                    default_accessor_policy<ValueType>>;
+    using const_span_expression_type =
+        expression::nullary::MDSpan<const ValueType,
+                                    zipper::extents<Rows, Cols>,
+                                    storage::matrix_layout<RowMajor>,
+                                    default_accessor_policy<ValueType>>;
+    using span_type = MatrixBase<span_expression_type>;
+    using const_span_type = MatrixBase<const_span_expression_type>;
+    using Base::transpose;
+    constexpr static bool is_static = extents_traits::is_static;
 
-  Matrix()
-      // requires(extents_traits::is_static)
-      = default;
+    Matrix()
+        // requires(extents_traits::is_static)
+        = default;
 
-  template <typename T>
-  Matrix(const std::initializer_list<std::initializer_list<T>> &l)
-    requires(extents_traits::is_static)
-  {
-    detail::check_extents<extents_type>(l.size(), l.begin()->size());
-    auto it = l.begin();
-    for (index_type j = 0; j < l.size(); ++j, ++it) {
-      row(j) = *it;
+    /// Throws std::invalid_argument on ragged rows or a static-extent mismatch.
+    template <typename T>
+    Matrix(const std::initializer_list<std::initializer_list<T>> &l)
+      : Base(initializer_list_extents(l)) {
+        auto it = l.begin();
+        for (index_type j = 0; j < l.size(); ++j, ++it) { row(j) = *it; }
     }
-  }
-  template <typename T>
-  Matrix(const std::initializer_list<std::initializer_list<T>> &l)
-    requires(extents_traits::rank_dynamic == 1)
-      : Base(extents_type(extents_traits::is_dynamic_extent(0)
-                              ? l.size()
-                              : l.begin()->size())) {
-     auto it = l.begin();
-     for (index_type j = 0; j < l.size(); ++j, ++it) {
-       if (it->size() != extent(1)) {
-         throw std::invalid_argument(std::format(
-             "Matrix initializer_list: row {} has size {} but expected {}",
-             j, it->size(), extent(1)));
-       }
-       row(j) = *it;
-     }
-   }
-   template <typename T>
-   Matrix(const std::initializer_list<std::initializer_list<T>> &l)
-     requires(extents_traits::rank_dynamic == 2)
-       // every row is written; ragged rows throw
-       : Base(zipper::uninitialized,
-              extents_type(l.size(), l.begin()->size())) {
-     auto it = l.begin();
-     for (index_type j = 0; j < l.size(); ++j, ++it) {
-       if (it->size() != extent(1)) {
-         throw std::invalid_argument(std::format(
-             "Matrix initializer_list: row {} has size {} but expected {}",
-             j, it->size(), extent(1)));
-       }
-       row(j) = *it;
-     }
-   }
 
-  auto as_span() -> span_type {
-    if constexpr (is_static) {
-      return span_type(expression().as_std_span());
-    } else {
-      return span_type(expression().as_std_span(), extents());
+    auto as_span() -> span_type {
+        if constexpr (is_static) {
+            return span_type(expression().as_std_span());
+        } else {
+            return span_type(expression().as_std_span(), extents());
+        }
     }
-  }
-  auto as_const_span() const -> const_span_type {
-    if constexpr (is_static) {
-      return const_span_type(expression().as_std_span());
-    } else {
-      return const_span_type(expression().as_std_span(), extents());
+    auto as_const_span() const -> const_span_type {
+        if constexpr (is_static) {
+            return const_span_type(expression().as_std_span());
+        } else {
+            return const_span_type(expression().as_std_span(), extents());
+        }
     }
-  }
-  auto as_span() const -> const_span_type { return as_const_span(); }
+    auto as_span() const -> const_span_type { return as_const_span(); }
 
-  /// Allocates storage without initializing the elements; every element
-  /// must be written before it is read. Accepts either all extents or only
-  /// the dynamic ones (none for fully static types). See
-  /// zipper::uninitialized_t.
-  template <typename... Args>
-    requires((std::is_convertible_v<Args, index_type> && ...) &&
-             (sizeof...(Args) == extents_type::rank() ||
-              sizeof...(Args) == extents_type::rank_dynamic()) &&
-             std::is_constructible_v<typename Base::expression_type,
-                                     uninitialized_t, const extents_type &>)
-  explicit Matrix(uninitialized_t, Args &&...args)
-      : Base(uninitialized,
-             extents_type(static_cast<index_type>(args)...)) {
-    if constexpr (sizeof...(Args) == extents_type::rank() && sizeof...(Args) > 0) {
-      detail::check_extents<extents_type>(static_cast<index_type>(args)...);
+    /// Allocates storage without initializing the elements; every element
+    /// must be written before it is read. Accepts either all extents or only
+    /// the dynamic ones (none for fully static types). See
+    /// zipper::uninitialized_t.
+    template <typename... Args>
+        requires((std::is_convertible_v<Args, index_type> && ...)
+                 && (sizeof...(Args) == extents_type::rank()
+                     || sizeof...(Args) == extents_type::rank_dynamic())
+                 && std::is_constructible_v<typename Base::expression_type,
+                                            uninitialized_t,
+                                            const extents_type &>)
+    explicit Matrix(uninitialized_t, Args &&...args)
+      : Base(uninitialized, extents_type(static_cast<index_type>(args)...)) {
+        if constexpr (sizeof...(Args) == extents_type::rank()
+                      && sizeof...(Args) > 0) {
+            detail::check_extents<extents_type>(
+                static_cast<index_type>(args)...);
+        }
     }
-  }
-  Matrix(uninitialized_t, const extents_type &e)
-    requires(std::is_constructible_v<typename Base::expression_type,
-                                     uninitialized_t, const extents_type &>)
+    Matrix(uninitialized_t, const extents_type &e)
+        requires(std::is_constructible_v<typename Base::expression_type,
+                                         uninitialized_t,
+                                         const extents_type &>)
       : Base(uninitialized, e) {}
 
-  Matrix(index_type dyn_size)
-    requires(extents_traits::rank_dynamic == 1)
+    Matrix(index_type dyn_size)
+        requires(extents_traits::rank_dynamic == 1)
       : Base(extents_type(dyn_size)) {}
 
-  Matrix(index_type rows, index_type cols)
-    requires(extents_traits::is_dynamic)
+    Matrix(index_type rows, index_type cols)
+        requires(extents_traits::is_dynamic)
       : Base(extents_type(rows, cols)) {}
 
-  Matrix(const extents_type &e)
-    requires(extents_traits::is_dynamic)
+    Matrix(const extents_type &e)
+        requires(extents_traits::is_dynamic)
       : Base(e) {}
-  Matrix(const extents_type &)
-    requires(extents_traits::is_static)
+    Matrix(const extents_type &)
+        requires(extents_traits::is_static)
       : Base() {}
 
-  Matrix([[maybe_unused]] index_type rows, [[maybe_unused]] index_type cols)
-    requires(extents_traits::is_static)
+    Matrix([[maybe_unused]] index_type rows, [[maybe_unused]] index_type cols)
+        requires(extents_traits::is_static)
       : Base() {
-    detail::check_extents<extents_type>(rows, cols);
-  }
+        detail::check_extents<extents_type>(rows, cols);
+    }
 
-  template <concepts::Matrix Other> Matrix(const Other &other) : Base(other) {}
+    template <concepts::Matrix Other>
+    Matrix(const Other &other) : Base(other) {}
 
-  template <concepts::Expression Other>
-  Matrix(const Other &other) : Base(other) {}
+    template <concepts::Expression Other>
+    Matrix(const Other &other) : Base(other) {}
 
-  Matrix(const Matrix &other) = default;
+    Matrix(const Matrix &other) = default;
 
-  template <index_type R2, index_type C2>
-  Matrix(const Matrix<value_type, R2, C2> &other) : Base(other.expression()) {}
+    template <index_type R2, index_type C2>
+    Matrix(const Matrix<value_type, R2, C2> &other)
+      : Base(other.expression()) {}
 
-  using Base::operator=;
-  auto operator=(Matrix &&other) -> Matrix & = default;
-  auto operator=(const Matrix &other) -> Matrix & = default;
-  template <index_type R2, index_type C2>
-  auto operator=(const Matrix<value_type, R2, C2> &other) -> Matrix & {
-    Base::operator=(other.expression());
-    return *this;
-  }
+    using Base::operator=;
+    auto operator=(Matrix &&other) -> Matrix & = default;
+    auto operator=(const Matrix &other) -> Matrix & = default;
+    template <index_type R2, index_type C2>
+    auto operator=(const Matrix<value_type, R2, C2> &other) -> Matrix & {
+        Base::operator=(other.expression());
+        return *this;
+    }
+
+  private:
+    template <typename T>
+    static auto initializer_list_extents(
+        const std::initializer_list<std::initializer_list<T>> &l)
+        -> extents_type {
+        const index_type rows = l.size();
+        const index_type cols = rows > 0 ? l.begin()->size()
+                                : extents_traits::is_dynamic_extent(1)
+                                    ? index_type{0}
+                                    : extents_type::static_extent(1);
+        index_type j = 0;
+        for (const auto &r : l) {
+            if (r.size() != cols) {
+                throw std::invalid_argument(
+                    std::format("Matrix initializer_list: row {} has size {} "
+                                "but expected {}",
+                                j,
+                                r.size(),
+                                cols));
+            }
+            ++j;
+        }
+        detail::check_extents<extents_type>(rows, cols);
+        return extents_type(rows, cols);
+    }
 };
 template <concepts::MatrixExpression E>
 Matrix(const E &) -> Matrix<std::decay_t<typename E::value_type>,
@@ -241,12 +242,10 @@ Matrix(const MB &o) -> Matrix<std::decay_t<typename MB::value_type>,
                               MB::extents_type::static_extent(1)>;
 
 namespace concepts::detail {
-template <typename T, index_type R, index_type C, bool RowMajor>
-struct IsMatrix<zipper::Matrix<T, R, C, RowMajor>> : std::true_type {
-};
-template <typename T, index_type R, index_type C, bool RowMajor>
-struct IsZipperBase<zipper::Matrix<T, R, C, RowMajor>> : std::true_type {
-};
+    template <typename T, index_type R, index_type C, bool RowMajor>
+    struct IsMatrix<zipper::Matrix<T, R, C, RowMajor>> : std::true_type {};
+    template <typename T, index_type R, index_type C, bool RowMajor>
+    struct IsZipperBase<zipper::Matrix<T, R, C, RowMajor>> : std::true_type {};
 
 } // namespace concepts::detail
 } // namespace zipper

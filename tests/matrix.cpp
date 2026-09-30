@@ -845,3 +845,73 @@ TEST_CASE("test_span_view", "[vector][storage][dense][span]") {
         CHECK(x == z);
     }
 }
+
+TEST_CASE("matrix_initializer_list_validation", "[matrix][initializer_list]") {
+    using zipper::dynamic_extent;
+    using zipper::Matrix;
+
+    SECTION("valid lists") {
+        Matrix<double, 2, 3> S{{1, 2, 3}, {4, 5, 6}};
+        CHECK(S(1, 2) == 6.0);
+        Matrix<double, 2, dynamic_extent> R{{1, 2, 3}, {4, 5, 6}};
+        CHECK(R.cols() == 3);
+        CHECK(R(1, 0) == 4.0);
+        Matrix<double, dynamic_extent, 3> C{{1, 2, 3}, {4, 5, 6}};
+        CHECK(C.rows() == 2);
+        CHECK(C(1, 2) == 6.0);
+        Matrix<double, dynamic_extent, dynamic_extent> D{{1, 2}, {3, 4}, {5, 6}};
+        CHECK(D.rows() == 3);
+        CHECK(D.cols() == 2);
+        CHECK(D(2, 1) == 6.0);
+    }
+
+    SECTION("static: ragged row after the first") {
+        // Only the first row used to be checked (later rows only by a
+        // debug-only assert, overflowing into the next row in release).
+        CHECK_THROWS_AS((Matrix<double, 2, 3>{{1, 2, 3}, {4, 5, 6, 7}}),
+                        std::invalid_argument);
+        CHECK_THROWS_AS((Matrix<double, 2, 3>{{1, 2, 3}, {4, 5}}),
+                        std::invalid_argument);
+    }
+    SECTION("static: wrong row count") {
+        CHECK_THROWS_AS((Matrix<double, 2, 3>{{1, 2, 3}}),
+                        std::invalid_argument);
+        CHECK_THROWS_AS((Matrix<double, 2, 3>{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}}),
+                        std::invalid_argument);
+    }
+    SECTION("static rows, dynamic cols: wrong row count") {
+        // The row count used to be unchecked (out-of-bounds write / unset
+        // rows).
+        CHECK_THROWS_AS((Matrix<double, 2, dynamic_extent>{{1, 2, 3}}),
+                        std::invalid_argument);
+        CHECK_THROWS_AS(
+            (Matrix<double, 2, dynamic_extent>{{1, 2}, {3, 4}, {5, 6}}),
+            std::invalid_argument);
+        CHECK_THROWS_AS((Matrix<double, 2, dynamic_extent>{{1, 2}, {3}}),
+                        std::invalid_argument);
+    }
+    SECTION("dynamic rows, static cols: wrong column count") {
+        CHECK_THROWS_AS((Matrix<double, dynamic_extent, 3>{{1, 2}, {3, 4}}),
+                        std::invalid_argument);
+        CHECK_THROWS_AS((Matrix<double, dynamic_extent, 3>{{1, 2, 3}, {4, 5}}),
+                        std::invalid_argument);
+    }
+    SECTION("fully dynamic: ragged") {
+        CHECK_THROWS_AS(
+            (Matrix<double, dynamic_extent, dynamic_extent>{{1, 2}, {3}}),
+            std::invalid_argument);
+    }
+    SECTION("empty list") {
+        // Used to dereference l.begin() of an empty list.
+        std::initializer_list<std::initializer_list<double>> empty{};
+        Matrix<double, dynamic_extent, dynamic_extent> D(empty);
+        CHECK(D.rows() == 0);
+        CHECK(D.cols() == 0);
+        Matrix<double, dynamic_extent, 3> C(empty);
+        CHECK(C.rows() == 0);
+        CHECK(C.cols() == 3);
+        CHECK_THROWS_AS((Matrix<double, 2, 3>(empty)), std::invalid_argument);
+        CHECK_THROWS_AS((Matrix<double, 2, dynamic_extent>(empty)),
+                        std::invalid_argument);
+    }
+}
