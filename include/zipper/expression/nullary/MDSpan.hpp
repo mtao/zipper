@@ -60,6 +60,16 @@ public:
       : base_type(typename base_type::linear_accessor_type(s),
                   extents_type(s.size())) {}
 
+  /// Explicit constructor from std::span with dynamic extent into static
+  /// extents. The size is checked at runtime (ZIPPER_ASSERT).
+  explicit MDSpan(std::span<ElementType, std::dynamic_extent> s)
+    requires(extents_traits::is_static)
+      : base_type(typename base_type::linear_accessor_type(
+            std::span<ElementType, extents_traits::static_size>(
+                s.data(), extents_traits::static_size))) {
+    ZIPPER_ASSERT(s.size() == extents_traits::static_size);
+  }
+
   /// Constructor from std::array (mutable reference, static extents)
   template <std::size_t N>
   MDSpan(std::array<std::remove_const_t<ElementType>, N> &arr)

@@ -189,3 +189,24 @@ TEST_CASE("test_mdspan_construction", "[mdspan][nullary][dense]") {
     }
   }
 }
+
+TEST_CASE("mdspan_static_extents_from_dynamic_span",
+          "[mdspan][nullary][dense]") {
+  using namespace zipper;
+  using Vec3Span = expression::nullary::MDSpan<int, extents<3>>;
+  using ScalarSpan = expression::nullary::MDSpan<int, extents<>>;
+
+  // Only explicit construction is allowed from a dynamic-extent span.
+  STATIC_CHECK(std::is_constructible_v<Vec3Span, std::span<int>>);
+  STATIC_CHECK_FALSE(std::is_convertible_v<std::span<int>, Vec3Span>);
+  STATIC_CHECK(std::is_constructible_v<ScalarSpan, std::span<int>>);
+  STATIC_CHECK_FALSE(std::is_convertible_v<std::span<int>, ScalarSpan>);
+
+  std::array<int, 3> data{1, 2, 3};
+  const Vec3Span v(std::span<int>(data.data(), data.size()));
+  CHECK(v(0) == 1);
+  CHECK(v(2) == 3);
+
+  const ScalarSpan s(std::span<int>(data.data() + 1, 1));
+  CHECK(s() == 2);
+}
