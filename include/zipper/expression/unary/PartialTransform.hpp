@@ -263,7 +263,7 @@ namespace unary {
                                            child_extents_type::rank()>{};
 
             // Iterate over non-fiber indices
-            zipper::utils::extents::for_each_index_row_major(
+            zipper::utils::extents::for_each_index<zipper::storage::layout_right>(
                 non_fiber_ext, [&](auto... non_fiber_idxs) {
                     // Build the fiber slice from the source expression
                     auto fiber =
@@ -379,7 +379,7 @@ namespace unary {
                 _get_fiber_extents(std::index_sequence<Indices...>{});
 
             // Iterate over all fiber index combinations
-            zipper::utils::extents::for_each_index_row_major(
+            zipper::utils::extents::for_each_index<zipper::storage::layout_right>(
                 fiber_ext, [&](auto... fiber_idxs) {
                     // Fill fiber positions into a copy of the base index
                     auto full_idx = base_idx;
