@@ -3,3 +3,5 @@ test_extents_utils = executable('test_extents_utils', srcs, dependencies: [zippe
 test('test_extents_utils', test_extents_utils)
 test_iterate = executable('test_iterate', 'iterate.cpp', dependencies: [zipper_test_dep])
 test('iterate', test_iterate)
+test_for_each_index = executable('test_for_each_index', 'for_each_index.cpp', dependencies: [zipper_test_dep])
+test('for_each_index', test_for_each_index)
