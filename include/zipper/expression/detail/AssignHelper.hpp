@@ -61,14 +61,14 @@ struct AssignHelper {
         && RankZeroEvaluation<From, to_extents_type::rank()>::is_scalar;
 
     /// Element-by-element copy, iterating in the target's preferred layout.
-    static void assign_direct(const From &from, To &to);
+    [[gnu::always_inline]] inline static void assign_direct(const From &from, To &to);
 
     /// Evaluate into a prepared target; the caller handles shape and aliasing.
     ///
     /// Contract: writes every coefficient of `to` (custom `assign_to`
     /// strategies must too). Callers rely on this to allocate `to` without
     /// a zero-fill (zipper::uninitialized).
-    static void evaluate_to(const From &from, To &to);
+    [[gnu::always_inline]] inline static void evaluate_to(const From &from, To &to);
 
     /// Resize `to` ahead of a full overwrite, skipping value-initialization
     /// of new elements when the destination supports it.
@@ -76,10 +76,10 @@ struct AssignHelper {
     static void resize_for_overwrite(To &to, const E &extents);
 
     /// Prepare shape and evaluate; the caller guarantees storage independence.
-    static void assign_independent(const From &from, To &to);
+    [[gnu::always_inline]] inline static void assign_independent(const From &from, To &to);
 
     /// Main entry point: handles resizing, aliasing, and strategy dispatch.
-    static void assign(const From &from, To &to);
+    [[gnu::always_inline]] inline static void assign(const From &from, To &to);
 };
 
 template <zipper::concepts::Expression From, zipper::concepts::Expression To>
