@@ -15,6 +15,8 @@
 #include "detail/extents/constexpr_extent.hpp"
 #include "detail/LayoutPreference.hpp"
 #include "expression/binary/CrossProduct.hpp"
+#include "expression/binary/TensorProduct.hpp"
+#include "detail/declare_operations.hpp"
 #include "expression/nullary/StlMDArray.hpp"
 #include "expression/reductions/CoefficientSum.hpp"
 #include "expression/reductions/LpNorm.hpp"
@@ -162,6 +164,22 @@ public:
     using V = expression::binary::CrossProduct<child_t,
                                                const typename O::expression_type&>;
     return VectorBase<V>(std::in_place, std::forward<Self>(self).expression(), o.expression());
+  }
+
+  /// Outer product u ⊗ o, returning a rank-2 MatrixBase with
+  /// M(i, j) = (*this)(i) * o(j). Accepts either a Vector or a Form as the
+  /// right operand (v.outer(f) is equivalent to v * f).
+  template <typename O, typename Self>
+    requires((concepts::Vector<O> || concepts::Form<O>) &&
+             std::remove_cvref_t<O>::extents_type::rank() == 1)
+  auto outer(this Self &&self, O &&o) {
+    static_assert(extents_type::rank() == 1,
+                  "outer: left operand must be a rank-1 vector");
+    using child_t = detail::member_child_storage_t<Self, Expr>;
+    using V = expression::binary::TensorProduct<
+        child_t, zipper::detail::forwarded_expression_t<O>>;
+    return MatrixBase<V>(std::in_place, std::forward<Self>(self).expression(),
+                         std::forward<O>(o).expression());
   }
 
   template <index_type Start, index_type Size, typename Self>

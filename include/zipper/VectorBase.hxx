@@ -1,9 +1,9 @@
 #if !defined(ZIPPER_VECTORBASE_HXX)
 #define ZIPPER_VECTORBASE_HXX
 
-#include "VectorBase.hpp"
 #include "ArrayBase.hxx"
 #include "FormBase.hxx"
+#include "VectorBase.hpp"
 #include "expression/nullary/MDSpan.hpp"
 #include "zipper/detail/declare_operations.hpp"
 #include "zipper/expression/binary/ArithmeticExpressions.hpp"
@@ -14,22 +14,22 @@ namespace zipper {
 
 // Deduction guide from std::mdspan
 template <typename T, typename Extents, typename Layout, typename Accessor>
-VectorBase(zipper::mdspan<T, Extents, Layout, Accessor>) -> VectorBase<
-    expression::nullary::MDSpan<T, Extents, Layout, Accessor>>;
+VectorBase(zipper::mdspan<T, Extents, Layout, Accessor>)
+    -> VectorBase<expression::nullary::MDSpan<T, Extents, Layout, Accessor>>;
 
 // Deduction guides from std::span
 template <typename T, std::size_t N>
-VectorBase(std::span<T, N>) -> VectorBase<
-    expression::nullary::MDSpan<T, extents<N>>>;
+VectorBase(std::span<T, N>)
+    -> VectorBase<expression::nullary::MDSpan<T, extents<N>>>;
 
 template <typename T>
-VectorBase(std::span<T, std::dynamic_extent>) -> VectorBase<
-    expression::nullary::MDSpan<T, extents<dynamic_extent>>>;
+VectorBase(std::span<T, std::dynamic_extent>)
+    -> VectorBase<expression::nullary::MDSpan<T, extents<dynamic_extent>>>;
 
 // Deduction guides from std::vector (creates a mutable dynamic-extent view)
 template <typename T, typename Alloc>
-VectorBase(std::vector<T, Alloc> &) -> VectorBase<
-    expression::nullary::MDSpan<T, extents<dynamic_extent>>>;
+VectorBase(std::vector<T, Alloc> &)
+    -> VectorBase<expression::nullary::MDSpan<T, extents<dynamic_extent>>>;
 
 template <typename T, typename Alloc>
 VectorBase(const std::vector<T, Alloc> &) -> VectorBase<
@@ -37,12 +37,12 @@ VectorBase(const std::vector<T, Alloc> &) -> VectorBase<
 
 // Deduction guides from std::array (creates a view with static extent)
 template <typename T, std::size_t N>
-VectorBase(std::array<T, N> &) -> VectorBase<
-    expression::nullary::MDSpan<T, extents<N>>>;
+VectorBase(std::array<T, N> &)
+    -> VectorBase<expression::nullary::MDSpan<T, extents<N>>>;
 
 template <typename T, std::size_t N>
-VectorBase(const std::array<T, N> &) -> VectorBase<
-    expression::nullary::MDSpan<const T, extents<N>>>;
+VectorBase(const std::array<T, N> &)
+    -> VectorBase<expression::nullary::MDSpan<const T, extents<N>>>;
 
 UNARY_DECLARATION(VectorBase, LogicalNot, operator!)
 UNARY_DECLARATION(VectorBase, BitNot, operator~)
@@ -55,14 +55,20 @@ ZERO_AWARE_BINARY_DECLARATION(VectorBase, Minus, operator-)
 
 template <concepts::Vector Expr1, concepts::Vector Expr2>
 auto operator==(Expr1 const &lhs, Expr2 const &rhs) -> bool {
-  return (lhs.as_array() == rhs.as_array()).all();
+    return (lhs.as_array() == rhs.as_array()).all();
 }
 
 template <concepts::Vector Expr1, concepts::Vector Expr2>
 auto operator!=(Expr1 const &lhs, Expr2 const &rhs) -> bool {
-  return (lhs.as_array() != rhs.as_array()).any();
+    return (lhs.as_array() != rhs.as_array()).any();
 }
 SCALAR_BINARY_DECLARATION(VectorBase, Multiplies, operator*)
+
+// Outer product: column vector times row vector (form) -> matrix.
+template <concepts::Vector V, concepts::Form F>
+auto operator*(V &&v, F &&f) {
+    return std::forward<V>(v).outer(std::forward<F>(f));
+}
 
 // Free-function forms of dot product and norm.
 // These enable ADL-based customization: external types can provide
