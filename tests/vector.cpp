@@ -240,3 +240,48 @@ TEST_CASE("static_matrix_compound_scalar_div", "[matrix][compound]") {
 // FormBase::operator= uses `expression() = v.expression()` instead of
 // `expression().assign(v.expression())`. See FormBase.hpp lines 62-69.
 // Form compound tests are omitted until FormBase assignment is fixed.
+
+TEST_CASE("vector_outer_product", "[vector][outer]") {
+    zipper::Vector<double, 3> u{1.0, 2.0, 3.0};
+    zipper::Vector<double, 2> v{4.0, 5.0};
+
+    auto check = [&](auto const &M) {
+        STATIC_REQUIRE(zipper::concepts::Matrix<decltype(M)>);
+        REQUIRE(M.extent(0) == 3);
+        REQUIRE(M.extent(1) == 2);
+        for (zipper::index_type i = 0; i < 3; ++i) {
+            for (zipper::index_type j = 0; j < 2; ++j) {
+                CHECK(M(i, j) == u(i) * v(j));
+            }
+        }
+    };
+
+    SECTION("member with vector") { check(u.outer(v)); }
+    SECTION("member with form") { check(u.outer(v.as_form())); }
+    SECTION("operator vector * form") { check(u * v.as_form()); }
+    SECTION("materialized") {
+        zipper::Matrix<double, 3, 2> M = u.outer(v);
+        check(M);
+        check(u.outer(v).eval());
+    }
+    SECTION("temporary operands") {
+        zipper::Matrix<double, 3, 2> M = (u + u).outer(v * 2.0);
+        for (zipper::index_type i = 0; i < 3; ++i) {
+            for (zipper::index_type j = 0; j < 2; ++j) {
+                CHECK(M(i, j) == 4.0 * u(i) * v(j));
+            }
+        }
+    }
+    SECTION("dynamic") {
+        zipper::VectorX<double> a(3);
+        a = u;
+        zipper::VectorX<double> b(2);
+        b = v;
+        auto M = a.outer(b).eval();
+        check(M);
+    }
+    SECTION("self outer is symmetric") {
+        auto M = u.outer(u).eval();
+        CHECK(M == M.transpose());
+    }
+}
