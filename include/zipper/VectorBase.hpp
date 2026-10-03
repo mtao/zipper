@@ -170,8 +170,11 @@ public:
   /// M(i, j) = (*this)(i) * o(j). Accepts either a Vector or a Form as the
   /// right operand (v.outer(f) is equivalent to v * f).
   template <typename O, typename Self>
-    requires(concepts::Vector<O> || concepts::Form<O>)
+    requires((concepts::Vector<O> || concepts::Form<O>) &&
+             std::remove_cvref_t<O>::extents_type::rank() == 1)
   auto outer(this Self &&self, O &&o) {
+    static_assert(extents_type::rank() == 1,
+                  "outer: left operand must be a rank-1 vector");
     using child_t = detail::member_child_storage_t<Self, Expr>;
     using V = expression::binary::TensorProduct<
         child_t, zipper::detail::forwarded_expression_t<O>>;

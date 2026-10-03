@@ -285,3 +285,20 @@ TEST_CASE("vector_outer_product", "[vector][outer]") {
         CHECK(M == M.transpose());
     }
 }
+
+namespace {
+template <typename A, typename B>
+concept HasOuter = requires(A a, B b) { a.outer(b); };
+} // namespace
+
+TEST_CASE("vector_outer_product_rank_constraint", "[vector][outer]") {
+    using V3 = zipper::Vector<double, 3>;
+    using F3 = zipper::Form<double, 3>;
+    using M3 = zipper::Matrix<double, 3, 3>;
+    using Wedge = decltype(std::declval<F3 &>() ^ std::declval<F3 &>());
+    STATIC_REQUIRE(Wedge::extents_type::rank() == 2);
+    STATIC_REQUIRE(HasOuter<V3 &, V3 &>);
+    STATIC_REQUIRE(HasOuter<V3 &, F3 &>);
+    STATIC_REQUIRE_FALSE(HasOuter<V3 &, M3 &>);
+    STATIC_REQUIRE_FALSE(HasOuter<V3 &, Wedge>);
+}
