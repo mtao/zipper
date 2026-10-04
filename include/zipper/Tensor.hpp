@@ -74,8 +74,9 @@ class Tensor_ : public TensorBase<expression::nullary::MDArray<
       requires(std::is_constructible_v<typename Base::expression_type,
                                        uninitialized_t, const Extents &>)
         : Base(uninitialized, e) {}
-    Tensor_& operator=(Tensor_&& o) = default;
     using Base::operator=;
+    Tensor_& operator=(const Tensor_& o) = default;
+    Tensor_& operator=(Tensor_&& o) = default;
 };
 template <concepts::Expression E>
 Tensor_(const E &)

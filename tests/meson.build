@@ -28,6 +28,9 @@ test('array', test_array)
 test_vector = executable('test_vector', 'vector.cpp', dependencies: [zipper_test_dep])
 test('vector', test_vector)
 
+test_tensor = executable('test_tensor', 'tensor.cpp', dependencies: [zipper_test_dep])
+test('tensor', test_tensor)
+
 test_matrix = executable('test_matrix', 'matrix.cpp', dependencies: [zipper_test_dep])
 test('matrix', test_matrix)
 
