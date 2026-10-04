@@ -44,87 +44,87 @@
 namespace zipper::expression {
 namespace nullary {
 
-template <typename T, int Value, index_type... Indices>
-class StaticConstant
-    : public ExpressionBase<StaticConstant<T, Value, Indices...>>,
-      public zipper::extents<Indices...> {
-public:
-  using self_type = StaticConstant<T, Value, Indices...>;
-  using traits = zipper::expression::detail::ExpressionTraits<self_type>;
-  using extents_type = typename traits::extents_type;
-  using extents_traits = typename traits::extents_traits;
-  using value_type = typename traits::value_type;
+    template <typename T, int Value, index_type... Indices>
+    class StaticConstant
+      : public ExpressionBase<StaticConstant<T, Value, Indices...>>
+      , public zipper::extents<Indices...> {
+      public:
+        using self_type = StaticConstant<T, Value, Indices...>;
+        using traits = zipper::expression::detail::ExpressionTraits<self_type>;
+        using extents_type = typename traits::extents_type;
+        using extents_traits = typename traits::extents_traits;
+        using value_type = typename traits::value_type;
 
-  using extents_type::extent;
-  using extents_type::rank;
-  auto extents() const -> const extents_type & { return *this; }
+        using extents_type::extent;
+        using extents_type::rank;
+        auto extents() const -> const extents_type & { return *this; }
 
-  /// The compile-time constant value.
-  constexpr static int static_value = Value;
+        /// The compile-time constant value.
+        constexpr static int static_value = Value;
 
-  StaticConstant(const StaticConstant &) = default;
-  StaticConstant(StaticConstant &&) = default;
-  auto operator=(const StaticConstant &) -> StaticConstant & = default;
-  auto operator=(StaticConstant &&) -> StaticConstant & = default;
+        StaticConstant(const StaticConstant &) = default;
+        StaticConstant(StaticConstant &&) = default;
+        auto operator=(const StaticConstant &) -> StaticConstant & = default;
+        auto operator=(StaticConstant &&) -> StaticConstant & = default;
 
-  StaticConstant()
-    requires(extents_traits::is_static)
-  = default;
+        StaticConstant()
+            requires(extents_traits::is_static)
+        = default;
 
-  StaticConstant(const extents_type &e) : extents_type(e) {}
+        StaticConstant(const extents_type &e) : extents_type(e) {}
 
-  template <zipper::concepts::Index... Args>
-  StaticConstant(Args &&...args)
-      : StaticConstant(extents_type(std::forward<Args>(args)...)) {}
+        template <zipper::concepts::Index... Args>
+        StaticConstant(Args &&...args)
+          : StaticConstant(extents_type(std::forward<Args>(args)...)) {}
 
-  /// Returns the constant value, cast to value_type.
-  auto coeff(zipper::concepts::Index auto &&...) const -> value_type {
-    return static_cast<value_type>(Value);
-  }
+        /// Returns the constant value, cast to value_type.
+        auto coeff(zipper::concepts::Index auto &&...) const -> value_type {
+            return static_cast<value_type>(Value);
+        }
 
-  /// StaticConstant already owns its data — make_owned() returns a copy.
-  auto make_owned() const -> StaticConstant { return *this; }
+        /// StaticConstant already owns its data — make_owned() returns a copy.
+        auto make_owned() const -> StaticConstant { return *this; }
 
-  // ── Index set queries (Zero only) ─────────────────────────────
-  // When Value == 0, every coefficient is zero, so the index set along
-  // any dimension is empty.
+        // ── Index set queries (Zero only) ─────────────────────────────
+        // When Value == 0, every coefficient is zero, so the index set along
+        // any dimension is empty.
 
-  template <rank_type D>
-    requires(D < extents_type::rank() && Value == 0)
-  auto index_set(index_type /*other_idx*/ = 0) const
-      -> zipper::expression::detail::EmptyIndexRange {
-    return {};
-  }
+        template <rank_type D>
+            requires(D < extents_type::rank() && Value == 0)
+        [[nodiscard]] auto index_set(index_type /*other_idx*/ = 0) const
+            -> zipper::expression::detail::EmptyIndexRange {
+            return {};
+        }
 
-  template <rank_type D>
-    requires(D < extents_type::rank() && Value == 0)
-  auto nonzero_range(index_type other_idx = 0) const
-      -> zipper::expression::detail::EmptyIndexRange {
-    return index_set<D>(other_idx);
-  }
+        template <rank_type D>
+            requires(D < extents_type::rank() && Value == 0)
+        [[nodiscard]] auto nonzero_range(index_type other_idx = 0) const
+            -> zipper::expression::detail::EmptyIndexRange {
+            return index_set<D>(other_idx);
+        }
 
-  auto col_range_for_row(index_type /*row*/) const
-      -> zipper::expression::detail::EmptyIndexRange
-    requires(extents_type::rank() == 2 && Value == 0)
-  {
-    return {};
-  }
+        [[nodiscard]] auto col_range_for_row(index_type /*row*/) const
+            -> zipper::expression::detail::EmptyIndexRange
+            requires(extents_type::rank() == 2 && Value == 0)
+        {
+            return {};
+        }
 
-  auto row_range_for_col(index_type /*col*/) const
-      -> zipper::expression::detail::EmptyIndexRange
-    requires(extents_type::rank() == 2 && Value == 0)
-  {
-    return {};
-  }
-};
+        [[nodiscard]] auto row_range_for_col(index_type /*col*/) const
+            -> zipper::expression::detail::EmptyIndexRange
+            requires(extents_type::rank() == 2 && Value == 0)
+        {
+            return {};
+        }
+    };
 
-/// Convenience alias: zero expression.
-template <typename T, index_type... Indices>
-using Zero = StaticConstant<T, 0, Indices...>;
+    /// Convenience alias: zero expression.
+    template <typename T, index_type... Indices>
+    using Zero = StaticConstant<T, 0, Indices...>;
 
-/// Convenience alias: all-ones expression.
-template <typename T, index_type... Indices>
-using Ones = StaticConstant<T, 1, Indices...>;
+    /// Convenience alias: all-ones expression.
+    template <typename T, index_type... Indices>
+    using Ones = StaticConstant<T, 1, Indices...>;
 
 } // namespace nullary
 
@@ -132,14 +132,14 @@ using Ones = StaticConstant<T, 1, Indices...>;
 
 template <typename T, int Value, index_type... Indices>
 struct detail::ExpressionTraits<nullary::StaticConstant<T, Value, Indices...>>
-    : public BasicExpressionTraits<
-          T, zipper::extents<Indices...>,
-          expression::detail::AccessFeatures::const_value(),
-          expression::detail::ShapeFeatures::resizable()> {
-
-  /// Zero expressions have structurally known zero regions (everything is
-  /// zero).
-  constexpr static bool has_index_set = (Value == 0);
+  : public BasicExpressionTraits<
+        T,
+        zipper::extents<Indices...>,
+        expression::detail::AccessFeatures::const_value(),
+        expression::detail::ShapeFeatures::resizable()> {
+    /// Zero expressions have structurally known zero regions (everything is
+    /// zero).
+    constexpr static bool has_index_set = (Value == 0);
 };
 
 } // namespace zipper::expression
