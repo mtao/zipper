@@ -915,3 +915,46 @@ TEST_CASE("matrix_initializer_list_validation", "[matrix][initializer_list]") {
                         std::invalid_argument);
     }
 }
+
+TEST_CASE("set_zero", "[matrix][vector][set_zero]") {
+    using namespace zipper;
+
+    SECTION("static matrix") {
+        Matrix<double, 2, 3> M{{1, 2, 3}, {4, 5, 6}};
+        M.set_zero();
+        for (index_type i = 0; i < 2; ++i) {
+            for (index_type j = 0; j < 3; ++j) { CHECK(M(i, j) == 0.0); }
+        }
+    }
+
+    SECTION("dynamic matrix keeps its shape") {
+        MatrixXX<double> M(3, 4);
+        for (index_type i = 0; i < 3; ++i) {
+            for (index_type j = 0; j < 4; ++j) { M(i, j) = 1.0 + i + j; }
+        }
+        M.set_zero();
+        CHECK(M.rows() == 3);
+        CHECK(M.cols() == 4);
+        for (index_type i = 0; i < 3; ++i) {
+            for (index_type j = 0; j < 4; ++j) { CHECK(M(i, j) == 0.0); }
+        }
+    }
+
+    SECTION("vector, chained") {
+        VectorX<double> v(5);
+        for (index_type i = 0; i < 5; ++i) { v(i) = 1.0 + i; }
+        auto &r = v.set_zero();
+        CHECK(&r == &v);
+        for (index_type i = 0; i < 5; ++i) { CHECK(v(i) == 0.0); }
+    }
+
+    SECTION("sub-block view zeroes only the block") {
+        Matrix<double, 3, 3> M{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
+        M.col(1).set_zero();
+        CHECK(M(0, 0) == 1.0);
+        CHECK(M(0, 1) == 0.0);
+        CHECK(M(1, 1) == 0.0);
+        CHECK(M(2, 1) == 0.0);
+        CHECK(M(2, 2) == 9.0);
+    }
+}
