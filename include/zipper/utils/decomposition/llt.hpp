@@ -41,7 +41,7 @@
 
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
-#include <zipper/expression/nullary/StaticConstant.hpp>
+#include <zipper/expression/nullary/Zero.hpp>
 #include <zipper/expression/unary/TriangularView.hpp>
 #include <zipper/utils/decomposition/detail/shape_validation.hpp>
 #include <zipper/utils/scalar_math.hpp>

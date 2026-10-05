@@ -1,5 +1,7 @@
 #pragma once
 
+#include "zipper/static_scalar.hpp"
+
 #include "AssignmentSafety.hpp"
 
 namespace zipper::expression::detail::assignment_safety {
@@ -97,12 +99,19 @@ auto Source<nullary::Constant<T, N...>>::check(
         && (sizeof...(N) == 0 || same_shape(from, to));
 }
 
-template <typename T, int Value, index_type... N>
+template <typename T, T Value, index_type... N>
 template <typename To>
 auto Source<nullary::StaticConstant<T, Value, N...>>::check(
     const nullary::StaticConstant<T, Value, N...> &from, const To &to) -> bool {
     return std::is_arithmetic_v<T> && !std::is_volatile_v<T>
         && (sizeof...(N) == 0 || same_shape(from, to));
+}
+
+template <typename T, index_type... N>
+template <typename To>
+auto Source<nullary::Zero<T, N...>>::check(const nullary::Zero<T, N...> &from,
+                                           const To &to) -> bool {
+    return sizeof...(N) == 0 || same_shape(from, to);
 }
 
 template <typename Child, typename Op>

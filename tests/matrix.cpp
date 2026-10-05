@@ -1,5 +1,6 @@
 
 
+#include <complex>
 #include <iostream>
 #include <zipper/ArrayBase.hxx>
 #include <zipper/Matrix.hpp>
@@ -946,6 +947,15 @@ TEST_CASE("set_zero", "[matrix][vector][set_zero]") {
         auto &r = v.set_zero();
         CHECK(&r == &v);
         for (index_type i = 0; i < 5; ++i) { CHECK(v(i) == 0.0); }
+    }
+
+    SECTION("element types that cannot be template arguments") {
+        VectorX<std::complex<double>> c(3);
+        for (index_type i = 0; i < 3; ++i) { c(i) = {1.0 + i, -2.0}; }
+        c.set_zero();
+        for (index_type i = 0; i < 3; ++i) {
+            CHECK(c(i) == std::complex<double>(0.0, 0.0));
+        }
     }
 
     SECTION("sub-block view zeroes only the block") {

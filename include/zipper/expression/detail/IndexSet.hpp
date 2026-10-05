@@ -236,8 +236,8 @@ using SingleIndexRange = SingleIndexSet<>;
 // ─────────────────────────────────────────────────────────────────────────────
 /// @brief An index set that is always empty — contains no indices.
 ///
-/// Used by expressions that are structurally zero everywhere (e.g.
-/// StaticConstant<T, 0, ...>).  Satisfies IndexSet with zero storage.
+/// Used by expressions that are structurally zero everywhere (e.g. Zero).
+/// Satisfies IndexSet with zero storage.
 // ─────────────────────────────────────────────────────────────────────────────
 struct EmptyIndexRange {
     constexpr auto contains([[maybe_unused]] index_type idx) const -> bool {

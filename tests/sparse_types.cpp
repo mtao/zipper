@@ -1,3 +1,4 @@
+#include <complex>
 
 #include <vector>
 
@@ -12,6 +13,7 @@
 #include <zipper/Vector.hpp>
 #include <zipper/VectorBase.hxx>
 #include <zipper/detail/LayoutPreference.hpp>
+#include <zipper/expression/nullary/Zero.hpp>
 #include <zipper/expression/detail/ExpressionTraits.hpp>
 
 #include "catch_include.hpp"
@@ -2292,4 +2294,28 @@ TEST_CASE("csr_dynamic_empty_roundtrip", "[sparse][csr][dynamic]") {
     CHECK(coo2.rows() == 4);
     CHECK(coo2.cols() == 4);
     CHECK(coo2(0, 0) == 0.0);
+}
+
+// Assigning a structural Zero to sparse storage clears it without visiting
+// every index (10^10 here — this would not finish otherwise), for any T.
+TEMPLATE_TEST_CASE("sparse_assign_zero_clears_without_scanning",
+                   "[sparse][zero]",
+                   double,
+                   std::complex<double>) {
+    using namespace zipper;
+    using T = TestType;
+    const index_type n = 100000;
+    COOMatrix<T, dynamic_extent, dynamic_extent> coo(n, n);
+    coo.emplace(0, n - 1) = T(2.0);
+    coo.emplace(n / 2, 7) = T(5.0);
+    coo.emplace(n - 1, 0) = T(-1.0);
+    coo.compress();
+    CSMatrix<T, dynamic_extent, dynamic_extent> A(coo);
+    REQUIRE(A.expression().compressed_data().m_values.size() == 3);
+
+    A = expression::nullary::Zero<T, dynamic_extent, dynamic_extent>(n, n);
+    CHECK(A.rows() == n);
+    CHECK(A.cols() == n);
+    CHECK(A.expression().compressed_data().m_values.size() == 0);
+    CHECK(A(n / 2, 7) == T(0.0));
 }

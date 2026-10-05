@@ -49,7 +49,7 @@
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
 #include <zipper/expression/nullary/Identity.hpp>
-#include <zipper/expression/nullary/StaticConstant.hpp>
+#include <zipper/expression/nullary/Zero.hpp>
 #include <zipper/utils/decomposition/detail/givens.hpp>
 #include <zipper/utils/decomposition/detail/householder.hpp>
 #include <zipper/utils/determinant.hpp>

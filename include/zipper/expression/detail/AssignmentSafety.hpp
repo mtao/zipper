@@ -13,7 +13,8 @@ namespace zipper::expression::nullary {
 template <typename T, typename E, typename L, typename A> class MDArray;
 template <typename T, typename E, typename L, typename A> class MDSpan;
 template <typename T, index_type... N> class Constant;
-template <typename T, int Value, index_type... N> class StaticConstant;
+template <typename T, T Value, index_type... N> class StaticConstant;
+template <typename T, index_type... N> class Zero;
 } // namespace zipper::expression::nullary
 
 namespace zipper::expression::detail {
@@ -77,11 +78,17 @@ struct Source<nullary::Constant<T, N...>> {
     static auto check(const nullary::Constant<T, N...> &from, const To &to)
         -> bool;
 };
-template <typename T, int Value, index_type... N>
+template <typename T, T Value, index_type... N>
 struct Source<nullary::StaticConstant<T, Value, N...>> {
     template <typename To>
     static auto check(const nullary::StaticConstant<T, Value, N...> &from,
                       const To &to) -> bool;
+};
+/// Zero reads nothing (every coefficient is T{}), so it is safe for any T.
+template <typename T, index_type... N>
+struct Source<nullary::Zero<T, N...>> {
+    template <typename To>
+    static auto check(const nullary::Zero<T, N...> &from, const To &to) -> bool;
 };
 
 template <typename Child, typename Op>

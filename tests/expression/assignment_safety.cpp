@@ -1,3 +1,4 @@
+#include <complex>
 // Intentionally first: this header must also work from inside AssignHelper,
 // before MDArray/MDSpan or any constant template is defined.
 #include <zipper/expression/detail/AssignmentSafety.hpp>
@@ -8,6 +9,7 @@
 #include <zipper/expression/nullary/MDArray.hpp>
 #include <zipper/expression/nullary/MDSpan.hpp>
 #include <zipper/expression/nullary/StaticConstant.hpp>
+#include <zipper/expression/nullary/Zero.hpp>
 
 namespace {
 using zipper::expression::detail::assignment_is_safe;
@@ -15,6 +17,7 @@ using zipper::expression::nullary::MDArray;
 using zipper::expression::nullary::MDSpan;
 using zipper::expression::nullary::Constant;
 using zipper::expression::nullary::StaticConstant;
+using zipper::expression::nullary::Zero;
 using zipper::expression::unary::CoefficientWiseOperation;
 using zipper::expression::unary::ScalarOperation;
 using zipper::expression::binary::Operation;
@@ -128,9 +131,17 @@ TEST_CASE("assignment_safety_shape_and_constants", "[expression][assignment_safe
     CHECK(assignment_is_safe(Constant<double>(4.0), a));
     CHECK(assignment_is_safe(Constant<double, 2, 3>(4.0), a));
     CHECK_FALSE(assignment_is_safe(Constant<double, 3, 2>(4.0), a));
-    CHECK(assignment_is_safe(StaticConstant<double, 0>{}, a));
-    CHECK(assignment_is_safe(StaticConstant<double, 1, 2, 3>{}, a));
-    CHECK_FALSE(assignment_is_safe(StaticConstant<double, 1, 3, 2>{}, a));
+    CHECK(assignment_is_safe(StaticConstant<double, 0.0>{}, a));
+    CHECK(assignment_is_safe(StaticConstant<double, 1.0, 2, 3>{}, a));
+    CHECK_FALSE(assignment_is_safe(StaticConstant<double, 1.0, 3, 2>{}, a));
+    // Zero reads nothing: as a source it is safe whatever its element type.
+    CHECK(assignment_is_safe(Zero<double, 2, 3>{}, a));
+    CHECK(assignment_is_safe(Zero<double>{}, a));
+    CHECK_FALSE(assignment_is_safe(Zero<double, 3, 2>{}, a));
+    // Destinations are only recognized for arithmetic element types (DenseLeaf),
+    // so assignments into e.g. std::complex storage are never proven here.
+    MDArray<std::complex<double>, zipper::dextents<2>> c(zipper::dextents<2>(2, 3));
+    CHECK_FALSE(assignment_is_safe(Zero<std::complex<double>, 2, 3>{}, c));
     const Constant<double> scalar(2.0);
     const Operation sum(a, scalar, std::plus<>{});
     CHECK(assignment_is_safe(sum, a));
