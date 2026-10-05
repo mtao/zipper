@@ -78,9 +78,14 @@ TEST_CASE("assignment_rank_zero_generator_remains_per_coefficient",
     destination = random;
     CHECK(destination.rows() == 2);
     CHECK(destination.cols() == 3);
+    // The two sides are separately inlined copies of the same distribution
+    // arithmetic; with FMA available (-ffp-contract=fast) the compiler may
+    // fuse one and not the other, so they can differ in the last bit. Distinct
+    // draws differ by far more, so per-coefficient evaluation is still checked.
     for (index_type i = 0; i < 2; ++i) {
         for (index_type j = 0; j < 3; ++j) {
-            CHECK(destination(i, j) == expected());
+            CHECK_THAT(destination(i, j),
+                       Catch::Matchers::WithinULP(expected(), 4));
         }
     }
 }
