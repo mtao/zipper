@@ -8,6 +8,7 @@
 #include "zipper/expression/detail/AssignmentSafety.hpp"
 #include "zipper/expression/detail/ExpressionTraits.hpp"
 #include "zipper/expression/detail/RankZeroEvaluation.hpp"
+#include "zipper/expression/detail/TiledRelayout.hpp"
 #include "zipper/utils/extents/assignable_extents.hpp"
 #include "zipper/utils/extents/for_each_index.hpp"
 #include <tuple>
@@ -119,6 +120,13 @@ void AssignHelper<From, To>::evaluate_to(const From &from, To &to) {
                   && HasAssignTo<From, To>) {
         from.assign_to(to);
     } else {
+        if constexpr (TiledRelayout<From, To>) {
+            // Transposes / layout changes / permutations of large operands.
+            if (worth_tiling<From>(to)) {
+                tiled_relayout(from, to);
+                return;
+            }
+        }
         assign_direct(from, to);
     }
 }

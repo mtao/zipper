@@ -21,3 +21,10 @@ test('zero_aware_operation', test_zero_aware_operation)
 
 test_assignment_safety = executable('test_assignment_safety', 'assignment_safety.cpp', dependencies: [zipper_test_dep])
 test('assignment_safety', test_assignment_safety)
+
+test_tiled_relayout = executable('test_tiled_relayout', 'tiled_relayout.cpp', dependencies: [zipper_test_dep])
+test('tiled_relayout', test_tiled_relayout)
+test_tiled_relayout_always = executable('test_tiled_relayout_always', 'tiled_relayout.cpp',
+  dependencies: [zipper_test_dep],
+  cpp_args: ['-DZIPPER_RELAYOUT_TILING_MIN_BYTES=0'])
+test('tiled_relayout_always', test_tiled_relayout_always)
