@@ -77,6 +77,27 @@ struct BasicExpressionTraits {
     /// Unary and binary expressions propagate it from their children.
     constexpr static bool is_view_propagating = false;
 
+    /// Whether this expression exposes a layout `mapping()` (tensor index →
+    /// linear offset, with per-dimension `stride()` / `extents()`), so its
+    /// access can be *linearized* instead of walked via `coeff`. Pure
+    /// reindexing capability — does NOT imply an addressable buffer.
+    ///
+    /// Default false; dense linear storage sets it true. Layout-preserving
+    /// views (Slice, Swizzle) and shape-preserving coeff-wise ops set it from
+    /// their operands (they expose a composed/forwarded mapping). Like
+    /// `has_index_set`, it is NOT auto-propagated by the Default*ExpressionTraits
+    /// bases — each expression that provides `mapping()` declares it.
+    constexpr static bool has_layout_mapping = false;
+
+    /// Whether this expression is *treatable as a linear array*: it has a
+    /// layout mapping AND a flat unchecked `operator[](index_type)` over a
+    /// contiguous buffer, with the contract `e[ e.mapping()(i,j) ] == e(i,j)`.
+    ///
+    /// Default false; dense linear storage sets it true. Buffer-sharing views
+    /// (Slice, Swizzle) forward it from their child; value-computing
+    /// expressions (coeff-wise ops, products) leave it false.
+    constexpr static bool is_linear_array = false;
+
     /// Layout preference for smart eval().
     /// Leaf expressions override this; non-leaf expressions propagate.
     /// Default: no preference → eval() produces default row-major dense.

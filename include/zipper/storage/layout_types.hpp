@@ -8,9 +8,11 @@ namespace zipper::storage {
 #if defined(__cpp_lib_mdspan)
 using layout_right = std::layout_right;
 using layout_left = std::layout_left;
+using layout_stride = std::layout_stride;
 #else
 using layout_right = MDSPAN_IMPL_STANDARD_NAMESPACE::layout_right;
 using layout_left = MDSPAN_IMPL_STANDARD_NAMESPACE::layout_left;
+using layout_stride = MDSPAN_IMPL_STANDARD_NAMESPACE::layout_stride;
 #endif
 
 // row major ~ layout_right
