@@ -4,6 +4,7 @@
 #include "zipper/detail/NoAliasTraits.hpp"
 #include "UnaryExpressionBase.hpp"
 #include "zipper/concepts/IndexSlice.hpp"
+#include <array>
 #include <utility>
 #include "zipper/concepts/Expression.hpp"
 #include "zipper/concepts/Index.hpp"
@@ -11,8 +12,10 @@
 #include "zipper/detail/constexpr_arithmetic.hpp"
 #include "zipper/detail/is_integral_constant.hpp"
 #include "zipper/detail/pack_index.hpp"
+#include "zipper/expression/concepts/capabilities.hpp"
 #include "zipper/expression/detail/AssignHelper.hpp"
 #include "zipper/expression/detail/IndexSet.hpp"
+#include "zipper/storage/layout_types.hpp"
 
 namespace zipper::expression {
 namespace unary {
@@ -29,6 +32,8 @@ struct slice_helper<strided_slice<OffsetType, ExtentType, StrideType>> {
    public:
     using type = strided_slice<OffsetType, ExtentType, StrideType>;
     constexpr static bool stores_references = false;
+    /// Affine in the index: a constant stride into the sliced dimension.
+    constexpr static bool is_affine = true;
     constexpr slice_helper(const type &t) : m_slice(t) {}
     constexpr static auto get_extent(const auto &stride, const auto &extent) {
         return extent > 0 ? 1 + (extent - 1) / stride : 0;
@@ -78,6 +83,8 @@ struct slice_helper<full_extent_t> {
    public:
     using type = full_extent_t;
     constexpr static bool stores_references = false;
+    /// Affine in the index: a constant stride into the sliced dimension.
+    constexpr static bool is_affine = true;
     constexpr slice_helper(const type &) {}
     template <rank_type N, zipper::concepts::Extents ET>
     constexpr static index_type static_extent() {
@@ -99,6 +106,8 @@ struct slice_helper<T> {
    public:
     using type = index_type;
     constexpr static bool stores_references = false;
+    /// Affine in the index: a constant stride into the sliced dimension.
+    constexpr static bool is_affine = true;
     constexpr slice_helper(const type &t) : m_slice(t) {}
     template <rank_type N, zipper::concepts::Extents ET>
     constexpr static index_type static_extent() {
@@ -123,6 +132,8 @@ struct slice_helper<std::integral_constant<index_type, N>> {
    public:
     using type = std::integral_constant<index_type, N>;
     constexpr static bool stores_references = false;
+    /// Affine in the index: a constant stride into the sliced dimension.
+    constexpr static bool is_affine = true;
     constexpr slice_helper(std::integral_constant<index_type, N>) {}
     template <rank_type M, zipper::concepts::Extents ET>
     constexpr static index_type static_extent() {
@@ -147,6 +158,8 @@ struct slice_helper<Expr> {
         zipper::expression::detail::ExpressionTraits<std::decay_t<Expr>>;
     /// The stored expression may itself hold references to external data.
     constexpr static bool stores_references = expr_traits::stores_references;
+    /// A gather (arbitrary index list): not affine, so no layout mapping.
+    constexpr static bool is_affine = false;
     constexpr slice_helper(const type &t) : m_slice(t) {}
     template <rank_type M, zipper::concepts::Extents ET>
     constexpr static index_type static_extent() {
@@ -184,6 +197,8 @@ struct slice_helper<std::array<index_type, N>> {
    public:
     using type = std::array<index_type, N>;
     constexpr static bool stores_references = false;
+    /// A gather (arbitrary index list): not affine, so no layout mapping.
+    constexpr static bool is_affine = false;
     constexpr slice_helper(const type &t) : m_slice(t) {}
     template <rank_type M, zipper::concepts::Extents ET>
     constexpr static index_type static_extent() {
@@ -209,6 +224,8 @@ struct slice_helper<std::vector<index_type>> {
    public:
     using type = std::vector<index_type>;
     constexpr static bool stores_references = false;
+    /// A gather (arbitrary index list): not affine, so no layout mapping.
+    constexpr static bool is_affine = false;
     constexpr slice_helper(const type &t) : m_slice(t) {}
     template <rank_type N, zipper::concepts::Extents ET>
     constexpr static index_type static_extent() {
@@ -400,6 +417,20 @@ struct detail::ExpressionTraits<unary::Slice<ExprType, Slices...>>
 
     /// Propagate has_index_set from child.
     constexpr static bool has_index_set = _Detail::Base::has_index_set;
+
+    /// Every slice argument is affine (index, range, strided range, full
+    /// extent) — not a gather by an index list.
+    constexpr static bool all_slices_affine =
+        (unary::_detail_slice::slice_helper<std::decay_t<Slices>>::is_affine
+         && ...);
+
+    /// An affine slice of a layout-mapped expression is itself affine in the
+    /// child's buffer (composed offset + strides), and shares that buffer —
+    /// so forward both capabilities from the child. Gathers do not.
+    constexpr static bool has_layout_mapping =
+        _Detail::Base::has_layout_mapping && all_slices_affine;
+    constexpr static bool is_linear_array =
+        _Detail::Base::is_linear_array && all_slices_affine;
 };
 
 namespace unary {
@@ -447,6 +478,78 @@ class Slice : public UnaryExpressionBase<Slice<ExprType, Slices...>,
 
     constexpr auto extents() const -> extents_type {
         return m_extents;
+    }
+
+    // ── Layout ─────────────────────────────────────────────────────────
+    // An affine slice of a layout-mapped child is the standard submdspan of
+    // the child's mapping (P2630): a mapping of the same family where
+    // possible (a block of row-major storage stays row-major / row-major
+    // padded) and layout_stride otherwise, plus the offset of the slice
+    // origin in the child's buffer.
+   private:
+    /// A slice argument as submdspan_mapping should see it. A strided_slice
+    /// with a static unit stride is a contiguous range; passed as the
+    /// equivalent (begin, end) pair it keeps the child's layout family (C++26
+    /// treats both alike; the mdspan reference implementation only the pair).
+    template <typename S>
+    static constexpr auto _as_submdspan_slice(const S &s) {
+        if constexpr (zipper::detail::is_integral_constant_v<
+                          std::decay_t<decltype(s.stride)>>) {
+            if constexpr (std::decay_t<decltype(s.stride)>::value == 1) {
+                const auto begin = static_cast<index_type>(s.offset);
+                return std::pair<index_type, index_type>{
+                    begin, begin + static_cast<index_type>(s.extent)};
+            } else {
+                return s;
+            }
+        } else {
+            return s;
+        }
+    }
+    template <typename S>
+        requires(!requires(const S &s) { s.stride; })
+    static constexpr auto _as_submdspan_slice(const S &s) -> const S & {
+        return s;
+    }
+
+    auto _submapping() const
+        requires(traits::has_layout_mapping)
+    {
+        return std::apply(
+            [&](const auto &...s) {
+                return submdspan_mapping(expression().mapping(),
+                                         _as_submdspan_slice(s.slice())...);
+            },
+            m_slices);
+    }
+
+   public:
+    auto mapping() const
+        requires(traits::has_layout_mapping)
+    {
+        return _submapping().mapping;
+    }
+
+    auto data() const
+        requires(traits::is_linear_array)
+    {
+        return expression().data() + _submapping().offset;
+    }
+    auto data()
+        requires(traits::is_linear_array && traits::is_assignable())
+    {
+        return expression().data() + _submapping().offset;
+    }
+
+    auto operator[](index_type k) const
+        requires(traits::is_linear_array)
+    {
+        return expression()[_submapping().offset + k];
+    }
+    auto operator[](index_type k) -> decltype(auto)
+        requires(traits::is_linear_array && traits::is_assignable())
+    {
+        return expression()[_submapping().offset + k];
     }
 
     template <rank_type K, typename... Args>

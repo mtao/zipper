@@ -7,6 +7,7 @@
 #include "zipper/detail/extents/swizzle_extents.hpp"
 #include "zipper/expression/detail/AssignHelper.hpp"
 #include "zipper/expression/detail/IndexSet.hpp"
+#include "zipper/storage/layout_permuted.hpp"
 
 namespace zipper::expression {
 namespace unary {
@@ -45,6 +46,24 @@ struct detail::ExpressionTraits<unary::Swizzle<QualifiedExprType, Indices...>>
     /// Propagate has_index_set from child — Swizzle permutes dimensions
     /// but does not change the sparsity structure.
     constexpr static bool has_index_set = Base::has_index_set;
+
+    /// True when Indices... is a pure permutation of the child's dimensions
+    /// (no inserted size-1 dimensions), e.g. a transpose.
+    consteval static bool is_permutation() {
+        if constexpr (sizeof...(Indices) != Base::extents_type::rank()) {
+            return false;
+        } else {
+            return ((Indices != std::dynamic_extent) && ...);
+        }
+    }
+
+    /// A permutation of a layout-mapped child is the same offsets with
+    /// permuted strides, so it forwards the mapping (and, if the child is a
+    /// linear array, its buffer).
+    constexpr static bool has_layout_mapping =
+        Base::has_layout_mapping && is_permutation();
+    constexpr static bool is_linear_array =
+        Base::is_linear_array && is_permutation();
 
   private:
     /// True when Indices... is exactly {1, 0} — a matrix transpose.
@@ -160,6 +179,44 @@ namespace unary {
 
         constexpr auto extents() const -> extents_type {
             return extents_traits::make_extents_from(*this);
+        }
+
+        // ── Layout forwarding (pure permutations only) ─────────────────────
+        // A permuted view shares the child's buffer; its mapping is the
+        // child's mapping with dimensions reordered (layout_permuted), which
+        // keeps the child's layout in the type. Satisfies the linear-array
+        // contract `(*this)[mapping()(i...)] == (*this)(i...)`.
+
+        auto mapping() const
+            requires(traits::has_layout_mapping)
+        {
+            using child_mapping =
+                std::remove_cvref_t<decltype(expression().mapping())>;
+            using layout = zipper::storage::layout_permuted<
+                child_mapping, static_cast<std::size_t>(Indices)...>;
+            return typename layout::template mapping<extents_type>(
+                expression().mapping());
+        }
+
+        auto data() const
+            requires(traits::is_linear_array)
+        {
+            return expression().data();
+        }
+        auto data()
+            requires(traits::is_linear_array && traits::is_assignable())
+        {
+            return expression().data();
+        }
+        constexpr auto operator[](index_type k) const -> decltype(auto)
+            requires(traits::is_linear_array)
+        {
+            return expression()[k];
+        }
+        constexpr auto operator[](index_type k) -> decltype(auto)
+            requires(traits::is_linear_array && traits::is_assignable())
+        {
+            return expression()[k];
         }
 
         template <typename... Args>
