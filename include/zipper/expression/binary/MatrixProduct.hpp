@@ -50,8 +50,13 @@
 #include "BinaryExpressionBase.hpp"
 #include "zipper/concepts/Expression.hpp"
 #include "zipper/detail/assert.hpp"
+#include "zipper/expression/detail/AssignStrategy.hpp"
 #include "zipper/expression/detail/ExpressionTraits.hpp"
 #include "zipper/expression/detail/IndexSet.hpp"
+#ifndef ZIPPER_DISABLE_GEMM_KERNEL
+#include "zipper/expression/binary/detail/gemm_eligible.hpp"
+#include "zipper/expression/binary/detail/gemm_kernel.hpp"
+#endif
 
 namespace zipper::expression {
 namespace binary {
@@ -104,6 +109,12 @@ struct detail::ExpressionTraits<binary::MatrixProduct<A, B>>
     using extents_type = typename _Detail::ConvertExtentsUtil::product_extents_type;
     constexpr static bool is_coefficient_consistent = false;
     constexpr static bool is_value_based = false;
+#ifndef ZIPPER_DISABLE_GEMM_KERNEL
+    // Routes eligible assignments through MatrixProduct::assign_to /
+    // accumulate_to (the blocked GEMM kernel). Ineligible cases fail their
+    // constraints, so AssignHelper falls back to the generic coefficient path.
+    using assign_strategy = zipper::expression::detail::AccumulateAssignStrategy;
+#endif
 };
 
 namespace binary {
@@ -205,6 +216,44 @@ class MatrixProduct : public BinaryExpressionBase<MatrixProduct<A, B>, A, B> {
         }
         return v;
     }
+
+#ifndef ZIPPER_DISABLE_GEMM_KERNEL
+    /// Optimized blocked-GEMM assignment, selected when both operands are dense
+    /// rank-2 and the target is any writable dense rank-2 expression, with the
+    /// same floating-point scalar type and dynamic sizing (see
+    /// detail::GemmEligible). The target need not be contiguous. Aliasing is
+    /// AssignHelper's job (it evaluates into a temporary unless the caller
+    /// used noalias()); assign_to assumes `to` is independent. When the
+    /// constraint is not satisfied this overload is removed and AssignHelper
+    /// uses the generic coefficient path.
+    template <zipper::concepts::Expression To>
+        requires detail::GemmEligible<A, B, To>
+    void assign_to(To& to) const {
+        accumulate_to(to, zipper::cw<1>, zipper::cw<0>);
+    }
+
+    /// to = beta * to + alpha * (lhs * rhs) — the accumulate protocol
+    /// (AccumulateAssignStrategy). alpha/beta are run-time scalars or
+    /// zipper::cw<V>. `to` must not alias the operands.
+    /// Optional trailing argument: a std::execution policy (default seq).
+    template <zipper::concepts::Expression To,
+              typename Alpha,
+              typename Beta,
+              detail::gemm::ExecutionPolicy... Policy>
+        requires detail::GemmEligible<A, B, To>
+                 && zipper::concepts::Coefficient<Alpha, detail::gemm_scalar_t<To>>
+                 && zipper::concepts::Coefficient<Beta, detail::gemm_scalar_t<To>>
+                 && (sizeof...(Policy) <= 1)
+    void accumulate_to(To& to,
+                       Alpha alpha,
+                       Beta beta,
+                       const Policy&... policy) const {
+        // Expression-native: hand the operand expressions straight to the
+        // kernel. It reads them through their element accessor while packing,
+        // so contiguity/layout of the operands is irrelevant here.
+        detail::gemm::gemm(alpha, lhs(), rhs(), beta, to, policy...);
+    }
+#endif
 
     /// Recursively deep-copy children so the result owns all data.
     auto make_owned() const {

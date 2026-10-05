@@ -54,8 +54,9 @@ struct FiberAssignStrategy {};
 /// `to = beta * to + alpha * expr` via a member
 /// `accumulate_to(to, alpha, beta)` (alpha/beta: run-time scalars or
 /// zipper::cw<V>), and `assign_to(to)` is the (1, 0) case.
-/// Like every strategy this is not an alias-safety promise: AssignHelper
-/// still snapshots unless the caller used noalias().
+/// Matrix products provide it with the blocked GEMM kernel. Like every
+/// strategy this is not an alias-safety promise: AssignHelper still
+/// snapshots unless the caller used noalias().
 struct AccumulateAssignStrategy {};
 
 // ── Detection machinery ────────────────────────────────────────────────
