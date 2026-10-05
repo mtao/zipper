@@ -357,6 +357,44 @@ TEST_CASE("gemm: beta = 0 never reads C (NaN does not leak)",
     }
 }
 
+TEST_CASE("gemm: scaled products reach the kernel via the accumulate protocol",
+          "[gemm][matrix][dense][blas]") {
+    namespace ed = zipper::expression::detail;
+    const index_type n = 70;
+    DMat A = make_filled(n, n + 3, 26), B = make_filled(n + 3, n, 27);
+    const DMat C0 = make_filled(n, n, 28);
+
+    STATIC_CHECK(ed::HasAccumulateStrategy<decltype((A * B).expression())>);
+    STATIC_CHECK(ed::HasAccumulateStrategy<decltype((2.0 * (A * B)).expression())>);
+    STATIC_CHECK(ed::HasAccumulateStrategy<decltype(((A * B) * 2.0).expression())>);
+    STATIC_CHECK(ed::HasAccumulateStrategy<decltype(((A * B) / 2.0).expression())>);
+    STATIC_CHECK(ed::HasAccumulateStrategy<decltype((-(A * B)).expression())>);
+    STATIC_CHECK(ed::HasAccumulateStrategy<
+                 decltype((-(3.0 * (A * B) / 2.0)).expression())>);
+
+    // Only linear scalings forward: s / X, s + X, X - s do not.
+    namespace ud = zipper::expression::unary::detail;
+    STATIC_CHECK(ud::is_linear_scaling_v<std::multiplies<double>, true>);
+    STATIC_CHECK(ud::is_linear_scaling_v<std::multiplies<double>, false>);
+    STATIC_CHECK(ud::is_linear_scaling_v<std::divides<double>, true>);
+    STATIC_CHECK_FALSE(ud::is_linear_scaling_v<std::divides<double>, false>);
+    STATIC_CHECK_FALSE(ud::is_linear_scaling_v<std::plus<double>, true>);
+    STATIC_CHECK_FALSE(ud::is_linear_scaling_v<std::minus<double>, true>);
+
+    DMat C(n, n);
+    C = 2.0 * (A * B);
+    check_equal(reference_gemm(2.0, A, B, 0.0, C0), C);
+    C = (A * B) / 4.0;
+    check_equal(reference_gemm(0.25, A, B, 0.0, C0), C);
+    C = -(A * B);
+    check_equal(reference_gemm(-1.0, A, B, 0.0, C0), C);
+    C = -(3.0 * (A * B) / 2.0);
+    check_equal(reference_gemm(-1.5, A, B, 0.0, C0), C);
+    DMatCol Ccol(n, n);
+    Ccol = 2.0 * (A * B);
+    check_equal(reference_gemm(2.0, A, B, 0.0, C0), Ccol);
+}
+
 TEST_CASE("gemm: compound assignment entry points",
           "[gemm][matrix][dense][blas]") {
     const index_type n = 70;
@@ -369,6 +407,9 @@ TEST_CASE("gemm: compound assignment entry points",
     C = C0;
     C -= A * B;
     check_equal(reference_gemm(-1.0, A, B, 1.0, C0), C);
+    C = C0;
+    C += 2.0 * (A * B);
+    check_equal(reference_gemm(2.0, A, B, 1.0, C0), C);
 
     C = C0;
     C.noalias() += A * B;
@@ -376,6 +417,9 @@ TEST_CASE("gemm: compound assignment entry points",
     C = C0;
     C.noalias() -= A * B;
     check_equal(reference_gemm(-1.0, A, B, 1.0, C0), C);
+    C = C0;
+    C.noalias() += -(A * B) / 2.0;
+    check_equal(reference_gemm(-0.5, A, B, 1.0, C0), C);
     // noalias += of a non-accumulable expression: pointwise update.
     C = C0;
     C.noalias() += A.slice(zipper::slice(0, n), zipper::slice(0, n));

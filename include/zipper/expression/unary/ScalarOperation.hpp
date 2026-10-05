@@ -3,7 +3,9 @@
 
 #include "UnaryExpressionBase.hpp"
 #include "concepts/ScalarOperation.hpp"
+#include "detail/AccumulateForwarding.hpp"
 #include "detail/ZeroPreserving.hpp"
+#include "zipper/static_scalar.hpp"
 #include "zipper/expression/detail/IndexSet.hpp"
 
 namespace zipper::expression {
@@ -53,6 +55,13 @@ struct detail::ExpressionTraits<
         ChildTraits::has_index_set
         && zipper::expression::detail::ZeroPreservingScalarOp<Operation,
                                                               ScalarOnRight>;
+
+    /// `s * X`, `X * s`, `X / s` of an accumulable X (e.g. a matrix product)
+    /// accumulate too, with the scale folded into alpha.
+    constexpr static bool is_linear_scaling =
+        unary::detail::is_linear_scaling_v<Operation, ScalarOnRight>;
+    using assign_strategy =
+        unary::detail::forwarded_assign_strategy_t<Child, is_linear_scaling>;
 };
 
 namespace unary {
@@ -167,6 +176,43 @@ namespace unary {
             requires(traits::has_index_set && extents_type::rank() == 1)
         {
             return expression().nonzero_segment();
+        }
+
+        // ── Accumulate protocol forwarding ──────────────────────────────────
+        // to = beta * to + alpha * (s op X)  ==  child's protocol with
+        // alpha' = alpha * s (or alpha / s).
+
+        template <typename To, typename Alpha, typename Beta, typename... Opts>
+            requires(traits::is_linear_scaling
+                     && requires(const std::remove_cvref_t<Child> &e, To &to, Beta beta) {
+                            e.accumulate_to(to, value_type{}, beta);
+                        })
+        void accumulate_to(To &to,
+                           Alpha alpha,
+                           Beta beta,
+                           const Opts &...opts) const {
+            const auto factor = [&] {
+                if constexpr (unary::detail::is_op_v<Operation,
+                                                     std::divides>) {
+                    return value_type(1) / static_cast<value_type>(m_scalar);
+                } else {
+                    return static_cast<value_type>(m_scalar);
+                }
+            }();
+            expression().accumulate_to(
+                to,
+                zipper::scalar_product<value_type>(alpha, factor),
+                beta,
+                opts...);
+        }
+
+        template <typename To>
+            requires requires(const ScalarOperation &self, To &to) {
+                self.accumulate_to(
+                    to, zipper::cw<1>, zipper::cw<0>);
+            }
+        void assign_to(To &to) const {
+            accumulate_to(to, zipper::cw<1>, zipper::cw<0>);
         }
 
       private:

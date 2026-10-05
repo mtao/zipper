@@ -3,7 +3,9 @@
 
 #include "UnaryExpressionBase.hpp"
 #include "concepts/ScalarOperation.hpp"
+#include "detail/AccumulateForwarding.hpp"
 #include "detail/ZeroPreserving.hpp"
+#include "zipper/static_scalar.hpp"
 #include "zipper/expression/detail/ExpressionTraits.hpp"
 #include "zipper/expression/detail/IndexSet.hpp"
 
@@ -30,6 +32,12 @@ struct expression::detail::ExpressionTraits<
     constexpr static bool has_index_set =
         child_traits::has_index_set
         && zipper::expression::detail::ZeroPreservingUnaryOp<Op>;
+
+    /// `-X` of an accumulable X accumulates too (alpha negated).
+    constexpr static bool is_negation =
+        unary::detail::is_op_v<Op, std::negate>;
+    using assign_strategy =
+        unary::detail::forwarded_assign_strategy_t<Child, is_negation>;
 };
 
 // represents a coefficient-wise transformation of an underlyng expression
@@ -112,6 +120,36 @@ namespace unary {
             requires(traits::has_index_set && extents_type::rank() == 1)
         {
             return expression().nonzero_segment();
+        }
+
+        // ── Accumulate protocol forwarding (negation only) ──────────────────
+
+        template <typename To, typename Alpha, typename Beta, typename... Opts>
+            requires(traits::is_negation
+                     && requires(const std::remove_cvref_t<Child> &e,
+                                 To &to,
+                                 Beta beta) {
+                            e.accumulate_to(to, value_type{}, beta);
+                        })
+        void accumulate_to(To &to,
+                           Alpha alpha,
+                           Beta beta,
+                           const Opts &...opts) const {
+            expression().accumulate_to(
+                to,
+                zipper::scalar_product<value_type>(
+                    alpha, zipper::cw<-1>),
+                beta,
+                opts...);
+        }
+
+        template <typename To>
+            requires requires(const CoefficientWiseOperation &self, To &to) {
+                self.accumulate_to(
+                    to, zipper::cw<1>, zipper::cw<0>);
+            }
+        void assign_to(To &to) const {
+            accumulate_to(to, zipper::cw<1>, zipper::cw<0>);
         }
 
       private:
