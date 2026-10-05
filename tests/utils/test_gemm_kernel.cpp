@@ -5,6 +5,7 @@
 
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
+#include <zipper/utils/gemm.hpp>
 
 #include "../catch_include.hpp"
 
@@ -321,8 +322,12 @@ TEST_CASE("gemm: every static/run-time alpha and beta combination",
                                std::array<index_type, 3>{70, 130, 33}}) {
             DMat A = make_filled(M, K, 20), B = make_filled(K, N, 21);
             DMat C0 = make_filled(M, N, 22);
-            // Small blocks (multi-pc: beta must be applied by the first kc
-            // block only).
+            DMat C = C0;
+            zipper::utils::gemm(alpha, A, B, beta, C);
+            check_equal(reference_gemm(as_double(alpha), A, B, as_double(beta), C0), C);
+
+            // Same through the kernel entry with small blocks (multi-pc: beta
+            // must be applied by the first kc block only).
             DMat D = C0;
             g::GemmConfig<double, g::default_tile<double>> cfg{
                 .blocks = {.kc = 16, .mc = 16, .nc = 12}};
@@ -343,6 +348,7 @@ TEST_CASE("gemm: every static/run-time alpha and beta combination",
 
 TEST_CASE("gemm: beta = 0 never reads C (NaN does not leak)",
           "[gemm][matrix][dense][blas]") {
+    using zipper::cw;
     const double nan = std::numeric_limits<double>::quiet_NaN();
     for (index_type n : {5, 70}) {
         DMat A = make_filled(n, n, 23), B = make_filled(n, n, 24);
@@ -351,10 +357,28 @@ TEST_CASE("gemm: beta = 0 never reads C (NaN does not leak)",
             for (index_type j = 0; j < n; ++j) Cnan(i, j) = nan;
         const DMat R = reference_gemm(1.0, A, B, 0.0, Cnan);
 
+        DMat C = Cnan;
+        zipper::utils::gemm(cw<1>, A, B, cw<0>, C);
+        check_equal(R, C);
+
+        DMat D = Cnan;
+        zipper::utils::gemm(1.0, A, B, 0.0, D);  // run-time zero
+        check_equal(R, D);
+
         DMat E = Cnan;
         E.noalias() = A * B;
         check_equal(R, E);
     }
+}
+
+TEST_CASE("gemm: empty inner dimension scales C by beta",
+          "[gemm][matrix][dense][blas]") {
+    DMat A(4, 0), B(0, 3);
+    DMat C0 = make_filled(4, 3, 25);
+    DMat C = C0;
+    zipper::utils::gemm(2.0, A, B, 0.5, C);
+    for (index_type i = 0; i < 4; ++i)
+        for (index_type j = 0; j < 3; ++j) CHECK(C(i, j) == 0.5 * C0(i, j));
 }
 
 TEST_CASE("gemm: scaled products reach the kernel via the accumulate protocol",
@@ -451,8 +475,21 @@ TEST_CASE("gemm: compound assignment entry points",
     check_equal(reference_gemm(1.0, A, B, 1.0, inner), got);
 }
 
+TEST_CASE("gemm: small static matrices use the generic fallback",
+          "[gemm][matrix][blas]") {
+    using zipper::cw;
+    Matrix<double, 3, 3> A{{1, 2, 3}, {4, 5, 6}, {7, 8, 10}};
+    Matrix<double, 3, 3> B{{2, 0, 1}, {1, 3, 0}, {0, 1, 4}};
+    Matrix<double, 3, 3> C{{1, 1, 1}, {1, 1, 1}, {1, 1, 1}};
+    Matrix<double, 3, 3> AB = A * B;
+    zipper::utils::gemm(2.0, A, B, cw<1>, C);
+    for (index_type i = 0; i < 3; ++i)
+        for (index_type j = 0; j < 3; ++j) CHECK(C(i, j) == 1.0 + 2.0 * AB(i, j));
+}
+
 #if defined(ZIPPER_TEST_HAVE_TBB)
 TEST_CASE("gemm: parallel execution policy", "[gemm][matrix][dense][parallel]") {
+    using zipper::cw;
     namespace g = zipper::expression::binary::detail::gemm;
     for (auto [M, K, N] : {std::array<index_type, 3>{1, 7, 5},
                            std::array<index_type, 3>{37, 29, 41},
@@ -460,6 +497,15 @@ TEST_CASE("gemm: parallel execution policy", "[gemm][matrix][dense][parallel]") 
                            std::array<index_type, 3>{513, 64, 3}}) {
         DMat A = make_filled(M, K, 34), B = make_filled(K, N, 35);
         const DMat C0 = make_filled(M, N, 36);
+
+        DMat C = C0;
+        zipper::utils::gemm(std::execution::par, 0.5, A, B, cw<1>, C);
+        check_equal(reference_gemm(0.5, A, B, 1.0, C0), C);
+
+        DMatCol Ccol(M, N);
+        zipper::utils::gemm(std::execution::par, cw<1>, A, B,
+                            cw<0>, Ccol);
+        check_equal(reference_gemm(1.0, A, B, 0.0, C0), Ccol);
 
         // Small blocks: many parallel row blocks per (jc, pc), multi-pc beta.
         DMat D = C0;
