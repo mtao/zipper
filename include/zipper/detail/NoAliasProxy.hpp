@@ -3,6 +3,7 @@
 #include "zipper/concepts/Zipper.hpp"
 #include "zipper/expression/concepts/capabilities.hpp"
 #include "zipper/detail/NoAliasTraits.hpp"
+#include "zipper/static_scalar.hpp"
 #include "zipper/expression/detail/AssignHelper.hpp"
 #include <type_traits>
 #include <utility>
@@ -54,7 +55,32 @@ public:
         return *this = from.expression();
     }
 
+    /// `dest.noalias() += src` / `-= src`: dest + src without the aliasing
+    /// check (accumulable sources, e.g. a matrix product, add themselves in).
+    template <concepts::Zipper From>
+    auto operator+=(const From &from) -> Destination &
+        requires requires(const Destination &d, const From &f) { d + f; }
+    {
+        accumulate(from, cw<1>);
+        return m_destination;
+    }
+    template <concepts::Zipper From>
+    auto operator-=(const From &from) -> Destination &
+        requires requires(const Destination &d, const From &f) { d - f; }
+    {
+        accumulate(from, cw<-1>);
+        return m_destination;
+    }
+
 private:
+    template <typename From,
+              concepts::Coefficient<typename Destination::value_type> Alpha>
+    void accumulate(const From &from, Alpha alpha) {
+        using to_type = typename Destination::expression_type;
+        expression::detail::AssignHelper<typename From::expression_type, to_type>::
+            accumulate_independent(from.expression(), m_destination.expression(), alpha);
+    }
+
     Destination &m_destination;
 };
 

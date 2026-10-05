@@ -1,6 +1,7 @@
 #include "catch_include.hpp"
 #include <zipper/CSRMatrix.hpp>
 #include <zipper/DataArray.hpp>
+#include <zipper/Form.hpp>
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
 #include <zipper/expression/nullary/Constant.hpp>
@@ -825,4 +826,58 @@ TEST_CASE("noalias_forwarding_views_write_through", "[assignment][noalias][views
         CHECK(column == Vector<int, 3>{1, 2, 3});
     }
     CHECK(allocations == 0);
+}
+
+template <typename A, typename B>
+concept can_add_assign = requires(A &a, const B &b) { a += b; };
+template <typename A, typename B>
+concept can_noalias_add_assign = requires(A &a, const B &b) { a.noalias() += b; };
+
+TEST_CASE("compound_assignment_accumulate", "[assignment][noalias][accumulate]") {
+    using namespace zipper;
+    using M = Matrix<double, dynamic_extent, dynamic_extent>;
+    auto filled = [](index_type r, index_type c, double s) {
+        M m(r, c);
+        for (index_type i = 0; i < r; ++i)
+            for (index_type j = 0; j < c; ++j) m(i, j) = s * (1.0 + i) + j;
+        return m;
+    };
+
+    SECTION("self update is safe in place") {
+        M a = filled(3, 4, 1.0);
+        const M a0 = a;
+        a += a;
+        for (index_type i = 0; i < 3; ++i)
+            for (index_type j = 0; j < 4; ++j) CHECK(a(i, j) == 2.0 * a0(i, j));
+        a -= a;
+        for (index_type i = 0; i < 3; ++i)
+            for (index_type j = 0; j < 4; ++j) CHECK(a(i, j) == 0.0);
+    }
+    SECTION("overlapping views use a snapshot") {
+        // b[k] += b[k - 1] read in place would see already-updated values.
+        Vector<double, dynamic_extent> v(6);
+        for (index_type i = 0; i < 6; ++i) v(i) = double(i + 1);
+        const auto v0 = v;
+        v.segment(1, 5) += v.head(5);
+        CHECK(v(0) == v0(0));
+        for (index_type i = 1; i < 6; ++i) CHECK(v(i) == v0(i) + v0(i - 1));
+    }
+    SECTION("noalias on a view") {
+        M a = filled(4, 4, 1.0), b = filled(4, 4, 3.0);
+        const M a0 = a;
+        a.noalias() += b;
+        auto a1 = a.col(1); // noalias() needs an lvalue
+        a1.noalias() -= b.col(2);
+        for (index_type i = 0; i < 4; ++i)
+            for (index_type j = 0; j < 4; ++j)
+                CHECK(a(i, j) == a0(i, j) + b(i, j) - (j == 1 ? b(i, 2) : 0.0));
+    }
+    SECTION("semantic types still apply") {
+        using V = Vector<double, 3>;
+        using F = Form<double, 3>;
+        STATIC_CHECK(can_add_assign<V, V>);
+        STATIC_CHECK(can_noalias_add_assign<V, V>);
+        STATIC_CHECK_FALSE(can_add_assign<V, F>);
+        STATIC_CHECK_FALSE(can_noalias_add_assign<V, F>);
+    }
 }

@@ -7,7 +7,9 @@
 #include "detail/NoAliasProxy.hpp"
 #include "detail/NonReturnable.hpp"
 #include "expression/concepts/capabilities.hpp"
+#include "expression/detail/AssignHelper.hpp"
 #include "expression/nullary/Zero.hpp"
+#include "static_scalar.hpp"
 #include "expression/unary/Cast.hpp"
 #include "expression/unary/CoefficientWiseOperation.hpp"
 #include "expression/unary/DiagonalExtract.hpp"
@@ -79,6 +81,16 @@ class ZipperBase
     constexpr static bool is_const =
         std::is_const_v<std::remove_reference_t<Expression>>;
     using value_type = typename expression_traits::value_type;
+
+  private:
+    template <typename Other, concepts::Coefficient<value_type> Alpha>
+    void accumulate(const Other &other, Alpha alpha) {
+        expression::detail::AssignHelper<
+            typename Other::expression_type,
+            expression_type>::accumulate(other.expression(), m_expression, alpha);
+    }
+
+  public:
     using extents_type = typename expression_traits::extents_type;
     using extents_traits = detail::ExtentsTraits<extents_type>;
 
@@ -244,20 +256,27 @@ class ZipperBase
         return derived();
     }
 
+    /// `x += y` / `x -= y` (requires `x + y` / `x - y` to be valid, so the
+    /// usual semantic rules apply). AssignHelper::accumulate does the update:
+    /// in place when provably alias-free, otherwise from a snapshot of y;
+    /// accumulable y (e.g. a matrix product) are evaluated through their fast
+    /// path. `x.noalias() += y` skips the aliasing check.
     template <concepts::Zipper Other>
     auto operator+=(const Other &other) -> Derived &
         requires(expression::concepts::WritableExpression<expression_type>
-                 && !is_const)
+                 && !is_const
+                 && requires(const Derived &x, const Other &y) { x + y; })
     {
-        derived() = derived() + other;
+        accumulate(other, zipper::cw<1>);
         return derived();
     }
     template <concepts::Zipper Other>
     auto operator-=(const Other &other) -> Derived &
         requires(expression::concepts::WritableExpression<expression_type>
-                 && !is_const)
+                 && !is_const
+                 && requires(const Derived &x, const Other &y) { x - y; })
     {
-        derived() = derived() - other;
+        accumulate(other, zipper::cw<-1>);
         return derived();
     }
     auto operator*=(const value_type &other) -> Derived &

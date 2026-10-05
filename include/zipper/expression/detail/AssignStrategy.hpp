@@ -15,6 +15,7 @@
 // A strategy is not an alias-safety promise. AssignHelper prepares the target
 // and snapshots the result when safety has not been established independently.
 
+#include "zipper/expression/detail/ExpressionTraits.hpp"
 #include "zipper/types.hpp"
 #include <type_traits>
 
@@ -49,6 +50,14 @@ struct DefaultAssignStrategy {};
 template <rank_type... FiberIndices>
 struct FiberAssignStrategy {};
 
+/// BLAS-style accumulation: the expression can evaluate itself as
+/// `to = beta * to + alpha * expr` via a member
+/// `accumulate_to(to, alpha, beta)` (alpha/beta: run-time scalars or
+/// zipper::cw<V>), and `assign_to(to)` is the (1, 0) case.
+/// Like every strategy this is not an alias-safety promise: AssignHelper
+/// still snapshots unless the caller used noalias().
+struct AccumulateAssignStrategy {};
+
 // ── Detection machinery ────────────────────────────────────────────────
 
 /// Checks whether a traits type declares a custom assign_strategy.
@@ -75,6 +84,12 @@ struct get_assign_strategy<ET, std::void_t<typename ET::assign_strategy>> {
 
 template <typename ET>
 using get_assign_strategy_t = typename get_assign_strategy<ET>::type;
+
+/// The expression type E declares the accumulate protocol.
+template <typename E>
+concept HasAccumulateStrategy = std::is_same_v<
+    get_assign_strategy_t<ExpressionTraits<std::remove_cvref_t<E>>>,
+    AccumulateAssignStrategy>;
 
 // ── FiberAssignStrategy detection ──────────────────────────────────────
 

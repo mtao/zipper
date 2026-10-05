@@ -7,6 +7,7 @@
 #include "zipper/expression/detail/AssignStrategy.hpp"
 #include "zipper/expression/detail/AssignmentSafety.hpp"
 #include "zipper/expression/detail/ExpressionTraits.hpp"
+#include "zipper/static_scalar.hpp"
 #include "zipper/expression/detail/RankZeroEvaluation.hpp"
 #include "zipper/expression/detail/TiledRelayout.hpp"
 #include "zipper/utils/extents/assignable_extents.hpp"
@@ -81,6 +82,24 @@ struct AssignHelper {
 
     /// Main entry point: handles resizing, aliasing, and strategy dispatch.
     [[gnu::always_inline]] inline static void assign(const From &from, To &to);
+
+    /// to = to + alpha * from (same shape); the caller guarantees storage
+    /// independence. A source with the accumulate protocol
+    /// (AccumulateAssignStrategy, e.g. a matrix product) adds itself in;
+    /// anything else is a coefficient-wise update.
+    ///
+    /// alpha: a value_type coefficient — a run-time scalar, or a
+    /// std::integral_constant (e.g. zipper::cw<1>) when it is known at compile
+    /// time (static 1 / -1 cost no multiply; `x += y` passes cw<1>).
+    template <zipper::concepts::Coefficient<value_type> Alpha>
+    static void accumulate_independent(const From &from, To &to, Alpha alpha);
+
+    /// to = to + alpha * from, handling aliasing like assign(): updated in
+    /// place when that is provably safe, otherwise from a snapshot of `from`
+    /// (evaluated through its own fast path, e.g. the GEMM kernel). alpha as
+    /// in accumulate_independent.
+    template <zipper::concepts::Coefficient<value_type> Alpha>
+    static void accumulate(const From &from, To &to, Alpha alpha);
 };
 
 template <zipper::concepts::Expression From, zipper::concepts::Expression To>
@@ -217,6 +236,64 @@ void AssignHelper<From, To>::assign(const From &from, To &to) {
         }
         AssignHelper<POS, To>::assign_direct(pos, to);
     }
+}
+
+template <zipper::concepts::Expression From, zipper::concepts::Expression To>
+    requires(concepts::WritableExpression<To>
+             && !std::is_const_v<std::remove_reference_t<To>>
+             && zipper::utils::extents::assignable_extents_v<
+                 typename ExpressionTraits<From>::extents_type,
+                 typename ExpressionTraits<To>::extents_type>)
+template <zipper::concepts::Coefficient<
+    typename AssignHelper<From, To>::value_type> Alpha>
+void AssignHelper<From, To>::accumulate_independent(const From &from,
+                                                    To &to,
+                                                    Alpha alpha) {
+    ZIPPER_ASSERT(to.extents() == to_extents_traits::convert_from(from.extents()));
+    if constexpr (requires {
+                      from.accumulate_to(to, alpha, zipper::cw<1>);
+                  }) {
+        from.accumulate_to(to, alpha, zipper::cw<1>);
+    } else {
+        using target_layout_pref = typename to_traits::preferred_layout;
+        zipper::utils::extents::for_each_index<target_layout_pref>(
+            to.extents(), [&](auto... idxs) {
+                if constexpr (zipper::concepts::StaticScalarOf<Alpha, 1>) {
+                    to(idxs...) = to(idxs...) + from(idxs...);
+                } else if constexpr (zipper::concepts::StaticScalarOf<Alpha, -1>) {
+                    to(idxs...) = to(idxs...) - from(idxs...);
+                } else {
+                    to(idxs...) = to(idxs...)
+                                  + static_cast<value_type>(alpha) * from(idxs...);
+                }
+            });
+    }
+}
+
+template <zipper::concepts::Expression From, zipper::concepts::Expression To>
+    requires(concepts::WritableExpression<To>
+             && !std::is_const_v<std::remove_reference_t<To>>
+             && zipper::utils::extents::assignable_extents_v<
+                 typename ExpressionTraits<From>::extents_type,
+                 typename ExpressionTraits<To>::extents_type>)
+template <zipper::concepts::Coefficient<
+    typename AssignHelper<From, To>::value_type> Alpha>
+void AssignHelper<From, To>::accumulate(const From &from, To &to, Alpha alpha) {
+    // Same-index reads of `to` are fine for a coefficient-wise update; a
+    // custom strategy (e.g. a product) reads across indices, so it is never
+    // proven safe here.
+    if constexpr (!HasCustomAssignStrategy<from_traits>) {
+        if (assignment_is_safe(from, to)) {
+            accumulate_independent(from, to, alpha);
+            return;
+        }
+    }
+    using POS = nullary::
+        MDArray<value_type, extents_type, layout_policy, accessor_policy>;
+    POS pos(zipper::uninitialized,
+            to_extents_traits::convert_from(from.extents()));
+    AssignHelper<From, POS>::evaluate_to(from, pos);
+    AssignHelper<POS, To>::accumulate_independent(pos, to, alpha);
 }
 } // namespace zipper::expression::detail
 #endif
