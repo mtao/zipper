@@ -36,7 +36,7 @@
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
 #include <zipper/expression/nullary/Identity.hpp>
-#include <zipper/expression/nullary/StaticConstant.hpp>
+#include <zipper/expression/nullary/Zero.hpp>
 #include <zipper/utils/decomposition/detail/scalar_math.hpp>
 #include <zipper/utils/extents/extent_arithmetic.hpp>
 

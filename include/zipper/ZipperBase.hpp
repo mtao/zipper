@@ -7,6 +7,7 @@
 #include "detail/NoAliasProxy.hpp"
 #include "detail/NonReturnable.hpp"
 #include "expression/concepts/capabilities.hpp"
+#include "expression/nullary/Zero.hpp"
 #include "expression/unary/Cast.hpp"
 #include "expression/unary/CoefficientWiseOperation.hpp"
 #include "expression/unary/DiagonalExtract.hpp"
@@ -271,6 +272,20 @@ class ZipperBase
                  && !is_const)
     {
         derived() = derived() / other;
+        return derived();
+    }
+
+    /// Set every coefficient to zero (value_type{}). Assigns a structural
+    /// `Zero` of this object's extents, so zero-aware expressions and sparse
+    /// storage see the zero (sparse storage is simply cleared).
+    auto set_zero() -> Derived &
+        requires(expression::concepts::WritableExpression<expression_type>
+                 && !is_const)
+    {
+        [&]<index_type... Is>(const zipper::extents<Is...> &e) {
+            m_expression.assign(
+                expression::nullary::Zero<value_type, Is...>(e));
+        }(extents());
         return derived();
     }
 #pragma GCC diagnostic pop

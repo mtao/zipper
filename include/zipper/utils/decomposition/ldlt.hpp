@@ -52,7 +52,7 @@
 #include <zipper/Vector.hpp>
 #include <zipper/as.hpp>
 #include <zipper/expression/nullary/Identity.hpp>
-#include <zipper/expression/nullary/StaticConstant.hpp>
+#include <zipper/expression/nullary/Zero.hpp>
 #include <zipper/expression/unary/TriangularView.hpp>
 #include <zipper/utils/decomposition/detail/shape_validation.hpp>
 #include <zipper/utils/max_coeff.hpp>

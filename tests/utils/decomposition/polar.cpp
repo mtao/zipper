@@ -3,7 +3,7 @@
 
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
-#include <zipper/expression/nullary/StaticConstant.hpp>
+#include <zipper/expression/nullary/Zero.hpp>
 #include <zipper/utils/decomposition/polar.hpp>
 #include <zipper/utils/determinant.hpp>
 

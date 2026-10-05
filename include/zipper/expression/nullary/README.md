@@ -35,7 +35,8 @@ These compute their coefficients on-the-fly from parameters (no stored data).
 | `Iota.hpp` | `Iota<T, D, Indices...>` | Returns the D-th index cast to T (counting sequence along an axis) |
 | `Unit.hpp` | `Unit<T, Extent, IndexType>` | Unit (basis) vector: 1 at one index, 0 elsewhere |
 | `Random.hpp` | `Random<T, Indices...>` | Random values (generated once and cached) |
-| `StaticConstant.hpp` | `StaticConstant<T, Value, Indices...>` | Returns `static_cast<T>(Value)` for all indices, where `Value` is a compile-time `constexpr int`; aliases: `Zero<T, Indices...>` (Value=0), `Ones<T, Indices...>` (Value=1). When Value==0, has `has_index_set = true` with empty index sets for zero-aware optimisation. Unlike `Constant`, the value is encoded in the type. |
+| `StaticConstant.hpp` | `StaticConstant<T, Value, Indices...>` | Returns `Value` (a `T`; T must be usable as a template argument, e.g. arithmetic, and floating values are written as floating literals) for all indices; alias `Ones<T, Indices...>` (Value = `T{1}`). Unlike `Constant`, the value is encoded in the type. |
+| `Zero.hpp` | `Zero<T, Indices...>` | Returns `T{}` for all indices, for any `T` (including `std::complex`). Structurally zero: `has_index_set = true` with empty index sets, so zero-aware operations skip it and sparse targets are cleared. |
 
 ### Factory Functions
 
@@ -47,10 +48,11 @@ These compute their coefficients on-the-fly from parameters (no stored data).
 
 ### Zero-Aware Sparsity
 
-`Unit` and `Identity` have `has_index_set = true` in their ExpressionTraits,
-providing `index_set<D>()` methods that describe which indices are structurally
-nonzero. This enables `MatrixVectorProduct` to skip known-zero entries when
-multiplying by a unit vector or identity matrix.
+`Unit`, `Identity` and `Zero` have `has_index_set = true` in their
+ExpressionTraits, providing `index_set<D>()` methods that describe which indices
+are structurally nonzero. This enables `MatrixVectorProduct` to skip known-zero
+entries when multiplying by a unit vector or identity matrix, and makes assigning
+a `Zero` into sparse storage a clear (`set_zero()` relies on this).
 
 ---
 

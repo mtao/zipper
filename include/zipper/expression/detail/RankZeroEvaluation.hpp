@@ -8,7 +8,8 @@ namespace zipper::expression::nullary {
 template <typename T, typename E, typename L, typename A> class MDArray;
 template <typename T, typename E, typename L, typename A> class MDSpan;
 template <typename T, index_type... N> class Constant;
-template <typename T, int Value, index_type... N> class StaticConstant;
+template <typename T, T Value, index_type... N> class StaticConstant;
+template <typename T, index_type... N> class Zero;
 }
 
 namespace zipper::expression::unary {
@@ -46,8 +47,12 @@ template <typename T, index_type... N, rank_type R>
 struct RankZeroEvaluation<nullary::Constant<T, N...>, R> {
     static constexpr bool is_scalar = true;
 };
-template <typename T, int Value, index_type... N, rank_type R>
+template <typename T, T Value, index_type... N, rank_type R>
 struct RankZeroEvaluation<nullary::StaticConstant<T, Value, N...>, R> {
+    static constexpr bool is_scalar = true;
+};
+template <typename T, index_type... N, rank_type R>
+struct RankZeroEvaluation<nullary::Zero<T, N...>, R> {
     static constexpr bool is_scalar = true;
 };
 template <typename Child, typename... Slices, rank_type R>

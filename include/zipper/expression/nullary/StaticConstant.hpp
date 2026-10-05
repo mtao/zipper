@@ -2,49 +2,39 @@
 #define ZIPPER_EXPRESSION_NULLARY_STATIC_CONSTANT_HPP
 
 /// @file StaticConstant.hpp
-/// @brief Nullary expression with a compile-time constant integer value.
+/// @brief Nullary expression with a compile-time constant value.
 /// @ingroup expressions_nullary
 ///
-/// `StaticConstant<T, Value, Indices...>` is a rank-N expression that returns
-/// `static_cast<T>(Value)` for every coefficient.  The constant is a template
-/// parameter (constexpr int) because floating-point types cannot be non-type
-/// template parameters.  The cast to `T` happens at runtime.
+/// `StaticConstant<T, Value, Indices...>` is a rank-N expression whose every
+/// coefficient is `Value`, a T. T must be usable as a template argument
+/// (arithmetic types; for others use the run-time Constant), and a
+/// floating-point value is written as a floating-point literal:
+/// `StaticConstant<double, 0.5, 3>`, `StaticConstant<double, 2.0, 3>`.
 ///
 /// This expression owns no data — its value is encoded in the type.
 ///
-/// Two convenience aliases are provided:
-///   - `Zero<T, Indices...>`  = `StaticConstant<T, 0, Indices...>`
-///   - `Ones<T, Indices...>`  = `StaticConstant<T, 1, Indices...>`
+/// `Ones<T, Indices...>` = `StaticConstant<T, T{1}, Indices...>`. For zeros
+/// use `Zero` (Zero.hpp): it works for any T and is structurally zero (empty
+/// index sets), which a StaticConstant never is, whatever its value.
 ///
 /// @code
-///   // Static 3-vector of zeros
-///   auto z = Zero<double, 3>();
-///   // z(0) == 0.0, z(1) == 0.0, z(2) == 0.0
-///
 ///   // Static 3x3 matrix of ones
 ///   auto o = Ones<double, 3, 3>();
-///   // o(i, j) == 1.0 for all i, j
 ///
 ///   // Static 4-vector of twos
-///   auto c = StaticConstant<float, 2, 4>();
-///   // c(i) == 2.0f for all i
+///   auto c = StaticConstant<float, 2.0f, 4>();
 ///
-///   // Dynamic extents
-///   auto z_dyn = Zero<double, dynamic_extent>(n);
+///   // Non-integral values, dynamic extents
+///   auto h = StaticConstant<double, 0.5, dynamic_extent>(n);
 /// @endcode
-///
-/// **Zero-aware sparsity:** When `Value == 0`, the expression has
-/// `has_index_set = true` and returns empty index sets, enabling zero-aware
-/// optimizations to skip all coefficients.
 
 #include "zipper/expression/ExpressionBase.hpp"
 #include "zipper/expression/detail/ExpressionTraits.hpp"
-#include "zipper/expression/detail/IndexSet.hpp"
 
 namespace zipper::expression {
 namespace nullary {
 
-    template <typename T, int Value, index_type... Indices>
+    template <typename T, T Value, index_type... Indices>
     class StaticConstant
       : public ExpressionBase<StaticConstant<T, Value, Indices...>>
       , public zipper::extents<Indices...> {
@@ -60,7 +50,7 @@ namespace nullary {
         auto extents() const -> const extents_type & { return *this; }
 
         /// The compile-time constant value.
-        constexpr static int static_value = Value;
+        constexpr static T static_value = Value;
 
         StaticConstant(const StaticConstant &) = default;
         StaticConstant(StaticConstant &&) = default;
@@ -79,68 +69,28 @@ namespace nullary {
 
         /// Returns the constant value, cast to value_type.
         auto coeff(zipper::concepts::Index auto &&...) const -> value_type {
-            return static_cast<value_type>(Value);
+            return static_cast<value_type>(static_value);
         }
 
         /// StaticConstant already owns its data — make_owned() returns a copy.
         auto make_owned() const -> StaticConstant { return *this; }
-
-        // ── Index set queries (Zero only) ─────────────────────────────
-        // When Value == 0, every coefficient is zero, so the index set along
-        // any dimension is empty.
-
-        template <rank_type D>
-            requires(D < extents_type::rank() && Value == 0)
-        [[nodiscard]] auto index_set(index_type /*other_idx*/ = 0) const
-            -> zipper::expression::detail::EmptyIndexRange {
-            return {};
-        }
-
-        template <rank_type D>
-            requires(D < extents_type::rank() && Value == 0)
-        [[nodiscard]] auto nonzero_range(index_type other_idx = 0) const
-            -> zipper::expression::detail::EmptyIndexRange {
-            return index_set<D>(other_idx);
-        }
-
-        [[nodiscard]] auto col_range_for_row(index_type /*row*/) const
-            -> zipper::expression::detail::EmptyIndexRange
-            requires(extents_type::rank() == 2 && Value == 0)
-        {
-            return {};
-        }
-
-        [[nodiscard]] auto row_range_for_col(index_type /*col*/) const
-            -> zipper::expression::detail::EmptyIndexRange
-            requires(extents_type::rank() == 2 && Value == 0)
-        {
-            return {};
-        }
     };
-
-    /// Convenience alias: zero expression.
-    template <typename T, index_type... Indices>
-    using Zero = StaticConstant<T, 0, Indices...>;
 
     /// Convenience alias: all-ones expression.
     template <typename T, index_type... Indices>
-    using Ones = StaticConstant<T, 1, Indices...>;
+    using Ones = StaticConstant<T, T{1}, Indices...>;
 
 } // namespace nullary
 
 // ── ExpressionTraits specialization ─────────────────────────────
 
-template <typename T, int Value, index_type... Indices>
+template <typename T, T Value, index_type... Indices>
 struct detail::ExpressionTraits<nullary::StaticConstant<T, Value, Indices...>>
   : public BasicExpressionTraits<
         T,
         zipper::extents<Indices...>,
         expression::detail::AccessFeatures::const_value(),
-        expression::detail::ShapeFeatures::resizable()> {
-    /// Zero expressions have structurally known zero regions (everything is
-    /// zero).
-    constexpr static bool has_index_set = (Value == 0);
-};
+        expression::detail::ShapeFeatures::resizable()> {};
 
 } // namespace zipper::expression
 
