@@ -142,6 +142,16 @@ TEST_CASE("assignment_safety_shape_and_constants", "[expression][assignment_safe
     // so assignments into e.g. std::complex storage are never proven here.
     MDArray<std::complex<double>, zipper::dextents<2>> c(zipper::dextents<2>(2, 3));
     CHECK_FALSE(assignment_is_safe(Zero<std::complex<double>, 2, 3>{}, c));
+    // Storage-free sources are safe for any arithmetic destination expression,
+    // not only dense leaves: e.g. a block slice (set_zero() on a sub-block).
+    zipper::Matrix<double, zipper::dynamic_extent, zipper::dynamic_extent> m(4,
+                                                                             5);
+    auto blk = m.slice(zipper::slice(1, 2), zipper::slice(0, 3));
+    CHECK(assignment_is_safe(Zero<double, 2, 3>{}, blk.expression()));
+    CHECK(assignment_is_safe(Constant<double>(1.0), blk.expression()));
+    CHECK_FALSE(assignment_is_safe(Zero<double, 3, 3>{}, blk.expression()));
+    // Slices that read storage are still not proven (no slice-origin proof).
+    CHECK_FALSE(assignment_is_safe(a, blk.expression()));
     const Constant<double> scalar(2.0);
     const Operation sum(a, scalar, std::plus<>{});
     CHECK(assignment_is_safe(sum, a));

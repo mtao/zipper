@@ -169,7 +169,21 @@ namespace zipper::expression::detail {
 template <class From, class To>
 auto assignment_is_safe(const From &from, const To &to) -> bool {
     using Destination = std::remove_cvref_t<To>;
-    if constexpr (assignment_safety::DenseLeaf<Destination>::value) {
+    using Origin = std::remove_cvref_t<From>;
+    constexpr bool arithmetic_destination = [] {
+        if constexpr (requires { typename Destination::value_type; }) {
+            using V = typename Destination::value_type;
+            return std::is_arithmetic_v<V> && !std::is_volatile_v<V>;
+        } else {
+            return false;
+        }
+    }();
+    if constexpr (assignment_safety::ReadsNoStorage<Origin>::value
+                  && arithmetic_destination) {
+        // Any destination expression (slices, views): the source reads no
+        // storage, and arithmetic element writes have no hidden effects.
+        return assignment_safety::Source<Origin>::check(from, to);
+    } else if constexpr (assignment_safety::DenseLeaf<Destination>::value) {
         if constexpr (!assignment_safety::DenseLeaf<Destination>::writable) {
             return false;
         } else {

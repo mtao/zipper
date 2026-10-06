@@ -91,6 +91,18 @@ struct Source<nullary::Zero<T, N...>> {
     static auto check(const nullary::Zero<T, N...> &from, const To &to) -> bool;
 };
 
+/// Sources that read no storage (generators of a constant value): no write
+/// to any destination can change what they evaluate to, so their proof does
+/// not depend on the destination being a dense leaf.
+template <typename T> struct ReadsNoStorage : std::false_type {};
+template <typename T, index_type... N>
+struct ReadsNoStorage<nullary::Constant<T, N...>> : std::true_type {};
+template <typename T, T Value, index_type... N>
+struct ReadsNoStorage<nullary::StaticConstant<T, Value, N...>>
+    : std::true_type {};
+template <typename T, index_type... N>
+struct ReadsNoStorage<nullary::Zero<T, N...>> : std::true_type {};
+
 template <typename Child, typename Op>
 struct Source<unary::CoefficientWiseOperation<Child, Op>> {
     template <typename To>
