@@ -12,9 +12,13 @@
 /// would only keep run-time strides.
 ///
 /// Satisfies the mdspan LayoutMapping requirements, including
-/// `submdspan_mapping` (a slice of a permuted mapping is a layout_stride).
+/// `submdspan_mapping`: a rank-preserving slice (ranges / full extents only)
+/// is the permutation of the correspondingly sliced child, so the layout —
+/// e.g. which dimension is contiguous — survives slicing a transpose; slices
+/// that drop a dimension fall back to layout_stride.
 
 #include <array>
+#include <tuple>
 #include <cstddef>
 #include <type_traits>
 #include <utility>
@@ -23,6 +27,17 @@
 #include "zipper/types.hpp"
 
 namespace zipper::storage {
+
+namespace detail {
+    /// submdspan_mapping_result<Old> -> submdspan_mapping_result<New>,
+    /// without naming the (standard or reference-implementation) template.
+    template <typename Result, typename NewMapping>
+    struct rebind_submdspan_result;
+    template <template <typename> class Result, typename Old, typename New>
+    struct rebind_submdspan_result<Result<Old>, New> {
+        using type = Result<New>;
+    };
+} // namespace detail
 
 template <typename ChildMapping, std::size_t... Perm>
 struct layout_permuted {
@@ -92,18 +107,36 @@ struct layout_permuted {
             return a.m_child == b.m_child;
         }
 
-        /// Slicing goes through the equivalent layout_stride mapping.
+        /// Slicing keeps the permutation when no dimension is dropped
+        /// (output slice d applies to child dimension perm[d]); otherwise it
+        /// goes through the equivalent layout_stride mapping.
         template <typename... Slices>
         friend constexpr auto submdspan_mapping(const mapping &m,
                                                 Slices... slices) {
-            using stride_mapping =
-                typename layout_stride::template mapping<extents_type>;
-            std::array<index_type, extents_type::rank()> strides{};
-            for (rank_type r = 0; r < extents_type::rank(); ++r) {
-                strides[r] = m.stride(r);
+            if constexpr ((!std::is_convertible_v<Slices, index_type> && ...)) {
+                const std::tuple<Slices...> out{slices...};
+                auto sub = [&]<std::size_t... C>(std::index_sequence<C...>) {
+                    return submdspan_mapping(
+                        m.m_child, std::get<inverse()[C]>(out)...);
+                }(std::make_index_sequence<sizeof...(Slices)>{});
+                using sub_child = decltype(sub.mapping);
+                using sub_extents = typename sub_child::extents_type;
+                using permuted = typename layout_permuted<sub_child, Perm...>::
+                    template mapping<zipper::extents<
+                        sub_extents::static_extent(Perm)...>>;
+                using result = typename detail::rebind_submdspan_result<
+                    decltype(sub), permuted>::type;
+                return result{permuted(sub.mapping), sub.offset};
+            } else {
+                using stride_mapping =
+                    typename layout_stride::template mapping<extents_type>;
+                std::array<index_type, extents_type::rank()> strides{};
+                for (rank_type r = 0; r < extents_type::rank(); ++r) {
+                    strides[r] = m.stride(r);
+                }
+                return submdspan_mapping(stride_mapping(m.extents(), strides),
+                                         slices...);
             }
-            return submdspan_mapping(stride_mapping(m.extents(), strides),
-                                     slices...);
         }
 
       private:

@@ -42,6 +42,8 @@
 #include "zipper/expression/binary/detail/gemm_config.hpp"
 #include "zipper/expression/binary/detail/gemm_eligible.hpp"
 #include "zipper/detail/assert.hpp"
+#include "zipper/expression/concepts/capabilities.hpp"
+#include "zipper/storage/layout_traits.hpp"
 #include "zipper/static_scalar.hpp"
 #include "zipper/types.hpp"
 
@@ -69,17 +71,49 @@ constexpr auto round_up(index_type n, index_type m) -> index_type {
     return (n + m - 1) / m * m;
 }
 
+/// Dimension along which consecutive elements of the zipper view `Z` are
+/// adjacent in memory, as determined by its layout mapping type;
+/// storage::unknown_dimension when Z is not a linear array (lazy, gathered)
+/// or its mapping type does not say (layout_stride).
+template <typename Z>
+inline constexpr rank_type fastest_dimension = [] {
+    using E = std::remove_cvref_t<decltype(std::declval<Z &>().expression())>;
+    if constexpr (zipper::expression::concepts::LinearArray<E>) {
+        return zipper::storage::fastest_dimension_v<std::remove_cvref_t<
+            decltype(std::declval<const E &>().mapping())>>;
+    } else {
+        return zipper::storage::unknown_dimension;
+    }
+}();
+
+/// A writable view whose columns are contiguous in memory, so a SIMD vector
+/// of a column can be loaded from / stored to `&tile(i, j)` directly.
+template <typename Z>
+concept ColumnContiguous =
+    fastest_dimension<Z> == 0 && requires(Z &z) { &z(0, 0); };
+
+#if defined(ZIPPER_GEMM_NO_DIRECT_STORE)
+inline constexpr bool direct_store_enabled = false;
+#else
+inline constexpr bool direct_store_enabled = true;
+#endif
+
+template <typename T, index_type W>
+using simd_vec = std::experimental::fixed_size_simd<T, W>;
+
 /// The register-tiled microkernel (tutorial's mymul_4x4, generalized):
 /// Apanel is an mr×kc column-major panel, Bpanel a kc×nr row-major panel;
-/// returns Apanel * Bpanel as a sum of rank-1 updates a ⊗ b.
+/// accumulates Apanel * Bpanel as a sum of rank-1 updates a ⊗ b into
+/// (mr / W)·nr SIMD registers (column t, vector r = rows [r·W, r·W + W)).
 template <typename T, Tile S, index_type W = simd_width<T>>
     requires SimdTile<S, W>
-auto microkernel(zipper::concepts::Matrix auto const &Apanel,
-                 zipper::concepts::Matrix auto const &Bpanel)
-    -> zipper::Matrix<T, S.mr, S.nr, false> {
+[[gnu::always_inline]] inline auto
+    microkernel_accumulate(zipper::concepts::Matrix auto const &Apanel,
+                           zipper::concepts::Matrix auto const &Bpanel)
+        -> std::array<std::array<simd_vec<T, W>, S.mr / W>, S.nr> {
     namespace stdx = std::experimental;
     constexpr index_type R = S.mr / W;
-    using vec = stdx::fixed_size_simd<T, W>;
+    using vec = simd_vec<T, W>;
 
     std::array<std::array<vec, R>, S.nr> cv{};
     for (index_type p : std::views::iota(index_type{0}, Apanel.cols())) {
@@ -100,6 +134,20 @@ auto microkernel(zipper::concepts::Matrix auto const &Apanel,
             for (index_type r = 0; r < R; ++r) { cv[t][r] += av[r] * bv; }
         }
     }
+    return cv;
+}
+
+/// Microkernel returning Apanel * Bpanel as a column-major Matrix, for
+/// targets the registers cannot be stored into directly (and ragged edges);
+/// the caller adds it in through a slice.
+template <typename T, Tile S, index_type W = simd_width<T>>
+    requires SimdTile<S, W>
+auto microkernel(zipper::concepts::Matrix auto const &Apanel,
+                 zipper::concepts::Matrix auto const &Bpanel)
+    -> zipper::Matrix<T, S.mr, S.nr, false> {
+    namespace stdx = std::experimental;
+    constexpr index_type R = S.mr / W;
+    const auto cv = microkernel_accumulate<T, S, W>(Apanel, Bpanel);
 
     // Column-major, so each SIMD vector is a contiguous piece of a column.
     zipper::Matrix<T, S.mr, S.nr, false> C(zipper::uninitialized);
@@ -111,6 +159,37 @@ auto microkernel(zipper::concepts::Matrix auto const &Apanel,
         }
     }
     return C;
+}
+
+/// Microkernel storing straight from registers into an mr×nr tile (a slice
+/// of C with contiguous columns): tile = beta * tile + Apanel * Bpanel,
+/// without the temporary Matrix. Static beta = 0 never reads the tile.
+template <typename T, Tile S, typename Beta, index_type W = simd_width<T>>
+    requires SimdTile<S, W>
+void microkernel_store(zipper::concepts::Matrix auto const &Apanel,
+                       zipper::concepts::Matrix auto const &Bpanel,
+                       ColumnContiguous auto &&tile,
+                       Beta beta) {
+    namespace stdx = std::experimental;
+    constexpr index_type R = S.mr / W;
+    using vec = simd_vec<T, W>;
+    const auto cv = microkernel_accumulate<T, S, W>(Apanel, Bpanel);
+#pragma GCC unroll 16
+    for (index_type t = 0; t < S.nr; ++t) {
+#pragma GCC unroll 16
+        for (index_type r = 0; r < R; ++r) {
+            T *dst = &tile(r * W, t);
+            if constexpr (zipper::concepts::StaticScalarOf<Beta, 0>) {
+                cv[t][r].copy_to(dst, stdx::element_aligned);
+            } else {
+                vec old(dst, stdx::element_aligned);
+                if constexpr (!zipper::concepts::StaticScalarOf<Beta, 1>) {
+                    old *= vec(static_cast<T>(beta));
+                }
+                (old + cv[t][r]).copy_to(dst, stdx::element_aligned);
+            }
+        }
+    }
 }
 
 /// dst = alpha * src, without a multiply when alpha is statically 1.
@@ -190,13 +269,18 @@ void inner_kernel(APanels<T, S> const &Apacked,
         auto Bpanel = Bpacked.row_slice(zipper::slice(j / S.nr * kc, kc));
         for (auto [i, mr] : blocks(C.rows(), S.mr)) {
             auto Apanel = Apacked.col_slice(zipper::slice(i / S.mr * kc, kc));
-            const auto c = microkernel<T, S>(Apanel, Bpanel);
             if (mr == S.mr && nr == S.nr) {
-                update_tile<T>(
-                    C.slice(zipper::slice(i, mr_t{}), zipper::slice(j, nr_t{})),
-                    c,
-                    beta);
+                auto tile =
+                    C.slice(zipper::slice(i, mr_t{}), zipper::slice(j, nr_t{}));
+                if constexpr (direct_store_enabled
+                              && ColumnContiguous<decltype(tile)>) {
+                    microkernel_store<T, S>(Apanel, Bpanel, tile, beta);
+                } else {
+                    update_tile<T>(
+                        tile, microkernel<T, S>(Apanel, Bpanel), beta);
+                }
             } else {
+                const auto c = microkernel<T, S>(Apanel, Bpanel);
                 update_tile<T>(
                     C.slice(zipper::slice(i, mr), zipper::slice(j, nr)),
                     c.slice(zipper::slice(0, mr), zipper::slice(0, nr)),
@@ -272,6 +356,14 @@ void gemm_blocked(Alpha alpha,
             return gemm_blocked<T, S>(
                 zipper::cw<0>, A, B, beta, C, config);
         }
+    }
+
+    // Tiles are stored a column at a time; for a row-major C compute
+    // C^T = B^T A^T instead, whose target C^T is column-major.
+    if constexpr (fastest_dimension<decltype(C)> == 1) {
+        auto Ct = C.transpose();
+        return gemm_blocked<T, S>(
+            alpha, B.transpose(), A.transpose(), beta, Ct, config);
     }
 
     // Nothing to multiply: C = beta * C, without reading A or B.

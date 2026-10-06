@@ -571,3 +571,35 @@ TEST_CASE("gemm kernel: float", "[gemm][matrix][dense][float]") {
             }
     }
 }
+
+TEST_CASE("gemm kernel: tiles of column-major targets are stored directly",
+          "[gemm][layout]") {
+    namespace g = zipper::expression::binary::detail::gemm;
+    using st = static_index_t<8>;
+    DMat R(16, 16);
+    DMatCol C(16, 16);
+    auto c_tile = C.slice(zipper::slice(0, st{}), zipper::slice(0, st{}));
+    auto r_tile = R.slice(zipper::slice(0, st{}), zipper::slice(0, st{}));
+    auto rt = R.transpose();
+    auto rt_tile = rt.slice(zipper::slice(0, st{}), zipper::slice(0, st{}));
+    // Column-major tiles (and tiles of a row-major target's transpose, which
+    // is what gemm_blocked computes into) take the register-store path ...
+    STATIC_CHECK(g::ColumnContiguous<decltype(c_tile)>);
+    STATIC_CHECK(g::ColumnContiguous<decltype(rt_tile)>);
+    STATIC_CHECK(g::fastest_dimension<DMat> == 1);
+    // ... row-major tiles and lazy expressions do not.
+    STATIC_CHECK_FALSE(g::ColumnContiguous<decltype(r_tile)>);
+    auto lazy = 2.0 * C;
+    STATIC_CHECK_FALSE(g::ColumnContiguous<decltype(lazy)>);
+
+    // Both target layouts, through the swap and the direct store.
+    for (index_type n : {7, 8, 13, 64, 97}) {
+        DMat A = make_filled(n, n + 3, 5), B = make_filled(n + 3, n, 6);
+        DMat Cr(n, n);
+        DMatCol Cc(n, n);
+        Cr.noalias() = A * B;
+        Cc.noalias() = A * B;
+        check_against_reference(A, B, Cr);
+        check_against_reference(A, B, Cc);
+    }
+}

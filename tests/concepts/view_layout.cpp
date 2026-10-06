@@ -120,6 +120,20 @@ TEST_CASE("view layout: mapping types and fastest dimension",
     CHECK(fastest(M.transpose().transpose()) == 1);
     CHECK(fastest(T.swizzle<TensorBase, 2, 0, 1>()) == 0);
 
+    // A block of a transpose stays a permuted (not strided) layout.
+    auto MT = M.transpose();
+    CHECK(fastest(MT.slice(zipper::slice(1, 2), zipper::slice(0, 3))) == 0);
+    CHECK(fastest(C.transpose().slice(zipper::slice(1, 2), full_extent_t{}))
+          == 1);
+    {
+        auto blk = MT.slice(zipper::slice(1, 3), zipper::slice(1, 2));
+        for (index_type i = 0; i < 3; ++i)
+            for (index_type j = 0; j < 2; ++j) {
+                CHECK(blk(i, j) == M(1 + j, 1 + i));
+                CHECK(&blk(i, j) == &M(1 + j, 1 + i));
+            }
+    }
+
     // Slices keep it, renumbered past indexed-away dimensions.
     CHECK(fastest(M.slice(zipper::slice(1, 2), zipper::slice(0, 3))) == 1);
     CHECK(fastest(M.row(1)) == 0);
