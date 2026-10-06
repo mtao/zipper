@@ -196,9 +196,9 @@ void microkernel_store(zipper::concepts::Matrix auto const &Apanel,
 template <typename T, typename Alpha>
 void assign_scaled(auto &&dst, auto const &src, Alpha alpha) {
     if constexpr (zipper::concepts::StaticScalarOf<Alpha, 1>) {
-        dst = src;
+        dst.noalias() = src;
     } else {
-        dst = static_cast<T>(alpha) * src;
+        dst.noalias() = static_cast<T>(alpha) * src;
     }
 }
 
@@ -233,10 +233,10 @@ void pack_B(zipper::concepts::Matrix auto const &B, BPanels<T, S> &Bpacked) {
     for (auto [j, nr] : blocks(B.cols(), S.nr)) {
         auto panel = Bpacked.row_slice(zipper::slice(j / S.nr * kc, kc));
         if (nr == S.nr) {
-            panel = B.col_slice(zipper::slice(j, nr_t{}));
+            panel.noalias() = B.col_slice(zipper::slice(j, nr_t{}));
         } else {
-            panel.col_slice(zipper::slice(0, nr)) =
-                B.col_slice(zipper::slice(j, nr));
+            auto head = panel.col_slice(zipper::slice(0, nr));
+            head.noalias() = B.col_slice(zipper::slice(j, nr));
             panel.col_slice(zipper::slice(nr, S.nr - nr)).set_zero();
         }
     }
@@ -246,12 +246,13 @@ void pack_B(zipper::concepts::Matrix auto const &B, BPanels<T, S> &Bpacked) {
 /// or NaN in C does not leak into the result (BLAS semantics).
 template <typename T, typename Beta>
 void update_tile(auto &&tile, auto const &c, Beta beta) {
+    // c is the microkernel's own result, independent of C.
     if constexpr (zipper::concepts::StaticScalarOf<Beta, 0>) {
-        tile = c;
+        tile.noalias() = c;
     } else if constexpr (zipper::concepts::StaticScalarOf<Beta, 1>) {
-        tile += c;
+        tile.noalias() += c;
     } else {
-        tile = static_cast<T>(beta) * tile + c;
+        tile.noalias() = static_cast<T>(beta) * tile + c;
     }
 }
 
@@ -461,6 +462,53 @@ void gemm_blocked(zipper::concepts::Matrix auto const &A,
                        config);
 }
 
+/// C = beta * C + alpha * A * B, one dot product per coefficient (no
+/// packing): the path for products below coeff_based_threshold. Static
+/// beta = 0 never reads C; run-time 0 / 1 are dispatched as in gemm_blocked.
+template <typename T,
+          zipper::concepts::Coefficient<T> Alpha,
+          zipper::concepts::Coefficient<T> Beta>
+void gemm_coeff_based(Alpha alpha,
+                      zipper::concepts::Matrix auto const &A,
+                      zipper::concepts::Matrix auto const &B,
+                      Beta beta,
+                      zipper::concepts::Matrix auto &&C) {
+    if constexpr (!zipper::concepts::StaticScalar<Beta>) {
+        if (static_cast<T>(beta) == T(0)) {
+            return gemm_coeff_based<T>(alpha, A, B, zipper::cw<0>, C);
+        }
+        if (static_cast<T>(beta) == T(1)) {
+            return gemm_coeff_based<T>(alpha, A, B, zipper::cw<1>, C);
+        }
+    }
+    if constexpr (!zipper::concepts::StaticScalar<Alpha>) {
+        if (static_cast<T>(alpha) == T(0)) {
+            return gemm_coeff_based<T>(zipper::cw<0>, A, B, beta, C);
+        }
+    }
+    // alpha = 0: C = beta * C, without reading A or B.
+    if constexpr (zipper::concepts::StaticScalarOf<Alpha, 0>) {
+        scale<T>(C, beta);
+        return;
+    }
+    for (index_type i = 0; i < C.rows(); ++i) {
+        const auto a = A.row(i);
+        for (index_type j = 0; j < C.cols(); ++j) {
+            T v = a.dot(B.col(j));
+            if constexpr (!zipper::concepts::StaticScalarOf<Alpha, 1>) {
+                v *= static_cast<T>(alpha);
+            }
+            if constexpr (zipper::concepts::StaticScalarOf<Beta, 0>) {
+                C(i, j) = v;
+            } else if constexpr (zipper::concepts::StaticScalarOf<Beta, 1>) {
+                C(i, j) += v;
+            } else {
+                C(i, j) = static_cast<T>(beta) * C(i, j) + v;
+            }
+        }
+    }
+}
+
 /// Entry point from MatrixProduct::assign_to / accumulate_to on raw
 /// expressions: C = beta * C + alpha * A * B (precondition:
 /// detail::GemmEligible).
@@ -501,6 +549,10 @@ void gemm(Alpha alpha,
     };
     ZIPPER_ASSERT(!shares_buffer(A_) && !shares_buffer(B_));
 
+    if (use_coeff_based(C.rows(), C.cols(), A.cols())) {
+        gemm_coeff_based<T>(alpha, A, B, beta, C);
+        return;
+    }
     constexpr Tile S = default_tile<T>;
     gemm_blocked<T, S>(
         alpha, A, B, beta, C, GemmConfig<T, S, Policy>{.policy = policy});

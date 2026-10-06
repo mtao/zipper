@@ -318,7 +318,9 @@ TEST_CASE("gemm: every static/run-time alpha and beta combination",
     using zipper::cw;
     namespace g = zipper::expression::binary::detail::gemm;
     auto run = [](auto alpha, auto beta) {
-        for (auto [M, K, N] : {std::array<index_type, 3>{7, 5, 9},
+        // 3x4x5 is below coeff_based_threshold (the coefficient-based path).
+        for (auto [M, K, N] : {std::array<index_type, 3>{3, 4, 5},
+                               std::array<index_type, 3>{7, 5, 9},
                                std::array<index_type, 3>{70, 130, 33}}) {
             DMat A = make_filled(M, K, 20), B = make_filled(K, N, 21);
             DMat C0 = make_filled(M, N, 22);
@@ -350,7 +352,7 @@ TEST_CASE("gemm: beta = 0 never reads C (NaN does not leak)",
           "[gemm][matrix][dense][blas]") {
     using zipper::cw;
     const double nan = std::numeric_limits<double>::quiet_NaN();
-    for (index_type n : {5, 70}) {
+    for (index_type n : {2, 5, 70}) {
         DMat A = make_filled(n, n, 23), B = make_filled(n, n, 24);
         DMat Cnan(n, n);
         for (index_type i = 0; i < n; ++i)
@@ -595,6 +597,24 @@ TEST_CASE("gemm kernel: tiles of column-major targets are stored directly",
     // Both target layouts, through the swap and the direct store.
     for (index_type n : {7, 8, 13, 64, 97}) {
         DMat A = make_filled(n, n + 3, 5), B = make_filled(n + 3, n, 6);
+        DMat Cr(n, n);
+        DMatCol Cc(n, n);
+        Cr.noalias() = A * B;
+        Cc.noalias() = A * B;
+        check_against_reference(A, B, Cr);
+        check_against_reference(A, B, Cc);
+    }
+}
+
+TEST_CASE("gemm: small products take the coefficient-based path",
+          "[gemm][matrix][dense]") {
+    namespace g = zipper::expression::binary::detail::gemm;
+    STATIC_CHECK(g::use_coeff_based(6, 6, 6));
+    STATIC_CHECK(!g::use_coeff_based(7, 7, 7));
+    STATIC_CHECK(!g::use_coeff_based(4, 4, 0));  // empty inner dimension
+    // Results agree on both sides of the threshold, for both target layouts.
+    for (index_type n : {1, 2, 5, 6, 7, 8}) {
+        DMat A = make_filled(n, n + 1, 30), B = make_filled(n + 1, n, 31);
         DMat Cr(n, n);
         DMatCol Cc(n, n);
         Cr.noalias() = A * B;
