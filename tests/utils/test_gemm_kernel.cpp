@@ -44,9 +44,18 @@ void check_against_reference(const DMat& A, const DMat& B, const CMat& C) {
 }
 
 void check_product(index_type M, index_type K, index_type N) {
+    namespace g = zipper::expression::binary::detail::gemm;
     DMat A = make_filled(M, K, 1), B = make_filled(K, N, 2);
-    DMat C = A * B;  // routed through the blocked kernel for eligible operands
+    DMat C = A * B;  // blocked kernel, or coefficient-based below the threshold
     check_against_reference(A, B, C);
+    // Both paths at every size, whatever the threshold.
+    DMat D(M, N), E(M, N);
+    g::gemm_blocked<double>(A, B, D);
+    check_against_reference(A, B, D);
+    if (K > 0) {
+        g::gemm_coeff_based<double>(zipper::cw<1>, A, B, zipper::cw<0>, E);
+        check_against_reference(A, B, E);
+    }
 }
 
 }  // namespace
@@ -609,11 +618,14 @@ TEST_CASE("gemm kernel: tiles of column-major targets are stored directly",
 TEST_CASE("gemm: small products take the coefficient-based path",
           "[gemm][matrix][dense]") {
     namespace g = zipper::expression::binary::detail::gemm;
-    STATIC_CHECK(g::use_coeff_based(6, 6, 6));
-    STATIC_CHECK(!g::use_coeff_based(7, 7, 7));
+    STATIC_CHECK(g::use_coeff_based(1, 1, 1));
+    STATIC_CHECK(!g::use_coeff_based(64, 64, 64));
+    STATIC_CHECK(g::use_coeff_based(g::coeff_based_threshold / 3 - 1,
+                                    g::coeff_based_threshold / 3 - 1,
+                                    g::coeff_based_threshold / 3 - 1));
     STATIC_CHECK(!g::use_coeff_based(4, 4, 0));  // empty inner dimension
     // Results agree on both sides of the threshold, for both target layouts.
-    for (index_type n : {1, 2, 5, 6, 7, 8}) {
+    for (index_type n : {1, 2, 5, 6, 7, 8, 12, 13, 14, 15}) {
         DMat A = make_filled(n, n + 1, 30), B = make_filled(n + 1, n, 31);
         DMat Cr(n, n);
         DMatCol Cc(n, n);

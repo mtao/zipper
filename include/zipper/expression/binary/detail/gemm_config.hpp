@@ -143,14 +143,14 @@ inline constexpr Tile default_tile = [] consteval {
 //
 // Below a size the blocked kernel's fixed costs (packing into padded panels,
 // a full mr×nr tile for a few results, loop setup) outweigh its arithmetic
-// rate, and a plain coefficient-based product is faster. The rule and
-// default are Eigen's (EIGEN_GEMM_TO_COEFFBASED_THRESHOLD): products with
-// m + n + k < threshold skip the kernel. Measured on Zen 3 the crossover is
-// between 6³ and 8³ (m + n + k of 18..24); scripts/tune_gemm.py in
-// zipper-benchmark reports it per machine.
+// rate, and the register-accumulating coefficient-based product
+// (gemm_coeff_based) is faster. Products with m + n + k < threshold skip the
+// kernel -- the same rule as Eigen's EIGEN_GEMM_TO_COEFFBASED_THRESHOLD, with
+// a larger default because the small path vectorizes along C's columns. The
+// best value depends on the machine; override it with the macro.
 
 #if !defined(ZIPPER_GEMM_TO_COEFFBASED_THRESHOLD)
-#define ZIPPER_GEMM_TO_COEFFBASED_THRESHOLD 20
+#define ZIPPER_GEMM_TO_COEFFBASED_THRESHOLD 40
 #endif
 
 /// m + n + k below which a dynamic product skips the blocked kernel.

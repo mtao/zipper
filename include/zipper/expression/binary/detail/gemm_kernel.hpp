@@ -92,6 +92,12 @@ template <typename Z>
 concept ColumnContiguous =
     fastest_dimension<Z> == 0 && requires(Z &z) { &z(0, 0); };
 
+/// A view whose columns are contiguous in memory and addressable, so
+/// SIMD vectors can be loaded from `&z(i, j)` (read-only use).
+template <typename Z>
+concept ColumnContiguousReadable =
+    fastest_dimension<Z> == 0 && requires(const Z &z) { &z(0, 0); };
+
 #if defined(ZIPPER_GEMM_NO_DIRECT_STORE)
 inline constexpr bool direct_store_enabled = false;
 #else
@@ -491,19 +497,80 @@ void gemm_coeff_based(Alpha alpha,
         scale<T>(C, beta);
         return;
     }
-    for (index_type i = 0; i < C.rows(); ++i) {
-        const auto a = A.row(i);
-        for (index_type j = 0; j < C.cols(); ++j) {
-            T v = a.dot(B.col(j));
-            if constexpr (!zipper::concepts::StaticScalarOf<Alpha, 1>) {
-                v *= static_cast<T>(alpha);
-            }
-            if constexpr (zipper::concepts::StaticScalarOf<Beta, 0>) {
-                C(i, j) = v;
-            } else if constexpr (zipper::concepts::StaticScalarOf<Beta, 1>) {
-                C(i, j) += v;
+    // Each column of C is a sum of scaled columns of A: axpy along C's
+    // contiguous dimension, which vectorizes exactly (a dot product per
+    // coefficient is a reduction the compiler may not reorder, and walks B
+    // with a stride). A row-major C is computed as C^T = B^T A^T, whose
+    // columns are contiguous.
+    if constexpr (fastest_dimension<decltype(C)> == 1) {
+        auto Ct = C.transpose();
+        return gemm_coeff_based<T>(
+            alpha, B.transpose(), A.transpose(), beta, Ct);
+    } else {
+        const auto b = [&](index_type k, index_type j) -> T {
+            if constexpr (zipper::concepts::StaticScalarOf<Alpha, 1>) {
+                return B(k, j);
             } else {
-                C(i, j) = static_cast<T>(beta) * C(i, j) + v;
+                return static_cast<T>(alpha) * B(k, j);
+            }
+        };
+        if constexpr (ColumnContiguous<decltype(C)>
+                      && ColumnContiguousReadable<decltype(A)>) {
+            // Rows i..i+V::size() of column j accumulate in one register
+            // across all of k (loaded / stored once).
+            namespace stdx = std::experimental;
+            const auto rows = [&]<typename V>(index_type i, index_type j) {
+                V acc;
+                if constexpr (zipper::concepts::StaticScalarOf<Beta, 0>) {
+                    acc = T(0);
+                } else {
+                    acc.copy_from(&C(i, j), stdx::element_aligned);
+                    if constexpr (!zipper::concepts::StaticScalarOf<Beta, 1>) {
+                        acc *= V(static_cast<T>(beta));
+                    }
+                }
+                for (index_type k = 0; k < A.cols(); ++k) {
+                    acc += V(&A(i, k), stdx::element_aligned) * V(b(k, j));
+                }
+                acc.copy_to(&C(i, j), stdx::element_aligned);
+            };
+            using full = simd_vec<T, simd_width<T>>;
+            // The remainder after full vectors is < W rows; its binary digits
+            // pick each narrower power-of-two width (W/2, W/4, ..., 1) at
+            // most once.
+            const auto tail = [&]<index_type V>(this const auto &self,
+                                               index_type i,
+                                               index_type j) -> void {
+                if constexpr (V >= 1) {
+                    if (C.rows() - i >= V) {
+                        rows.template operator()<simd_vec<T, V>>(i, j);
+                        i += V;
+                    }
+                    self.template operator()<V / 2>(i, j);
+                }
+            };
+            for (index_type j = 0; j < C.cols(); ++j) {
+                index_type i = 0;
+                for (; i + full::size() <= C.rows(); i += full::size()) {
+                    rows.template operator()<full>(i, j);
+                }
+                tail.template operator()<full::size() / 2>(i, j);
+            }
+        } else {
+            // Non-contiguous / lazy operands: the same order through views.
+            for (index_type j = 0; j < C.cols(); ++j) {
+                auto c = C.col(j);
+                index_type k0 = 0;
+                if constexpr (zipper::concepts::StaticScalarOf<Beta, 0>) {
+                    c.noalias() = b(0, j) * A.col(0);
+                    k0 = 1;
+                } else if constexpr (!zipper::concepts::StaticScalarOf<Beta,
+                                                                       1>) {
+                    c *= static_cast<T>(beta);
+                }
+                for (index_type k = k0; k < A.cols(); ++k) {
+                    c.noalias() += b(k, j) * A.col(k);
+                }
             }
         }
     }
