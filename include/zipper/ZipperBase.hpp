@@ -199,6 +199,13 @@ class ZipperBase
     /// Explicitly promise that RHS reads do not alias this destination's
     /// storage. Available for types that accept the NoAliasDestination concept.
     /// Rank-zero RHS preserves the shape.
+    ///
+    /// Plain assignment proves independence from types alone (no address
+    /// checks; see AssignmentSafety.hpp): coefficient-wise expressions of
+    /// owning arrays into an owning array, and constants into anything, are
+    /// written in place. Whenever a view (slice, span, transpose) is involved
+    /// on either side, plain assignment goes through a temporary; use
+    /// noalias() to write in place when the operands are known independent.
     template <typename Self>
     auto noalias(this Self &self) -> detail::NoAliasProxy<Self>
         requires detail::NoAliasDestination<Self>

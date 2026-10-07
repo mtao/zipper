@@ -198,12 +198,12 @@ void AssignHelper<From, To>::assign(const From &from, To &to) {
         !assigning_from_infinite && ToTraits::is_resizable();
 
     // A pointwise proof covers coefficient evaluation, not a custom evaluator's
-    // write order. Prove against live storage before any resize or mutation.
-    if constexpr (!HasCustomAssignStrategy<FromTraits>) {
-        if (assignment_is_safe(from, to)) {
-            evaluate_to(from, to);
-            return;
-        }
+    // write order. The proof is by type (assignment_is_safe_v); it also
+    // covers resizing the destination to from's shape first.
+    if constexpr (!HasCustomAssignStrategy<FromTraits>
+                  && assignment_is_safe_v<From, To>) {
+        assign_independent(from, to);
+        return;
     }
 
     if constexpr (scalar_broadcast && !HasCustomAssignStrategy<FromTraits>) {
@@ -282,11 +282,10 @@ void AssignHelper<From, To>::accumulate(const From &from, To &to, Alpha alpha) {
     // Same-index reads of `to` are fine for a coefficient-wise update; a
     // custom strategy (e.g. a product) reads across indices, so it is never
     // proven safe here.
-    if constexpr (!HasCustomAssignStrategy<from_traits>) {
-        if (assignment_is_safe(from, to)) {
-            accumulate_independent(from, to, alpha);
-            return;
-        }
+    if constexpr (!HasCustomAssignStrategy<from_traits>
+                  && assignment_is_safe_v<From, To>) {
+        accumulate_independent(from, to, alpha);
+        return;
     }
     using POS = nullary::
         MDArray<value_type, extents_type, layout_policy, accessor_policy>;

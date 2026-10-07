@@ -27,8 +27,6 @@ struct PureNegate {
     auto operator()(double value) const -> double { return -value; }
 };
 
-struct CustomAccessor : zipper::default_accessor_policy<double> {};
-
 struct OpaqueValue {
     double value;
     auto operator-() const -> OpaqueValue { return {-value}; }
@@ -70,129 +68,89 @@ TEST_CASE("assignment_safety_dense_pointwise", "[expression][assignment_safety]"
     CHECK(assignment_is_safe(a, independent_left));
 }
 
-TEST_CASE("assignment_safety_overlapping_spans", "[expression][assignment_safety]") {
+// Views may share storage with anything; the proof never looks at addresses,
+// so no view is proven, however its memory is placed. `noalias()` is the
+// caller's statement that a view-based assignment is independent.
+TEST_CASE("assignment_safety_views_are_not_proven", "[expression][assignment_safety]") {
     std::array<double, 10> data{};
     using Span = MDSpan<double, extents<4>>;
     Span a(std::span<double, 4>(data.data(), 4));
     Span same(std::span<double, 4>(data.data(), 4));
     Span shifted(std::span<double, 4>(data.data() + 1, 4));
-    Span partial(std::span<double, 4>(data.data() + 3, 4));
     Span adjacent(std::span<double, 4>(data.data() + 4, 4));
     MDSpan<const double, extents<4>> read(std::span<const double, 4>(data.data(), 4));
-    CHECK(assignment_is_safe(same, a));
-    CHECK(assignment_is_safe(read, a));
-    CHECK_FALSE(assignment_is_safe(a, read));
-    MDSpan<const double, extents<4>> independent_read(
-        std::span<const double, 4>(data.data() + 4, 4));
-    CHECK(assignment_is_safe(independent_read, a));
+    CHECK_FALSE(assignment_is_safe(same, a));
+    CHECK_FALSE(assignment_is_safe(read, a));
+    CHECK_FALSE(assignment_is_safe(a, read));  // const destination
     CHECK_FALSE(assignment_is_safe(shifted, a));
-    CHECK_FALSE(assignment_is_safe(a, shifted));
-    CHECK_FALSE(assignment_is_safe(partial, a));
-    CHECK_FALSE(assignment_is_safe(a, partial));
-    CHECK(assignment_is_safe(adjacent, a));
-    CHECK(assignment_is_safe(a, adjacent));
-    const Operation unsafe_sum(a, shifted, std::plus<>{});
-    CHECK_FALSE(assignment_is_safe(unsafe_sum, a));
-    const CoefficientWiseOperation unsafe_neg(unsafe_sum, std::negate<>{});
-    CHECK_FALSE(assignment_is_safe(unsafe_neg, a));
-    const Operation safe_sum(read, adjacent, std::plus<>{});
-    CHECK(assignment_is_safe(safe_sum, a));
+    CHECK_FALSE(assignment_is_safe(adjacent, a));
+    const Operation sum(read, adjacent, std::plus<>{});
+    CHECK_FALSE(assignment_is_safe(sum, a));
+
+    // An owning destination does not make a view source safe (the view may
+    // look into the destination), nor the other way round.
+    MDArray<double, extents<4>> owned;
+    CHECK_FALSE(assignment_is_safe(adjacent, owned));
+    CHECK_FALSE(assignment_is_safe(owned, a));
+
+    // Generators read nothing, so they are safe into views.
+    CHECK(assignment_is_safe(Zero<double, 4>{}, a));
+    CHECK(assignment_is_safe(Constant<double>(1.0), a));
+    const ScalarOperation scaled(Constant<double, 4>(1.0), 2.0,
+                                 std::multiplies<double>{});
+    CHECK(assignment_is_safe(scaled, a));
+
+    // Slices and transposes of owning arrays are views too.
+    zipper::Matrix<double, zipper::dynamic_extent, zipper::dynamic_extent> m(4, 5);
+    auto blk = m.slice(zipper::slice(1, 2), zipper::slice(0, 3));
+    CHECK(assignment_is_safe(Zero<double, 2, 3>{}, blk.expression()));
+    CHECK_FALSE(assignment_is_safe(blk.expression(), m.expression()));
 }
 
-TEST_CASE("assignment_safety_mapping_and_backing_span", "[expression][assignment_safety]") {
-    std::array<double, 4> data{};
-    MDSpan<double, extents<2, 2>, zipper::storage::layout_right> right(data);
-    MDSpan<double, extents<2, 2>, zipper::storage::layout_left> left(data);
-    CHECK_FALSE(assignment_is_safe(left, right));
-    CHECK_FALSE(assignment_is_safe(right, left));
-    CHECK(assignment_is_safe(left, left));
-
-    // A malformed logical shape must not allow out-of-bounds end arithmetic.
-    using DynamicSpan = MDSpan<double, zipper::dextents<2>>;
-    DynamicSpan short_span(typename DynamicSpan::linear_accessor_type(data),
-                           zipper::dextents<2>(2, 3));
-    MDArray<double, zipper::dextents<2>> destination(zipper::dextents<2>(2, 3));
-    CHECK_FALSE(assignment_is_safe(short_span, destination));
-    CHECK_FALSE(assignment_is_safe(destination, short_span));
-
-    MDSpan<double, extents<4>, zipper::storage::layout_right, CustomAccessor> custom(data);
-    MDSpan<double, extents<4>> plain(data);
-    CHECK_FALSE(assignment_is_safe(custom, plain));
-    CHECK_FALSE(assignment_is_safe(plain, custom));
+TEST_CASE("assignment_safety_is_a_compile_time_property",
+          "[expression][assignment_safety]") {
+    using zipper::expression::detail::assignment_is_safe_v;
+    using A = MDArray<double, zipper::dextents<2>>;
+    using S = MDSpan<double, zipper::dextents<2>>;
+    STATIC_CHECK(assignment_is_safe_v<A, A>);
+    STATIC_CHECK(assignment_is_safe_v<const A &, A>);
+    STATIC_CHECK(assignment_is_safe_v<Operation<const A &, const A &, std::plus<double>>, A>);
+    STATIC_CHECK_FALSE(assignment_is_safe_v<S, A>);
+    STATIC_CHECK_FALSE(assignment_is_safe_v<A, S>);
+    STATIC_CHECK(assignment_is_safe_v<Zero<double>, S>);
 }
 
 TEST_CASE("assignment_safety_shape_and_constants", "[expression][assignment_safety]") {
     MDArray<double, zipper::dextents<2>> a(zipper::dextents<2>(2, 3));
     MDArray<double, zipper::dextents<2>> b(zipper::dextents<2>(3, 2));
-    const auto *before = a.data();
-    CHECK_FALSE(assignment_is_safe(b, a));
-    CHECK(a.extents() == zipper::dextents<2>(2, 3));
-    CHECK(a.data() == before);
+    // Distinct owning arrays never overlap; a shape change is a resize of
+    // the destination before evaluation, which the proof covers.
+    CHECK(assignment_is_safe(b, a));
     CHECK(assignment_is_safe(Constant<double>(4.0), a));
     CHECK(assignment_is_safe(Constant<double, 2, 3>(4.0), a));
-    CHECK_FALSE(assignment_is_safe(Constant<double, 3, 2>(4.0), a));
+    CHECK(assignment_is_safe(Constant<double, 3, 2>(4.0), a));
     CHECK(assignment_is_safe(StaticConstant<double, 0.0>{}, a));
     CHECK(assignment_is_safe(StaticConstant<double, 1.0, 2, 3>{}, a));
-    CHECK_FALSE(assignment_is_safe(StaticConstant<double, 1.0, 3, 2>{}, a));
+    CHECK(assignment_is_safe(StaticConstant<double, 1.0, 3, 2>{}, a));
     // Zero reads nothing: as a source it is safe whatever its element type.
     CHECK(assignment_is_safe(Zero<double, 2, 3>{}, a));
     CHECK(assignment_is_safe(Zero<double>{}, a));
-    CHECK_FALSE(assignment_is_safe(Zero<double, 3, 2>{}, a));
+    CHECK(assignment_is_safe(Zero<double, 3, 2>{}, a));
     // Destinations are only recognized for arithmetic element types (DenseLeaf),
     // so assignments into e.g. std::complex storage are never proven here.
     MDArray<std::complex<double>, zipper::dextents<2>> c(zipper::dextents<2>(2, 3));
     CHECK_FALSE(assignment_is_safe(Zero<std::complex<double>, 2, 3>{}, c));
-    // Storage-free sources are safe for any arithmetic destination expression,
-    // not only dense leaves: e.g. a block slice (set_zero() on a sub-block).
-    zipper::Matrix<double, zipper::dynamic_extent, zipper::dynamic_extent> m(4,
-                                                                             5);
-    auto blk = m.slice(zipper::slice(1, 2), zipper::slice(0, 3));
-    CHECK(assignment_is_safe(Zero<double, 2, 3>{}, blk.expression()));
-    CHECK(assignment_is_safe(Constant<double>(1.0), blk.expression()));
-    CHECK_FALSE(assignment_is_safe(Zero<double, 3, 3>{}, blk.expression()));
-    // Slices that read storage are still not proven (no slice-origin proof).
-    CHECK_FALSE(assignment_is_safe(a, blk.expression()));
     const Constant<double> scalar(2.0);
     const Operation sum(a, scalar, std::plus<>{});
     CHECK(assignment_is_safe(sum, a));
 
     MDArray<double, extents<>> rank_zero;
     CHECK(assignment_is_safe(rank_zero, rank_zero));
-    CHECK_FALSE(assignment_is_safe(rank_zero, a));
+    CHECK(assignment_is_safe(rank_zero, a));  // broadcast from another array
     MDArray<double, zipper::dextents<1>> empty(zipper::dextents<1>(0));
     CHECK(assignment_is_safe(empty, empty));
     MDSpan<double, zipper::dextents<1>> empty_span(std::span<double>{});
-    CHECK(assignment_is_safe(empty_span, empty));
-}
-
-TEST_CASE("assignment_safety_strided_storage", "[expression][assignment_safety]") {
-#if defined(__cpp_lib_mdspan)
-    using Layout = std::layout_stride;
-#else
-    using Layout = MDSPAN_IMPL_STANDARD_NAMESPACE::layout_stride;
-#endif
-    using Span = MDSpan<double, zipper::dextents<1>, Layout>;
-    STATIC_CHECK(zipper::expression::detail::assignment_safety::DenseLeaf<Span>::value);
-    // Mapping constructors are supplied by the integrated mapping branch. Keep
-    // this test ready for that branch without importing any mapping factories.
-    []<typename S>() {
-        using Storage = typename S::linear_accessor_type;
-        using Mapping = typename S::mapping_type;
-        if constexpr (std::is_constructible_v<S, const Storage &, const Mapping &>) {
-            std::array<double, 12> data{};
-            const Mapping mapping(zipper::dextents<1>(3),
-                                  std::array<zipper::index_type, 1>{2});
-            S a(Storage(std::span<double>(data.data(), 5)), mapping);
-            S same(Storage(std::span<double>(data.data(), 5)), mapping);
-            S interleaved(Storage(std::span<double>(data.data() + 1, 5)), mapping);
-            S independent(Storage(std::span<double>(data.data() + 6, 5)), mapping);
-            CHECK(assignment_is_safe(same, a));
-            CHECK(assignment_is_safe(independent, a));
-            // Bounding spans include holes: conservative false negatives are OK.
-            CHECK_FALSE(assignment_is_safe(interleaved, a));
-            CHECK_FALSE(assignment_is_safe(a, interleaved));
-        }
-    }.template operator()<Span>();
+    CHECK_FALSE(assignment_is_safe(empty_span, empty));  // views: never
 }
 
 TEST_CASE("assignment_safety_opaque_dependencies", "[expression][assignment_safety]") {
@@ -221,8 +179,9 @@ TEST_CASE("assignment_safety_opaque_dependencies", "[expression][assignment_safe
     CHECK_FALSE(assignment_is_safe(a, PretendLeaf{}));
     CHECK_FALSE(assignment_is_safe(42, a));
 
+    // Another owning array, of another element type, is still independent.
     MDArray<float, extents<4>> other_type;
-    CHECK_FALSE(assignment_is_safe(other_type, a));
+    CHECK(assignment_is_safe(other_type, a));
     MDArray<OpaqueValue, extents<4>> opaque;
     CHECK_FALSE(assignment_is_safe(opaque, opaque));
     const CoefficientWiseOperation overloaded(opaque, std::negate<>{});
