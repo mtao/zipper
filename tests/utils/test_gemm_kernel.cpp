@@ -635,3 +635,62 @@ TEST_CASE("gemm: small products take the coefficient-based path",
         check_against_reference(A, B, Cc);
     }
 }
+
+// Every row remainder of the register tile (1..mr-1, i.e. every combination
+// of power-of-two edge microkernels) and every column remainder, for both
+// target layouts and element types, with beta != 0 so edge stores must
+// read-modify-write C correctly.
+TEST_CASE("gemm kernel: ragged edge tiles store directly",
+          "[gemm][matrix][dense]") {
+    namespace g = zipper::expression::binary::detail::gemm;
+    auto run = []<typename T>() {
+        using RM = Matrix<T, dynamic_extent, dynamic_extent>;
+        using CM = Matrix<T, dynamic_extent, dynamic_extent, false>;
+        constexpr auto S = g::default_tile<T>;
+        // The edge path is taken: a short / narrow slice of a (transposed)
+        // column-major target is still column-contiguous.
+        using st = static_index_t<S.mr>;
+        CM probe(S.mr, S.nr);
+        STATIC_CHECK(g::ColumnContiguous<decltype(probe.slice(
+                         zipper::slice(0, st{}), zipper::slice(0, 1)))>);
+        RM probe_r(S.mr, S.nr);
+        auto probe_t = probe_r.transpose();
+        STATIC_CHECK(g::ColumnContiguous<decltype(probe_t.slice(
+                         zipper::slice(0, st{}), zipper::slice(0, 1)))>);
+
+        const T tol = std::is_same_v<T, float> ? T(1e-4) : T(1e-12);
+        for (index_type M = 1; M <= S.mr + 9; ++M) {
+            for (index_type N : {index_type(1), S.nr - 1, S.nr + 1, 2 * S.nr + 3}) {
+                const index_type K = 11;
+                RM A(M, K), B(K, N);
+                for (index_type i = 0; i < M; ++i)
+                    for (index_type k = 0; k < K; ++k)
+                        A(i, k) = T((i * 7 + k * 3) % 11) / T(5) - T(1);
+                for (index_type k = 0; k < K; ++k)
+                    for (index_type j = 0; j < N; ++j)
+                        B(k, j) = T((k * 5 + j * 2) % 13) / T(6) - T(1);
+                auto expect = [&](index_type i, index_type j, T c0) {
+                    T ab = 0;
+                    for (index_type k = 0; k < K; ++k) ab += A(i, k) * B(k, j);
+                    return T(0.5) * c0 + T(2) * ab;
+                };
+                RM Cr(M, N);
+                CM Cc(M, N);
+                for (index_type i = 0; i < M; ++i)
+                    for (index_type j = 0; j < N; ++j)
+                        Cr(i, j) = Cc(i, j) = T(i) - T(j);
+                const RM Cr0 = Cr;
+                g::gemm_blocked<T>(T(2), A, B, T(0.5), Cr);
+                g::gemm_blocked<T>(T(2), A, B, T(0.5), Cc);
+                for (index_type i = 0; i < M; ++i)
+                    for (index_type j = 0; j < N; ++j) {
+                        const T e = expect(i, j, Cr0(i, j));
+                        CHECK(Cr(i, j) == Catch::Approx(e).epsilon(tol).margin(tol));
+                        CHECK(Cc(i, j) == Catch::Approx(e).epsilon(tol).margin(tol));
+                    }
+            }
+        }
+    };
+    run.template operator()<double>();
+    run.template operator()<float>();
+}

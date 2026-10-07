@@ -24,6 +24,7 @@
 /// the edge tiles.
 
 #include <algorithm>
+#include <bit>
 #include <array>
 #include <cstddef>
 #include <execution>
@@ -42,6 +43,7 @@
 #include "zipper/expression/binary/detail/gemm_config.hpp"
 #include "zipper/expression/binary/detail/gemm_eligible.hpp"
 #include "zipper/detail/assert.hpp"
+#include "zipper/detail/pow2_chunks.hpp"
 #include "zipper/expression/concepts/capabilities.hpp"
 #include "zipper/storage/layout_traits.hpp"
 #include "zipper/static_scalar.hpp"
@@ -170,20 +172,41 @@ auto microkernel(zipper::concepts::Matrix auto const &Apanel,
 /// Microkernel storing straight from registers into an mr×nr tile (a slice
 /// of C with contiguous columns): tile = beta * tile + Apanel * Bpanel,
 /// without the temporary Matrix. Static beta = 0 never reads the tile.
+/// Only the first `nrows` (<= mr) rows and `ncols` (<= nr) columns are
+/// stored: at C's edges the packed panels are zero-padded, and the padding
+/// is discarded (whole vectors stored as such, a partial one lane by lane).
 template <typename T, Tile S, typename Beta, index_type W = simd_width<T>>
     requires SimdTile<S, W>
 void microkernel_store(zipper::concepts::Matrix auto const &Apanel,
                        zipper::concepts::Matrix auto const &Bpanel,
                        ColumnContiguous auto &&tile,
-                       Beta beta) {
+                       Beta beta,
+                       index_type ncols = S.nr,
+                       index_type nrows = S.mr) {
     namespace stdx = std::experimental;
     constexpr index_type R = S.mr / W;
     using vec = simd_vec<T, W>;
     const auto cv = microkernel_accumulate<T, S, W>(Apanel, Bpanel);
 #pragma GCC unroll 16
     for (index_type t = 0; t < S.nr; ++t) {
+        if (t >= ncols) { break; }
 #pragma GCC unroll 16
         for (index_type r = 0; r < R; ++r) {
+            if ((r + 1) * W > nrows) {
+                // Partial vector at the bottom edge: valid lanes only.
+                for (index_type l = 0; r * W + l < nrows; ++l) {
+                    T &dst = tile(r * W + l, t);
+                    if constexpr (zipper::concepts::StaticScalarOf<Beta, 0>) {
+                        dst = cv[t][r][l];
+                    } else if constexpr (zipper::concepts::StaticScalarOf<Beta,
+                                                                          1>) {
+                        dst += cv[t][r][l];
+                    } else {
+                        dst = static_cast<T>(beta) * dst + cv[t][r][l];
+                    }
+                }
+                break;
+            }
             T *dst = &tile(r * W, t);
             if constexpr (zipper::concepts::StaticScalarOf<Beta, 0>) {
                 cv[t][r].copy_to(dst, stdx::element_aligned);
@@ -272,6 +295,7 @@ void inner_kernel(APanels<T, S> const &Apacked,
                   Beta beta) {
     using mr_t = zipper::static_index_t<S.mr>;
     using nr_t = zipper::static_index_t<S.nr>;
+    constexpr index_type W = simd_width<T>;
     for (auto [j, nr] : blocks(C.cols(), S.nr)) {
         auto Bpanel = Bpacked.row_slice(zipper::slice(j / S.nr * kc, kc));
         for (auto [i, mr] : blocks(C.rows(), S.mr)) {
@@ -285,6 +309,38 @@ void inner_kernel(APanels<T, S> const &Apacked,
                 } else {
                     update_tile<T>(
                         tile, microkernel<T, S>(Apanel, Bpanel), beta);
+                }
+                continue;
+            }
+            // Ragged edge, stored straight into C. When the leftover rows
+            // are a single power of two narrower than a vector pass (e.g. 8
+            // of 16), a microkernel of that height does strictly less work;
+            // otherwise one padded full-height pass is cheaper than several
+            // narrow ones (each re-reads the B panel), and only the valid
+            // rows / columns are stored.
+            using edge_tile_t = decltype(C.slice(zipper::slice(i, mr),
+                                                 zipper::slice(j, nr)));
+            if constexpr (direct_store_enabled
+                          && ColumnContiguous<edge_tile_t>) {
+                auto tile = C.slice(zipper::slice(i, mr), zipper::slice(j, nr));
+                if (mr < S.mr && mr <= W
+                    && std::has_single_bit(static_cast<std::size_t>(mr))) {
+                    // A single power of two: exactly one chunk, of height
+                    // mr (one vector of mr lanes when mr <= W).
+                    zipper::detail::for_each_pow2_chunk<W>(
+                        mr, [&]<index_type V>(index_type r) {
+                            using v_t = zipper::static_index_t<V>;
+                            constexpr Tile E{.mr = V, .nr = S.nr};
+                            microkernel_store<T, E, Beta, V>(
+                                Apanel.row_slice(zipper::slice(r, v_t{})),
+                                Bpanel,
+                                tile,
+                                beta,
+                                nr);
+                        });
+                } else {
+                    microkernel_store<T, S>(
+                        Apanel, Bpanel, tile, beta, nr, mr);
                 }
             } else {
                 const auto c = microkernel<T, S>(Apanel, Bpanel);
@@ -534,27 +590,13 @@ void gemm_coeff_based(Alpha alpha,
                 }
                 acc.copy_to(&C(i, j), stdx::element_aligned);
             };
-            using full = simd_vec<T, simd_width<T>>;
-            // The remainder after full vectors is < W rows; its binary digits
-            // pick each narrower power-of-two width (W/2, W/4, ..., 1) at
-            // most once.
-            const auto tail = [&]<index_type V>(this const auto &self,
-                                               index_type i,
-                                               index_type j) -> void {
-                if constexpr (V >= 1) {
-                    if (C.rows() - i >= V) {
-                        rows.template operator()<simd_vec<T, V>>(i, j);
-                        i += V;
-                    }
-                    self.template operator()<V / 2>(i, j);
-                }
-            };
+            // Full SIMD-width chunks of each column, then each narrower
+            // power-of-two width at most once for the remainder.
             for (index_type j = 0; j < C.cols(); ++j) {
-                index_type i = 0;
-                for (; i + full::size() <= C.rows(); i += full::size()) {
-                    rows.template operator()<full>(i, j);
-                }
-                tail.template operator()<full::size() / 2>(i, j);
+                zipper::detail::for_each_pow2_chunk<simd_width<T>>(
+                    C.rows(), [&]<index_type V>(index_type i) {
+                        rows.template operator()<simd_vec<T, V>>(i, j);
+                    });
             }
         } else {
             // Non-contiguous / lazy operands: the same order through views.
