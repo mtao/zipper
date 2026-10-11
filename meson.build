@@ -94,6 +94,17 @@ else
   endif
 endif
 
+# Parallel execution policies (std::execution::par) for GEMM. With libstdc++
+# these are backed by TBB, which must then be linked by every consumer.
+tbb_opt = get_option('use_tbb')
+tbb_dep = dependency('tbb', required: tbb_opt)
+if tbb_dep.found()
+  message('TBB found — enabling std::execution parallel policies')
+  required_deps += tbb_dep
+else
+  compile_args += '-DZIPPER_GEMM_HAS_STD_EXECUTION=0'
+endif
+
 zipper_dep = declare_dependency(
   dependencies: required_deps,
   include_directories: include_dirs,

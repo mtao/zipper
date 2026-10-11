@@ -21,8 +21,10 @@
 #if __has_include(<experimental/simd>)
 #include <experimental/simd>
 #endif
+#if !defined(ZIPPER_GEMM_HAS_STD_EXECUTION) || ZIPPER_GEMM_HAS_STD_EXECUTION
 #if __has_include(<execution>)
 #include <execution>
+#endif
 #endif
 
 #if !defined(ZIPPER_GEMM_HAS_STD_SIMD)

@@ -10,11 +10,10 @@ test('minmax', test_minmax)
 test_inverse = executable('test_inverse', 'inverse.cpp', dependencies: [zipper_test_dep])
 test('inverse', test_inverse)
 
-# std::execution::par in libstdc++ needs TBB; the parallel test is compiled
-# only when it can be linked.
-tbb_dep = dependency('tbb', required: false)
+# The parallel test is compiled only when zipper was built with TBB
+# (zipper_dep then carries tbb_dep).
 test_gemm_kernel = executable('test_gemm_kernel', 'test_gemm_kernel.cpp',
-  dependencies: [zipper_test_dep, tbb_dep],
+  dependencies: [zipper_test_dep],
   cpp_args: tbb_dep.found() ? ['-DZIPPER_TEST_HAVE_TBB'] : [])
 # Exhaustive (~600k assertions): exceeds the 30s default in debug builds.
 test('gemm_kernel', test_gemm_kernel, timeout: 300)
