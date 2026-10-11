@@ -5,7 +5,7 @@
 #include "zipper/types.hpp"
 
 namespace zipper::storage {
-#if defined(__cpp_lib_mdspan)
+#if defined(ZIPPER_USE_STD_MDSPAN)
 using layout_right = std::layout_right;
 using layout_left = std::layout_left;
 using layout_stride = std::layout_stride;

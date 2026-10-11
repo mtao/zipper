@@ -45,7 +45,7 @@ namespace detail {
         static constexpr rank_type value = 0;
     };
 
-#if !defined(__cpp_lib_mdspan)
+#if !defined(ZIPPER_USE_STD_MDSPAN)
     template <std::size_t Pad, std::size_t Rank>
         requires(Rank > 0)
     struct layout_fastest_dimension<

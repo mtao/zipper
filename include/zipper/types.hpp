@@ -10,7 +10,7 @@
 #pragma GCC diagnostic ignored "-Wunsafe-buffer-usage"
 #else
 #endif
-#if defined(__cpp_lib_mdspan)
+#if defined(ZIPPER_USE_STD_MDSPAN)
 #include <mdspan>
 #else
 #include <mdspan/mdspan.hpp>
@@ -46,7 +46,7 @@ using index_type = std::size_t;
 using rank_type = std::size_t;
 constexpr static index_type dynamic_extent = std::dynamic_extent;
 template <index_type... Extents>
-#if defined(__cpp_lib_mdspan)
+#if defined(ZIPPER_USE_STD_MDSPAN)
 using extents = std::extents<index_type, Extents...>;
 // fully dynamic extents
 template <rank_type N>
