@@ -16,7 +16,8 @@ tbb_dep = dependency('tbb', required: false)
 test_gemm_kernel = executable('test_gemm_kernel', 'test_gemm_kernel.cpp',
   dependencies: [zipper_test_dep, tbb_dep],
   cpp_args: tbb_dep.found() ? ['-DZIPPER_TEST_HAVE_TBB'] : [])
-test('gemm_kernel', test_gemm_kernel)
+# Exhaustive (~600k assertions): exceeds the 30s default in debug builds.
+test('gemm_kernel', test_gemm_kernel, timeout: 300)
 
 test_gemm_tuning = executable('test_gemm_tuning', 'test_gemm_tuning.cpp',
   dependencies: [zipper_test_dep])

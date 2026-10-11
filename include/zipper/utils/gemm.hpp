@@ -28,11 +28,11 @@
 ///   zipper::utils::gemm(std::execution::par, alpha, A, B, beta, C);  // parallel
 /// @endcode
 
-#include <execution>
 #include <type_traits>
 #include <utility>
 
 #include "zipper/concepts/Matrix.hpp"
+#include "zipper/expression/binary/detail/gemm_config.hpp"
 #include "zipper/static_scalar.hpp"
 
 namespace zipper::utils {
@@ -46,7 +46,7 @@ template <typename Policy,
           zipper::concepts::Matrix BType,
           typename Beta,
           zipper::concepts::Matrix CType>
-    requires std::is_execution_policy_v<std::remove_cvref_t<Policy>>
+    requires expression::binary::detail::gemm::ExecutionPolicy<Policy>
              && zipper::concepts::Coefficient<
                  Alpha, typename std::remove_cvref_t<CType>::value_type>
              && zipper::concepts::Coefficient<
@@ -101,7 +101,8 @@ template <typename Alpha,
                  Beta, typename std::remove_cvref_t<CType>::value_type>
 auto gemm(Alpha alpha, const AType &A, const BType &B, Beta beta, CType &&C)
     -> CType && {
-    return gemm(std::execution::seq, alpha, A, B, beta, std::forward<CType>(C));
+    return gemm(expression::binary::detail::gemm::sequenced_policy{},
+                alpha, A, B, beta, std::forward<CType>(C));
 }
 
 } // namespace zipper::utils

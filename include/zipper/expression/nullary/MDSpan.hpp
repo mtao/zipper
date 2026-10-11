@@ -19,19 +19,19 @@ template <typename ElementType,
           typename AccessorPolicy = default_accessor_policy<ElementType>>
 class MDSpan
   : public LinearLayoutExpression<
-        MDSpan<ElementType, Extents, LayoutPolicy, AccessorPolicy>,
         storage::SpanData<ElementType,
                           zipper::detail::ExtentsTraits<Extents>::static_size>,
         Extents,
         LayoutPolicy,
-        AccessorPolicy> {
+        AccessorPolicy,
+        MDSpan<ElementType, Extents, LayoutPolicy, AccessorPolicy>> {
     using base_type = LinearLayoutExpression<
-        MDSpan<ElementType, Extents, LayoutPolicy, AccessorPolicy>,
         storage::SpanData<ElementType,
                           zipper::detail::ExtentsTraits<Extents>::static_size>,
         Extents,
         LayoutPolicy,
-        AccessorPolicy>;
+        AccessorPolicy,
+        MDSpan<ElementType, Extents, LayoutPolicy, AccessorPolicy>>;
     using base_type::base_type;
 
     using extents_traits = zipper::detail::ExtentsTraits<Extents>;
