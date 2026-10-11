@@ -1,9 +1,9 @@
 #if !defined(ZIPPER_EXPRESSION_NULLARY_MDSPAN_HPP)
 #define ZIPPER_EXPRESSION_NULLARY_MDSPAN_HPP
 
-#include "zipper/detail/NoAliasTraits.hpp"
 #include "LinearLayoutExpression.hpp"
 #include "zipper/detail/ExtentsTraits.hpp"
+#include "zipper/detail/NoAliasTraits.hpp"
 #include "zipper/expression/detail/AssignHelper.hpp"
 #include "zipper/storage/SpanData.hpp"
 #include "zipper/storage/layout_types.hpp"
@@ -13,143 +13,162 @@
 
 namespace zipper::expression::nullary {
 
-template <typename ElementType, typename Extents,
+template <typename ElementType,
+          typename Extents,
           typename LayoutPolicy = default_layout_policy,
           typename AccessorPolicy = default_accessor_policy<ElementType>>
 class MDSpan
-    : public LinearLayoutExpression<
-          storage::SpanData<
-              ElementType, zipper::detail::ExtentsTraits<Extents>::static_size>,
-          Extents, LayoutPolicy, AccessorPolicy,
-          MDSpan<ElementType, Extents, LayoutPolicy, AccessorPolicy>> {
+  : public LinearLayoutExpression<
+        MDSpan<ElementType, Extents, LayoutPolicy, AccessorPolicy>,
+        storage::SpanData<ElementType,
+                          zipper::detail::ExtentsTraits<Extents>::static_size>,
+        Extents,
+        LayoutPolicy,
+        AccessorPolicy> {
+    using base_type = LinearLayoutExpression<
+        MDSpan<ElementType, Extents, LayoutPolicy, AccessorPolicy>,
+        storage::SpanData<ElementType,
+                          zipper::detail::ExtentsTraits<Extents>::static_size>,
+        Extents,
+        LayoutPolicy,
+        AccessorPolicy>;
+    using base_type::base_type;
 
-  using base_type = LinearLayoutExpression<
-      storage::SpanData<ElementType,
-                        zipper::detail::ExtentsTraits<Extents>::static_size>,
-      Extents, LayoutPolicy, AccessorPolicy,
-      MDSpan<ElementType, Extents, LayoutPolicy, AccessorPolicy>>;
-  using base_type::base_type;
+    using extents_traits = zipper::detail::ExtentsTraits<Extents>;
 
-  using extents_traits = zipper::detail::ExtentsTraits<Extents>;
+  public:
+    using self_type =
+        MDSpan<ElementType, Extents, LayoutPolicy, AccessorPolicy>;
+    using extents_type = Extents;
 
-public:
-  using self_type = MDSpan<ElementType, Extents, LayoutPolicy, AccessorPolicy>;
-  using extents_type = Extents;
+    /// Converting constructor: allows MDSpan<T,...> -> MDSpan<const T,...>
+    template <typename OtherElementType,
+              typename OtherLayoutPolicy,
+              typename OtherAccessorPolicy>
+    MDSpan(const MDSpan<OtherElementType,
+                        Extents,
+                        OtherLayoutPolicy,
+                        OtherAccessorPolicy> &other)
+        requires(std::is_const_v<ElementType>
+                 && !std::is_const_v<OtherElementType>
+                 && std::is_same_v<std::remove_cv_t<ElementType>,
+                                   std::remove_cv_t<OtherElementType>>)
+      : base_type(
+            typename base_type::linear_accessor_type(other.linear_accessor()),
+            other.extents()) {}
 
-  /// Converting constructor: allows MDSpan<T,...> -> MDSpan<const T,...>
-  template <typename OtherElementType, typename OtherLayoutPolicy,
-            typename OtherAccessorPolicy>
-  MDSpan(const MDSpan<OtherElementType, Extents, OtherLayoutPolicy,
-                      OtherAccessorPolicy> &other)
-    requires(std::is_const_v<ElementType> &&
-             !std::is_const_v<OtherElementType> &&
-             std::is_same_v<std::remove_cv_t<ElementType>,
-                            std::remove_cv_t<OtherElementType>>)
-      : base_type(typename base_type::linear_accessor_type(other.linear_accessor()),
-                  other.extents()) {}
-
-  /// Constructor from std::span with matching static extent
-  template <std::size_t N>
-  MDSpan(std::span<ElementType, N> s)
-    requires(extents_traits::is_static && N == extents_traits::static_size)
+    /// Constructor from std::span with matching static extent
+    template <std::size_t N>
+    MDSpan(std::span<ElementType, N> s)
+        requires(extents_traits::is_static && N == extents_traits::static_size)
       : base_type(typename base_type::linear_accessor_type(s)) {}
 
-  /// Constructor from std::span with dynamic extent (rank-1 only)
-  MDSpan(std::span<ElementType, std::dynamic_extent> s)
-    requires(!extents_traits::is_static && extents_type::rank() == 1)
+    /// Constructor from std::span with dynamic extent (rank-1 only)
+    MDSpan(std::span<ElementType, std::dynamic_extent> s)
+        requires(!extents_traits::is_static && extents_type::rank() == 1)
       : base_type(typename base_type::linear_accessor_type(s),
                   extents_type(s.size())) {}
 
-  /// Explicit constructor from std::span with dynamic extent into static
-  /// extents. The size is checked at runtime (ZIPPER_ASSERT).
-  explicit MDSpan(std::span<ElementType, std::dynamic_extent> s)
-    requires(extents_traits::is_static)
+    /// Explicit constructor from std::span with dynamic extent into static
+    /// extents. The size is checked at runtime (ZIPPER_ASSERT).
+    explicit MDSpan(std::span<ElementType, std::dynamic_extent> s)
+        requires(extents_traits::is_static)
       : base_type(typename base_type::linear_accessor_type(
             std::span<ElementType, extents_traits::static_size>(
-                s.data(), extents_traits::static_size))) {
-    ZIPPER_ASSERT(s.size() == extents_traits::static_size);
-  }
+                s.data(),
+                extents_traits::static_size))) {
+        ZIPPER_ASSERT(s.size() == extents_traits::static_size);
+    }
 
-  /// Constructor from std::array (mutable reference, static extents)
-  template <std::size_t N>
-  MDSpan(std::array<std::remove_const_t<ElementType>, N> &arr)
-    requires(!std::is_const_v<ElementType> && extents_traits::is_static &&
-             N == extents_traits::static_size)
+    /// Constructor from std::array (mutable reference, static extents)
+    template <std::size_t N>
+    MDSpan(std::array<std::remove_const_t<ElementType>, N> &arr)
+        requires(!std::is_const_v<ElementType> && extents_traits::is_static
+                 && N == extents_traits::static_size)
       : MDSpan(std::span<ElementType, N>(arr)) {}
 
-  /// Constructor from const std::array (static extents)
-  template <std::size_t N>
-  MDSpan(const std::array<std::remove_const_t<ElementType>, N> &arr)
-    requires(std::is_const_v<ElementType> && extents_traits::is_static &&
-             N == extents_traits::static_size)
+    /// Constructor from const std::array (static extents)
+    template <std::size_t N>
+    MDSpan(const std::array<std::remove_const_t<ElementType>, N> &arr)
+        requires(std::is_const_v<ElementType> && extents_traits::is_static
+                 && N == extents_traits::static_size)
       : MDSpan(std::span<ElementType, N>(arr)) {}
 
-  /// Constructor from std::vector (mutable reference, dynamic extents, rank-1)
-  template <typename Alloc>
-  MDSpan(std::vector<std::remove_const_t<ElementType>, Alloc> &vec)
-    requires(!std::is_const_v<ElementType> && !extents_traits::is_static &&
-             extents_type::rank() == 1)
+    /// Constructor from std::vector (mutable reference, dynamic extents,
+    /// rank-1)
+    template <typename Alloc>
+    MDSpan(std::vector<std::remove_const_t<ElementType>, Alloc> &vec)
+        requires(!std::is_const_v<ElementType> && !extents_traits::is_static
+                 && extents_type::rank() == 1)
       : MDSpan(std::span<ElementType, std::dynamic_extent>(vec)) {}
 
-  /// Constructor from const std::vector (dynamic extents, rank-1)
-  template <typename Alloc>
-  MDSpan(const std::vector<std::remove_const_t<ElementType>, Alloc> &vec)
-    requires(std::is_const_v<ElementType> && !extents_traits::is_static &&
-             extents_type::rank() == 1)
+    /// Constructor from const std::vector (dynamic extents, rank-1)
+    template <typename Alloc>
+    MDSpan(const std::vector<std::remove_const_t<ElementType>, Alloc> &vec)
+        requires(std::is_const_v<ElementType> && !extents_traits::is_static
+                 && extents_type::rank() == 1)
       : MDSpan(std::span<ElementType, std::dynamic_extent>(vec)) {}
 
-  /// Constructor from std::mdspan (or zipper::mdspan)
-  /// Constructs from a data pointer + extents taken from the mdspan.
-  template <typename OtherLayout, typename OtherAccessor>
-  MDSpan(zipper::mdspan<ElementType, Extents, OtherLayout, OtherAccessor> m)
-      : base_type(
-            typename base_type::linear_accessor_type(
-                std::span<ElementType, extents_traits::static_size>(
-                    m.data_handle(), extents_traits::size(m.extents()))),
-            m.extents()) {}
+    /// Constructor from std::mdspan (or zipper::mdspan)
+    /// Constructs from a data pointer + extents taken from the mdspan.
+    template <typename OtherLayout, typename OtherAccessor>
+    MDSpan(zipper::mdspan<ElementType, Extents, OtherLayout, OtherAccessor> m)
+      : base_type(typename base_type::linear_accessor_type(
+                      std::span<ElementType, extents_traits::static_size>(
+                          m.data_handle(),
+                          extents_traits::size(m.extents()))),
+                  m.extents()) {}
 
-  /// Constructor from std::mdspan with const element type conversion
-  template <typename OtherElementType, typename OtherLayout, typename OtherAccessor>
-  MDSpan(zipper::mdspan<OtherElementType, Extents, OtherLayout, OtherAccessor> m)
-    requires(std::is_const_v<ElementType> &&
-             !std::is_const_v<OtherElementType> &&
-             std::is_same_v<std::remove_cv_t<ElementType>,
-                            std::remove_cv_t<OtherElementType>>)
-      : base_type(
-            typename base_type::linear_accessor_type(
-                std::span<ElementType, extents_traits::static_size>(
-                    m.data_handle(), extents_traits::size(m.extents()))),
-            m.extents()) {}
+    /// Constructor from std::mdspan with const element type conversion
+    template <typename OtherElementType,
+              typename OtherLayout,
+              typename OtherAccessor>
+    MDSpan(
+        zipper::mdspan<OtherElementType, Extents, OtherLayout, OtherAccessor> m)
+        requires(std::is_const_v<ElementType>
+                 && !std::is_const_v<OtherElementType>
+                 && std::is_same_v<std::remove_cv_t<ElementType>,
+                                   std::remove_cv_t<OtherElementType>>)
+      : base_type(typename base_type::linear_accessor_type(
+                      std::span<ElementType, extents_traits::static_size>(
+                          m.data_handle(),
+                          extents_traits::size(m.extents()))),
+                  m.extents()) {}
 
-  template <zipper::concepts::Expression V>
-  void assign(const V &v)
-    requires(!std::is_const_v<ElementType> &&
-             zipper::utils::extents::assignable_extents_v<
-                 typename V::extents_type, extents_type>)
-  {
-    expression::detail::AssignHelper<V, self_type>::assign(v, *this);
-  }
+    template <zipper::concepts::Expression V>
+    void assign(const V &v)
+        requires(!std::is_const_v<ElementType>
+                 && zipper::utils::extents::assignable_extents_v<
+                     typename V::extents_type,
+                     extents_type>)
+    {
+        expression::detail::AssignHelper<V, self_type>::assign(v, *this);
+    }
 
-  /// MDSpan borrows external memory — make_owned() deep-copies into an MDArray.
-  /// Defined out-of-line (after MDArray.hpp is included) because MDArray
-  /// depends on MDSpan and not vice versa.
-  auto make_owned() const;
+    /// MDSpan borrows external memory — make_owned() deep-copies into an
+    /// MDArray. Defined out-of-line (after MDArray.hpp is included) because
+    /// MDArray depends on MDSpan and not vice versa.
+    auto make_owned() const;
 };
 } // namespace zipper::expression::nullary
 
 namespace zipper::expression {
 /// ExpressionTraits for MDSpan forwards to the LinearLayoutExpression traits.
-template <typename ElementType, typename Extents, typename LayoutPolicy,
+template <typename ElementType,
+          typename Extents,
+          typename LayoutPolicy,
           typename AccessorPolicy>
-struct detail::ExpressionTraits<nullary::MDSpan<
-    ElementType, Extents, LayoutPolicy, AccessorPolicy>>
-    : public detail::ExpressionTraits<nullary::LinearLayoutExpression<
-          storage::SpanData<ElementType,
-                            zipper::detail::ExtentsTraits<Extents>::static_size>,
-          Extents, LayoutPolicy, AccessorPolicy,
-          nullary::MDSpan<ElementType, Extents, LayoutPolicy, AccessorPolicy>>> {
-  /// MDSpan borrows external memory via a span, so it stores references.
-  constexpr static bool stores_references = true;
+struct detail::ExpressionTraits<
+    nullary::MDSpan<ElementType, Extents, LayoutPolicy, AccessorPolicy>>
+  : public detail::ExpressionTraits<nullary::LinearLayoutExpression<
+        storage::SpanData<ElementType,
+                          zipper::detail::ExtentsTraits<Extents>::static_size>,
+        Extents,
+        LayoutPolicy,
+        AccessorPolicy,
+        nullary::MDSpan<ElementType, Extents, LayoutPolicy, AccessorPolicy>>> {
+    /// MDSpan borrows external memory via a span, so it stores references.
+    constexpr static bool stores_references = true;
 };
 } // namespace zipper::expression
 
