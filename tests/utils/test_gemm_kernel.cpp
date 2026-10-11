@@ -498,7 +498,7 @@ TEST_CASE("gemm: small static matrices use the generic fallback",
         for (index_type j = 0; j < 3; ++j) CHECK(C(i, j) == 1.0 + 2.0 * AB(i, j));
 }
 
-#if defined(ZIPPER_TEST_HAVE_TBB)
+#if defined(ZIPPER_TEST_HAVE_TBB) && ZIPPER_GEMM_HAS_STD_EXECUTION
 TEST_CASE("gemm: parallel execution policy", "[gemm][matrix][dense][parallel]") {
     using zipper::cw;
     namespace g = zipper::expression::binary::detail::gemm;

@@ -33,8 +33,13 @@ if not alias_ctad_compiles
   compile_args += '-DZIPPER_DONT_USE_ALIAS_CTAD'
 endif
 
-if not cpp_compiler.has_define('__cpp_lib_mdspan')
-  message('current version of mdspan is insufficient, fetching dependency')
+# Use the standard library's mdspan only if it also provides submdspan
+# (zipper relies on submdspan_mapping). Otherwise use Kokkos mdspan.
+# ZIPPER_USE_STD_MDSPAN is propagated so headers make the same choice.
+if cpp_compiler.has_define('__cpp_lib_submdspan', prefix: '#include <version>')
+  compile_args += '-DZIPPER_USE_STD_MDSPAN'
+else
+  message('standard library lacks submdspan, using Kokkos mdspan')
   if get_option('use_mdspan_subproject')
     mdspan_proj = subproject('mdspan')
     mdspan_dep = mdspan_proj.get_variable('mdspan_dep')
@@ -92,6 +97,17 @@ else
   else
     message('SuiteSparse not found — sparse direct solvers disabled')
   endif
+endif
+
+# Parallel execution policies (std::execution::par) for GEMM. With libstdc++
+# these are backed by TBB, which must then be linked by every consumer.
+tbb_opt = get_option('use_tbb')
+tbb_dep = dependency('tbb', required: tbb_opt)
+if tbb_dep.found()
+  message('TBB found — enabling std::execution parallel policies')
+  required_deps += tbb_dep
+else
+  compile_args += '-DZIPPER_GEMM_HAS_STD_EXECUTION=0'
 endif
 
 zipper_dep = declare_dependency(

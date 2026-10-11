@@ -27,11 +27,9 @@
 #include <bit>
 #include <array>
 #include <cstddef>
-#include <execution>
 #include <thread>
 #include <tuple>
 #include <vector>
-#include <experimental/simd>
 #include <ranges>
 #include <type_traits>
 
@@ -62,10 +60,10 @@ using BPanels =
 
 /// Split [0, n) into consecutive (offset, size) blocks of at most b.
 constexpr auto blocks(index_type n, index_type b) {
-    return std::views::iota(index_type{0}, n) | std::views::chunk(b)
-           | std::views::transform([](auto r) -> auto {
-                 return std::pair{
-                     r.front(), static_cast<index_type>(std::ranges::size(r))};
+    return std::views::iota(index_type{0}, (n + b - 1) / b)
+           | std::views::transform([n, b](index_type k) {
+                 const index_type start = k * b;
+                 return std::pair{start, std::min(b, n - start)};
              });
 }
 
@@ -106,9 +104,6 @@ inline constexpr bool direct_store_enabled = false;
 inline constexpr bool direct_store_enabled = true;
 #endif
 
-template <typename T, index_type W>
-using simd_vec = std::experimental::fixed_size_simd<T, W>;
-
 /// The register-tiled microkernel (tutorial's mymul_4x4, generalized):
 /// Apanel is an mr×kc column-major panel, Bpanel a kc×nr row-major panel;
 /// accumulates Apanel * Bpanel as a sum of rank-1 updates a ⊗ b into
@@ -119,7 +114,6 @@ template <typename T, Tile S, index_type W = simd_width<T>>
     microkernel_accumulate(zipper::concepts::Matrix auto const &Apanel,
                            zipper::concepts::Matrix auto const &Bpanel)
         -> std::array<std::array<simd_vec<T, W>, S.mr / W>, S.nr> {
-    namespace stdx = std::experimental;
     constexpr index_type R = S.mr / W;
     using vec = simd_vec<T, W>;
 
@@ -131,7 +125,7 @@ template <typename T, Tile S, index_type W = simd_width<T>>
         std::array<vec, R> av;
 #pragma GCC unroll 16
         for (index_type r = 0; r < R; ++r) {
-            av[r].copy_from(&a(r * W), stdx::element_aligned);
+            av[r].copy_from(&a(r * W), element_aligned);
         }
         // Unroll explicitly: cv[t][r] must use constant indices to stay in
         // registers, and -O2 (unlike -O3) won't fully unroll this early.
@@ -153,7 +147,6 @@ template <typename T, Tile S, index_type W = simd_width<T>>
 auto microkernel(zipper::concepts::Matrix auto const &Apanel,
                  zipper::concepts::Matrix auto const &Bpanel)
     -> zipper::Matrix<T, S.mr, S.nr, false> {
-    namespace stdx = std::experimental;
     constexpr index_type R = S.mr / W;
     const auto cv = microkernel_accumulate<T, S, W>(Apanel, Bpanel);
 
@@ -163,7 +156,7 @@ auto microkernel(zipper::concepts::Matrix auto const &Apanel,
     for (index_type t = 0; t < S.nr; ++t) {
 #pragma GCC unroll 16
         for (index_type r = 0; r < R; ++r) {
-            cv[t][r].copy_to(&C(r * W, t), stdx::element_aligned);
+            cv[t][r].copy_to(&C(r * W, t), element_aligned);
         }
     }
     return C;
@@ -183,7 +176,6 @@ void microkernel_store(zipper::concepts::Matrix auto const &Apanel,
                        Beta beta,
                        index_type ncols = S.nr,
                        index_type nrows = S.mr) {
-    namespace stdx = std::experimental;
     constexpr index_type R = S.mr / W;
     using vec = simd_vec<T, W>;
     const auto cv = microkernel_accumulate<T, S, W>(Apanel, Bpanel);
@@ -209,13 +201,13 @@ void microkernel_store(zipper::concepts::Matrix auto const &Apanel,
             }
             T *dst = &tile(r * W, t);
             if constexpr (zipper::concepts::StaticScalarOf<Beta, 0>) {
-                cv[t][r].copy_to(dst, stdx::element_aligned);
+                cv[t][r].copy_to(dst, element_aligned);
             } else {
-                vec old(dst, stdx::element_aligned);
+                vec old(dst, element_aligned);
                 if constexpr (!zipper::concepts::StaticScalarOf<Beta, 1>) {
                     old *= vec(static_cast<T>(beta));
                 }
-                (old + cv[t][r]).copy_to(dst, stdx::element_aligned);
+                (old + cv[t][r]).copy_to(dst, element_aligned);
             }
         }
     }
@@ -389,7 +381,7 @@ auto packing_buffer(index_type rows, index_type cols) -> Buffer & {
 /// C must not alias A or B.
 template <typename T,
           Tile S = default_tile<T>,
-          ExecutionPolicy Policy = std::execution::sequenced_policy,
+          ExecutionPolicy Policy = sequenced_policy,
           zipper::concepts::Coefficient<T> Alpha,
           zipper::concepts::Coefficient<T> Beta>
     requires SimdTile<S, simd_width<T>>
@@ -441,7 +433,7 @@ void gemm_blocked(Alpha alpha,
 
         constexpr bool parallel =
             !std::is_same_v<std::remove_cvref_t<Policy>,
-                            std::execution::sequenced_policy>;
+                            sequenced_policy>;
         const auto [kc_max, nc_max, mc_step] = [&] {
             const auto [kc, mc, nc] = config.blocks;
             if constexpr (parallel) {
@@ -490,6 +482,7 @@ void gemm_blocked(Alpha alpha,
                                      (A.rows() + mc_step - 1) / mc_step)
                     | std::views::transform(
                         [&](index_type b) { return b * mc_step; });
+#if ZIPPER_GEMM_HAS_STD_EXECUTION
                 if constexpr (parallel) {
                     // Parallel algorithms want forward iterators over real
                     // references; materialize the (few) block offsets.
@@ -499,7 +492,9 @@ void gemm_blocked(Alpha alpha,
                                   offsets.begin(),
                                   offsets.end(),
                                   row_block);
-                } else {
+                } else
+#endif
+                {
                     std::ranges::for_each(starts, row_block);
                 }
             }
@@ -510,7 +505,7 @@ void gemm_blocked(Alpha alpha,
 /// C = A * B (alpha = 1, beta = 0).
 template <typename T,
           Tile S = default_tile<T>,
-          ExecutionPolicy Policy = std::execution::sequenced_policy>
+          ExecutionPolicy Policy = sequenced_policy>
     requires SimdTile<S, simd_width<T>>
 void gemm_blocked(zipper::concepts::Matrix auto const &A,
                   zipper::concepts::Matrix auto const &B,
@@ -574,21 +569,20 @@ void gemm_coeff_based(Alpha alpha,
                       && ColumnContiguousReadable<decltype(A)>) {
             // Rows i..i+V::size() of column j accumulate in one register
             // across all of k (loaded / stored once).
-            namespace stdx = std::experimental;
             const auto rows = [&]<typename V>(index_type i, index_type j) {
                 V acc;
                 if constexpr (zipper::concepts::StaticScalarOf<Beta, 0>) {
                     acc = T(0);
                 } else {
-                    acc.copy_from(&C(i, j), stdx::element_aligned);
+                    acc.copy_from(&C(i, j), element_aligned);
                     if constexpr (!zipper::concepts::StaticScalarOf<Beta, 1>) {
                         acc *= V(static_cast<T>(beta));
                     }
                 }
                 for (index_type k = 0; k < A.cols(); ++k) {
-                    acc += V(&A(i, k), stdx::element_aligned) * V(b(k, j));
+                    acc += V(&A(i, k), element_aligned) * V(b(k, j));
                 }
-                acc.copy_to(&C(i, j), stdx::element_aligned);
+                acc.copy_to(&C(i, j), element_aligned);
             };
             // Full SIMD-width chunks of each column, then each narrower
             // power-of-two width at most once for the remainder.
@@ -630,7 +624,7 @@ template <typename Alpha,
           typename BExpr,
           typename Beta,
           typename CExpr,
-          ExecutionPolicy Policy = std::execution::sequenced_policy>
+          ExecutionPolicy Policy = sequenced_policy>
 void gemm(Alpha alpha,
           const AExpr &A_,
           const BExpr &B_,

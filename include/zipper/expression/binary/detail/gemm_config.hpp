@@ -10,16 +10,105 @@
 /// affects results, only speed.
 
 #include <algorithm>
+#include <array>
 #include <cstddef>
-#include <execution>
-#include <experimental/simd>
 #include <type_traits>
+#include <version>
+
+// Optional standard library features. libc++ (Apple Clang) ships neither
+// <experimental/simd> nor the parallel algorithms, so both have portable
+// fallbacks below (forceable by defining ZIPPER_GEMM_HAS_STD_* to 0).
+#if __has_include(<experimental/simd>)
+#include <experimental/simd>
+#endif
+
+#if !defined(ZIPPER_GEMM_HAS_STD_SIMD)
+#if defined(__cpp_lib_experimental_parallel_simd)
+#define ZIPPER_GEMM_HAS_STD_SIMD 1
+#else
+#define ZIPPER_GEMM_HAS_STD_SIMD 0
+#endif
+#endif
+#if !defined(ZIPPER_GEMM_HAS_STD_EXECUTION)
+#if defined(__cpp_lib_execution)
+#define ZIPPER_GEMM_HAS_STD_EXECUTION 1
+#else
+#define ZIPPER_GEMM_HAS_STD_EXECUTION 0
+#endif
+#endif
+#if ZIPPER_GEMM_HAS_STD_EXECUTION
+#include <execution>
+#endif
 
 #include "zipper/types.hpp"
 
 namespace zipper::expression::binary::detail::gemm {
 
 using index_type = zipper::index_type;
+
+// ── Portability shims ───────────────────────────────────────────────────
+
+#if ZIPPER_GEMM_HAS_STD_SIMD
+template <typename T, index_type W>
+using simd_vec = std::experimental::fixed_size_simd<T, W>;
+inline constexpr auto element_aligned = std::experimental::element_aligned;
+
+template <typename T>
+inline constexpr index_type native_vector_bytes =
+    std::experimental::native_simd<T>::size() * sizeof(T);
+#else
+struct element_aligned_tag {};
+inline constexpr element_aligned_tag element_aligned{};
+
+/// Minimal stand-in for std::experimental::fixed_size_simd: the operations
+/// the microkernel uses, on a plain array the optimizer can vectorize.
+template <typename T, index_type W>
+struct simd_vec {
+    std::array<T, W> v{};
+
+    constexpr simd_vec() = default;
+    constexpr simd_vec(T x) { v.fill(x); } // broadcast
+    simd_vec(const T *p, element_aligned_tag) { copy_from(p, element_aligned); }
+
+    void copy_from(const T *p, element_aligned_tag) {
+        for (index_type i = 0; i < W; ++i) { v[i] = p[i]; }
+    }
+    void copy_to(T *p, element_aligned_tag) const {
+        for (index_type i = 0; i < W; ++i) { p[i] = v[i]; }
+    }
+    auto operator+=(const simd_vec &o) -> simd_vec & {
+        for (index_type i = 0; i < W; ++i) { v[i] += o.v[i]; }
+        return *this;
+    }
+    auto operator*=(const simd_vec &o) -> simd_vec & {
+        for (index_type i = 0; i < W; ++i) { v[i] *= o.v[i]; }
+        return *this;
+    }
+    friend auto operator+(simd_vec a, const simd_vec &b) -> simd_vec {
+        return a += b;
+    }
+    friend auto operator*(simd_vec a, const simd_vec &b) -> simd_vec {
+        return a *= b;
+    }
+};
+
+/// No way to query the target: assume 128-bit vectors (SSE / NEON).
+template <typename T>
+inline constexpr index_type native_vector_bytes = 16;
+#endif
+
+#if ZIPPER_GEMM_HAS_STD_EXECUTION
+using sequenced_policy = std::execution::sequenced_policy;
+template <typename P>
+inline constexpr bool is_execution_policy_v =
+    std::is_execution_policy_v<std::remove_cvref_t<P>>;
+#else
+/// Only sequential execution is available without <execution>.
+struct sequenced_policy {};
+template <typename P>
+inline constexpr bool is_execution_policy_v =
+    std::is_same_v<std::remove_cvref_t<P>, sequenced_policy>;
+#endif
 
 // parameters for GEMM:
 // C = alpha * A * B + beta * C
@@ -99,7 +188,7 @@ struct GemmTuning {
 #if defined(ZIPPER_GEMM_VECTOR_BYTES)
         ZIPPER_GEMM_VECTOR_BYTES;
 #else
-        std::experimental::native_simd<T>::size() * sizeof(T);
+        native_vector_bytes<T>;
 #endif
     /// Elements of T per SIMD register (2 doubles under SSE, 4 under AVX2,
     /// 8 under AVX-512; twice that for float).
@@ -211,7 +300,7 @@ constexpr auto blocking_for(CacheSizes c) -> BlockSizes {
 
 /// A standard execution policy (std::execution::seq, par, par_unseq, ...).
 template <typename P>
-concept ExecutionPolicy = std::is_execution_policy_v<std::remove_cvref_t<P>>;
+concept ExecutionPolicy = is_execution_policy_v<P>;
 
 /// Run-time GEMM configuration. The register tile is compile-time (it shapes
 /// the microkernel); cache blocking is plain data; the execution policy
@@ -219,7 +308,7 @@ concept ExecutionPolicy = std::is_execution_policy_v<std::remove_cvref_t<P>>;
 /// std::execution::seq. With libstdc++, parallel policies need TBB linked.
 template <typename T,
           Tile S,
-          ExecutionPolicy Policy = std::execution::sequenced_policy>
+          ExecutionPolicy Policy = sequenced_policy>
 struct GemmConfig {
     static constexpr Tile tile = S;
     BlockSizes blocks = blocking_for<T, S>(CacheSizes{});
