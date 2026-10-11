@@ -21,9 +21,6 @@
 #if __has_include(<experimental/simd>)
 #include <experimental/simd>
 #endif
-#if __has_include(<execution>)
-#include <execution>
-#endif
 
 #if !defined(ZIPPER_GEMM_HAS_STD_SIMD)
 #if defined(__cpp_lib_experimental_parallel_simd)
@@ -38,6 +35,9 @@
 #else
 #define ZIPPER_GEMM_HAS_STD_EXECUTION 0
 #endif
+#endif
+#if ZIPPER_GEMM_HAS_STD_EXECUTION
+#include <execution>
 #endif
 
 #include "zipper/types.hpp"
