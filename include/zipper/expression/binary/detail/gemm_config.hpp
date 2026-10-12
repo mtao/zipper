@@ -90,6 +90,7 @@ struct simd_vec {
     friend auto operator*(simd_vec a, const simd_vec &b) -> simd_vec {
         return a *= b;
     }
+    constexpr auto operator[](index_type i) const -> T { return v[i]; }
 };
 
 /// No way to query the target: assume 128-bit vectors (SSE / NEON).
@@ -306,9 +307,7 @@ concept ExecutionPolicy = is_execution_policy_v<P>;
 /// the microkernel); cache blocking is plain data; the execution policy
 /// (default: sequential) parallelizes over row blocks of C when it is not
 /// std::execution::seq. With libstdc++, parallel policies need TBB linked.
-template <typename T,
-          Tile S,
-          ExecutionPolicy Policy = sequenced_policy>
+template <typename T, Tile S, ExecutionPolicy Policy = sequenced_policy>
 struct GemmConfig {
     static constexpr Tile tile = S;
     BlockSizes blocks = blocking_for<T, S>(CacheSizes{});
