@@ -263,3 +263,37 @@ TEST_CASE("test_mdspan_deduction_guides", "[mdspan][ctad]") {
     CHECK(array(2) == 3);
   }
 }
+
+TEST_CASE("test_span_pointer_extents_construction", "[mdspan][span]") {
+  // Dynamic column count: (pointer, n) mirrors std::mdspan's constructor.
+  {
+    std::array<float, 6> data{1, 2, 3, 4, 5, 6};
+    using M = zipper::Matrix<float, 3, std::dynamic_extent>;
+    M::const_span_type m(data.data(), 2);
+    CHECK(m.rows() == 3);
+    CHECK(m.cols() == 2);
+    // Matrix default layout must agree with how the pointer is interpreted.
+    zipper::mdspan<const float, M::extents_type, M::layout_type> ref(
+        data.data(), 2);
+    for (zipper::index_type i = 0; i < 3; ++i) {
+      for (zipper::index_type j = 0; j < 2; ++j) {
+        CHECK(m(i, j) == ref[i, j]);
+        CHECK(&m(i, j) == &ref[i, j]);
+      }
+    }
+  }
+  // Mutable span writes through to the buffer.
+  {
+    std::array<double, 4> data{};
+    zipper::Vector<double, std::dynamic_extent>::span_type v(data.data(), 4);
+    v(2) = 7.0;
+    CHECK(data[2] == 7.0);
+  }
+  // Fully static extents: pointer only.
+  {
+    std::array<double, 3> data{1, 2, 3};
+    zipper::Vector<double, 3>::const_span_type v(data.data());
+    CHECK(v(1) == 2);
+    CHECK(&v(1) == &data[1]);
+  }
+}

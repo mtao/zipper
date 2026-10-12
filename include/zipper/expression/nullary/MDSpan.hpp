@@ -135,6 +135,26 @@ class MDSpan
                           extents_traits::size(m.extents()))),
                   m.extents()) {}
 
+    /// Constructor mirroring std::mdspan's (pointer, extents...) form:
+    /// builds the mdspan in place, so callers don't have to spell out the
+    /// mdspan type.  E.g. for extents (3, dynamic):
+    ///     MatrixX3::const_span_type m(ptr, n);
+    template <typename... IndexTypes>
+        requires(sizeof...(IndexTypes) > 0
+                 && std::is_constructible_v<
+                     zipper::mdspan<ElementType, Extents, LayoutPolicy>,
+                     ElementType *,
+                     IndexTypes...>)
+    explicit MDSpan(ElementType *data, IndexTypes... exts)
+      : MDSpan(zipper::mdspan<ElementType, Extents, LayoutPolicy>(data,
+                                                                    exts...)) {
+    }
+
+    /// Fully static extents: the pointer alone determines the view.
+    explicit MDSpan(ElementType *data)
+        requires(extents_traits::is_static)
+      : MDSpan(zipper::mdspan<ElementType, Extents, LayoutPolicy>(data)) {}
+
     template <zipper::concepts::Expression V>
     void assign(const V &v)
         requires(!std::is_const_v<ElementType>
