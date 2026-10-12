@@ -37,7 +37,19 @@
 #endif
 #endif
 #if ZIPPER_GEMM_HAS_STD_EXECUTION
+// Qt defines `emit`, `signals` and `slots` as macros; libstdc++'s TBB
+// backend for <execution> declares members with those names.  Hide them
+// while <execution> is parsed so zipper can be included after Qt headers.
+#pragma push_macro("emit")
+#pragma push_macro("signals")
+#pragma push_macro("slots")
+#undef emit
+#undef signals
+#undef slots
 #include <execution>
+#pragma pop_macro("slots")
+#pragma pop_macro("signals")
+#pragma pop_macro("emit")
 #endif
 
 #include "zipper/types.hpp"

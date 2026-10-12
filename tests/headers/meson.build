@@ -6,6 +6,7 @@ umbrella_header_sources = [
   'solver_result.cpp',
   'shape_validation.cpp',
   'scalar_math.cpp',
+  'qt_keyword_macros.cpp',
 ]
 
 foreach source : umbrella_header_sources
