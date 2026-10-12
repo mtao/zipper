@@ -963,3 +963,24 @@ TEST_CASE("dynamic_vector_normalized", "[dynamic][reduction]") {
     CHECK(n(0) == Catch::Approx(0.6));
     CHECK(n(1) == Catch::Approx(0.8));
 }
+
+TEST_CASE("partial_reduction_min_max", "[partial_reduction][min][max]") {
+    zipper::Matrix<double, 3, std::dynamic_extent> M(3, 4);
+    M.col(0) = zipper::Vector<double, 3>{1.0, -5.0, 0.0};
+    M.col(1) = zipper::Vector<double, 3>{-2.0, 3.0, 20.0};
+    M.col(2) = zipper::Vector<double, 3>{0.5, 0.0, 4.0};
+    M.col(3) = zipper::Vector<double, 3>{0.0, 1.0, -1.0};
+
+    zipper::Vector<double, 3> rmin = M.rowwise().min();
+    zipper::Vector<double, 3> rmax = M.rowwise().max();
+    CHECK(rmin == zipper::Vector<double, 3>{-2.0, -5.0, -1.0});
+    CHECK(rmax == zipper::Vector<double, 3>{1.0, 3.0, 20.0});
+
+    auto cmin = M.colwise().min().eval();
+    auto cmax = M.colwise().max().eval();
+    REQUIRE(cmin.extent(0) == 4);
+    CHECK(cmin(0) == -5.0);
+    CHECK(cmin(1) == -2.0);
+    CHECK(cmax(1) == 20.0);
+    CHECK(cmax(3) == 1.0);
+}

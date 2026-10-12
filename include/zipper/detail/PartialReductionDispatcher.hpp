@@ -2,6 +2,7 @@
 #define ZIPPER_DETAIL_PARTIALREDUCTIONDISPATCHER_HPP
 #include "zipper/concepts/Expression.hpp"
 #include "zipper/detail/wrap_in_base.hpp"
+#include "zipper/expression/reductions/CoefficientMinMax.hpp"
 #include "zipper/expression/unary/detail/PartialReductionDispatcher.hpp"
 
 namespace zipper::detail {
@@ -16,6 +17,25 @@ class PartialReductionDispatcher {
         using PR = expression::unary::PartialReduction<
             ExprType &,
             expression::reductions::CoefficientSum,
+            Indices...>;
+        return DerivedT<PR>(std::in_place, m_dispatcher.expression());
+    }
+    /// Per-slice minimum / maximum coefficient (slices must be non-empty).
+    auto min() const {
+        using holder = expression::reductions::detail::
+            coefficient_extremum_holder<std::less<>>;
+        using PR = expression::unary::PartialReduction<
+            ExprType &,
+            holder::template CoefficientExtremum,
+            Indices...>;
+        return DerivedT<PR>(std::in_place, m_dispatcher.expression());
+    }
+    auto max() const {
+        using holder = expression::reductions::detail::
+            coefficient_extremum_holder<std::greater<>>;
+        using PR = expression::unary::PartialReduction<
+            ExprType &,
+            holder::template CoefficientExtremum,
             Indices...>;
         return DerivedT<PR>(std::in_place, m_dispatcher.expression());
     }
