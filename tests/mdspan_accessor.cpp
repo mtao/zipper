@@ -70,6 +70,10 @@ TEST_CASE("mdspan_proxy_accessor_is_honored", "[mdspan][accessor]") {
   CHECK(y(0) == 8.0);
   CHECK(y(1) == 20.0);
 
+  // Static size: only the handle and the accessor are stored.
+  using storage_t = std::decay_t<decltype(M.expression().linear_accessor())>;
+  STATIC_CHECK(sizeof(storage_t) == sizeof(const double *) + sizeof(double));
+
   // A proxy reference is neither writable nor a raw linear array.
   using traits = std::decay_t<decltype(M.expression())>::traits;
   STATIC_CHECK_FALSE(traits::is_assignable());

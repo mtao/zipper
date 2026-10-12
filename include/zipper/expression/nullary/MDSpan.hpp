@@ -5,7 +5,6 @@
 #include "zipper/detail/ExtentsTraits.hpp"
 #include "zipper/detail/NoAliasTraits.hpp"
 #include "zipper/expression/detail/AssignHelper.hpp"
-#include "zipper/storage/AccessorData.hpp"
 #include "zipper/storage/SpanData.hpp"
 #include "zipper/storage/layout_types.hpp"
 #include <array>
@@ -28,18 +27,13 @@ namespace _detail_mdspan {
         }
     }();
 
-    /// Default accessors read a raw buffer (fast linear-array path); any
-    /// other accessor is honored by reading through it.
     template <typename ElementType,
               typename Extents,
               typename LayoutPolicy,
               typename AccessorPolicy>
-    using storage_t = std::conditional_t<
-        std::is_same_v<AccessorPolicy, default_accessor_policy<ElementType>>,
-        storage::SpanData<ElementType, storage_size<Extents, LayoutPolicy>>,
-        storage::AccessorData<ElementType,
-                              AccessorPolicy,
-                              storage_size<Extents, LayoutPolicy>>>;
+    using storage_t = storage::SpanData<ElementType,
+                                        storage_size<Extents, LayoutPolicy>,
+                                        AccessorPolicy>;
 } // namespace _detail_mdspan
 
 /// Non-owning view of external memory, mirroring
@@ -212,15 +206,9 @@ class MDSpan
                              OtherAccessor> &m) ->
         typename base_type::linear_accessor_type {
         using linear_accessor_type = typename base_type::linear_accessor_type;
-        const auto size = m.mapping().required_span_size();
-        if constexpr (is_default_accessor) {
-            return linear_accessor_type(
-                std::span<ElementType, linear_accessor_type::static_size>(
-                    m.data_handle(), size));
-        } else {
-            return linear_accessor_type(
-                m.data_handle(), size, AccessorPolicy(m.accessor()));
-        }
+        return linear_accessor_type(m.data_handle(),
+                                    m.mapping().required_span_size(),
+                                    AccessorPolicy(m.accessor()));
     }
 };
 } // namespace zipper::expression::nullary

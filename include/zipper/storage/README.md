@@ -24,7 +24,7 @@ handles the multidimensional-to-linear mapping.
 
 | Header | Description |
 |--------|-------------|
-| `SpanData.hpp` | Non-owning storage backed by `std::span<T>`; used by `MDSpan` |
+| `SpanData.hpp` | Non-owning storage over external memory, read through an mdspan accessor (`access(handle, k)`). With the default accessor it is a contiguous `std::span` (raw `data()`/`as_std_span()`); other accessors are honored and writable only for `T&`-returning ones. Used by `MDSpan` |
 
 ## Sparse Data
 
@@ -46,7 +46,6 @@ handles the multidimensional-to-linear mapping.
 | Header | Description |
 |--------|-------------|
 | `LinearAccessorTraits.hpp` | `AccessFeatures` and `ShapeFeatures` structs; `BasicLinearAccessorTraits` base (incl. `is_contiguous`) |
-| `AccessorData.hpp` | Linear storage reading through an mdspan accessor policy (`access(handle, k)`); not contiguous, writable only for `T&`-returning accessors |
 | `StlStorageInfo.hpp` | Detects STL container properties (static/dynamic size, value_type) |
 | `concepts/Data.hpp` | `Data` concept |
 | `concepts/DenseData.hpp` | `DenseData` concept |
