@@ -11,29 +11,28 @@
 
 namespace zipper::expression::nullary {
 template <typename ElementType, typename Extents,
-          typename LayoutPolicy = default_layout_policy,
-          typename AccessorPolicy = default_accessor_policy<ElementType>>
+          typename LayoutPolicy = default_layout_policy>
 class MDArray
     : public LinearLayoutExpression<
           storage::DenseData<
               ElementType, zipper::detail::ExtentsTraits<Extents>::static_size>,
-          Extents, LayoutPolicy, AccessorPolicy,
-          MDArray<ElementType, Extents, LayoutPolicy, AccessorPolicy>> {
+          Extents, LayoutPolicy,
+          MDArray<ElementType, Extents, LayoutPolicy>> {
 
   using base_type = LinearLayoutExpression<
       storage::DenseData<ElementType,
                          zipper::detail::ExtentsTraits<Extents>::static_size>,
-      Extents, LayoutPolicy, AccessorPolicy,
-      MDArray<ElementType, Extents, LayoutPolicy, AccessorPolicy>>;
+      Extents, LayoutPolicy,
+      MDArray<ElementType, Extents, LayoutPolicy>>;
   using base_type::base_type;
 
   constexpr static bool IsStatic = base_type::extents_traits::is_static;
-  using span_type = MDSpan<ElementType, Extents, LayoutPolicy, AccessorPolicy>;
+  using span_type = MDSpan<ElementType, Extents, LayoutPolicy>;
 public:
   using typename base_type::extents_traits;
   using typename base_type::extents_type;
   using base_type::linear_accessor;
-  using self_type = MDArray<ElementType, Extents, LayoutPolicy, AccessorPolicy>;
+  using self_type = MDArray<ElementType, Extents, LayoutPolicy>;
 
   template <zipper::concepts::Expression V>
   void assign(const V &v)
@@ -91,15 +90,14 @@ public:
 namespace zipper::expression {
 /// ExpressionTraits for MDArray forwards to the LinearLayoutExpression traits,
 /// since MDArray is a thin owning wrapper around LinearLayoutExpression.
-template <typename ElementType, typename Extents, typename LayoutPolicy,
-          typename AccessorPolicy>
-struct detail::ExpressionTraits<nullary::MDArray<
-    ElementType, Extents, LayoutPolicy, AccessorPolicy>>
+template <typename ElementType, typename Extents, typename LayoutPolicy>
+struct detail::ExpressionTraits<
+    nullary::MDArray<ElementType, Extents, LayoutPolicy>>
     : public detail::ExpressionTraits<nullary::LinearLayoutExpression<
           storage::DenseData<ElementType,
                              zipper::detail::ExtentsTraits<Extents>::static_size>,
-          Extents, LayoutPolicy, AccessorPolicy,
-          nullary::MDArray<ElementType, Extents, LayoutPolicy, AccessorPolicy>>> {
+          Extents, LayoutPolicy,
+          nullary::MDArray<ElementType, Extents, LayoutPolicy>>> {
 };
 } // namespace zipper::expression
 
@@ -110,8 +108,9 @@ template <typename ElementType, typename Extents,
           typename LayoutPolicy, typename AccessorPolicy>
 auto MDSpan<ElementType, Extents, LayoutPolicy, AccessorPolicy>::make_owned() const {
   using non_const_element = std::remove_const_t<ElementType>;
-  using owned_type = MDArray<non_const_element, Extents, LayoutPolicy,
-                             default_accessor_policy<non_const_element>>;
+  // Strided views copy into the default dense layout.
+  using owned_type = MDArray<non_const_element, Extents,
+                             owning_layout_policy_t<LayoutPolicy, Extents>>;
   // evaluate_to overwrites every coefficient: skip the zero-fill.
   owned_type result(zipper::uninitialized, this->extents());
   expression::detail::AssignHelper<self_type, owned_type>::evaluate_to(*this, result);
@@ -121,9 +120,9 @@ auto MDSpan<ElementType, Extents, LayoutPolicy, AccessorPolicy>::make_owned() co
 
 namespace zipper::detail {
 // Mutable dense owning storage supports noalias destinations.
-template <typename T, typename E, typename L, typename A>
+template <typename T, typename E, typename L>
 inline constexpr bool
-    supports_noalias_v<expression::nullary::MDArray<T, E, L, A>> =
+    supports_noalias_v<expression::nullary::MDArray<T, E, L>> =
         !std::is_const_v<T>;
 } // namespace zipper::detail
 

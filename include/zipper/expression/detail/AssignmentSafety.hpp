@@ -12,7 +12,7 @@
 // this classifier. Operation templates above use their actual declarations,
 // including any callback constraints, rather than duplicated forward declarations.
 namespace zipper::expression::nullary {
-template <typename T, typename E, typename L, typename A> class MDArray;
+template <typename T, typename E, typename L> class MDArray;
 template <typename T, index_type... N> class Constant;
 template <typename T, T Value, index_type... N> class StaticConstant;
 template <typename T, index_type... N> class Zero;
@@ -65,10 +65,8 @@ using source_t = Source<std::remove_cvref_t<From>>;
 /// An owning dense array: its storage cannot be shared with another object.
 template <typename T>
 struct OwningLeaf : std::false_type {};
-template <typename T, typename E, typename L, typename A>
-struct OwningLeaf<nullary::MDArray<T, E, L, A>>
-    : std::bool_constant<plain_v<T>
-                         && std::is_same_v<A, default_accessor_policy<T>>> {};
+template <typename T, typename E, typename L>
+struct OwningLeaf<nullary::MDArray<T, E, L>> : std::bool_constant<plain_v<T>> {};
 
 template <typename From>
     requires OwningLeaf<From>::value

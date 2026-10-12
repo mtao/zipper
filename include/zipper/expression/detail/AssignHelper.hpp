@@ -15,10 +15,7 @@
 #include <tuple>
 
 namespace zipper::expression::nullary {
-template <typename ElementType,
-          typename Extents,
-          typename LayoutPolicy,
-          typename AccessorPolicy>
+template <typename ElementType, typename Extents, typename LayoutPolicy>
 class MDArray;
 } // namespace zipper::expression::nullary
 
@@ -53,7 +50,6 @@ struct AssignHelper {
     using extents_type = to_extents_type;
 
     using layout_policy = zipper::default_layout_policy;
-    using accessor_policy = zipper::default_accessor_policy<value_type>;
 
     using to_extents_traits = zipper::detail::ExtentsTraits<to_extents_type>;
     using from_extents_traits =
@@ -226,7 +222,7 @@ void AssignHelper<From, To>::assign(const From &from, To &to) {
             ZIPPER_ASSERT(to.extents() == snapshot_extents);
         }
         using POS = nullary::
-            MDArray<value_type, extents_type, layout_policy, accessor_policy>;
+            MDArray<value_type, extents_type, layout_policy>;
         // Both pos and a resized `to` are fully overwritten below.
         POS pos(zipper::uninitialized, snapshot_extents);
 
@@ -288,7 +284,7 @@ void AssignHelper<From, To>::accumulate(const From &from, To &to, Alpha alpha) {
         return;
     }
     using POS = nullary::
-        MDArray<value_type, extents_type, layout_policy, accessor_policy>;
+        MDArray<value_type, extents_type, layout_policy>;
     POS pos(zipper::uninitialized,
             to_extents_traits::convert_from(from.extents()));
     AssignHelper<From, POS>::evaluate_to(from, pos);

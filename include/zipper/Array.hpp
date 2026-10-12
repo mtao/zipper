@@ -15,13 +15,11 @@ namespace detail {
 template <typename ValueType, concepts::Extents Extents,
           bool LeftMajor = true>
 class Array_ : public ArrayBase<expression::nullary::MDArray<
-                   ValueType, Extents, storage::tensor_layout<LeftMajor>,
-                   default_accessor_policy<ValueType>>> {
+                   ValueType, Extents, storage::tensor_layout<LeftMajor>>> {
 public:
   using layout_type = storage::tensor_layout<LeftMajor>;
   using expression_type =
-      expression::nullary::MDArray<ValueType, Extents, layout_type,
-                                   default_accessor_policy<ValueType>>;
+      expression::nullary::MDArray<ValueType, Extents, layout_type>;
   using Base = ArrayBase<expression_type>;
   using Base::expression;
   using value_type = Base::value_type;
@@ -29,8 +27,7 @@ public:
   using Base::extent;
   using Base::extents;
   using span_type =
-      ArrayBase<expression::nullary::MDSpan<ValueType, Extents, layout_type,
-                                            default_accessor_policy<ValueType>>>;
+      ArrayBase<expression::nullary::MDSpan<ValueType, Extents, layout_type>>;
 
   Array_() = default;
   Array_(const Array_ &o) = default;

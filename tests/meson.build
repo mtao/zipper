@@ -36,6 +36,8 @@ test('matrix', test_matrix)
 
 test_span_construction = executable('test_span_construction', 'span_construction.cpp', dependencies: [zipper_test_dep])
 test('span_construction', test_span_construction)
+test_mdspan_accessor = executable('test_mdspan_accessor', 'mdspan_accessor.cpp', dependencies: [zipper_test_dep])
+test('mdspan_accessor', test_mdspan_accessor)
 
 test_matrix_base_header = executable('test_matrix_base_header', 'matrix_base_header.cpp', dependencies: [zipper_test_dep])
 test('matrix_base_header', test_matrix_base_header)

@@ -5,7 +5,7 @@
 #include "zipper/expression/unary/ScalarOperation.hpp"
 
 namespace zipper::expression::nullary {
-template <typename T, typename E, typename L, typename A> class MDArray;
+template <typename T, typename E, typename L> class MDArray;
 template <typename T, typename E, typename L, typename A> class MDSpan;
 template <typename T, index_type... N> class Constant;
 template <typename T, T Value, index_type... N> class StaticConstant;
@@ -35,8 +35,8 @@ struct RankZeroEvaluation {
 };
 
 // These nodes ignore indices even though their coeff signatures are variadic.
-template <typename T, typename E, typename L, typename A, rank_type R>
-struct RankZeroEvaluation<nullary::MDArray<T, E, L, A>, R> {
+template <typename T, typename E, typename L, rank_type R>
+struct RankZeroEvaluation<nullary::MDArray<T, E, L>, R> {
     static constexpr bool is_scalar = true;
 };
 template <typename T, typename E, typename L, typename A, rank_type R>

@@ -150,7 +150,7 @@ TEST_CASE("standard_data_are_data_like", "[storage]") {
 TEST_CASE("static_dense_accessor", "[data]") {
     zipper::storage::DenseAccessor<
         zipper::storage::DenseData<index_type, 30>, extents<5, 6>,
-        zipper::default_layout_policy, zipper::default_accessor_policy<int>>
+        zipper::default_layout_policy>
         A;
     test(A);
     auto B = A.as_span();
@@ -161,12 +161,12 @@ TEST_CASE("dynamic_dense_accessor", "[data]") {
     // old clang doesn't like this full line
     using T = zipper::storage::DenseAccessor<
         zipper::storage::DenseData<index_type, std::dynamic_extent>, dextents<2>,
-        zipper::default_layout_policy, zipper::default_accessor_policy<int>>;
+        zipper::default_layout_policy>;
     T A(std::move(data), create_dextents(5, 6));
 
     // zipper::storage::DenseAccessor<
     //     zipper::storage::DenseData<index_type, std::dynamic_extent>, dextents<2>,
-    //     zipper::default_layout_policy, zipper::default_accessor_policy<int>>
+    //     zipper::default_layout_policy>
     //     A(extents(5, 6));
     test(A);
     auto B = A.as_span();
@@ -178,7 +178,7 @@ TEST_CASE("dynamic_static_dense_accessor", "[data]") {
     zipper::storage::DenseData<index_type, 30> data;
     zipper::storage::DenseAccessor<
         zipper::storage::DenseData<index_type, 30>, dextents<2>,
-        zipper::default_layout_policy, zipper::default_accessor_policy<int>>
+        zipper::default_layout_policy>
         A(std::move(data), create_dextents(5, 6));
 
     test(A);
@@ -189,7 +189,7 @@ TEST_CASE("static_dynamic_dense_accessor", "[data]") {
     zipper::storage::DenseData<index_type, std::dynamic_extent> data(30);
     zipper::storage::DenseAccessor<
         zipper::storage::DenseData<index_type, std::dynamic_extent>, extents<5, 6>,
-        zipper::default_layout_policy, zipper::default_accessor_policy<int>>
+        zipper::default_layout_policy>
         A(std::move(data));
 
     test(A);
@@ -197,7 +197,7 @@ TEST_CASE("static_dynamic_dense_accessor", "[data]") {
     test(B);
     zipper::storage::DenseAccessor<
         zipper::storage::DenseData<index_type, std::dynamic_extent>, extents<5, 6>,
-        zipper::default_layout_policy, zipper::default_accessor_policy<int>>
+        zipper::default_layout_policy>
         C;
 
     CHECK(C.size() == 30);

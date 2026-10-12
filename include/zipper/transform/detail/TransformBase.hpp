@@ -54,8 +54,7 @@ constexpr TransformMode promote_mode(TransformMode a, TransformMode b) {
 template <typename T,
           index_type D = 3,
           TransformMode Mode = TransformMode::Projective,
-          typename LayoutPolicy = zipper::storage::matrix_layout<false>,
-          typename AccessorPolicy = zipper::default_accessor_policy<T>>
+          typename LayoutPolicy = zipper::storage::matrix_layout<false>>
 class Transform;
 
 namespace detail {
