@@ -15,8 +15,8 @@ namespace zipper::detail {
 template <typename T>
 inline constexpr bool is_fresh_mdarray_v = false;
 
-template <typename T, typename E, typename L, typename A>
-inline constexpr bool is_fresh_mdarray_v<expression::nullary::MDArray<T, E, L, A>> = true;
+template <typename T, typename E, typename L>
+inline constexpr bool is_fresh_mdarray_v<expression::nullary::MDArray<T, E, L>> = true;
 
 // Which destination expressions support noalias is opted into by each
 // expression's own header via supports_noalias_v (see NoAliasTraits.hpp).

@@ -12,13 +12,11 @@ namespace zipper {
 
 template <typename ValueType, concepts::Extents Extents, bool LeftMajor>
 class Tensor_ : public TensorBase<expression::nullary::MDArray<
-                    ValueType, Extents, storage::tensor_layout<LeftMajor>,
-                    default_accessor_policy<ValueType>>> {
+                    ValueType, Extents, storage::tensor_layout<LeftMajor>>> {
    public:
     using layout_type = storage::tensor_layout<LeftMajor>;
     using expression_type =
-        expression::nullary::MDArray<ValueType, Extents, layout_type,
-                                     default_accessor_policy<ValueType>>;
+        expression::nullary::MDArray<ValueType, Extents, layout_type>;
     using Base = TensorBase<expression_type>;
     using Base::expression;
     using value_type = Base::value_type;
@@ -26,11 +24,9 @@ class Tensor_ : public TensorBase<expression::nullary::MDArray<
     using Base::extent;
     using Base::extents;
     using span_expression_type =
-        expression::nullary::MDSpan<ValueType, Extents, layout_type,
-                                    default_accessor_policy<ValueType>>;
+        expression::nullary::MDSpan<ValueType, Extents, layout_type>;
     using const_span_expression_type =
-        expression::nullary::MDSpan<const ValueType, Extents, layout_type,
-                                    default_accessor_policy<ValueType>>;
+        expression::nullary::MDSpan<const ValueType, Extents, layout_type>;
     using span_type = TensorBase<span_expression_type>;
     using const_span_type = TensorBase<const_span_expression_type>;
 

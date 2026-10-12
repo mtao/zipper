@@ -26,18 +26,16 @@ using resolved_derived_t =
 ///                       LinearLayoutExpression itself as the CRTP leaf.
 template <typename LinearAccessorType, typename Extents,
           typename LayoutPolicy = default_layout_policy,
-          typename AccessorPolicy = default_accessor_policy<
-              typename LinearAccessorType::element_type>,
           typename FinalDerived = void>
 class LinearLayoutExpression
     : public ExpressionBase<_detail_lle::resolved_derived_t<
           FinalDerived,
           LinearLayoutExpression<LinearAccessorType, Extents, LayoutPolicy,
-                                 AccessorPolicy, FinalDerived>>> {
+                                 FinalDerived>>> {
 public:
   using self_type =
       LinearLayoutExpression<LinearAccessorType, Extents, LayoutPolicy,
-                             AccessorPolicy, FinalDerived>;
+                             FinalDerived>;
   using traits = expression::detail::ExpressionTraits<self_type>;
   using value_type = typename traits::value_type;
   using element_type = typename traits::element_type;
@@ -46,17 +44,16 @@ public:
   using layout_policy = LayoutPolicy;
 
   using mapping_type = typename layout_policy::template mapping<extents_type>;
-  using accessor_policy = AccessorPolicy;
   using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
 
   using linear_accessor_type = LinearAccessorType;
+  /// Elements live in a raw buffer: data(), operator[], as_std_span() and
+  /// as_mdspan() are available.
+  constexpr static bool is_contiguous =
+      storage::LinearAccessorTraits<linear_accessor_type>::is_contiguous;
   using span_type = std::span<value_type, linear_accessor_type::static_size>;
   using const_span_type =
       std::span<const value_type, linear_accessor_type::static_size>;
-  using mdspan_type =
-      zipper::mdspan<value_type, extents_type, layout_policy, accessor_policy>;
-  using const_mdspan_type = zipper::mdspan<const value_type, extents_type,
-                                           layout_policy, accessor_policy>;
 
   /// Whether the linear accessor supports zipper::uninitialized
   /// construction for these extents.
@@ -124,7 +121,7 @@ public:
   template <typename OtherLinearAccessor, typename OtherFinalDerived>
   LinearLayoutExpression(
       const LinearLayoutExpression<OtherLinearAccessor, Extents, LayoutPolicy,
-                                   AccessorPolicy, OtherFinalDerived> &other)
+                                   OtherFinalDerived> &other)
     requires(std::is_constructible_v<LinearAccessorType,
                                      const OtherLinearAccessor &> &&
              !std::is_same_v<LinearAccessorType, OtherLinearAccessor>)
@@ -143,11 +140,15 @@ public:
     return m_linear_accessor;
   }
   auto data() -> value_type *
-    requires(!traits::is_const_valued())
+    requires(is_contiguous && !traits::is_const_valued())
   {
     return linear_accessor().data();
   }
-  auto data() const -> const value_type * { return linear_accessor().data(); }
+  auto data() const -> const value_type *
+    requires(is_contiguous)
+  {
+    return linear_accessor().data();
+  }
 
   // Flat unchecked linear access into the underlying buffer (the `is_linear_array`
   // contract: `(*this)[mapping()(i,j,...)] == (*this)(i,j,...)`). Deliberately
@@ -155,21 +156,50 @@ public:
   // _GLIBCXX_ASSERTIONS) inserts branches that defeat vectorization in hot
   // kernels.
   constexpr auto operator[](index_type k) -> value_type &
-    requires(!traits::is_const_valued())
+    requires(is_contiguous && !traits::is_const_valued())
   {
     return linear_accessor().data()[k];
   }
-  constexpr auto operator[](index_type k) const -> const value_type & {
+  constexpr auto operator[](index_type k) const -> const value_type &
+    requires(is_contiguous)
+  {
     return linear_accessor().data()[k];
   }
 
-  auto as_mdspan() -> mdspan_type
-    requires(!traits::is_const_valued());
-  auto as_mdspan() const -> const_mdspan_type;
+  /// View the raw storage as an mdspan.  The accessor policy is chosen by
+  /// the caller; it must operate on a raw pointer to the (const) element
+  /// type, e.g. default_accessor (the default), aligned_accessor or
+  /// scaled_accessor.
+  template <typename Accessor = default_accessor_policy<value_type>>
+    requires(is_contiguous && !traits::is_const_valued() &&
+             std::is_same_v<typename Accessor::element_type, value_type> &&
+             std::is_convertible_v<value_type *,
+                                   typename Accessor::data_handle_type>)
+  auto as_mdspan(const Accessor &accessor = {})
+      -> zipper::mdspan<value_type, extents_type, layout_policy, Accessor> {
+    return {data(), mapping(), accessor};
+  }
+  template <typename Accessor = default_accessor_policy<const value_type>>
+    requires(is_contiguous &&
+             std::is_same_v<typename Accessor::element_type,
+                            const value_type> &&
+             std::is_convertible_v<const value_type *,
+                                   typename Accessor::data_handle_type>)
+  auto as_mdspan(const Accessor &accessor = {}) const
+      -> zipper::mdspan<const value_type, extents_type, layout_policy,
+                        Accessor> {
+    return {data(), mapping(), accessor};
+  }
 
   // todo fixing names
-  auto as_std_span() -> span_type { return linear_accessor().as_std_span(); }
-  auto as_std_span() const -> const_span_type {
+  auto as_std_span() -> span_type
+    requires(is_contiguous)
+  {
+    return linear_accessor().as_std_span();
+  }
+  auto as_std_span() const -> const_span_type
+    requires(is_contiguous)
+  {
     return linear_accessor().as_std_span();
   }
 
@@ -233,28 +263,11 @@ private:
   ZIPPER_NO_UNIQUE_ADDRESS mapping_type m_mapping;
 };
 
-template <typename LinearAccessorType, typename Extents, typename LayoutPolicy,
-          typename AccessorPolicy, typename FinalDerived>
-auto LinearLayoutExpression<LinearAccessorType, Extents, LayoutPolicy,
-                            AccessorPolicy, FinalDerived>::as_mdspan()
-    -> mdspan_type
-  requires(!traits::is_const_valued())
-{
-  return mdspan_type(data(), extents());
-}
-template <typename LinearAccessorType, typename Extents, typename LayoutPolicy,
-          typename AccessorPolicy, typename FinalDerived>
-auto LinearLayoutExpression<LinearAccessorType, Extents, LayoutPolicy,
-                            AccessorPolicy, FinalDerived>::as_mdspan() const
-    -> const_mdspan_type {
-  return const_mdspan_type(data(), extents());
-}
-
 } // namespace nullary
 template <typename LinearAccessorType, typename Extents, typename LayoutPolicy,
-          typename AccessorPolicy, typename FinalDerived>
+          typename FinalDerived>
 struct detail::ExpressionTraits<nullary::LinearLayoutExpression<
-    LinearAccessorType, Extents, LayoutPolicy, AccessorPolicy, FinalDerived>>
+    LinearAccessorType, Extents, LayoutPolicy, FinalDerived>>
     : public BasicExpressionTraits<
           typename LinearAccessorType::value_type, Extents,
           storage::template LinearAccessorTraits<
@@ -264,10 +277,11 @@ struct detail::ExpressionTraits<nullary::LinearLayoutExpression<
   using preferred_layout =
       zipper::detail::DenseLayoutPreference<LayoutPolicy>;
 
-  /// Dense linear storage exposes `mapping()` and a flat `operator[]`, so it
-  /// both has a layout mapping and is a linear array.
+  /// Linear storage exposes `mapping()`; it is a linear array (flat
+  /// `operator[]` / `data()`) only when the storage is a raw buffer.
   constexpr static bool has_layout_mapping = true;
-  constexpr static bool is_linear_array = true;
+  constexpr static bool is_linear_array =
+      storage::LinearAccessorTraits<LinearAccessorType>::is_contiguous;
 
 };
 } // namespace zipper::expression

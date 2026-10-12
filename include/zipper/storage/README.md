@@ -45,7 +45,8 @@ handles the multidimensional-to-linear mapping.
 
 | Header | Description |
 |--------|-------------|
-| `LinearAccessorTraits.hpp` | `AccessFeatures` and `ShapeFeatures` structs; `BasicLinearAccessorTraits` base |
+| `LinearAccessorTraits.hpp` | `AccessFeatures` and `ShapeFeatures` structs; `BasicLinearAccessorTraits` base (incl. `is_contiguous`) |
+| `AccessorData.hpp` | Linear storage reading through an mdspan accessor policy (`access(handle, k)`); not contiguous, writable only for `T&`-returning accessors |
 | `StlStorageInfo.hpp` | Detects STL container properties (static/dynamic size, value_type) |
 | `concepts/Data.hpp` | `Data` concept |
 | `concepts/DenseData.hpp` | `DenseData` concept |

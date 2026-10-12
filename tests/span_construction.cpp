@@ -297,3 +297,15 @@ TEST_CASE("test_span_pointer_extents_construction", "[mdspan][span]") {
     CHECK(&v(1) == &data[1]);
   }
 }
+
+TEST_CASE("test_const_as_mdspan", "[matrix][storage][dense]") {
+  zipper::Matrix<double, 3, zipper::dynamic_extent, false> M(3, 2);
+  M(1, 1) = 4.0;
+  const auto &C = M;
+  auto m = C.expression().as_mdspan();
+  static_assert(std::is_same_v<typename decltype(m)::element_type, const double>);
+  CHECK(m.extent(0) == 3);
+  CHECK(m.extent(1) == 2);
+  CHECK(&m[1, 1] == &M(1, 1));
+  CHECK(m[1, 1] == 4.0);
+}

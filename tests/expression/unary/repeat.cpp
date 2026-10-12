@@ -13,8 +13,7 @@ using namespace zipper::expression::detail;
 
 TEST_CASE("test_repeat_left_rank1", "[expression][unary][repeat]") {
   expression::nullary::MDArray<double, extents<3>,
-                               storage::layout_left,
-                               default_accessor_policy<double>>
+                               storage::layout_left>
       a;
   a(0) = 1.0;
   a(1) = 2.0;
@@ -40,8 +39,7 @@ TEST_CASE("test_repeat_left_rank1", "[expression][unary][repeat]") {
 
 TEST_CASE("test_repeat_right_rank1", "[expression][unary][repeat]") {
   expression::nullary::MDArray<double, extents<3>,
-                               storage::layout_left,
-                               default_accessor_policy<double>>
+                               storage::layout_left>
       a;
   a(0) = 10.0;
   a(1) = 20.0;
@@ -65,8 +63,7 @@ TEST_CASE("test_repeat_right_rank1", "[expression][unary][repeat]") {
 
 TEST_CASE("test_repeat_left_rank2", "[expression][unary][repeat]") {
   expression::nullary::MDArray<double, extents<2, 3>,
-                               storage::layout_left,
-                               default_accessor_policy<double>>
+                               storage::layout_left>
       a;
   a(0, 0) = 1.0;
   a(0, 1) = 2.0;
@@ -97,8 +94,7 @@ TEST_CASE("test_repeat_left_rank2", "[expression][unary][repeat]") {
 
 TEST_CASE("test_repeat_right_rank2", "[expression][unary][repeat]") {
   expression::nullary::MDArray<double, extents<2, 3>,
-                               storage::layout_left,
-                               default_accessor_policy<double>>
+                               storage::layout_left>
       a;
   a(0, 0) = 1.0;
   a(0, 1) = 2.0;
@@ -134,7 +130,7 @@ TEST_CASE("test_repeat_right_rank2", "[expression][unary][repeat]") {
 TEST_CASE("repeat_has_index_set_propagation", "[expression][unary][repeat][indexset]") {
     // MDArray does NOT have index_set
     using dense_type = expression::nullary::MDArray<double, extents<3>,
-        storage::layout_left, default_accessor_policy<double>>;
+        storage::layout_left>;
     using dense_repeat = unary::Repeat<unary::RepeatMode::Left, 1, const dense_type>;
     STATIC_REQUIRE_FALSE(ExpressionTraits<dense_repeat>::has_index_set);
 

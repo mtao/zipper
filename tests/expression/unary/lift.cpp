@@ -13,8 +13,7 @@ using namespace zipper::expression::detail;
 
 TEST_CASE("lift_rank1", "[expression][unary][lift]") {
   expression::nullary::MDArray<double, extents<3>,
-                               storage::layout_left,
-                               default_accessor_policy<double>>
+                               storage::layout_left>
       a;
   a(0) = 10.0;
   a(1) = 20.0;
@@ -38,8 +37,7 @@ TEST_CASE("lift_rank1", "[expression][unary][lift]") {
 
 TEST_CASE("lift_rank2", "[expression][unary][lift]") {
   expression::nullary::MDArray<double, extents<2, 3>,
-                               storage::layout_left,
-                               default_accessor_policy<double>>
+                               storage::layout_left>
       a;
   a(0, 0) = 1.0;
   a(0, 1) = 2.0;
@@ -75,7 +73,7 @@ TEST_CASE("lift_rank2", "[expression][unary][lift]") {
 TEST_CASE("lift_has_index_set_propagation", "[expression][unary][lift][indexset]") {
     // MDArray does NOT have index_set
     using dense_type = expression::nullary::MDArray<double, extents<3>,
-        storage::layout_left, default_accessor_policy<double>>;
+        storage::layout_left>;
     using dense_lift = unary::Lift<1, const dense_type>;
     STATIC_REQUIRE_FALSE(ExpressionTraits<dense_lift>::has_index_set);
 

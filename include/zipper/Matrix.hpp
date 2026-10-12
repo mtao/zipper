@@ -76,15 +76,13 @@ class Matrix
   : public MatrixBase<
         expression::nullary::MDArray<ValueType,
                                      zipper::extents<Rows, Cols>,
-                                     storage::matrix_layout<RowMajor>,
-                                     default_accessor_policy<ValueType>>> {
+                                     storage::matrix_layout<RowMajor>>> {
   public:
     using layout_type = storage::matrix_layout<RowMajor>;
     using expression_type =
         expression::nullary::MDArray<ValueType,
                                      zipper::extents<Rows, Cols>,
-                                     storage::matrix_layout<RowMajor>,
-                                     default_accessor_policy<ValueType>>;
+                                     storage::matrix_layout<RowMajor>>;
     using Base = MatrixBase<expression_type>;
 
     using Base::expression;
@@ -98,13 +96,11 @@ class Matrix
     using span_expression_type =
         expression::nullary::MDSpan<ValueType,
                                     zipper::extents<Rows, Cols>,
-                                    storage::matrix_layout<RowMajor>,
-                                    default_accessor_policy<ValueType>>;
+                                    storage::matrix_layout<RowMajor>>;
     using const_span_expression_type =
         expression::nullary::MDSpan<const ValueType,
                                     zipper::extents<Rows, Cols>,
-                                    storage::matrix_layout<RowMajor>,
-                                    default_accessor_policy<ValueType>>;
+                                    storage::matrix_layout<RowMajor>>;
     using span_type = MatrixBase<span_expression_type>;
     using const_span_type = MatrixBase<const_span_expression_type>;
     using Base::transpose;
