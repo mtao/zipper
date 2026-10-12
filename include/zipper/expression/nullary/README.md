@@ -13,7 +13,7 @@ These hold actual data in memory and provide `coeff_ref()` for mutable access.
 | Header | Expression | Storage | Description |
 |--------|-----------|---------|-------------|
 | `MDArray.hpp` | `MDArray<T, Extents, Layout>` | Owning (`DenseData`) | The primary owning dense array; backs `Vector`, `Matrix`, `DataArray`, etc. |
-| `MDSpan.hpp` | `MDSpan<T, Extents, Layout, Accessor>` | Non-owning (`SpanData`, or `AccessorData` for non-default accessors) | Non-owning view mirroring `std::mdspan`; elements are read through `Accessor`. Backs `as_span()` and span/mdspan-based construction |
+| `MDSpan.hpp` | `MDSpan<T, Extents, Layout, Accessor>` | Non-owning (`SpanData`, or `AccessorData` for non-default accessors) | Non-owning view mirroring `std::mdspan`: keeps the mapping (incl. `layout_stride` strides) and reads elements through `Accessor`. Backs `as_span()` and span/mdspan-based construction |
 | `StlMDArray.hpp` | `StlMDArray<Container>` | STL container | Wraps `std::vector`, `std::array`, etc.; used by initialiser-list constructors |
 | `LinearLayoutExpression.hpp` | (base class) | (template parameter) | Common base for MDArray and MDSpan; provides linear indexing, `data()`, `as_std_span()` |
 

@@ -3,6 +3,8 @@
 #include <zipper/Vector.hpp>
 #include <zipper/VectorBase.hxx>
 
+#include <numeric>
+
 #include "catch_include.hpp"
 
 namespace {
@@ -108,4 +110,70 @@ TEST_CASE("as_mdspan_accessor_choice", "[mdspan][accessor]") {
   CHECK(s[1, 0] == 40.0);
   zipper::MatrixBase S(s);
   CHECK(S(0, 1) == 70.0);
+}
+
+namespace {
+using Stride = zipper::storage::layout_stride;
+// A 2x3 view of every other element of a 12-element buffer, column-major:
+// (i, j) -> 2*i + 4*j, so it reaches index 10 (past 2*3 = 6 elements).
+auto strided_mapping() -> Stride::mapping<E23> {
+  return {E23{}, std::array<std::size_t, 2>{2, 4}};
+}
+} // namespace
+
+TEST_CASE("mdspan_layout_stride_read_write", "[mdspan][layout_stride]") {
+  std::array<double, 12> data{};
+  std::iota(data.begin(), data.end(), 0.0);
+  zipper::mdspan<double, E23, Stride> m(data.data(), strided_mapping());
+
+  zipper::MatrixBase M(m);
+  CHECK(M(0, 0) == 0.0);
+  CHECK(M(1, 0) == 2.0);
+  CHECK(M(0, 1) == 4.0);
+  CHECK(M(1, 2) == 10.0);
+
+  // Strides survive through the expression and back out.
+  auto back = M.expression().as_mdspan();
+  STATIC_CHECK(std::is_same_v<decltype(back)::layout_type, Stride>);
+  CHECK(back.stride(0) == 2);
+  CHECK(back.stride(1) == 4);
+  CHECK(&back[1, 2] == &data[10]);
+
+  // Kernels see the right values.
+  zipper::Vector<double, 3> x{1.0, 1.0, 1.0};
+  zipper::Vector<double, 2> y = M * x;
+  CHECK(y(0) == 0.0 + 4.0 + 8.0);
+  CHECK(y(1) == 2.0 + 6.0 + 10.0);
+  zipper::Matrix<double, 3, 2> Mt = M.transpose();
+  CHECK(Mt(2, 1) == 10.0);
+
+  // Writes land on the strided elements only.
+  M = zipper::Matrix<double, 2, 3>{{-1, -2, -3}, {-4, -5, -6}};
+  CHECK(data[0] == -1.0);
+  CHECK(data[2] == -4.0);
+  CHECK(data[10] == -6.0);
+  CHECK(data[1] == 1.0);
+  CHECK(data[11] == 11.0);
+}
+
+TEST_CASE("mdspan_layout_stride_eval", "[mdspan][layout_stride]") {
+  std::array<double, 12> data{};
+  std::iota(data.begin(), data.end(), 0.0);
+  zipper::mdspan<const double, E23, Stride> m(data.data(), strided_mapping());
+  zipper::MatrixBase M(m);
+
+  // Owned copies use a dense layout.
+  auto E = M.eval();
+  CHECK(E(1, 2) == 10.0);
+  auto O = M.expression().make_owned();
+  STATIC_CHECK_FALSE(
+      std::is_same_v<std::decay_t<decltype(O)>::layout_policy, Stride>);
+  CHECK(O(0, 1) == 4.0);
+
+  // Dynamic extents with a strided mapping, viewed via the (ptr, mapping)
+  // constructor.
+  using DE = zipper::dextents<2>;
+  zipper::expression::nullary::MDSpan<const double, DE, Stride> D(
+      data.data(), Stride::mapping<DE>{DE{3, 2}, std::array<std::size_t, 2>{1, 6}});
+  CHECK(zipper::MatrixBase(D)(2, 1) == 8.0);
 }

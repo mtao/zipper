@@ -15,17 +15,31 @@
 namespace zipper::expression::nullary {
 
 namespace _detail_mdspan {
+    /// Number of elements the storage spans: the extents' size when every
+    /// mapping of the layout is exhaustive and the extents are static,
+    /// dynamic otherwise (a strided view can reach past size(extents)).
+    template <typename Extents, typename LayoutPolicy>
+    constexpr std::size_t storage_size = [] {
+        using mapping = typename LayoutPolicy::template mapping<Extents>;
+        if constexpr (mapping::is_always_exhaustive()) {
+            return zipper::detail::ExtentsTraits<Extents>::static_size;
+        } else {
+            return std::dynamic_extent;
+        }
+    }();
+
     /// Default accessors read a raw buffer (fast linear-array path); any
     /// other accessor is honored by reading through it.
-    template <typename ElementType, typename Extents, typename AccessorPolicy>
+    template <typename ElementType,
+              typename Extents,
+              typename LayoutPolicy,
+              typename AccessorPolicy>
     using storage_t = std::conditional_t<
         std::is_same_v<AccessorPolicy, default_accessor_policy<ElementType>>,
-        storage::SpanData<ElementType,
-                          zipper::detail::ExtentsTraits<Extents>::static_size>,
-        storage::AccessorData<
-            ElementType,
-            AccessorPolicy,
-            zipper::detail::ExtentsTraits<Extents>::static_size>>;
+        storage::SpanData<ElementType, storage_size<Extents, LayoutPolicy>>,
+        storage::AccessorData<ElementType,
+                              AccessorPolicy,
+                              storage_size<Extents, LayoutPolicy>>>;
 } // namespace _detail_mdspan
 
 /// Non-owning view of external memory, mirroring
@@ -38,12 +52,12 @@ template <typename ElementType,
           typename AccessorPolicy = default_accessor_policy<ElementType>>
 class MDSpan
   : public LinearLayoutExpression<
-        _detail_mdspan::storage_t<ElementType, Extents, AccessorPolicy>,
+        _detail_mdspan::storage_t<ElementType, Extents, LayoutPolicy, AccessorPolicy>,
         Extents,
         LayoutPolicy,
         MDSpan<ElementType, Extents, LayoutPolicy, AccessorPolicy>> {
     using base_type = LinearLayoutExpression<
-        _detail_mdspan::storage_t<ElementType, Extents, AccessorPolicy>,
+        _detail_mdspan::storage_t<ElementType, Extents, LayoutPolicy, AccessorPolicy>,
         Extents,
         LayoutPolicy,
         MDSpan<ElementType, Extents, LayoutPolicy, AccessorPolicy>>;
@@ -80,7 +94,7 @@ class MDSpan
                          linear_accessor_type &>)
       : base_type(
             typename base_type::linear_accessor_type(other.linear_accessor()),
-            other.extents()) {}
+            typename base_type::mapping_type(other.mapping())) {}
 
     /// Constructor from std::span with matching static extent
     template <std::size_t N>
@@ -143,11 +157,12 @@ class MDSpan
                      typename AccessorPolicy::data_handle_type>)
     MDSpan(zipper::mdspan<OtherElementType, Extents, LayoutPolicy, OtherAccessor>
                m)
-      : base_type(make_linear_accessor(m), m.extents()) {}
+      : base_type(make_linear_accessor(m), m.mapping()) {}
 
-    /// Constructor mirroring std::mdspan's (pointer, extents...) form:
-    /// builds the mdspan in place, so callers don't have to spell out the
-    /// mdspan type.  E.g. for extents (3, dynamic):
+    /// Constructor mirroring std::mdspan's (pointer, extents...) and
+    /// (pointer, mapping[, accessor]) forms: builds the mdspan in place, so
+    /// callers don't have to spell out the mdspan type.  E.g. for extents
+    /// (3, dynamic):
     ///     MatrixX3::const_span_type m(ptr, n);
     template <typename... IndexTypes>
         requires(sizeof...(IndexTypes) > 0
@@ -167,7 +182,7 @@ class MDSpan
 
     /// Fully static extents: the pointer alone determines the view.
     explicit MDSpan(typename AccessorPolicy::data_handle_type data)
-        requires(extents_traits::is_static)
+        requires(extents_traits::is_static && base_type::mapping_from_extents)
       : MDSpan(zipper::mdspan<ElementType,
                               Extents,
                               LayoutPolicy,
@@ -200,7 +215,7 @@ class MDSpan
         const auto size = m.mapping().required_span_size();
         if constexpr (is_default_accessor) {
             return linear_accessor_type(
-                std::span<ElementType, extents_traits::static_size>(
+                std::span<ElementType, linear_accessor_type::static_size>(
                     m.data_handle(), size));
         } else {
             return linear_accessor_type(
@@ -220,7 +235,7 @@ struct detail::ExpressionTraits<
     nullary::MDSpan<ElementType, Extents, LayoutPolicy, AccessorPolicy>>
   : public detail::ExpressionTraits<nullary::LinearLayoutExpression<
         nullary::_detail_mdspan::
-            storage_t<ElementType, Extents, AccessorPolicy>,
+            storage_t<ElementType, Extents, LayoutPolicy, AccessorPolicy>,
         Extents,
         LayoutPolicy,
         nullary::MDSpan<ElementType, Extents, LayoutPolicy, AccessorPolicy>>> {

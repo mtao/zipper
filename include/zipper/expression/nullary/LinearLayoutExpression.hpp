@@ -19,6 +19,15 @@ using resolved_derived_t =
     std::conditional_t<std::is_void_v<FinalDerived>, Self, FinalDerived>;
 } // namespace _detail_lle
 
+/// Layout for owning storage that copies a view with LayoutPolicy: the same
+/// layout when its mapping is determined by the extents alone, otherwise
+/// (e.g. layout_stride, whose strides are run-time) the default layout.
+template <typename LayoutPolicy, typename Extents>
+using owning_layout_policy_t = std::conditional_t<
+    std::is_constructible_v<
+        typename LayoutPolicy::template mapping<Extents>, const Extents &>,
+    LayoutPolicy, default_layout_policy>;
+
 /// Expression whose values are held in a linear span with its mapping type.
 ///
 /// @tparam FinalDerived  The outermost CRTP derived type (e.g. MDArray).
@@ -44,6 +53,10 @@ public:
   using layout_policy = LayoutPolicy;
 
   using mapping_type = typename layout_policy::template mapping<extents_type>;
+  /// The mapping is determined by the extents alone (false for e.g.
+  /// layout_stride); otherwise it must be supplied on construction.
+  constexpr static bool mapping_from_extents =
+      std::is_constructible_v<mapping_type, const extents_type &>;
   using extents_traits = zipper::detail::ExtentsTraits<extents_type>;
 
   using linear_accessor_type = LinearAccessorType;
@@ -83,21 +96,23 @@ public:
       -> LinearLayoutExpression & = default;
 
   LinearLayoutExpression()
-    requires(std::is_default_constructible_v<linear_accessor_type>)
+    requires(std::is_default_constructible_v<linear_accessor_type> &&
+             mapping_from_extents)
       : LinearLayoutExpression(extents_type{}) {}
 
   explicit LinearLayoutExpression(const extents_type &extents)
-    requires(std::is_default_constructible_v<linear_accessor_type>)
+    requires(std::is_default_constructible_v<linear_accessor_type> &&
+             mapping_from_extents)
       : m_linear_accessor(make_linear_accessor(extents)), m_mapping(extents) {}
 
   /// Allocates storage without initializing its elements. See
   /// zipper::uninitialized_t.
   explicit LinearLayoutExpression(uninitialized_t)
-    requires(uninitialized_constructible)
+    requires(uninitialized_constructible && mapping_from_extents)
       : LinearLayoutExpression(uninitialized, extents_type{}) {}
 
   LinearLayoutExpression(uninitialized_t, const extents_type &extents)
-    requires(uninitialized_constructible)
+    requires(uninitialized_constructible && mapping_from_extents)
       : m_linear_accessor(make_linear_accessor(uninitialized, extents)),
         m_mapping(extents) {}
 
@@ -106,12 +121,18 @@ public:
 
   LinearLayoutExpression(const linear_accessor_type &linear_access,
                          const extents_type &extents)
+    requires(mapping_from_extents)
       : m_linear_accessor(linear_access), m_mapping(extents) {}
+
+  /// Explicit mapping, e.g. the strides of a layout_stride view.
+  LinearLayoutExpression(const linear_accessor_type &linear_access,
+                         const mapping_type &mapping)
+      : m_linear_accessor(linear_access), m_mapping(mapping) {}
 
   /// Constructor for static extents might want to skip putting an extents
   /// member
   LinearLayoutExpression(linear_accessor_type const &linear_access)
-    requires(extents_traits::is_static)
+    requires(extents_traits::is_static && mapping_from_extents)
       : LinearLayoutExpression(linear_access, extents_type{}) {}
 
   /// Converting constructor: allows e.g.
@@ -130,7 +151,8 @@ public:
 
   template <zipper::concepts::Extents E2>
   void resize_extents(const E2 &e)
-    requires(extents_traits::template is_convertable_from<E2>())
+    requires(extents_traits::template is_convertable_from<E2>() &&
+             mapping_from_extents)
   {
     m_mapping = mapping_type(extents_traits::convert_from(e));
   }
@@ -274,8 +296,8 @@ struct detail::ExpressionTraits<nullary::LinearLayoutExpression<
               LinearAccessorType>::access_features,
           storage::LinearAccessorTraits<LinearAccessorType>::shape_features> {
   /// Dense leaf → prefer the layout it was created with.
-  using preferred_layout =
-      zipper::detail::DenseLayoutPreference<LayoutPolicy>;
+  using preferred_layout = zipper::detail::DenseLayoutPreference<
+      nullary::owning_layout_policy_t<LayoutPolicy, Extents>>;
 
   /// Linear storage exposes `mapping()`; it is a linear array (flat
   /// `operator[]` / `data()`) only when the storage is a raw buffer.

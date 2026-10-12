@@ -108,7 +108,9 @@ template <typename ElementType, typename Extents,
           typename LayoutPolicy, typename AccessorPolicy>
 auto MDSpan<ElementType, Extents, LayoutPolicy, AccessorPolicy>::make_owned() const {
   using non_const_element = std::remove_const_t<ElementType>;
-  using owned_type = MDArray<non_const_element, Extents, LayoutPolicy>;
+  // Strided views copy into the default dense layout.
+  using owned_type = MDArray<non_const_element, Extents,
+                             owning_layout_policy_t<LayoutPolicy, Extents>>;
   // evaluate_to overwrites every coefficient: skip the zero-fill.
   owned_type result(zipper::uninitialized, this->extents());
   expression::detail::AssignHelper<self_type, owned_type>::evaluate_to(*this, result);
