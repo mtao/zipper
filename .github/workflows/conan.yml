@@ -48,6 +48,7 @@ jobs:
       MESON_VERSION: "1.7.2"
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
       CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CONAN_HOME: ${{ github.workspace }}/.conan2
 
     steps:
       - name: Checkout code
@@ -105,14 +106,40 @@ jobs:
             echo "compiler.cppstd=23" >> "$PROFILE_PATH"
           fi
           echo "build_type=${{ matrix.build_type }}" >> "$PROFILE_PATH"
+          # Pin catch2 to settings that have prebuilt ConanCenter binaries
+          # (only Release binaries exist). Catch2 is ABI-stable across these
+          # compiler versions; MSVC Debug cannot mix runtimes, so it is
+          # left to build (and is then served from the cache below).
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            echo "catch2/*:compiler.version=11" >> "$PROFILE_PATH"
+            echo "catch2/*:compiler.cppstd=17" >> "$PROFILE_PATH"
+            echo "catch2/*:build_type=Release" >> "$PROFILE_PATH"
+          elif [ "$RUNNER_OS" = "macOS" ]; then
+            echo "catch2/*:compiler.version=17" >> "$PROFILE_PATH"
+            echo "catch2/*:compiler.cppstd=gnu17" >> "$PROFILE_PATH"
+            echo "catch2/*:build_type=Release" >> "$PROFILE_PATH"
+          elif [ "${{ matrix.build_type }}" = "Release" ]; then
+            echo "catch2/*:compiler.cppstd=14" >> "$PROFILE_PATH"
+          fi
           if [ "$RUNNER_OS" = "Windows" ]; then
             echo "[conf]" >> "$PROFILE_PATH"
             echo "tools.cmake.cmaketoolchain:generator=Ninja" >> "$PROFILE_PATH"
           fi
           conan profile show
 
+      - name: Cache conan packages
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.CONAN_HOME }}/p
+          key: conan-${{ matrix.platform.image }}-${{ matrix.build_type }}-${{ hashFiles('conanfile.py', '.github/workflows/conan.yml') }}
+          restore-keys: |
+            conan-${{ matrix.platform.image }}-${{ matrix.build_type }}-
+
       - name: Install conan dependencies
         run: conan install . --output-folder=builddir/conan --build=missing
+
+      - name: Trim conan cache
+        run: conan cache clean "*" --source --build --temp
 
       # -- Caches --
       - name: Cache ccache
