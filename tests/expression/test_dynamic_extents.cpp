@@ -205,7 +205,7 @@ template <typename ExpressionType, int index>
 auto make_partial_sum(const ExpressionType &a,
                       std::integral_constant<int, index>) {
     return expression::unary::detail::
-        PartialReductionDispatcher<const ExpressionType, index>(a)
+        PartialReductionDispatcher<const ExpressionType &, index>(a)
             .sum();
 }
 } // namespace

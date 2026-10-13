@@ -63,13 +63,13 @@ namespace {
 template <typename ExpressionType, int index>
 auto make_sum(const ExpressionType &a, std::integral_constant<int, index>) {
   return expression::unary::detail::PartialReductionDispatcher<
-             const ExpressionType, index>(a)
+             const ExpressionType &, index>(a)
       .sum();
 }
 template <typename ExpressionType, int index>
 auto make_norm(const ExpressionType &a, std::integral_constant<int, index>) {
   return expression::unary::detail::PartialReductionDispatcher<
-             const ExpressionType, index>(a)
+             const ExpressionType &, index>(a)
       .norm();
 }
 } // namespace
@@ -201,5 +201,76 @@ TEST_CASE("test_rowwise_colwise_matrix", "[matrix][storage][dense]") {
     for (index_type j = 0; j < N.extent(0); ++j) {
       CHECK(N.row(j).norm() == rownorm(j));
     }
+  }
+}
+
+// Regression tests for mtao/zipper#42: colwise()/rowwise() on temporaries.
+namespace {
+// The returned reduction must own the temporary cast expression; if it held a
+// reference, evaluating it here would read a destroyed object (ASan).
+auto colnorms_of_cast(const Matrix<int, 2, 3> &x) {
+  return x.cast<double>().colwise().norm();
+}
+auto rowsums_of_product(const Matrix<int, 2, 3> &x) {
+  return (x * 2).rowwise().sum();
+}
+} // namespace
+
+TEST_CASE("test_partial_reduction_on_temporaries", "[matrix][reduction]") {
+  Matrix<int, 2, 3> A{{3, 0, 1}, {4, 2, 0}};
+  const auto Ad = A.cast<double>();
+  const auto A1 = (A * 1).eval();
+
+  SECTION("colwise") {
+    Vector<double, 3> a = A.cast<double>().colwise().norm();
+    Vector<double, 3> a_ref = Ad.colwise().norm();
+    CHECK(a == a_ref);
+    CHECK(a(0) == 5.0);
+
+    Vector<double, 3> ap = A.cast<double>().colwise().norm_powered();
+    CHECK(ap == Vector<double, 3>(Ad.colwise().norm_powered()));
+
+    Vector<int, 3> s = (A * 1).colwise().sum();
+    CHECK(s == Vector<int, 3>(A1.colwise().sum()));
+    Vector<int, 3> mn = (A * 1).colwise().min();
+    CHECK(mn == Vector<int, 3>(A1.colwise().min()));
+    Vector<int, 3> mx = (A * 1).colwise().max();
+    CHECK(mx == Vector<int, 3>(A1.colwise().max()));
+  }
+  SECTION("rowwise") {
+    Vector<double, 2> a = A.cast<double>().rowwise().norm();
+    CHECK(a == Vector<double, 2>(Ad.rowwise().norm()));
+    Vector<double, 2> ap = A.cast<double>().rowwise().norm_powered();
+    CHECK(ap == Vector<double, 2>(Ad.rowwise().norm_powered()));
+    Vector<int, 2> s = (A * 1).rowwise().sum();
+    CHECK(s == Vector<int, 2>(A1.rowwise().sum()));
+    CHECK(s(0) == 4);
+    Vector<int, 2> mn = (A * 1).rowwise().min();
+    CHECK(mn == Vector<int, 2>(A1.rowwise().min()));
+    Vector<int, 2> mx = (A * 1).rowwise().max();
+    CHECK(mx == Vector<int, 2>(A1.rowwise().max()));
+  }
+  SECTION("transform") {
+    auto f = [](const auto &col) { return (2.0 * col).eval(); };
+    Matrix<double, 2, 3> t = A.cast<double>().colwise().transform(f);
+    Matrix<double, 2, 3> t_ref = Ad.colwise().transform(f);
+    CHECK(t == t_ref);
+    Matrix<double, 2, 3> rt = A.cast<double>().rowwise().transform(f);
+    CHECK(rt == Matrix<double, 2, 3>(Ad.rowwise().transform(f)));
+  }
+  SECTION("outlives_source_expression") {
+    auto n = colnorms_of_cast(A);
+    CHECK(n(0) == 5.0);
+    CHECK(n(1) == 2.0);
+    CHECK(n(2) == 1.0);
+    auto r = rowsums_of_product(A);
+    CHECK(r(0) == 8);
+    CHECK(r(1) == 12);
+  }
+  SECTION("lvalue_still_borrows") {
+    Matrix<double, 2, 3> B = Ad;
+    auto cn = B.colwise().sum();
+    B(0, 0) = 10.0;
+    CHECK(cn(0) == 14.0);
   }
 }
