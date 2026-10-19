@@ -51,13 +51,10 @@ using extents = std::extents<index_type, Extents...>;
 // fully dynamic extents
 template <rank_type N>
 using dextents = std::dextents<index_type, N>;
-struct full_extent_t {};
+using full_extent_t = std::full_extent_t;
+using full_extent_type = std::full_extent_t;
 template <typename OffsetType, typename ExtentType, typename StrideType>
-struct strided_slice {
-    OffsetType offset;
-    ExtentType extent;
-    StrideType stride;
-};
+using strided_slice = std::strided_slice<OffsetType, ExtentType, StrideType>;
 template <typename OffsetType, typename ExtentType, typename StrideType>
 using slice_type = strided_slice<OffsetType, ExtentType, StrideType>;
 using default_layout_policy = std::layout_right;

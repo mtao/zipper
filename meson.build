@@ -33,13 +33,21 @@ if not alias_ctad_compiles
   compile_args += '-DZIPPER_DONT_USE_ALIAS_CTAD'
 endif
 
-# Use the standard library's mdspan only if it also provides submdspan
-# (zipper relies on submdspan_mapping). Otherwise use Kokkos mdspan.
+# Use the standard library's mdspan only if it also provides the C++26
+# submdspan slice tags (zipper relies on submdspan_mapping). Otherwise use
+# Kokkos mdspan. GCC 16 advertises submdspan but still exposes extent_slice
+# rather than the standardized strided_slice.
 # ZIPPER_USE_STD_MDSPAN is propagated so headers make the same choice.
-if cpp_compiler.has_define('__cpp_lib_submdspan', prefix: '#include <version>')
+std_mdspan_code = '''
+  #include <mdspan>
+  using slice_type = std::strided_slice<std::size_t, std::size_t, std::size_t>;
+  static_assert(std::same_as<std::full_extent_t, decltype(std::full_extent)>);
+  slice_type slice{};
+'''
+if cpp_compiler.has_define('__cpp_lib_submdspan', prefix: '#include <version>') and cpp_compiler.compiles(std_mdspan_code, name: 'C++26 mdspan slices')
   compile_args += '-DZIPPER_USE_STD_MDSPAN'
 else
-  message('standard library lacks submdspan, using Kokkos mdspan')
+  message('standard library lacks C++26 submdspan slices, using Kokkos mdspan')
   if get_option('use_mdspan_subproject')
     mdspan_proj = subproject('mdspan')
     mdspan_dep = mdspan_proj.get_variable('mdspan_dep')
