@@ -332,6 +332,23 @@ TEST_CASE("array_normalized", "[array][norm]") {
     CHECK(n(2) == Catch::Approx(0.0));
 }
 
+TEST_CASE("array_normalized_owns_rvalue_expression", "[array][norm]") {
+    zipper::Array<double, 3> a;
+    a(0) = 3.0;
+    a(1) = 4.0;
+    a(2) = 0.0;
+    zipper::Array<double, 3> b;
+    b(0) = 0.0;
+    b(1) = 0.0;
+    b(2) = 12.0;
+
+    // The normalized expression must own the temporary a + b expression.
+    auto n = (a + b).normalized();
+    CHECK(n(0) == Catch::Approx(3.0 / 13.0));
+    CHECK(n(1) == Catch::Approx(4.0 / 13.0));
+    CHECK(n(2) == Catch::Approx(12.0 / 13.0));
+}
+
 // ============================================================
 // Element-wise three-way comparison (operator<=>)
 // ============================================================
