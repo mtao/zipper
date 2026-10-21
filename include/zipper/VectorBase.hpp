@@ -279,10 +279,14 @@ public:
     return std::pow<value_type>(norm_powered(T), p);
   }
 
-  template <index_type T = 2> auto normalized() const {
-    return *this / norm<T>();
+  template <index_type T = 2, typename Self>
+  auto normalized(this Self&& self) {
+    return std::forward<Self>(self) / self.template norm<T>();
   }
-  auto normalized(value_type T) const -> value_type { return *this / norm(T); }
+  template <typename Self>
+  auto normalized(this Self&& self, value_type T) {
+    return std::forward<Self>(self) / self.norm(T);
+  }
   template <index_type T = 2> void normalize()
     requires(expression::concepts::WritableExpression<expression_type> && !Base::is_const)
   { *this /= norm<T>(); }

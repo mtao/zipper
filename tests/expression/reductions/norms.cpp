@@ -3,6 +3,7 @@
 #include <cmath>
 #include <limits>
 #include <zipper/Array.hpp>
+#include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
 #include <zipper/ArrayBase.hxx>
 
@@ -133,6 +134,18 @@ TEST_CASE("vector_normalized", "[reduction][norm]") {
     auto n = x.normalized();
     CHECK(n(0) == Catch::Approx(0.6));
     CHECK(n(1) == Catch::Approx(0.8));
+    CHECK(n(2) == Catch::Approx(0.0));
+}
+
+TEST_CASE("vector_normalized_owns_rvalue_expression", "[reduction][norm]") {
+    const zipper::Matrix<double, 3, 3> A{
+        {1.0, 0.0, 0.0}, {0.0, 2.0, 0.0}, {0.0, 0.0, 3.0}};
+    const zipper::Vector<double, 3> x{3.0, 4.0, 0.0};
+
+    // The normalized expression must own the temporary A * x product.
+    auto n = (A * x).normalized();
+    CHECK(n(0) == Catch::Approx(0.3511234416));
+    CHECK(n(1) == Catch::Approx(0.9363291776));
     CHECK(n(2) == Catch::Approx(0.0));
 }
 
