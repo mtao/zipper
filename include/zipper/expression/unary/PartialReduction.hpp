@@ -9,10 +9,13 @@
 #include "zipper/detail/pack_index.hpp"
 #include "zipper/expression/reductions/CoefficientSum.hpp"
 
+#include <tuple>
+
 namespace zipper::expression {
 namespace unary {
 template <zipper::concepts::QualifiedExpression ExprType,
-          template <typename> typename Reduction, rank_type... Indices>
+          template <typename> typename Reduction, typename Parameters = std::tuple<>,
+          rank_type... Indices>
 class PartialReduction;
 
 }
@@ -24,9 +27,10 @@ class PartialReduction;
 /// index_remover to map between reduced and full index spaces (used in
 /// the constructor, slice_type computation, and coeff dispatching).
 template <zipper::concepts::QualifiedExpression ExprType,
-          template <typename> typename Reduction, rank_type... Indices>
+          template <typename> typename Reduction, typename Parameters,
+          rank_type... Indices>
 struct detail::ExpressionDetail<
-    unary::PartialReduction<ExprType, Reduction, Indices...>> {
+    unary::PartialReduction<ExprType, Reduction, Parameters, Indices...>> {
     using Base = detail::ExpressionTraits<std::decay_t<ExprType>>;
     using child_extents_type = typename Base::extents_type;
     using index_remover =
@@ -35,14 +39,15 @@ struct detail::ExpressionDetail<
 };
 
 template <zipper::concepts::QualifiedExpression ExprType,
-          template <typename> typename Reduction, rank_type... Indices>
+          template <typename> typename Reduction, typename Parameters,
+          rank_type... Indices>
 struct detail::ExpressionTraits<
-    unary::PartialReduction<ExprType, Reduction, Indices...>>
+    unary::PartialReduction<ExprType, Reduction, Parameters, Indices...>>
     : public zipper::expression::unary::detail::DefaultUnaryExpressionTraits<
           ExprType,
           zipper::detail::AccessFeatures::const_value()> {
     using _Detail = detail::ExpressionDetail<
-        unary::PartialReduction<ExprType, Reduction, Indices...>>;
+        unary::PartialReduction<ExprType, Reduction, Parameters, Indices...>>;
     using extents_type = typename _Detail::index_remover::template assign_types<
         zipper::extents, zipper::detail::extents::static_extents_to_array_v<
                              typename _Detail::child_extents_type>>;
@@ -54,12 +59,13 @@ struct detail::ExpressionTraits<
 namespace unary {
 // indices are the indices being reduced
 template <zipper::concepts::QualifiedExpression ExprType,
-          template <typename> typename Reduction, rank_type... Indices>
+          template <typename> typename Reduction, typename Parameters,
+          rank_type... Indices>
 class PartialReduction
     : public UnaryExpressionBase<
-          PartialReduction<ExprType, Reduction, Indices...>, ExprType> {
+          PartialReduction<ExprType, Reduction, Parameters, Indices...>, ExprType> {
    public:
-    using self_type = PartialReduction<ExprType, Reduction, Indices...>;
+    using self_type = PartialReduction<ExprType, Reduction, Parameters, Indices...>;
     using traits = zipper::expression::detail::ExpressionTraits<self_type>;
     using detail_type = zipper::expression::detail::ExpressionDetail<self_type>;
     using extents_type = traits::extents_type;
@@ -68,10 +74,11 @@ class PartialReduction
     using Base::expression;
     using child_extents_type = typename detail_type::child_extents_type;
 
-    template <typename U>
+    template <typename U, typename... Args>
       requires std::constructible_from<typename Base::storage_type, U &&>
-    PartialReduction(U &&b)
-        : Base(std::forward<U>(b)), m_extents(detail_type::index_remover::get_extents(expression().extents())) {}
+    PartialReduction(U &&b, Args &&...args)
+        : Base(std::forward<U>(b)), m_parameters(std::forward<Args>(args)...),
+          m_extents(detail_type::index_remover::get_extents(expression().extents())) {}
     PartialReduction() = delete;
     PartialReduction& operator=(const PartialReduction&) = delete;
     PartialReduction& operator=(PartialReduction&&) = delete;
@@ -122,9 +129,11 @@ class PartialReduction
             slice_type(expression(), get_index(std::integral_constant<rank_type, N>{},
                                          std::forward<Args>(idxs)...)...);
 
-        Reduction<const slice_type &> v(slice);
-        value_type val = v();
-        return val;
+        return std::apply(
+            [&](const auto &...parameters) -> value_type {
+                return Reduction<const slice_type &>(slice, parameters...)();
+            },
+            m_parameters);
     }
 
     template <typename... Args>
@@ -137,14 +146,15 @@ class PartialReduction
     }
 
 private:
+    Parameters m_parameters;
     extents_type m_extents;
 
 public:
     /// Recursively deep-copy child so the result owns all data.
     auto make_owned() const {
         auto owned_child = expression().make_owned();
-        return PartialReduction<const decltype(owned_child), Reduction, Indices...>(
-            std::move(owned_child));
+        return PartialReduction<const decltype(owned_child), Reduction, Parameters,
+                                Indices...>(std::move(owned_child), m_parameters);
     }
 };
 

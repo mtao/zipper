@@ -292,7 +292,8 @@ class ArrayBase : public ZipperBase<ArrayBase, Expr> {
 
     template <index_type T = 2>
     auto norm() const -> value_type {
-        return expression::reductions::LpNorm<T, const expression_type &>(
+        return expression::reductions::LpNorm<
+            std::integral_constant<index_type, T>, const expression_type &>(
             expression())();
     }
     auto norm(value_type T) const -> value_type {

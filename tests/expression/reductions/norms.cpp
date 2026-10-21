@@ -125,6 +125,16 @@ TEST_CASE("array_2d_norm", "[reduction][norm][array]") {
     CHECK(x.norm() == Catch::Approx(std::sqrt(30.0)));
 }
 
+TEST_CASE("columnwise_runtime_p_norm", "[reduction][norm][matrix]") {
+    zipper::Matrix<double, 2, 2> matrix{{3.0, 0.0}, {4.0, 2.0}};
+    const auto l1 = matrix.colwise().norm(1.0).eval();
+    const auto l3 = matrix.colwise().norm(3.0).eval();
+    CHECK(l1(0) == Catch::Approx(7.0));
+    CHECK(l1(1) == Catch::Approx(2.0));
+    CHECK(l3(0) == Catch::Approx(std::cbrt(91.0)));
+    CHECK(l3(1) == Catch::Approx(2.0));
+}
+
 // ============================================================
 // normalized() — returns unit vector
 // ============================================================

@@ -31,7 +31,8 @@ class PartialReductionDispatcher {
     template <template <typename> typename Reduction, typename Self>
     auto reduce(this Self &&self) {
         using PR =
-            expression::unary::PartialReduction<ExprType, Reduction, Indices...>;
+            expression::unary::PartialReduction<ExprType, Reduction, std::tuple<>,
+                                                Indices...>;
         return DerivedT<PR>(std::in_place,
                             std::forward<Self>(self)
                                 .m_dispatcher.forward_expression());
@@ -61,6 +62,18 @@ class PartialReductionDispatcher {
     auto norm(this Self &&self) {
         using holder = expression::reductions::detail::lp_norm_holder<P>;
         return std::forward<Self>(self).template reduce<holder::template LpNorm>();
+    }
+    template <typename Self>
+    auto norm(this Self &&self, typename std::decay_t<ExprType>::value_type p) {
+        using value_type = typename std::decay_t<ExprType>::value_type;
+        using binder = expression::reductions::detail::lp_norm_binder<value_type>;
+        using PR = expression::unary::PartialReduction<
+            ExprType, binder::template reduction,
+            std::tuple<value_type>, Indices...>;
+        return DerivedT<PR>(std::in_place,
+                            std::forward<Self>(self)
+                                .m_dispatcher.forward_expression(),
+                            p);
     }
     template <index_type P = 2, typename Self>
     auto norm_powered(this Self &&self) {

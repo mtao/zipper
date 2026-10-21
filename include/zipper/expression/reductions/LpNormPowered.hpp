@@ -49,8 +49,8 @@ struct lp_norm_powered_holder {
   template <zipper::concepts::QualifiedExpression ExprType,
             rank_type... Indices>
   static auto reduction(ExprType &expr) {
-    return unary::PartialReduction<ExprType, LpNormPowered,
-                                   Indices...>(expr);
+        return unary::PartialReduction<ExprType, LpNormPowered, std::tuple<>,
+                                       Indices...>(expr);
   }
 };
 } // namespace detail

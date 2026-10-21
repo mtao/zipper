@@ -8,30 +8,54 @@
 
 #include "LpNormPowered.hpp"
 #include "ReductionBase.hpp"
+#include "zipper/static_scalar.hpp"
 #include "zipper/utils/extents/all_extents_indices.hpp"
 #include "zipper/utils/scalar_math.hpp"
 
 namespace zipper::expression {
 namespace reductions {
 
+template <typename P, typename Expr>
+class LpNorm;
+
 namespace detail {
 template <index_type P>
 struct lp_norm_holder {
     template <typename Expr>
-    class LpNorm : public ReductionBase<LpNorm<Expr>, Expr> {
+    using LpNorm = reductions::LpNorm<std::integral_constant<index_type, P>, Expr>;
+};
+
+template <typename P, typename T>
+concept NormOrder =
+    (::zipper::concepts::StaticScalar<P>
+     && std::convertible_to<typename std::remove_cvref_t<P>::value_type, T>)
+    || std::convertible_to<P, T>;
+
+template <typename P>
+struct lp_norm_binder {
+    template <typename Expr>
+        requires NormOrder<P, typename std::remove_cvref_t<Expr>::value_type>
+    using reduction = reductions::LpNorm<P, Expr>;
+};
+} // namespace detail
+
+/// Lp norm reduction. `P` is either a static scalar (for compile-time
+/// `norm<P>()`) or a stored scalar (for runtime `norm(p)`).
+template <typename P, typename Expr>
+class LpNorm : public ReductionBase<LpNorm<Expr, P>, Expr> {
       public:
-        using Base = ReductionBase<LpNorm<Expr>, Expr>;
-        using typename Base::expression_type;
-        using typename Base::expression_traits;
-        using typename Base::value_type;
+    using Base = ReductionBase<LpNorm<Expr, P>, Expr>;
+    using typename Base::expression_type;
+    using typename Base::expression_traits;
+    using typename Base::value_type;
+    using Base::expression;
 
-        using Base::Base;
-        using Base::expression;
+    explicit LpNorm(const Expr &expr, P p = {}) : Base(expr), m_p(std::move(p)) {}
 
-        value_type operator()() const {
-            if constexpr (P == 2 &&
-                          utils::scalar_math::orthogonal_decomposition_scalar<
-                              value_type>) {
+    auto operator()() const -> value_type {
+        if constexpr (::zipper::concepts::StaticScalar<P>) {
+            if constexpr (P::value == 2
+                          && utils::scalar_math::orthogonal_decomposition_scalar<value_type>) {
                 using accumulator_type = value_type;
                 accumulator_type scale = accumulator_type{0};
                 accumulator_type sumsq = accumulator_type{1};
@@ -74,35 +98,37 @@ struct lp_norm_holder {
                 if (scale == accumulator_type{0}) { return value_type{0}; }
                 return scale * utils::scalar_math::square_root(sumsq);
             } else {
-                auto v =
-                    LpNormPowered<P, const expression_type &>(expression())();
-                if constexpr (P == 1) {
-                    return v;
-                } else if constexpr (P == 2) {
-                    using std::sqrt;
-                    return value_type(sqrt(v));
-                } else {
-                    return utils::scalar_math::root(v, P);
-                }
+            constexpr auto p = P::value;
+            auto v = LpNormPowered<p, const expression_type &>(expression())();
+            if constexpr (p == 1) {
+                return v;
+            } else if constexpr (p == 2) {
+                using std::sqrt;
+                return value_type(sqrt(v));
+            } else {
+                return utils::scalar_math::root(v, p);
             }
+            }
+        } else {
+            value_type sum = 0;
+            for (const auto &index : zipper::utils::extents::all_extents_indices(expression().extents())) {
+                using std::abs;
+                using std::pow;
+                sum += pow(abs(std::apply(expression(), index)), m_p);
+            }
+            using std::pow;
+            return pow(sum, value_type(1) / m_p);
         }
-    };
-    template <zipper::concepts::QualifiedExpression ExprType,
-              rank_type... Indices>
-    static auto reduction(ExprType &expr) {
-        return unary::PartialReduction<ExprType, LpNorm, Indices...>(expr);
     }
+
+  private:
+    P m_p;
 };
-} // namespace detail
-
-template <index_type P, typename Expr>
-using LpNorm =
-    typename detail::template lp_norm_holder<P>::template LpNorm<Expr>;
 
 template <typename Expr>
-using L2Norm = typename detail::lp_norm_holder<2>::LpNorm<Expr>;
+using L2Norm = LpNorm<std::integral_constant<index_type, 2>, Expr>;
 template <typename Expr>
-using L1Norm = typename detail::lp_norm_holder<1>::LpNorm<Expr>;
+using L1Norm = LpNorm<std::integral_constant<index_type, 1>, Expr>;
 
 } // namespace reductions
 } // namespace zipper::expression

@@ -43,7 +43,7 @@ class PartialReductionDispatcher {
 
     template <template <typename> typename Reduction, typename Self>
     auto reduce(this Self &&self) {
-        return unary::PartialReduction<ExprType, Reduction, Indices...>(
+        return unary::PartialReduction<ExprType, Reduction, std::tuple<>, Indices...>(
             std::forward<Self>(self).forward_expression());
     }
 
