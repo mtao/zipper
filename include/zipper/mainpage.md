@@ -10,6 +10,9 @@ using expression templates and CRTP (Curiously Recurring Template Pattern).
 
 ### Creating Vectors and Matrices
 
+Just like Eigen, you can specify types of tensors with the type and dimensions.
+These can be compile-time (static) sizes or runtime (dynamic) sizes.
+
 ```cpp
 #include <zipper/Vector.hpp>
 #include <zipper/Matrix.hpp>
@@ -27,7 +30,28 @@ Vector<double, dynamic_extent> w(100);
 Matrix<double, dynamic_extent, dynamic_extent> B(4, 4);
 ```
 
+Higher order tensors like the `Tensor` class itself can be declared by just
+having more template parameters:
+
+```cpp
+#include <zipper/Tensor.hpp>
+
+using namespace zipper;
+
+// Static-sized types (dimensions known at compile time)
+Tensor<double, 3> T1({1.0, 2.0, 3.0});
+Tensor<double, 3, 3> T2({{1, 0, 0}, {0, 2, 0}, {0, 0, 3}});
+Tensor<double, 3, 3, 3> T3(
+  {{1, 0, 0}, {0, 2, 0}, {0, 0, 3}},
+  {{1, 1, 0}, {0, 2, 1}, {4, 0, 3}},
+  {{1, 2, 0}, {0, 2, 2}, {5, 0, 3}}
+);
+```
+
 ### Arithmetic
+
+Just like you'd expect from a linear algebra library we can do simple linear
+algebraic operations with standard operator overloads:
 
 ```cpp
 // Coefficient-wise operations
@@ -47,7 +71,12 @@ double s = f * v;   // inner product
 Matrix<double, 3, 3> outer = v * f;   // outer product
 ```
 
+`0`-dimensional tensors (like the result of an inner product are implicitly
+castable as scalars.
+
 ### Solving Linear Systems
+
+zipper also supports a few higher order tools like linear solvers and views.
 
 ```cpp
 #include <zipper/utils/solver/conjugate_gradient.hpp>
@@ -81,7 +110,7 @@ Matrix<double, 3, 3> Ainv = inverse(A);
 Zipper is built on a layered architecture:
 
 | Layer | Purpose |
-|-------|---------|
+| ------- | --------- |
 | @ref user_types "User-Facing Types" | `Matrix`, `Vector`, `Form`, `Tensor` -- owning types with semantic operations |
 | **ZipperBase / ArrayBase** | CRTP bases providing common interface (assign, arithmetic) |
 | @ref expressions "Expression System" | Lazy expression templates evaluated on assignment |
@@ -106,6 +135,7 @@ elements are structurally zero. Operations like `MatrixProduct` and
 providing significant speedups for triangular and structured computations.
 
 Participating expressions:
+
 - `TriangularView` -- contiguous ranges from triangular structure
 - `Identity` -- single-index ranges (one nonzero per row/column)
 - `Unit` -- single-index range (one nonzero element)
@@ -114,7 +144,7 @@ Participating expressions:
 ## Modules
 
 | Module | Description |
-|--------|-------------|
+| -------- | ------------- |
 | @ref user_types | Matrix, Vector, Form, Array, Tensor |
 | @ref expressions | Expression template hierarchy |
 | @ref sparsity | Nonzero tracking and zero-aware operations |
@@ -126,7 +156,7 @@ Participating expressions:
 ## Choosing a Solver
 
 | Problem type | Recommended solver |
-|--------------|--------------------|
+| -------------- | -------------------- |
 | Triangular system | `triangular_solve` (direct, O(n^2)) |
 | Symmetric positive definite | `conjugate_gradient` |
 | Diagonally dominant | `gauss_seidel` |
