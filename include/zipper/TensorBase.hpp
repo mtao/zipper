@@ -6,6 +6,7 @@
 #include "concepts/stl.hpp"
 #include "detail/extents/static_extents_to_integral_sequence.hpp"
 #include "expression/nullary/StlMDArray.hpp"
+#include "expression/nullary/MDSpan.hpp"
 
 namespace zipper {
 
@@ -103,6 +104,11 @@ TensorBase(S &&)
     -> TensorBase<expression::nullary::StlMDArray<std::decay_t<S>>>;
 template <concepts::StlStorage S>
 TensorBase(S &) -> TensorBase<expression::nullary::StlMDArray<S &>>;
+
+// Deduction guide from std::mdspan
+template <typename T, typename Extents, typename Layout, typename Accessor>
+TensorBase(zipper::mdspan<T, Extents, Layout, Accessor>) -> TensorBase<
+    expression::nullary::MDSpan<T, Extents, Layout, Accessor>>;
 
 } // namespace zipper
 

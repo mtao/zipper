@@ -13,11 +13,6 @@
 
 namespace zipper {
 
-// Deduction guide from std::mdspan
-template <typename T, typename Extents, typename Layout, typename Accessor>
-FormBase(zipper::mdspan<T, Extents, Layout, Accessor>)
-    -> FormBase<expression::nullary::MDSpan<T, Extents, Layout, Accessor>>;
-
 UNARY_DECLARATION(FormBase, LogicalNot, operator!)
 UNARY_DECLARATION(FormBase, BitNot, operator~)
 UNARY_DECLARATION(FormBase, Negate, operator-)

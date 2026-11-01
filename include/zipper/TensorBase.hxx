@@ -13,11 +13,6 @@
 
 namespace zipper {
 
-// Deduction guide from std::mdspan
-template <typename T, typename Extents, typename Layout, typename Accessor>
-TensorBase(zipper::mdspan<T, Extents, Layout, Accessor>) -> TensorBase<
-    expression::nullary::MDSpan<T, Extents, Layout, Accessor>>;
-
 UNARY_DECLARATION(TensorBase, LogicalNot, operator!)
 UNARY_DECLARATION(TensorBase, BitNot, operator~)
 UNARY_DECLARATION(TensorBase, Negate, operator-)

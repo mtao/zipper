@@ -22,6 +22,10 @@
 #include "expression/reductions/LpNorm.hpp"
 #include "expression/reductions/LpNormPowered.hpp"
 #include "expression/unary/Homogeneous.hpp"
+#include "expression/nullary/MDSpan.hpp"
+#include <array>
+#include <span>
+#include <vector>
 
 namespace zipper {
 template <typename ValueType, index_type Rows> class Vector;
@@ -315,6 +319,38 @@ template <concepts::StlStorageOfRank<1> S>
 VectorBase(S &&) -> VectorBase<expression::nullary::StlMDArray<std::decay_t<S>>>;
 template <concepts::StlStorageOfRank<1> S>
 VectorBase(S &) -> VectorBase<expression::nullary::StlMDArray<S &>>;
+
+// Deduction guide from std::mdspan
+template <typename T, typename Extents, typename Layout, typename Accessor>
+VectorBase(zipper::mdspan<T, Extents, Layout, Accessor>)
+    -> VectorBase<expression::nullary::MDSpan<T, Extents, Layout, Accessor>>;
+
+// Deduction guides from std::span
+template <typename T, std::size_t N>
+VectorBase(std::span<T, N>)
+    -> VectorBase<expression::nullary::MDSpan<T, extents<N>>>;
+
+template <typename T>
+VectorBase(std::span<T, std::dynamic_extent>)
+    -> VectorBase<expression::nullary::MDSpan<T, extents<dynamic_extent>>>;
+
+// Deduction guides from std::vector (creates a mutable dynamic-extent view)
+template <typename T, typename Alloc>
+VectorBase(std::vector<T, Alloc> &)
+    -> VectorBase<expression::nullary::MDSpan<T, extents<dynamic_extent>>>;
+
+template <typename T, typename Alloc>
+VectorBase(const std::vector<T, Alloc> &) -> VectorBase<
+    expression::nullary::MDSpan<const T, extents<dynamic_extent>>>;
+
+// Deduction guides from std::array (creates a view with static extent)
+template <typename T, std::size_t N>
+VectorBase(std::array<T, N> &)
+    -> VectorBase<expression::nullary::MDSpan<T, extents<N>>>;
+
+template <typename T, std::size_t N>
+VectorBase(const std::array<T, N> &)
+    -> VectorBase<expression::nullary::MDSpan<const T, extents<N>>>;
 
 namespace concepts::detail {
 

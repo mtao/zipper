@@ -12,38 +12,6 @@
 
 namespace zipper {
 
-// Deduction guide from std::mdspan
-template <typename T, typename Extents, typename Layout, typename Accessor>
-VectorBase(zipper::mdspan<T, Extents, Layout, Accessor>)
-    -> VectorBase<expression::nullary::MDSpan<T, Extents, Layout, Accessor>>;
-
-// Deduction guides from std::span
-template <typename T, std::size_t N>
-VectorBase(std::span<T, N>)
-    -> VectorBase<expression::nullary::MDSpan<T, extents<N>>>;
-
-template <typename T>
-VectorBase(std::span<T, std::dynamic_extent>)
-    -> VectorBase<expression::nullary::MDSpan<T, extents<dynamic_extent>>>;
-
-// Deduction guides from std::vector (creates a mutable dynamic-extent view)
-template <typename T, typename Alloc>
-VectorBase(std::vector<T, Alloc> &)
-    -> VectorBase<expression::nullary::MDSpan<T, extents<dynamic_extent>>>;
-
-template <typename T, typename Alloc>
-VectorBase(const std::vector<T, Alloc> &) -> VectorBase<
-    expression::nullary::MDSpan<const T, extents<dynamic_extent>>>;
-
-// Deduction guides from std::array (creates a view with static extent)
-template <typename T, std::size_t N>
-VectorBase(std::array<T, N> &)
-    -> VectorBase<expression::nullary::MDSpan<T, extents<N>>>;
-
-template <typename T, std::size_t N>
-VectorBase(const std::array<T, N> &)
-    -> VectorBase<expression::nullary::MDSpan<const T, extents<N>>>;
-
 UNARY_DECLARATION(VectorBase, LogicalNot, operator!)
 UNARY_DECLARATION(VectorBase, BitNot, operator~)
 UNARY_DECLARATION(VectorBase, Negate, operator-)

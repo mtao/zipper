@@ -11,11 +11,6 @@
 
 namespace zipper {
 
-// Deduction guide from std::mdspan
-template <typename T, typename Extents, typename Layout, typename Accessor>
-ArrayBase(zipper::mdspan<T, Extents, Layout, Accessor>)
-    -> ArrayBase<expression::nullary::MDSpan<T, Extents, Layout, Accessor>>;
-
 UNARY_DECLARATION(ArrayBase, LogicalNot, operator!)
 UNARY_DECLARATION(ArrayBase, BitNot, operator~)
 UNARY_DECLARATION(ArrayBase, Negate, operator-)

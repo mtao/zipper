@@ -22,6 +22,7 @@
 #include "expression/unary/Abs.hpp"
 #include "expression/unary/ScalarPower.hpp"
 #include "expression/unary/math/all.hpp"
+#include "expression/nullary/MDSpan.hpp"
 
 #include <compare>
 
@@ -422,6 +423,11 @@ template <concepts::StlStorage S>
 ArrayBase(S &&) -> ArrayBase<expression::nullary::StlMDArray<std::decay_t<S>>>;
 template <concepts::StlStorage S>
 ArrayBase(S &) -> ArrayBase<expression::nullary::StlMDArray<S &>>;
+
+// Deduction guide from std::mdspan
+template <typename T, typename Extents, typename Layout, typename Accessor>
+ArrayBase(zipper::mdspan<T, Extents, Layout, Accessor>)
+    -> ArrayBase<expression::nullary::MDSpan<T, Extents, Layout, Accessor>>;
 
 namespace concepts::detail {
     template <typename T>

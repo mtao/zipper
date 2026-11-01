@@ -9,7 +9,11 @@
 //
 #include "detail/extents/static_extents_to_integral_sequence.hpp"
 #include "expression/nullary/Constant.hpp"
+#include "expression/nullary/MDSpan.hpp"
 #include <compare>
+#include <array>
+#include <span>
+#include <vector>
 
 namespace zipper {
 
@@ -106,6 +110,38 @@ template <concepts::Expression Expr>
 DataArrayBase(Expr &&) -> DataArrayBase<Expr>;
 template <concepts::Expression Expr>
 DataArrayBase(const Expr &) -> DataArrayBase<Expr>;
+
+// Deduction guide from std::mdspan
+template <typename T, typename Extents, typename Layout, typename Accessor>
+DataArrayBase(zipper::mdspan<T, Extents, Layout, Accessor>) -> DataArrayBase<
+    expression::nullary::MDSpan<T, Extents, Layout, Accessor>>;
+
+// Deduction guides from std::span
+template <typename T, std::size_t N>
+DataArrayBase(std::span<T, N>) -> DataArrayBase<
+    expression::nullary::MDSpan<T, extents<N>>>;
+
+template <typename T>
+DataArrayBase(std::span<T, std::dynamic_extent>) -> DataArrayBase<
+    expression::nullary::MDSpan<T, extents<dynamic_extent>>>;
+
+// Deduction guides from std::vector
+template <typename T, typename Alloc>
+DataArrayBase(std::vector<T, Alloc> &) -> DataArrayBase<
+    expression::nullary::MDSpan<T, extents<dynamic_extent>>>;
+
+template <typename T, typename Alloc>
+DataArrayBase(const std::vector<T, Alloc> &) -> DataArrayBase<
+    expression::nullary::MDSpan<const T, extents<dynamic_extent>>>;
+
+// Deduction guides from std::array
+template <typename T, std::size_t N>
+DataArrayBase(std::array<T, N> &) -> DataArrayBase<
+    expression::nullary::MDSpan<T, extents<N>>>;
+
+template <typename T, std::size_t N>
+DataArrayBase(const std::array<T, N> &) -> DataArrayBase<
+    expression::nullary::MDSpan<const T, extents<N>>>;
 
 namespace concepts::detail {
 template <typename T> struct IsDataArray<DataArrayBase<T>> : std::true_type {};

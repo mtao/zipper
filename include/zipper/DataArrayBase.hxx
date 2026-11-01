@@ -9,38 +9,6 @@
 
 namespace zipper {
 
-// Deduction guide from std::mdspan
-template <typename T, typename Extents, typename Layout, typename Accessor>
-DataArrayBase(zipper::mdspan<T, Extents, Layout, Accessor>) -> DataArrayBase<
-    expression::nullary::MDSpan<T, Extents, Layout, Accessor>>;
-
-// Deduction guides from std::span
-template <typename T, std::size_t N>
-DataArrayBase(std::span<T, N>) -> DataArrayBase<
-    expression::nullary::MDSpan<T, extents<N>>>;
-
-template <typename T>
-DataArrayBase(std::span<T, std::dynamic_extent>) -> DataArrayBase<
-    expression::nullary::MDSpan<T, extents<dynamic_extent>>>;
-
-// Deduction guides from std::vector
-template <typename T, typename Alloc>
-DataArrayBase(std::vector<T, Alloc> &) -> DataArrayBase<
-    expression::nullary::MDSpan<T, extents<dynamic_extent>>>;
-
-template <typename T, typename Alloc>
-DataArrayBase(const std::vector<T, Alloc> &) -> DataArrayBase<
-    expression::nullary::MDSpan<const T, extents<dynamic_extent>>>;
-
-// Deduction guides from std::array
-template <typename T, std::size_t N>
-DataArrayBase(std::array<T, N> &) -> DataArrayBase<
-    expression::nullary::MDSpan<T, extents<N>>>;
-
-template <typename T, std::size_t N>
-DataArrayBase(const std::array<T, N> &) -> DataArrayBase<
-    expression::nullary::MDSpan<const T, extents<N>>>;
-
 // Lexicographic three-way comparison (std::weak_ordering).
 // Two data arrays compare equal iff they have the same extents
 // and all elements compare equal in index order.  Otherwise the
