@@ -6,7 +6,7 @@
 #include <zipper/Vector.hpp>
 #include <zipper/expression/nullary/Identity.hpp>
 #include <zipper/expression/nullary/MDArray.hpp>
-#include <zipper/expression/unary/PartialTransform.hpp>
+#include <zipper/expression/unary/PartialMap.hpp>
 
 using namespace zipper;
 
@@ -21,10 +21,10 @@ TEST_CASE("partial_transform_colwise_identity",
     // colwise: Indices={0}, iterates columns, fn receives each column
     // Note: fn must accept by const reference (fibers are non-copyable views)
     auto result = A.colwise().transform([](const auto &col) {
-        return col.eval(); // materialize to return owned data
+        return as_vector(col).eval(); // materialize to return owned data
     });
 
-    using From = decltype(result)::expression_type;
+    using From = decltype(result);
     using To = decltype(A)::expression_type;
     using expression::detail::HasAssignTo;
     STATIC_CHECK(HasAssignTo<From, To>);
@@ -54,7 +54,7 @@ TEST_CASE("partial_transform_rowwise_identity",
 
     // rowwise: Indices={1}, iterates rows, fn receives each row
     auto result =
-        A.rowwise().transform([](const auto &row) { return row.eval(); });
+        A.rowwise().transform([](const auto &row) { return as_vector(row).eval(); });
 
     REQUIRE(result.extent(0) == 3);
     REQUIRE(result.extent(1) == 4);
@@ -73,7 +73,7 @@ TEST_CASE("partial_transform_colwise_scale",
 
     Matrix<double, 3, 4> B;
     B = A.colwise().transform(
-        [](const auto &col) { return (2.0 * col).eval(); });
+        [](const auto &col) { return (2.0 * as_vector(col)).eval(); });
 
     for (index_type i = 0; i < 3; ++i)
         for (index_type j = 0; j < 4; ++j) CHECK(B(i, j) == 2.0 * A(i, j));
@@ -89,7 +89,7 @@ TEST_CASE("partial_transform_rowwise_scale",
 
     Matrix<double, 3, 4> B;
     B = A.rowwise().transform(
-        [](const auto &row) { return (3.0 * row).eval(); });
+        [](const auto &row) { return (3.0 * as_vector(row)).eval(); });
 
     for (index_type i = 0; i < 3; ++i)
         for (index_type j = 0; j < 4; ++j) CHECK(B(i, j) == 3.0 * A(i, j));
@@ -108,7 +108,7 @@ TEST_CASE("partial_transform_colwise_normalize",
 
     Matrix<double, 2, 3> B;
     B = A.colwise().transform(
-        [](const auto &col) { return col.normalized().eval(); });
+        [](const auto &col) { return as_vector(col).normalized().eval(); });
 
     CHECK(B(0, 0) == Catch::Approx(3.0 / 5.0));
     CHECK(B(1, 0) == Catch::Approx(4.0 / 5.0));
@@ -144,7 +144,7 @@ TEST_CASE("partial_transform_givens_rotation",
     // Apply G to each column: result_col = G * col
     Matrix<double, 2, 3> B;
     B = A.colwise().transform(
-        [&G](const auto &col) { return (G * col).eval(); });
+        [&G](const auto &col) { return (G * as_vector(col)).eval(); });
 
     // Col 0: G * [1, 0]^T = [c, s]^T
     CHECK(B(0, 0) == Catch::Approx(c));
@@ -167,7 +167,7 @@ TEST_CASE("partial_transform_assign_to_dynamic",
 
     MatrixXX<double> B(3, 4);
     B = A.colwise().transform(
-        [](const auto &col) { return (2.0 * col).eval(); });
+        [](const auto &col) { return (2.0 * as_vector(col)).eval(); });
 
     for (index_type i = 0; i < 3; ++i)
         for (index_type j = 0; j < 4; ++j) CHECK(B(i, j) == 2.0 * A(i, j));
@@ -185,7 +185,7 @@ TEST_CASE("partial_transform_coeff_access",
     A(1, 2) = 6.0;
 
     auto result = A.colwise().transform(
-        [](const auto &col) { return (10.0 * col).eval(); });
+        [](const auto &col) { return (10.0 * as_vector(col)).eval(); });
 
     // Accessing via coeff() should give the correct values
     CHECK(result(0, 0) == 10.0);
@@ -204,7 +204,7 @@ TEST_CASE("partial_transform_transpose_alias",
     auto transposed = A.transpose();
     A = transposed.rowwise().transform([&](const auto &row) {
         ++calls;
-        return 2.0 * row;
+        return 2.0 * as_vector(row);
     });
     CHECK(A == expected);
     CHECK(calls == 3);
@@ -218,7 +218,7 @@ TEST_CASE("partial_transform_overlapping_fibers",
     int calls = 0;
     target = source.colwise().transform([&](const auto &col) {
         ++calls;
-        return 2.0 * col;
+        return 2.0 * as_vector(col);
     });
     CHECK(A == Matrix<double, 2, 4>{{1, 2, 4, 6}, {5, 10, 12, 14}});
     CHECK(calls == 3);
@@ -234,7 +234,7 @@ TEST_CASE("partial_transform_lazy_callback_reads_original_fiber",
         // The reduction is deferred until each result coefficient is read.
         return [&row, &coefficients](index_type) {
             ++coefficients;
-            return row.as_array().sum();
+            return as_array(row).sum();
         };
     });
     CHECK(A == Matrix<double, 2, 3>{{6, 6, 6}, {15, 15, 15}});
@@ -250,7 +250,7 @@ TEST_CASE("partial_transform_resize_alias",
         auto transposed = A.transpose();
         A = transposed.colwise().transform([&](const auto &col) {
             ++calls;
-            return 2.0 * col;
+            return 2.0 * as_vector(col);
         });
         CHECK(A == Matrix<double, 3, 2>{{2, 8}, {4, 10}, {6, 12}});
         CHECK(calls == 2);
@@ -259,7 +259,7 @@ TEST_CASE("partial_transform_resize_alias",
         auto tail = A.rightCols(2);
         A = tail.rowwise().transform([&](const auto &row) {
             ++calls;
-            return 2.0 * row;
+            return 2.0 * as_vector(row);
         });
         CHECK(A == Matrix<double, 2, 2>{{4, 6}, {10, 12}});
         CHECK(calls == 2);
@@ -272,7 +272,7 @@ TEST_CASE("partial_transform_resize_alias",
             ++calls;
             CHECK(A.rows() == 2);
             CHECK(A.cols() == 3);
-            return row * A.as_array().sum();
+            return as_vector(row) * A.as_array().sum();
         });
         CHECK(A == (source * 21.0).eval());
         CHECK(calls == 3);
@@ -285,7 +285,7 @@ TEST_CASE("partial_transform_assignment_evaluates_once_per_fiber",
     int calls = 0;
     auto transformed = source.colwise().transform([&](const auto &col) {
         ++calls;
-        return col * col.as_array().sum();
+        return as_vector(col) * as_array(col).sum();
     });
     STATIC_CHECK_FALSE(decltype(transformed)::expression_type::traits::
                            is_coefficient_consistent);
@@ -296,7 +296,7 @@ TEST_CASE("partial_transform_assignment_evaluates_once_per_fiber",
         CHECK(target == expected);
     }
     SECTION("eval") {
-        CHECK(transformed.eval() == expected);
+        CHECK(as_matrix(transformed).eval() == expected);
     }
     CHECK(calls == 3);
 }
@@ -310,13 +310,13 @@ TEST_CASE("partial_transform_sparse_child_does_not_imply_sparse_output",
     int calls = 0;
     auto transformed = source.rowwise().transform([&](const auto &row) {
         ++calls;
-        return row.as_array() + 1.0;
+        return as_array(row) + 1.0;
     });
-    using traits = typename decltype(transformed)::expression_type::traits;
+    using traits = typename decltype(transformed)::traits;
     STATIC_CHECK_FALSE(traits::has_index_set);
     STATIC_CHECK_FALSE(detail::is_sparse_layout_preference_v<
                        typename traits::preferred_layout>);
-    auto result = transformed.eval();
+    auto result = as_matrix(transformed).eval();
     STATIC_CHECK(std::is_same_v<decltype(result), Matrix<double, 2, 3>>);
     CHECK(result == Matrix<double, 2, 3>{{1, 3, 1}, {1, 1, 1}});
     CHECK(calls == 2);

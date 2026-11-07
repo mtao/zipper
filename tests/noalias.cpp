@@ -373,7 +373,7 @@ TEST_CASE("noalias_partial_transform_retains_fiber_evaluator", "[assignment][noa
     int calls = 0;
     auto transformed = source.colwise().transform([&](const auto &col) {
         ++calls;
-        return 2 * col;
+        return 2 * as_vector(col);
     });
     MatrixXX<int> target(1, 1);
     target.noalias() = transformed;

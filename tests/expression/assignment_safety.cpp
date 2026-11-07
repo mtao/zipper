@@ -200,5 +200,5 @@ TEST_CASE("assignment_safety_rejects_nonpointwise_nodes", "[expression][assignme
     CHECK_FALSE(assignment_is_safe(gathered.expression(), a.expression()));
     const auto reduced = a.colwise().sum();
     zipper::Vector<double, 2> v;
-    CHECK_FALSE(assignment_is_safe(reduced.expression(), v.expression()));
+    CHECK_FALSE(assignment_is_safe(reduced, v.expression()));
 }

@@ -77,7 +77,7 @@ These collapse one or more dimensions by aggregating values.
 
 | Header | Expression | What it does | Rank change |
 |--------|-----------|--------------|-------------|
-| `PartialReduction.hpp` | `PartialReduction<Expr, Red, Indices...>` | Collapses specified dimensions via a reduction functor (sum, max, etc.) | Rank - `sizeof...(Indices)` |
+| `PartialMap.hpp` | `PartialMap<Expr, Fn, Out, In...>` | Maps each sub-tensor spanning axes `In...` to a scalar (reductions: sum, max, ...) or a tensor whose axes go to positions `Out...` (transforms, reshaping maps) | Rank - `sizeof...(In)` + rank of `Fn`'s result |
 | `PartialTrace.hpp` | `PartialTrace<Expr, Indices...>` | Contracts dimension pairs (generalized trace) | Rank - `sizeof...(Indices)` |
 
 ---
@@ -135,7 +135,8 @@ These are all thin wrappers around `CoefficientWiseOperation` or
 | `detail/CoeffWiseTraits.hpp` | Traits for deducing `value_type` of coefficient-wise operations |
 | `detail/invert_integer_sequence.hpp` | Compile-time integer sequence inversion (used by `Swizzle`, `AntiSlice`) |
 | `detail/operation_implementations.hpp` | Functor structs: `Abs`, `ScalarPower`, min/max (some use `static operator()`) |
-| `detail/PartialReductionDispatcher.hpp` | Dispatch logic for `PartialReduction` over static/dynamic dimension sets |
+| `detail/PartialReductionDispatcher.hpp` | Builds `PartialMap`s (map, reductions, transform) over a set of axes |
+| `detail/ReduceWith.hpp` | Adapts a full reduction (with bound parameters) into a `PartialMap` function |
 
 ---
 
@@ -161,5 +162,5 @@ Child IndexSet
 ```
 
 Expressions that do NOT propagate IndexSets (AntiSlice, Diagonal, Homogeneous,
-Reshape, PartialReduction, PartialTrace, Cofactor) could potentially be
+Reshape, PartialMap, PartialTrace, Cofactor) could potentially be
 extended in the future but currently report all indices as potentially nonzero.

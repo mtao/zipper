@@ -54,6 +54,9 @@ test('function_boundary', test_function_boundary)
 test_readme_examples = executable('test_readme_examples', 'readme_examples.cpp', dependencies: [zipper_test_dep])
 test('readme_examples', test_readme_examples)
 
+test_mappings_examples = executable('test_mappings_examples', 'mappings_examples.cpp', dependencies: [zipper_test_dep])
+test('mappings_examples', test_mappings_examples)
+
 test_ref = executable('test_ref', 'ref.cpp', dependencies: [zipper_test_dep])
 test('ref', test_ref)
 

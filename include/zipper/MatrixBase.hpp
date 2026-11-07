@@ -17,7 +17,7 @@
 #include "expression/reductions/Trace.hpp"
 #include "expression/unary/TriangularView.hpp"
 #include "utils/decomposition/detail/shape_concepts.hpp"
-#include "zipper/detail/PartialReductionDispatcher.hpp"
+#include "zipper/expression/unary/detail/PartialReductionDispatcher.hpp"
 #include "zipper/detail/constexpr_arithmetic.hpp"
 #include "zipper/detail/extents/get_extent.hpp"
 
@@ -304,14 +304,14 @@ class MatrixBase : public ZipperBase<MatrixBase, Expr> {
     auto rowwise(this Self &&self) {
         using child_t = detail::member_child_storage_t<Self, Expr>;
         // we're reducing the first cols
-        return detail::PartialReductionDispatcher<VectorBase, child_t, 1>(
+        return expression::unary::detail::PartialReductionDispatcher<child_t, 1>(
           std::forward<Self>(self).expression());
     }
     template<typename Self>
     auto colwise(this Self &&self) {
         using child_t = detail::member_child_storage_t<Self, Expr>;
         // we're reducing the first rows
-        return detail::PartialReductionDispatcher<VectorBase, child_t, 0>(
+        return expression::unary::detail::PartialReductionDispatcher<child_t, 0>(
           std::forward<Self>(self).expression());
     }
 };

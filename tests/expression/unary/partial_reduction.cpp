@@ -9,7 +9,7 @@
 #include <zipper/expression/nullary/Random.hpp>
 #include <zipper/expression/reductions/CoefficientSum.hpp>
 #include <zipper/expression/reductions/Trace.hpp>
-#include <zipper/expression/unary/PartialReduction.hpp>
+#include <zipper/expression/unary/PartialMap.hpp>
 #include <zipper/expression/unary/detail/PartialReductionDispatcher.hpp>
 #include <zipper/utils/format.hpp>
 #include <zipper/Matrix.hpp>
@@ -251,7 +251,7 @@ TEST_CASE("test_partial_reduction_on_temporaries", "[matrix][reduction]") {
     CHECK(mx == Vector<int, 2>(A1.rowwise().max()));
   }
   SECTION("transform") {
-    auto f = [](const auto &col) { return (2.0 * col).eval(); };
+    auto f = [](const auto &col) { return (2.0 * as_vector(col)).eval(); };
     Matrix<double, 2, 3> t = A.cast<double>().colwise().transform(f);
     Matrix<double, 2, 3> t_ref = Ad.colwise().transform(f);
     CHECK(t == t_ref);

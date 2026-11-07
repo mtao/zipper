@@ -689,3 +689,164 @@ TEST_CASE("array_select_chaining", "[array][select]") {
     CHECK(clamped(1) == 0.0);
     CHECK(clamped(2) == 5.0);
 }
+
+namespace {
+// A (2, 3, 4) array with a(i, j, k) = 100 i + 10 j + k.
+auto make_tensor() {
+    zipper::Array<double, 2, 3, 4> a;
+    for (zipper::index_type i = 0; i < 2; ++i) {
+        for (zipper::index_type j = 0; j < 3; ++j) {
+            for (zipper::index_type k = 0; k < 4; ++k) {
+                a(i, j, k) = 100.0 * i + 10.0 * j + k;
+            }
+        }
+    }
+    return a;
+}
+} // namespace
+
+TEST_CASE("array_over_axes", "[array][over]") {
+    const auto a = make_tensor();
+
+    SECTION("reductions over one axis") {
+        const auto s = a.over<2>().sum(); // (2, 3)
+        STATIC_CHECK(decltype(s)::extents_type::rank() == 2);
+        CHECK(s(1, 2) == 4 * 120.0 + 6.0);
+        CHECK(a.over<0>().max()(2, 3) == 123.0);
+    }
+    SECTION("reductions over several axes") {
+        const auto s = a.over<0, 1>().sum(); // (4)
+        STATIC_CHECK(decltype(s)::extents_type::rank() == 1);
+        // sum_ij (100 i + 10 j + k) = 6k + 3*100 + 2*30
+        CHECK(s(3) == 6 * 3.0 + 300.0 + 60.0);
+    }
+    SECTION("contraction with a vector") {
+        zipper::Array<double, 4> w;
+        w(0) = 1.0;
+        w(1) = 0.0;
+        w(2) = 0.0;
+        w(3) = 2.0;
+        const auto c = a.over<2>().contract(w); // (2, 3)
+        CHECK(c(1, 1) == 110.0 + 2.0 * 113.0);
+    }
+    SECTION("contraction with a tensor") {
+        zipper::Array<double, 3, 4> w;
+        w.fill(0.0);
+        w(2, 1) = 1.0;
+        w(0, 3) = -1.0;
+        const auto c = a.over<1, 2>().contract(w); // (2)
+        CHECK(c(1) == 121.0 - 103.0);
+        // A temporary weight tensor is owned by the result.
+        const auto owned = a.over<1, 2>().contract(zipper::Array<double, 3, 4>(w));
+        CHECK(owned(0) == 21.0 - 3.0);
+    }
+}
+
+TEST_CASE("array_broadcast", "[array][broadcast]") {
+    zipper::Array<double, 4> v;
+    for (zipper::index_type k = 0; k < 4; ++k) v(k) = static_cast<double>(k);
+
+    const auto b = v.broadcast<0, 1>(zipper::extents<2, 3, 4>{});
+    STATIC_CHECK(decltype(b)::extents_type::rank() == 3);
+    CHECK(b.extent(1) == 3);
+    CHECK(b(1, 2, 3) == 3.0);
+    CHECK(b(0, 0, 2) == 2.0);
+
+    // A new middle axis.
+    zipper::Array<double, 2, 4> m;
+    for (zipper::index_type i = 0; i < 2; ++i) {
+        for (zipper::index_type k = 0; k < 4; ++k) m(i, k) = 10.0 * i + k;
+    }
+    const auto mid = m.broadcast<1>(zipper::dextents<3>(2, 5, 4));
+    CHECK(mid(1, 4, 3) == 13.0);
+
+    // Per-channel scaling.
+    const auto a = make_tensor();
+    const zipper::Array<double, 2, 3, 4> scaled = a * zipper::as_array(v.broadcast<0, 1>(a.extents()));
+    CHECK(scaled(1, 2, 3) == 123.0 * 3.0);
+    CHECK(scaled(1, 2, 0) == 0.0);
+}
+
+TEST_CASE("array_over_map", "[array][over][map]") {
+    // (3, 2, 2) channel-first RGB: a(c, x, y) = 10 c + 2 x + y.
+    zipper::Array<double, 3, 2, 2> rgb;
+    for (zipper::index_type c = 0; c < 3; ++c) {
+        for (zipper::index_type x = 0; x < 2; ++x) {
+            for (zipper::index_type y = 0; y < 2; ++y) rgb(c, x, y) = 10.0 * c + 2.0 * x + y;
+        }
+    }
+    int calls = 0;
+    const auto to_rgba = [&calls](const auto &c) {
+        ++calls;
+        return zipper::Vector<double, 4>{c(0), c(1), c(2), 1.0};
+    };
+
+    SECTION("channels stay first: (3, W, H) -> (4, W, H)") {
+        const zipper::Array<double, 4, 2, 2> rgba = rgb.over<0>().map<0>(to_rgba);
+        CHECK(calls == 4); // once per pixel
+        CHECK(rgba(2, 1, 0) == 22.0);
+        CHECK(rgba(3, 1, 1) == 1.0);
+    }
+    SECTION("channels move last: (3, W, H) -> (W, H, 4)") {
+        const auto lazy = rgb.over<0>().map<2>(to_rgba);
+        STATIC_CHECK(std::is_same_v<typename decltype(lazy)::extents_type, zipper::extents<2, 2, 4>>);
+        const zipper::Array<double, 2, 2, 4> rgba = lazy;
+        CHECK(rgba(1, 0, 2) == 22.0);
+        CHECK(rgba(0, 1, 3) == 1.0);
+    }
+    SECTION("channels last, dropped: (W, H, 4) -> (W, H, 3)") {
+        const zipper::Array<double, 2, 2, 4> rgba = rgb.over<0>().map<2>(to_rgba);
+        const zipper::Array<double, 2, 2, 3> back = rgba.over<2>().map<2>([](const auto &c) {
+            return zipper::Vector<double, 3>{c(0), c(1), c(2)};
+        });
+        CHECK(back(1, 1, 1) == 13.0);
+    }
+    SECTION("default placement is in place") {
+        const zipper::Array<double, 4, 2, 2> rgba = rgb.over<0>().map(to_rgba);
+        CHECK(rgba(0, 1, 1) == 3.0);
+    }
+    SECTION("results of another rank: (3, W, H) -> (W, 3, 3, H)") {
+        // Each pixel's outer product with itself, placed at axes 1 and 2.
+        const auto outer = rgb.over<0>().map<1, 2>([](const auto &c) {
+            zipper::Array<double, 3, 3> m;
+            for (zipper::index_type i = 0; i < 3; ++i) {
+                for (zipper::index_type j = 0; j < 3; ++j) m(i, j) = c(i) * c(j);
+            }
+            return m;
+        });
+        STATIC_CHECK(std::is_same_v<typename decltype(outer)::extents_type,
+                                    zipper::extents<2, 3, 3, 2>>);
+        CHECK(outer(1, 2, 1, 0) == 22.0 * 12.0);
+    }
+}
+
+TEST_CASE("array_over_map_dynamic_results", "[array][over][map]") {
+    zipper::Array<double, zipper::dynamic_extent, zipper::dynamic_extent> a(2, 3);
+    for (zipper::index_type i = 0; i < 2; ++i) {
+        for (zipper::index_type j = 0; j < 3; ++j) a(i, j) = 3.0 * i + j;
+    }
+    int calls = 0;
+    // Each row with its sum appended: (2, 3) -> (2, 4), sizes known only at
+    // run time.
+    const auto append_sum = [&calls](const auto &row) {
+        ++calls;
+        zipper::Array<double, zipper::dynamic_extent> out(row.extent(0) + 1);
+        for (zipper::index_type j = 0; j < row.extent(0); ++j) out(j) = row(j);
+        out(row.extent(0)) = zipper::as_array(row).sum();
+        return out;
+    };
+
+    SECTION("extents from the first row") {
+        const auto lazy = a.over<1>().map(append_sum);
+        CHECK(calls == 1);
+        CHECK(lazy.extent(1) == 4);
+        const zipper::Array<double, zipper::dynamic_extent, zipper::dynamic_extent> result = lazy;
+        CHECK(calls == 3);
+        CHECK(result(1, 3) == 3.0 + 4.0 + 5.0);
+    }
+    SECTION("extents given") {
+        const auto lazy = a.over<1>().map(append_sum, zipper::dextents<1>(4));
+        CHECK(calls == 0);
+        CHECK(lazy.extent(1) == 4);
+    }
+}

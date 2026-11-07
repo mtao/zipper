@@ -11,6 +11,8 @@
 #include "expression/nullary/Constant.hpp"
 #include "expression/nullary/Zero.hpp"
 #include "static_scalar.hpp"
+#include "expression/unary/detail/PartialReductionDispatcher.hpp"
+#include "expression/unary/Broadcast.hpp"
 #include "expression/unary/Cast.hpp"
 #include "expression/unary/CoefficientWiseOperation.hpp"
 #include "expression/unary/DiagonalExtract.hpp"
@@ -425,6 +427,33 @@ class ZipperBase
         using V = expression::unary::Cast<T, child_t>;
         return DerivedT<V>(std::in_place,
                            std::forward<Self>(self).expression());
+    }
+
+    /// Operations on the sub-tensors spanning axes `Axes...` (colwise /
+    /// rowwise for any rank): map each to a scalar or tensor, or reduce it
+    /// (sum, min, max, norm, contract).  Results are raw expressions: wrap
+    /// them (as_array(...), zipper::Vector(...), ...) to operate on them.
+    ///
+    ///     zipper::Vector n = A.over<0>().norm();   // = A.colwise().norm()
+    ///     rgb.over<2>().contract(weights)          // (H, W, 3) . (3) -> (H, W)
+    ///     rgb.over<0>().map<2>(to_rgba)            // (3, W, H) -> (W, H, 4)
+    template <rank_type... Axes, typename Self>
+    auto over(this Self &&self) {
+        using child_t = detail::member_child_storage_t<Self, raw_expression_type>;
+        return expression::unary::detail::PartialReductionDispatcher<child_t, Axes...>(
+            std::forward<Self>(self).expression());
+    }
+
+    /// This object repeated along new axes `Axes...` of a result shaped
+    /// `extents` (its other axes match this one), like NumPy broadcasting;
+    /// a raw expression.
+    ///
+    ///     zipper::Matrix X = x.broadcast<1>(extents<3, 4>{});  // X(i, j) = x(i)
+    template <rank_type... Axes, typename Self, concepts::Extents E>
+    auto broadcast(this Self &&self, const E &extents) {
+        using child_t = detail::member_child_storage_t<Self, raw_expression_type>;
+        return expression::unary::Broadcast<child_t, E, Axes...>(
+            std::forward<Self>(self).expression(), extents);
     }
 
     template <typename Self>

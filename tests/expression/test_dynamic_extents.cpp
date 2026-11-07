@@ -20,7 +20,7 @@
 #include <zipper/expression/unary/Cast.hpp>
 #include <zipper/expression/unary/Cofactor.hpp>
 #include <zipper/expression/unary/Homogeneous.hpp>
-#include <zipper/expression/unary/PartialReduction.hpp>
+#include <zipper/expression/unary/PartialMap.hpp>
 #include <zipper/expression/unary/Reshape.hpp>
 #include <zipper/expression/unary/detail/PartialReductionDispatcher.hpp>
 #include <zipper/utils/determinant.hpp>
@@ -689,13 +689,13 @@ TEST_CASE("dynamic_colwise_rowwise_norm", "[dynamic][reduction][partial]") {
     A(1, 1) = 5;
     A(1, 2) = 0;
 
-    auto cn = A.colwise().norm();
+    auto cn = zipper::as_vector(A.colwise().norm());
     REQUIRE(cn.size() == 3);
     CHECK(cn(0) == Catch::Approx(3.0));
     CHECK(cn(1) == Catch::Approx(5.0));
     CHECK(cn(2) == Catch::Approx(4.0));
 
-    auto rn = A.rowwise().norm();
+    auto rn = zipper::as_vector(A.rowwise().norm());
     REQUIRE(rn.size() == 2);
     CHECK(rn(0) == Catch::Approx(5.0));
     CHECK(rn(1) == Catch::Approx(5.0));
@@ -976,8 +976,8 @@ TEST_CASE("partial_reduction_min_max", "[partial_reduction][min][max]") {
     CHECK(rmin == zipper::Vector<double, 3>{-2.0, -5.0, -1.0});
     CHECK(rmax == zipper::Vector<double, 3>{1.0, 3.0, 20.0});
 
-    auto cmin = M.colwise().min().eval();
-    auto cmax = M.colwise().max().eval();
+    auto cmin = zipper::as_vector(M.colwise().min()).eval();
+    auto cmax = zipper::as_vector(M.colwise().max()).eval();
     REQUIRE(cmin.extent(0) == 4);
     CHECK(cmin(0) == -5.0);
     CHECK(cmin(1) == -2.0);
