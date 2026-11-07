@@ -24,6 +24,7 @@
 #include "expression/unary/math/all.hpp"
 #include "expression/nullary/Constant.hpp"
 #include "expression/nullary/MDSpan.hpp"
+#include "concepts/ArrayOrScalar.hpp"
 #include "concepts/Zipper.hpp"
 
 #include <compare>
@@ -49,12 +50,6 @@ namespace detail {
         static auto get(const T &value) -> type { return type(value); }
     };
 } // namespace detail
-
-namespace concepts {
-    /// An array or a scalar, as accepted by ArrayBase::select.
-    template <typename T>
-    concept SelectArgument = Array<T> || (!Zipper<T> && std::is_scalar_v<T>);
-} // namespace concepts
 
 template <concepts::Expression Expr>
 class ArrayBase : public ZipperBase<ArrayBase, Expr> {
@@ -359,8 +354,8 @@ class ArrayBase : public ZipperBase<ArrayBase, Expr> {
     /// @param true_val  Values (an array or a scalar) for true entries.
     /// @param false_val Values (an array or a scalar) for false entries.
     /// @return A lazy expression with the element-wise selection.
-    template <concepts::SelectArgument TrueArr,
-              concepts::SelectArgument FalseArr,
+    template <concepts::ArrayOrScalar TrueArr,
+              concepts::ArrayOrScalar FalseArr,
               typename Self>
     auto select(this Self &&self,
                 const TrueArr &true_val,
@@ -391,9 +386,9 @@ class ArrayBase : public ZipperBase<ArrayBase, Expr> {
     /// @param greater_val Values (an array or a scalar) for greater-than
     ///                    entries.
     /// @return A lazy expression with the element-wise three-way selection.
-    template <concepts::SelectArgument LessArr,
-              concepts::SelectArgument EqualArr,
-              concepts::SelectArgument GreaterArr,
+    template <concepts::ArrayOrScalar LessArr,
+              concepts::ArrayOrScalar EqualArr,
+              concepts::ArrayOrScalar GreaterArr,
               typename Self>
     auto select(this Self &&self,
                 const LessArr &less_val,

@@ -5,6 +5,7 @@
 #include <iostream>
 #include <zipper/Array.hpp>
 #include <zipper/ArrayBase.hxx>
+#include <zipper/Vector.hpp>
 
 TEST_CASE("test_array_minmax", "[array][storage][dense]") {
     zipper::Array<double, 2, 2> x;
@@ -606,6 +607,68 @@ TEST_CASE("array_select_scalars", "[array][select]") {
         CHECK(counts(1) == 1.0);
         CHECK(counts.sum() == 1.0);
     }
+}
+
+TEST_CASE("array_scalar_min_max_clamp", "[array][minmax]") {
+    zipper::Array<double, 4> a;
+    a(0) = -2.0;
+    a(1) = 0.5;
+    a(2) = 3.0;
+    a(3) = 1.0;
+
+    const zipper::Array<double, 4> low = zipper::min(a, 1.0);
+    CHECK(low(0) == -2.0);
+    CHECK(low(2) == 1.0);
+    const zipper::Array<double, 4> high = zipper::max(0.0, a);
+    CHECK(high(0) == 0.0);
+    CHECK(high(2) == 3.0);
+
+    SECTION("scalar bounds") {
+        const zipper::Array<double, 4> c = zipper::clamp(a, 0.0, 1.0);
+        CHECK(c(0) == 0.0);
+        CHECK(c(1) == 0.5);
+        CHECK(c(2) == 1.0);
+        CHECK(c(3) == 1.0);
+    }
+    SECTION("array bounds") {
+        zipper::Array<double, 4> lo;
+        zipper::Array<double, 4> hi;
+        for (zipper::index_type i = 0; i < 4; ++i) {
+            lo(i) = -1.0;
+            hi(i) = static_cast<double>(i);
+        }
+        const zipper::Array<double, 4> c = zipper::clamp(a, lo, hi);
+        CHECK(c(0) == -1.0);
+        CHECK(c(1) == 0.5);
+        CHECK(c(2) == 2.0);
+    }
+    SECTION("the expression owns its intermediates") {
+        const auto make = [](const zipper::Array<double, 4> &x) {
+            return zipper::clamp(x, 0.0, 1.0);
+        };
+        const auto lazy = make(a);
+        CHECK(lazy(2) == 1.0);
+        CHECK(lazy.sum() == 2.5);
+    }
+}
+
+TEST_CASE("zipper_fill", "[array][fill]") {
+    zipper::Array<float, 3> a;
+    a.fill(2);
+    CHECK(a.sum() == 6.0f);
+
+    // A slice of a rank-3 array.
+    zipper::Array<float, zipper::dynamic_extent, zipper::dynamic_extent, 4> rgba(2, 3);
+    rgba.fill(0.0f);
+    const zipper::full_extent_t all{};
+    rgba.slice(all, all, 3).fill(1.0f);
+    CHECK(rgba(1, 2, 3) == 1.0f);
+    CHECK(rgba(1, 2, 2) == 0.0f);
+    CHECK(rgba.sum() == 6.0f);
+
+    zipper::Vector<double, 3> v;
+    v.fill(0.5);
+    CHECK(v.as_array().sum() == 1.5);
 }
 
 TEST_CASE("array_select_chaining", "[array][select]") {

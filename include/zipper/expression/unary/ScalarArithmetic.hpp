@@ -5,6 +5,7 @@
 #include <functional>
 #include <type_traits>
 
+#include "../binary/detail/minmax.hpp"
 #include "CoefficientWiseOperation.hpp"
 #include "ScalarOperation.hpp"
 
@@ -206,6 +207,29 @@ using ScalarBitXor =
                         typename std::decay_t<Expression>::value_type>>,
                     Scalar,
                     ScalarOnRight>;
+
+// Element-wise minimum / maximum with a scalar.
+template <typename Scalar,
+          zipper::concepts::QualifiedExpression Expression,
+          bool ScalarOnRight>
+using ScalarMin = ScalarOperation<
+    Expression,
+    binary::detail::min<std::common_type_t<
+        Scalar,
+        typename std::decay_t<Expression>::value_type>>,
+    Scalar,
+    ScalarOnRight>;
+
+template <typename Scalar,
+          zipper::concepts::QualifiedExpression Expression,
+          bool ScalarOnRight>
+using ScalarMax = ScalarOperation<
+    Expression,
+    binary::detail::max<std::common_type_t<
+        Scalar,
+        typename std::decay_t<Expression>::value_type>>,
+    Scalar,
+    ScalarOnRight>;
 
 // Element-wise three-way comparison against a scalar.
 // Uses std::compare_three_way (transparent comparator), so the return type

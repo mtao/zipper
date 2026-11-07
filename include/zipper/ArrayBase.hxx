@@ -53,6 +53,17 @@ BINARY_DECLARATION(ArrayBase, BitXor, operator^)
 
 BINARY_DECLARATION(ArrayBase, Min, min)
 BINARY_DECLARATION(ArrayBase, Max, max)
+SCALAR_BINARY_DECLARATION(ArrayBase, Min, min)
+SCALAR_BINARY_DECLARATION(ArrayBase, Max, max)
+
+/// Element-wise clamp of `a` to [low, high]; each bound is an array or a
+/// scalar.
+template <concepts::Array ExprType,
+          concepts::ArrayOrScalar Low,
+          concepts::ArrayOrScalar High>
+auto clamp(ExprType &&a, const Low &low, const High &high) {
+    return min(max(std::forward<ExprType>(a), low), high);
+}
 
 // Element-wise three-way comparison: produces an array of ordering values
 // (std::partial_ordering for floating-point, std::strong_ordering for

@@ -8,6 +8,7 @@
 #include "detail/NonReturnable.hpp"
 #include "expression/concepts/capabilities.hpp"
 #include "expression/detail/AssignHelper.hpp"
+#include "expression/nullary/Constant.hpp"
 #include "expression/nullary/Zero.hpp"
 #include "static_scalar.hpp"
 #include "expression/unary/Cast.hpp"
@@ -260,6 +261,18 @@ class ZipperBase
                      extents_type>)
     {
         m_expression.assign(other.expression());
+        return derived();
+    }
+
+    /// Sets every coefficient to `value` (like Eigen's setConstant or
+    /// NumPy's fill); works on views such as slices.
+    template <typename Scalar>
+        requires(expression::concepts::WritableExpression<expression_type>
+                 && !is_const && !concepts::Zipper<Scalar>
+                 && std::is_convertible_v<const Scalar &, value_type>)
+    auto fill(const Scalar &value) -> Derived & {
+        m_expression.assign(expression::nullary::Constant(
+            static_cast<value_type>(value), extents()));
         return derived();
     }
 
