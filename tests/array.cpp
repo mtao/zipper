@@ -580,6 +580,14 @@ TEST_CASE("array_select_scalars", "[array][select]") {
         CHECK(both.sum() == 1);
     }
 
+    SECTION("reductions use the branch type, not the condition's") {
+        auto mask = (a <=> 4.0).select(true, false, false);
+        STATIC_CHECK(std::is_same_v<typename decltype(mask)::value_type, bool>);
+        auto counted = mask.select(1, 0);
+        CHECK(counted.sum() == 2);
+        CHECK((a <=> 4.0).select(1.0, 0.0, 2.0).sum() == 6.0);
+    }
+
     SECTION("ordering, all scalars") {
         auto sign = (a <=> 4.0).select(-1, 0, 1);
         CHECK(sign(0) == -1);

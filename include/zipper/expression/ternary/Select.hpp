@@ -8,6 +8,7 @@
 
 #include <compare>
 #include <format>
+#include <type_traits>
 
 namespace zipper::expression {
 namespace ternary {
@@ -59,6 +60,9 @@ struct detail::ExpressionTraits<
         typename _Detail::ConvertExtentsUtil::merged_extents_type;
     // The result type is the true-branch value_type.
     using value_type = typename _Detail::TrueTraits::value_type;
+    // The base traits take element_type from the condition; reductions
+    // accumulate in it.
+    using element_type = std::remove_cvref_t<value_type>;
 };
 
 namespace ternary {
@@ -239,6 +243,9 @@ struct detail::ExpressionTraits<
         ternary::OrderingSelect<Condition, LessExpr, EqualExpr, GreaterExpr>>;
     using extents_type = typename _Detail::merged_extents_type;
     using value_type = typename _Detail::LessTraits::value_type;
+    // The base traits take element_type from the condition; reductions
+    // accumulate in it.
+    using element_type = std::remove_cvref_t<value_type>;
     constexpr static bool is_coefficient_consistent =
         _Detail::CondTraits::is_coefficient_consistent
         && _Detail::LessTraits::is_coefficient_consistent
