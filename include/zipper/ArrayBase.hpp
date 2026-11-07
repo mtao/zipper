@@ -22,16 +22,39 @@
 #include "expression/unary/Abs.hpp"
 #include "expression/unary/ScalarPower.hpp"
 #include "expression/unary/math/all.hpp"
+#include "expression/nullary/Constant.hpp"
 #include "expression/nullary/MDSpan.hpp"
+#include "concepts/Zipper.hpp"
 
 #include <compare>
+#include <type_traits>
 
 namespace zipper {
 
 namespace detail {
     template <typename ValueType, concepts::Extents Extents, bool LeftMajor>
     class Array_;
+
+    /// An argument of ArrayBase::select: an array, referenced, or a scalar,
+    /// broadcast as a rank-0 Constant held by value.
+    template <typename T>
+    struct SelectOperand {
+        using type = const typename T::expression_type &;
+        static auto get(const T &value) -> type { return value.expression(); }
+    };
+    template <typename T>
+        requires(!concepts::Zipper<T> && std::is_scalar_v<T>)
+    struct SelectOperand<T> {
+        using type = expression::nullary::Constant<T>;
+        static auto get(const T &value) -> type { return type(value); }
+    };
 } // namespace detail
+
+namespace concepts {
+    /// An array or a scalar, as accepted by ArrayBase::select.
+    template <typename T>
+    concept SelectArgument = Array<T> || (!Zipper<T> && std::is_scalar_v<T>);
+} // namespace concepts
 
 template <concepts::Expression Expr>
 class ArrayBase : public ZipperBase<ArrayBase, Expr> {
@@ -333,24 +356,27 @@ class ArrayBase : public ZipperBase<ArrayBase, Expr> {
     /// `false_val` where the mask is false.  Equivalent to Eigen's
     /// `.select()` or NumPy's `np.where()`.
     ///
-    /// @param true_val  Value array for true entries.
-    /// @param false_val Value array for false entries.
+    /// @param true_val  Values (an array or a scalar) for true entries.
+    /// @param false_val Values (an array or a scalar) for false entries.
     /// @return A lazy expression with the element-wise selection.
-    template <concepts::Array TrueArr, concepts::Array FalseArr, typename Self>
+    template <concepts::SelectArgument TrueArr,
+              concepts::SelectArgument FalseArr,
+              typename Self>
     auto select(this Self &&self,
                 const TrueArr &true_val,
                 const FalseArr &false_val)
         requires(std::is_same_v<value_type, bool>)
     {
         using cond_t = detail::member_child_storage_t<Self, Expr>;
-        using true_t = const typename TrueArr::expression_type &;
-        using false_t = const typename FalseArr::expression_type &;
+        using true_t = typename detail::SelectOperand<TrueArr>::type;
+        using false_t = typename detail::SelectOperand<FalseArr>::type;
         using SelectType =
             expression::ternary::BoolSelect<cond_t, true_t, false_t>;
-        return ArrayBase<SelectType>(std::in_place,
-                                     std::forward<Self>(self).expression(),
-                                     true_val.expression(),
-                                     false_val.expression());
+        return ArrayBase<SelectType>(
+            std::in_place,
+            std::forward<Self>(self).expression(),
+            detail::SelectOperand<TrueArr>::get(true_val),
+            detail::SelectOperand<FalseArr>::get(false_val));
     }
 
     /// @brief Ordering select: `ordering.select(less, equal, greater)`.
@@ -360,13 +386,14 @@ class ArrayBase : public ZipperBase<ArrayBase, Expr> {
     /// Works with std::strong_ordering, std::weak_ordering, or
     /// std::partial_ordering value types.
     ///
-    /// @param less_val    Value array for less-than entries.
-    /// @param equal_val   Value array for equal entries.
-    /// @param greater_val Value array for greater-than entries.
+    /// @param less_val    Values (an array or a scalar) for less-than entries.
+    /// @param equal_val   Values (an array or a scalar) for equal entries.
+    /// @param greater_val Values (an array or a scalar) for greater-than
+    ///                    entries.
     /// @return A lazy expression with the element-wise three-way selection.
-    template <concepts::Array LessArr,
-              concepts::Array EqualArr,
-              concepts::Array GreaterArr,
+    template <concepts::SelectArgument LessArr,
+              concepts::SelectArgument EqualArr,
+              concepts::SelectArgument GreaterArr,
               typename Self>
     auto select(this Self &&self,
                 const LessArr &less_val,
@@ -379,16 +406,17 @@ class ArrayBase : public ZipperBase<ArrayBase, Expr> {
                 || std::is_convertible_v<value_type, std::strong_ordering>))
     {
         using cond_t = detail::member_child_storage_t<Self, Expr>;
-        using less_t = const typename LessArr::expression_type &;
-        using equal_t = const typename EqualArr::expression_type &;
-        using greater_t = const typename GreaterArr::expression_type &;
+        using less_t = typename detail::SelectOperand<LessArr>::type;
+        using equal_t = typename detail::SelectOperand<EqualArr>::type;
+        using greater_t = typename detail::SelectOperand<GreaterArr>::type;
         using SelectType = expression::ternary::
             OrderingSelect<cond_t, less_t, equal_t, greater_t>;
-        return ArrayBase<SelectType>(std::in_place,
-                                     std::forward<Self>(self).expression(),
-                                     less_val.expression(),
-                                     equal_val.expression(),
-                                     greater_val.expression());
+        return ArrayBase<SelectType>(
+            std::in_place,
+            std::forward<Self>(self).expression(),
+            detail::SelectOperand<LessArr>::get(less_val),
+            detail::SelectOperand<EqualArr>::get(equal_val),
+            detail::SelectOperand<GreaterArr>::get(greater_val));
     }
 
     // Slice methods - construct wrapper in-place to avoid moving non-movable

@@ -552,6 +552,54 @@ TEST_CASE("array_ordering_select_scalar_spaceship",
 // Select chaining: use select result in further computation
 // ============================================================
 
+TEST_CASE("array_select_scalars", "[array][select]") {
+    zipper::Array<double, 4> a;
+    a(0) = 1.0;
+    a(1) = 5.0;
+    a(2) = 3.0;
+    a(3) = 7.0;
+    zipper::Array<double, 4> b;
+    b(0) = -1.0;
+    b(1) = -2.0;
+    b(2) = -3.0;
+    b(3) = -4.0;
+
+    SECTION("mixed scalar and array branches") {
+        auto clamped = (a <=> 4.0).select(a, 4.0, 4.0); // min(a, 4)
+        CHECK(clamped(0) == 1.0);
+        CHECK(clamped(1) == 4.0);
+        CHECK(clamped(2) == 3.0);
+        CHECK(clamped(3) == 4.0);
+
+        auto mask = (a == 3.0);
+        auto picked = mask.select(1.0, b);
+        CHECK(picked(0) == -1.0);
+        CHECK(picked(2) == 1.0);
+        auto both = mask.select(1, 0);
+        STATIC_CHECK(std::is_same_v<typename decltype(both)::value_type, int>);
+        CHECK(both.sum() == 1);
+    }
+
+    SECTION("ordering, all scalars") {
+        auto sign = (a <=> 4.0).select(-1, 0, 1);
+        CHECK(sign(0) == -1);
+        CHECK(sign(1) == 1);
+        CHECK(sign.sum() == 0);
+    }
+
+    SECTION("dynamic extents and materialization") {
+        zipper::Array<double, zipper::dynamic_extent> d(3);
+        d(0) = 2.0;
+        d(1) = 4.0;
+        d(2) = 6.0;
+        zipper::Array<double, zipper::dynamic_extent> counts =
+            (d <=> 4.0).select(0.0, 1.0, 0.0);
+        CHECK(counts.extent(0) == 3);
+        CHECK(counts(1) == 1.0);
+        CHECK(counts.sum() == 1.0);
+    }
+}
+
 TEST_CASE("array_select_chaining", "[array][select]") {
     zipper::Array<double, 3> a;
     a(0) = -5.0;
