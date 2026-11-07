@@ -368,5 +368,44 @@ auto as_quaternion(ZipperDerived &&v) {
   }
 }
 
+// ---- Raw expressions ---------------------------------------------------------
+//
+// The as_* conversions also accept raw expressions (e.g. the results of over()
+// and map()): an lvalue is referenced (writably if it is writable), an rvalue
+// is owned by the result.
+
+namespace detail {
+template <concepts::Expression E>
+auto as_zipper(E &&e) {
+  if constexpr (std::is_lvalue_reference_v<E>) {
+    using X = std::remove_reference_t<E>;
+    constexpr static bool writable =
+        !std::is_const_v<X>
+        && expression::concepts::WritableExpression<std::remove_const_t<X>>;
+    using Child = std::conditional_t<writable, X &, const X &>;
+    return TensorBase<Child>(std::in_place, e);
+  } else {
+    return TensorBase<std::decay_t<E>>(std::in_place, std::move(e));
+  }
+}
+} // namespace detail
+
+#define ZIPPER_AS_EXPRESSION_(NAME)                                            \
+  template <concepts::Expression E>                                            \
+    requires(!concepts::Zipper<E>)                                             \
+  auto as_##NAME(E &&e) {                                                      \
+    return as_##NAME(detail::as_zipper(std::forward<E>(e)));                   \
+  }
+
+ZIPPER_AS_EXPRESSION_(array)
+ZIPPER_AS_EXPRESSION_(data_array)
+ZIPPER_AS_EXPRESSION_(form)
+ZIPPER_AS_EXPRESSION_(tensor)
+ZIPPER_AS_EXPRESSION_(vector)
+ZIPPER_AS_EXPRESSION_(matrix)
+ZIPPER_AS_EXPRESSION_(quaternion)
+
+#undef ZIPPER_AS_EXPRESSION_
+
 } // namespace zipper
 #endif
