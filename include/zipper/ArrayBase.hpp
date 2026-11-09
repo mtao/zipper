@@ -2,6 +2,7 @@
 #define ZIPPER_ARRAYBASE_HPP
 
 #include "ZipperBase.hpp"
+#include "detail/as_conversion.hpp"
 #include "concepts/detail/IsZipperBase.hpp"
 #include "concepts/stl.hpp"
 #include "expression/nullary/StlMDArray.hpp"
@@ -434,6 +435,8 @@ class ArrayBase : public ZipperBase<ArrayBase, Expr> {
             std::in_place, std::forward<Self>(self).expression(), Slices{}...);
     }
 };
+
+ZIPPER_DEFINE_AS(array, ArrayBase, 0)
 
 template <concepts::Expression Expr>
 ArrayBase(Expr &&) -> ArrayBase<Expr>;

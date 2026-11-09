@@ -258,7 +258,7 @@ TEST_CASE("test_mdspan_deduction_guides", "[mdspan][ctad]") {
 
   // Rvalue semantic conversions own their expression instead of dangling.
   {
-    auto array = zipper::Vector<double, 3>{1, 2, 3}.as_array();
+    auto array = zipper::as_array(zipper::Vector<double, 3>{1, 2, 3});
     CHECK(array(0) == 1);
     CHECK(array(2) == 3);
   }

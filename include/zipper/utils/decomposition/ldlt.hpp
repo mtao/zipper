@@ -134,7 +134,7 @@ struct LDLTResult {
                                + ") — matrix is singular"})};
             }
         }
-        ResultVec z(as_vector(y_result->as_array() / D.as_array()));
+        ResultVec z(as_vector(as_array(*y_result) / as_array(D)));
 
         // 3. Back substitution: L^T * x = z  (L^T is unit upper triangular).
         auto Lt = L.transpose();
@@ -191,7 +191,7 @@ auto ldlt(const Derived &A) -> std::expected<
         auto D_seg = D.segment(0, j);
         T sum =
             (j > 0)
-                ? Lj_seg.dot(as_vector(Lj_seg.as_array() * D_seg.as_array()))
+                ? Lj_seg.dot(as_vector(as_array(Lj_seg) * as_array(D_seg)))
                 : T{0};
         const T pivot = A(j, j) - sum;
         const T cancellation_scale =
@@ -210,7 +210,7 @@ auto ldlt(const Derived &A) -> std::expected<
                 auto L_block = L.slice(zipper::slice(j + 1, trailing_size),
                                        zipper::slice(index_type{0}, j));
                 auto weighted_row =
-                    as_vector(Lj_seg.as_array() * D_seg.as_array());
+                    as_vector(as_array(Lj_seg) * as_array(D_seg));
                 trailing_residual = A_subdiagonal - L_block * weighted_row;
             } else {
                 trailing_residual = A_subdiagonal;
@@ -220,7 +220,7 @@ auto ldlt(const Derived &A) -> std::expected<
         if (pivot <= pivot_tolerance) {
             const T residual_max =
                 trailing_size > 0
-                    ? utils::maxCoeff(trailing_residual.as_array().abs())
+                    ? utils::maxCoeff(as_array(trailing_residual).abs())
                     : T{0};
             if (pivot < -pivot_tolerance || residual_max > pivot_tolerance) {
                 return Result{std::unexpected(solver::SolverError{

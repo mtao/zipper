@@ -54,7 +54,7 @@ TEST_CASE("assignment_snapshots_aliasing_scalar_without_resizing",
         auto scalar = tensor.slice(0, 0);
         destination = (scalar * 2.0).expression();
         CHECK(destination.extents() == shape);
-        CHECK((destination.as_array() == 14.0).all());
+        CHECK((as_array(destination) == 14.0).all());
     };
     Matrix<double, 2, 3> fixed;
     MatrixXX<double> dynamic(2, 3);

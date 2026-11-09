@@ -1,7 +1,7 @@
 /// @file dot.hpp
 /// @brief Free-function dot product that bypasses the Form.hpp dependency.
 ///
-/// `VectorBase::dot()` is implemented as `as_form() * o`, which requires
+/// `VectorBase::dot()` is implemented as `as_form(*this) * o`, which requires
 /// `FormBase.hxx` (pulled in via `<zipper/Form.hpp>`) to be included so that
 /// the `operator*(FormBase, VectorBase)` overload is visible.  This is a
 /// heavyweight include for a simple inner product.

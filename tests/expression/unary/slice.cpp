@@ -141,8 +141,8 @@ TEST_CASE("test_matrix_slicing", "[extents][matrix][slice]") {
     print(MN);
     print(MN.slice<zipper::full_extent_t, zipper::full_extent_t>());
     print(MN.slice<zipper::full_extent_t, zipper::full_extent_t>());
-    print((MN.slice<zipper::full_extent_t, zipper::full_extent_t>().as_array()
-           == MN.as_array()));
+    print((as_array(MN.slice<zipper::full_extent_t, zipper::full_extent_t>())
+           == as_array(MN)));
 
     CHECK((MN.slice<zipper::full_extent_t, zipper::full_extent_t>() == MN));
     CHECK((MN.slice(zipper::full_extent_t{}, zipper::full_extent_t{}) == MN));
@@ -207,9 +207,9 @@ TEST_CASE("test_matrix_slicing", "[extents][matrix][slice]") {
 
     slice = zipper::expression::nullary::Constant<double>(3.4);
     sliceD = zipper::expression::nullary::Constant<double>(3.4);
-    auto slice_array = sliceD.as_array();
+    auto slice_array = as_array(sliceD);
     zipper::VectorX<double> constant{4.2, 4.2, 4.2, 4.2};
-    slice_array = constant.as_array().expression();
+    slice_array = as_array(constant).expression();
     CHECK(4.2 == MND(1, 0));
     CHECK(4.2 == MND(1, 3));
     sliceD = zipper::expression::nullary::Constant<double>(3.4);

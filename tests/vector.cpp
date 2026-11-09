@@ -257,8 +257,8 @@ TEST_CASE("vector_outer_product", "[vector][outer]") {
     };
 
     SECTION("member with vector") { check(u.outer(v)); }
-    SECTION("member with form") { check(u.outer(v.as_form())); }
-    SECTION("operator vector * form") { check(u * v.as_form()); }
+    SECTION("member with form") { check(u.outer(as_form(v))); }
+    SECTION("operator vector * form") { check(u * as_form(v)); }
     SECTION("materialized") {
         zipper::Matrix<double, 3, 2> M = u.outer(v);
         check(M);

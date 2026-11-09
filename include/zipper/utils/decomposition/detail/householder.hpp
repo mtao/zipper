@@ -63,7 +63,7 @@ auto householder_vector(const VDerived &x) -> std::optional<
     // Copy x into an owning vector for modification.
     Vector<T, N> v(x);
 
-    const T scale = utils::maxCoeff(v.as_array().abs());
+    const T scale = utils::maxCoeff(as_array(v).abs());
     if (scale == T{0}) { return std::nullopt; }
 
     // Unit scaling keeps x_0 + ||x|| and the normalization representable for
@@ -103,7 +103,7 @@ auto apply_householder_left(MDerived &M,
 
     for (index_type j = c0; j < c1; ++j) {
         auto column = M.col(j).segment(r0, len);
-        const T scale = utils::maxCoeff(column.as_array().abs());
+        const T scale = utils::maxCoeff(as_array(column).abs());
         if (scale != T{0}) {
             Vector<T, dynamic_extent> normalized(zipper::uninitialized, len);
             T projection{0};
@@ -142,7 +142,7 @@ auto apply_householder_right(MDerived &M,
 
     for (index_type i = r0; i < r1; ++i) {
         auto row = M.row(i).segment(c0, len);
-        const T scale = utils::maxCoeff(row.as_array().abs());
+        const T scale = utils::maxCoeff(as_array(row).abs());
         if (scale != T{0}) {
             Vector<T, dynamic_extent> normalized(zipper::uninitialized, len);
             T projection{0};

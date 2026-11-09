@@ -157,7 +157,7 @@ template <typename T, index_type N> struct PLUResult {
     ///
     /// det(A) = sign * product of U diagonal entries.
     auto determinant() const -> T {
-        return static_cast<T>(sign) * LU.diagonal().as_array().product();
+        return static_cast<T>(sign) * as_array(LU.diagonal()).product();
     }
 };
 
@@ -205,7 +205,7 @@ auto plu(const Derived &A)
         // Partial pivoting: find the row with the largest absolute value in
         // column k (from row k downward).
         const auto [max_val, max_index] = utils::maxCoeffWithIndex(
-            LU.col(k).segment(k, n - k).as_array().abs());
+            as_array(LU.col(k).segment(k, n - k)).abs());
         const index_type max_row = k + max_index[0];
 
         // Check for singular matrix.
@@ -234,9 +234,9 @@ auto plu(const Derived &A)
             auto trailing = LU.slice(zipper::slice(k + 1, n - k - 1),
                                      zipper::slice(k + 1, n - k - 1));
             auto pivot_row = LU.row(k).segment(k + 1, n - k - 1);
-            auto outer_product = multipliers.lift().as_array() *
-                                 pivot_row.lift().transpose().as_array();
-            auto trailing_array = trailing.as_array();
+            auto outer_product = as_array(multipliers.lift()) *
+                                 as_array(pivot_row.lift().transpose());
+            auto trailing_array = as_array(trailing);
             trailing_array = (trailing_array - outer_product).eval();
         }
     }

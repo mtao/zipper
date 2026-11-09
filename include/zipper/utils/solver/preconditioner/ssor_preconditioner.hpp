@@ -94,7 +94,7 @@ struct SSORPreconditioner {
         }
 
         // Step 2: Diagonal scale -- z_i = D_i * y_i
-        auto diag_y = diag.as_array() * y.as_array();
+        auto diag_y = as_array(diag) * as_array(y);
         Vector<T, Dim> z(as_vector(diag_y));
 
         // Step 3: Backward sweep -- solve (D + omega*U) w = z

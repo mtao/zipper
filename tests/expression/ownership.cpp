@@ -209,7 +209,7 @@ TEST_CASE("chain_as_array_plus_scalar", "[ownership][chain]") {
     zipper::Vector<double, 3> x{1.0, 2.0, 3.0};
 
     // as_array() creates a view on lvalue x; + 1 creates owning expression
-    auto xa = x.as_array();
+    auto xa = as_array(x);
     auto y = xa + 1.0;
     CHECK(y(0) == 2.0);
     CHECK(y(1) == 3.0);

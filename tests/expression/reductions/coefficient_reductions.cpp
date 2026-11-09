@@ -13,13 +13,13 @@
 
 TEST_CASE("coefficient_sum_vector", "[reduction][sum]") {
     zipper::Vector<double, 4> x{1.0, 2.0, 3.0, 4.0};
-    auto xa = x.as_array();
+    auto xa = as_array(x);
     CHECK(xa.sum() == 10.0);
 }
 
 TEST_CASE("coefficient_sum_matrix", "[reduction][sum]") {
     zipper::Matrix<double, 2, 2> M{{1.0, 2.0}, {3.0, 4.0}};
-    auto Ma = M.as_array();
+    auto Ma = as_array(M);
     CHECK(Ma.sum() == 10.0);
 }
 
@@ -45,13 +45,13 @@ TEST_CASE("coefficient_sum_negative", "[reduction][sum]") {
 
 TEST_CASE("coefficient_product_vector", "[reduction][product]") {
     zipper::Vector<double, 3> x{1.0, 2.0, 3.0};
-    auto xa = x.as_array();
+    auto xa = as_array(x);
     CHECK(xa.product() == 6.0);
 }
 
 TEST_CASE("coefficient_product_matrix", "[reduction][product]") {
     zipper::Matrix<double, 2, 2> M{{1.0, 2.0}, {3.0, 4.0}};
-    auto Ma = M.as_array();
+    auto Ma = as_array(M);
     CHECK(Ma.product() == 24.0);
 }
 

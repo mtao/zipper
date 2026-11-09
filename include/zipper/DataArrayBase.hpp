@@ -2,7 +2,7 @@
 #define ZIPPER_DATAARRAYBASE_HPP
 
 #include "ZipperBase.hpp"
-#include "as.hpp"
+#include "detail/as_conversion.hpp"
 #include "concepts/DataArray.hpp"
 #include "concepts/detail/IsZipperBase.hpp"
 #include "zipper/types.hpp"
@@ -92,10 +92,6 @@ public:
   DataArrayBase(Args &&...args)
       : Base(std::in_place, std::forward<Args>(args)...) {}
 
-  auto as_array() & { return zipper::as_array(*this); }
-  auto as_array() const & { return zipper::as_array(*this); }
-  auto as_array() && { return zipper::as_array(std::move(*this)); }
-  auto as_array() const && { return zipper::as_array(std::move(*this)); }
 
   /// Set all elements to the given value.
   void fill(const value_type &value)
@@ -105,6 +101,8 @@ public:
     expression().assign(c);
   }
 };
+
+ZIPPER_DEFINE_AS(data_array, DataArrayBase, 0)
 
 template <concepts::Expression Expr>
 DataArrayBase(Expr &&) -> DataArrayBase<Expr>;

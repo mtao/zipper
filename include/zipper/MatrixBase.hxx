@@ -25,11 +25,11 @@ ZERO_AWARE_BINARY_DECLARATION(MatrixBase, Minus, operator-)
 
 template <concepts::Matrix Expr1, concepts::Matrix Expr2>
 auto operator==(Expr1 const &lhs, Expr2 const &rhs) {
-  return (lhs.as_array() == rhs.as_array()).all();
+  return (as_array(lhs) == as_array(rhs)).all();
 }
 template <concepts::Matrix Expr1, concepts::Matrix Expr2>
 auto operator!=(Expr1 const &lhs, Expr2 const &rhs) {
-  return (lhs.as_array() != rhs.as_array()).any();
+  return (as_array(lhs) != as_array(rhs)).any();
 }
 
 template <typename Expr1, typename Expr2>

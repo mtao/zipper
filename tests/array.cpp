@@ -668,7 +668,7 @@ TEST_CASE("zipper_fill", "[array][fill]") {
 
     zipper::Vector<double, 3> v;
     v.fill(0.5);
-    CHECK(v.as_array().sum() == 1.5);
+    CHECK(as_array(v).sum() == 1.5);
 }
 
 TEST_CASE("array_select_chaining", "[array][select]") {

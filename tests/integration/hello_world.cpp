@@ -10,7 +10,7 @@ TEST_CASE("public_matrix_expressions_work_together", "[integration][matrix]") {
     auto scaled = (2.0 * a).eval();
     auto sum = (a + b).eval();
     auto coefficient_product =
-        (a.as_array() * b.as_array()).eval();
+        (as_array(a) * as_array(b)).eval();
     auto product = (a * b).eval();
     auto cast = a.cast<int>().eval();
 
@@ -21,7 +21,7 @@ TEST_CASE("public_matrix_expressions_work_together", "[integration][matrix]") {
     CHECK(product(1, 1) == 50.0);
     CHECK(cast(0, 1) == 2);
 
-    b.as_array() = coefficient_product;
+    as_array(b) = coefficient_product;
     CHECK(b(0, 0) == 5.0);
     CHECK(b(1, 1) == 32.0);
 }

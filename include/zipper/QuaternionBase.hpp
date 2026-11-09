@@ -25,7 +25,7 @@
 #define ZIPPER_QUATERNIONBASE_HPP
 
 #include "ZipperBase.hpp"
-#include "as.hpp"
+#include "detail/as_conversion.hpp"
 #include "concepts/Quaternion.hpp"
 #include "concepts/detail/IsZipperBase.hpp"
 #include "detail/assert.hpp"
@@ -180,23 +180,13 @@ public:
 
   // ── Semantic conversions ──────────────────────────────────────────────
 
-  auto as_array() & { return zipper::as_array(*this); }
-  auto as_array() const & { return zipper::as_array(*this); }
-  auto as_array() && { return zipper::as_array(std::move(*this)); }
-  auto as_array() const && { return zipper::as_array(std::move(*this)); }
-  auto as_tensor() & { return zipper::as_tensor(*this); }
-  auto as_tensor() const & { return zipper::as_tensor(*this); }
-  auto as_tensor() && { return zipper::as_tensor(std::move(*this)); }
-  auto as_tensor() const && { return zipper::as_tensor(std::move(*this)); }
-  auto as_vector() & { return zipper::as_vector(*this); }
-  auto as_vector() const & { return zipper::as_vector(*this); }
-  auto as_vector() && { return zipper::as_vector(std::move(*this)); }
-  auto as_vector() const && { return zipper::as_vector(std::move(*this)); }
 
   // ── Iteration ─────────────────────────────────────────────────────────
 
   using Base::operator=;
 };
+
+ZIPPER_DEFINE_AS(quaternion, QuaternionBase, 1)
 
 // ── Hamilton product (lazy) ───────────────────────────────────────────────
 //

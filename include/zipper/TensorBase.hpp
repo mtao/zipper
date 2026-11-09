@@ -2,6 +2,7 @@
 #define ZIPPER_TENSORBASE_HPP
 
 #include "ZipperBase.hpp"
+#include "detail/as_conversion.hpp"
 #include "concepts/Tensor.hpp"
 #include "concepts/stl.hpp"
 #include "detail/extents/static_extents_to_integral_sequence.hpp"
@@ -91,6 +92,8 @@ class TensorBase : public ZipperBase<TensorBase, Expr> {
             std::in_place, std::forward<Self>(self).expression(), Slices{}...);
     }
 };
+
+ZIPPER_DEFINE_AS(tensor, TensorBase, 0)
 
 template <concepts::Expression Expr>
 TensorBase(Expr &&) -> TensorBase<Expr>;

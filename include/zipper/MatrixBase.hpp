@@ -2,7 +2,7 @@
 #define ZIPPER_MATRIXBASE_HPP
 
 #include "ZipperBase.hpp"
-#include "as.hpp"
+#include "detail/as_conversion.hpp"
 #include "concepts/Index.hpp"
 #include "concepts/IndexSlice.hpp"
 #include "concepts/Matrix.hpp"
@@ -134,10 +134,6 @@ class MatrixBase : public ZipperBase<MatrixBase, Expr> {
         expression().resize(uninitialized_t{}, extents_type{ size });
     }
 
-    auto as_array() & { return zipper::as_array(*this); }
-    auto as_array() const & { return zipper::as_array(*this); }
-    auto as_array() && { return zipper::as_array(std::move(*this)); }
-    auto as_array() const && { return zipper::as_array(std::move(*this)); }
 
     auto trace() const -> value_type {
         return expression::reductions::Trace(expression())();
@@ -315,6 +311,8 @@ class MatrixBase : public ZipperBase<MatrixBase, Expr> {
           std::forward<Self>(self).expression());
     }
 };
+
+ZIPPER_DEFINE_AS(matrix, MatrixBase, 2)
 
 template<typename T>
 using MatrixXX = Matrix<T, dynamic_extent, dynamic_extent>;

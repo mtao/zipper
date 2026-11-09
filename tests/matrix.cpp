@@ -102,7 +102,7 @@ TEST_CASE("test_matrix_eval", "[matrix][storage][dense]") {
                                     {10, 11, 12, 13, 14}};
 
     auto x = (N * 2).eval();
-    auto v = N.as_array();
+    auto v = as_array(N);
     STATIC_CHECK(std::is_same_v<std::decay_t<decltype(v)>::extents_type,
                                  decltype(N)::extents_type>);
     STATIC_CHECK(std::is_same_v<decltype(v.extents()), decltype(N.extents())>);

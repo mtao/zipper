@@ -19,7 +19,7 @@ TEST_CASE("test_vector_scalar", "[vector][unary][scalar_arithmetic]") {
         // Capture as_array() separately to avoid dangling reference:
         // as_array() on a const/rvalue returns a temporary ArrayBase that
         // owns a copy; operator+ would hold a reference into that temporary.
-        auto xa = x.as_array();
+        auto xa = as_array(x);
         auto y = xa + 1;
         CHECK(y(0) == 1.5);
         CHECK(y(1) == 2.5);
@@ -36,7 +36,7 @@ TEST_CASE("test_matrix_scalar", "[matrix][unary][scalar_arithmetic]") {
         CHECK(y(0, 2) == 7.5);
     }
     {
-        auto xa = x.as_array();
+        auto xa = as_array(x);
         auto y = xa + 1;
         CHECK(y(0, 0) == 1.5);
         CHECK(y(0, 1) == 2.5);

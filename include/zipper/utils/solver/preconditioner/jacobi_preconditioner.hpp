@@ -57,7 +57,7 @@ struct JacobiPreconditioner {
     /// @return   Preconditioned vector z = M^{-1} r.
     template <concepts::Vector VDerived>
     auto apply(const VDerived &r) const -> Vector<T, Dim> {
-        auto arr = inv_diag.as_array() * r.as_array();
+        auto arr = as_array(inv_diag) * as_array(r);
         return Vector<T, Dim>(as_vector(arr));
     }
 };

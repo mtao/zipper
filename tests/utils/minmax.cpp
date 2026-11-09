@@ -54,7 +54,7 @@ TEST_CASE("test_minMax_matrix", "[storage][dense]") {
     x.col(1) = {-3, 3, 0};
     x.col(2) = {100, 4, 1};
 
-    CHECK(x.as_array().sum() == 108);
+    CHECK(as_array(x).sum() == 108);
     CHECK(zipper::utils::minCoeff(x) == -3);
     CHECK(zipper::utils::maxCoeff(x) == 100);
     CHECK(zipper::utils::meanCoeff(x) == 12);

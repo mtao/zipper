@@ -8,6 +8,7 @@ umbrella_header_sources = [
   'scalar_math.cpp',
   'qt_keyword_macros.cpp',
   'base_deduction_guides.cpp',
+  'as_expression.cpp',
 ]
 
 foreach source : umbrella_header_sources

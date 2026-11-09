@@ -11,7 +11,7 @@
 
 __attribute__((noinline)) auto DOOP(const auto& a, const auto& b,
                                     const auto& c) {
-    return (a.as_array() * (b + c).as_array()).eval();
+    return (as_array(a) * as_array(b + c)).eval();
 }
 __attribute__((noinline)) auto f() {
     auto R = zipper::expression::nullary::uniform_random<float>(

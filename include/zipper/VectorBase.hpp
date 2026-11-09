@@ -2,7 +2,7 @@
 #define ZIPPER_VECTORBASE_HPP
 
 #include "ZipperBase.hpp"
-#include "as.hpp"
+#include "detail/as_conversion.hpp"
 #include "concepts/Vector.hpp"
 #include "concepts/detail/IsZipperBase.hpp"
 #include "concepts/stl.hpp"
@@ -30,6 +30,9 @@
 namespace zipper {
 template <typename ValueType, index_type Rows> class Vector;
 template <typename ValueType, index_type N> class CSVector;
+template <concepts::Expression Expr>
+  requires(concepts::QualifiedRankedExpression<Expr, 2>)
+class MatrixBase;
 
 template <concepts::Expression Expr>
   requires(concepts::QualifiedRankedExpression<Expr, 1>)
@@ -140,28 +143,16 @@ public:
     return *this;
   }
 
-  auto as_array() & { return zipper::as_array(*this); }
-  auto as_array() const & { return zipper::as_array(*this); }
-  auto as_array() && { return zipper::as_array(std::move(*this)); }
-  auto as_array() const && { return zipper::as_array(std::move(*this)); }
-  auto as_tensor() & { return zipper::as_tensor(*this); }
-  auto as_tensor() const & { return zipper::as_tensor(*this); }
-  auto as_tensor() && { return zipper::as_tensor(std::move(*this)); }
-  auto as_tensor() const && { return zipper::as_tensor(std::move(*this)); }
-  auto as_form() & { return zipper::as_form(*this); }
-  auto as_form() const & { return zipper::as_form(*this); }
-  auto as_form() && { return zipper::as_form(std::move(*this)); }
-  auto as_form() const && { return zipper::as_form(std::move(*this)); }
 
   template <index_type T> auto norm_powered() const -> value_type {
     return expression::reductions::LpNormPowered<T, const expression_type &>(expression())();
   }
   auto norm_powered(value_type T) const -> value_type {
-    return expression::reductions::CoefficientSum{as_array().pow(T).abs().expression()}();
+    return expression::reductions::CoefficientSum{as_array(*this).pow(T).abs().expression()}();
   }
 
   auto dot(concepts::Vector auto const &o) const -> value_type {
-    return as_form() * o;
+    return as_form(*this) * o;
   }
   template <concepts::Vector O, typename Self> auto cross(this Self&& self, O const &o) {
     using child_t = detail::member_child_storage_t<Self, Expr>;
@@ -308,6 +299,8 @@ public:
     return VectorBase<H>(std::in_place, std::forward<Self>(self).expression());
   }
 };
+
+ZIPPER_DEFINE_AS(vector, VectorBase, 1)
 
 template <concepts::Expression Expr>
 VectorBase(Expr &&) -> VectorBase<Expr>;

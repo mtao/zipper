@@ -3,7 +3,7 @@
 
 #include "ZipperBase.hpp"
 #include <cassert>
-#include "as.hpp"
+#include "detail/as_conversion.hpp"
 #include "concepts/Form.hpp"
 #include "concepts/Tensor.hpp"
 #include "concepts/Vector.hpp"
@@ -33,18 +33,6 @@ public:
   using extents_type = typename expression_traits::extents_type;
   using extents_traits = detail::ExtentsTraits<extents_type>;
 
-  auto as_array() & { return zipper::as_array(*this); }
-  auto as_array() const & { return zipper::as_array(*this); }
-  auto as_array() && { return zipper::as_array(std::move(*this)); }
-  auto as_array() const && { return zipper::as_array(std::move(*this)); }
-  auto as_tensor() & { return zipper::as_tensor(*this); }
-  auto as_tensor() const & { return zipper::as_tensor(*this); }
-  auto as_tensor() && { return zipper::as_tensor(std::move(*this)); }
-  auto as_tensor() const && { return zipper::as_tensor(std::move(*this)); }
-  auto as_vector() & { return zipper::as_vector(*this); }
-  auto as_vector() const & { return zipper::as_vector(*this); }
-  auto as_vector() && { return zipper::as_vector(std::move(*this)); }
-  auto as_vector() const && { return zipper::as_vector(std::move(*this)); }
   template <index_type... N>
   auto eval(const std::integer_sequence<index_type, N...> &) const
     requires(std::is_same_v<extents<N...>, extents_type>)
@@ -116,6 +104,8 @@ public:
     return *this;
   }
 };
+
+ZIPPER_DEFINE_AS(form, FormBase, 0)
 
 template <concepts::Expression Expr>
 FormBase(Expr &&) -> FormBase<Expr>;

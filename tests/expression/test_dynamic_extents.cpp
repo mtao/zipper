@@ -35,7 +35,7 @@ TEST_CASE("dynamic_binary_vector_add", "[dynamic][binary]") {
     VectorX<double> a = {1.0, 2.0, 3.0};
     VectorX<double> b = {4.0, 5.0, 6.0};
 
-    auto c = a.as_array() + b.as_array();
+    auto c = as_array(a) + as_array(b);
     REQUIRE(c.extent(0) == 3);
     CHECK(c(0) == 5.0);
     CHECK(c(1) == 7.0);
@@ -46,7 +46,7 @@ TEST_CASE("dynamic_binary_vector_subtract", "[dynamic][binary]") {
     VectorX<double> a = {10.0, 20.0, 30.0};
     VectorX<double> b = {1.0, 2.0, 3.0};
 
-    auto c = a.as_array() - b.as_array();
+    auto c = as_array(a) - as_array(b);
     REQUIRE(c.extent(0) == 3);
     CHECK(c(0) == 9.0);
     CHECK(c(1) == 18.0);
@@ -66,7 +66,7 @@ TEST_CASE("dynamic_binary_matrix_multiply", "[dynamic][binary]") {
     B(1, 0) = 7;
     B(1, 1) = 8;
 
-    auto C = A.as_array() * B.as_array();
+    auto C = as_array(A) * as_array(B);
     REQUIRE(C.extent(0) == 2);
     REQUIRE(C.extent(1) == 2);
     CHECK(C(0, 0) == 5.0);
@@ -88,7 +88,7 @@ TEST_CASE("dynamic_binary_matrix_divide", "[dynamic][binary]") {
     B(1, 0) = 5;
     B(1, 1) = 8;
 
-    auto C = A.as_array() / B.as_array();
+    auto C = as_array(A) / as_array(B);
     CHECK(C(0, 0) == 5.0);
     CHECK(C(0, 1) == 5.0);
     CHECK(C(1, 0) == 6.0);
@@ -161,7 +161,7 @@ TEST_CASE("dynamic_scalar_multiply_vector", "[dynamic][scalar]") {
 TEST_CASE("dynamic_scalar_add_array", "[dynamic][scalar]") {
     VectorX<double> x = {0.5, 1.5, 2.5};
 
-    auto y = x.as_array() + 1.0;
+    auto y = as_array(x) + 1.0;
     CHECK(y(0) == 1.5);
     CHECK(y(1) == 2.5);
     CHECK(y(2) == 3.5);
@@ -365,7 +365,7 @@ TEST_CASE("mixed_static_dynamic_add", "[dynamic][binary][mixed]") {
     VectorX<double> b = {4.0, 5.0, 6.0};
 
     // static + dynamic
-    auto c = a.as_array() + b.as_array();
+    auto c = as_array(a) + as_array(b);
     REQUIRE(c.extent(0) == 3);
     CHECK(c(0) == 5.0);
     CHECK(c(1) == 7.0);
@@ -839,7 +839,7 @@ TEST_CASE("dynamic_scalar_divide_vector", "[dynamic][scalar]") {
 TEST_CASE("dynamic_scalar_subtract_array", "[dynamic][scalar]") {
     VectorX<double> x = {5.0, 10.0, 15.0};
 
-    auto y = x.as_array() - 2.0;
+    auto y = as_array(x) - 2.0;
     CHECK(y(0) == 3.0);
     CHECK(y(1) == 8.0);
     CHECK(y(2) == 13.0);

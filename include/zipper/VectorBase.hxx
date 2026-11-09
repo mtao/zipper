@@ -23,12 +23,12 @@ ZERO_AWARE_BINARY_DECLARATION(VectorBase, Minus, operator-)
 
 template <concepts::Vector Expr1, concepts::Vector Expr2>
 auto operator==(Expr1 const &lhs, Expr2 const &rhs) -> bool {
-    return (lhs.as_array() == rhs.as_array()).all();
+    return (as_array(lhs) == as_array(rhs)).all();
 }
 
 template <concepts::Vector Expr1, concepts::Vector Expr2>
 auto operator!=(Expr1 const &lhs, Expr2 const &rhs) -> bool {
-    return (lhs.as_array() != rhs.as_array()).any();
+    return (as_array(lhs) != as_array(rhs)).any();
 }
 SCALAR_BINARY_DECLARATION(VectorBase, Multiplies, operator*)
 

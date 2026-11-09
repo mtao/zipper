@@ -301,7 +301,7 @@ TEST_CASE("data_array_as_array", "[data_array]") {
   c(1) = 2.0;
   c(2) = 3.0;
 
-  auto a = c.as_array();
+  auto a = as_array(c);
   CHECK(a(0) == 1.0);
   CHECK(a(1) == 2.0);
   CHECK(a(2) == 3.0);

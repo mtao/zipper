@@ -272,7 +272,7 @@ TEST_CASE("partial_transform_resize_alias",
             ++calls;
             CHECK(A.rows() == 2);
             CHECK(A.cols() == 3);
-            return as_vector(row) * A.as_array().sum();
+            return as_vector(row) * as_array(A).sum();
         });
         CHECK(A == (source * 21.0).eval());
         CHECK(calls == 3);

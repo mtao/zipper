@@ -51,7 +51,7 @@ TEST_CASE("test_matrix_inverse", "[matrix][storage][dense]") {
       auto Inv2 = zipper::utils::inverse(M2);
 
       auto myI = M * Inv;
-      CHECK((I - myI).as_array().norm() < 1e-5);
+      CHECK(as_array((I - myI)).norm() < 1e-5);
 
       CHECK(Inv(a, a) == Inv2(0, 0));
       CHECK(Inv(a, b) == Inv2(0, 1));
@@ -68,8 +68,8 @@ TEST_CASE("test_matrix_inverse", "[matrix][storage][dense]") {
     auto myI = M * Inv;
     auto myI2 = Inv * M;
 
-    CHECK((I - myI).as_array().norm() < 1e-5);
-    CHECK((I - myI2).as_array().norm() < 1e-5);
+    CHECK(as_array((I - myI)).norm() < 1e-5);
+    CHECK(as_array((I - myI2)).norm() < 1e-5);
   }
   {
     zipper::Matrix<double, 3, 3> M{
@@ -81,8 +81,8 @@ TEST_CASE("test_matrix_inverse", "[matrix][storage][dense]") {
     auto myI = M * Inv;
     auto myI2 = Inv * M;
 
-    CHECK((I - myI).as_array().norm() < 1e-5);
-    CHECK((I - myI2).as_array().norm() < 1e-5);
+    CHECK(as_array((I - myI)).norm() < 1e-5);
+    CHECK(as_array((I - myI2)).norm() < 1e-5);
   }
 }
 
@@ -104,11 +104,11 @@ TEST_CASE("inverse 4x4 static extents", "[matrix][inverse][general]") {
     // Verify A * Inv ≈ I.
     zipper::MatrixBase I = zipper::expression::nullary::Identity<double, 4, 4>();
     auto prod = A * Inv;
-    CHECK((I - prod).as_array().norm() < 1e-8);
+    CHECK(as_array((I - prod)).norm() < 1e-8);
 
     // Verify Inv * A ≈ I.
     auto prod2 = Inv * A;
-    CHECK((I - prod2).as_array().norm() < 1e-8);
+    CHECK(as_array((I - prod2)).norm() < 1e-8);
 }
 
 TEST_CASE("inverse 5x5 static extents", "[matrix][inverse][general]") {
@@ -126,7 +126,7 @@ TEST_CASE("inverse 5x5 static extents", "[matrix][inverse][general]") {
     // Verify A * Inv ≈ I.
     zipper::MatrixBase I = zipper::expression::nullary::Identity<double, 5, 5>();
     auto prod = A * Inv;
-    CHECK((I - prod).as_array().norm() < 1e-8);
+    CHECK(as_array((I - prod)).norm() < 1e-8);
 }
 
 TEST_CASE("inverse 4x4 identity", "[matrix][inverse][general]") {

@@ -263,8 +263,8 @@ overwritten -- e.g. evaluating an expression into a new `Vector`/`Matrix`
 
 `DataArray<T, N...>` is the plain-data storage type in Zipper. It owns a
 dense multidimensional array with no arithmetic semantics — to do math, wrap
-it in an algebraic type (`.as_vector()`, `.as_matrix()`, etc.) or use
-`as_array()` for coefficient-wise operations.
+it in an algebraic type (`as_vector(d)`, `as_matrix(d)`, etc.) or use
+`as_array(d)` for coefficient-wise operations.
 
 ```cpp
 #include <zipper/DataArray.hpp>

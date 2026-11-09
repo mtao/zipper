@@ -167,7 +167,7 @@ TEST_CASE("test_form_product", "[storage][tensor]") {
     CHECK(double(D2 * E2) == 1.0);
 
     // Test dot product: form(O) * O = sum of components squared
-    CHECK(double(O.as_form() * O) == Catch::Approx(3.0));
+    CHECK(double(as_form(O) * O) == Catch::Approx(3.0));
 
     // Test rank-2 form * rank-1 tensor contraction -> rank-1 form
     // FormTensorProduct requires form_rank >= tensor_rank
@@ -183,7 +183,7 @@ TEST_CASE("test_form_product", "[storage][tensor]") {
         zipper::expression::nullary::normal_random_infinite<double>(0, 1);
 
     // Build a rank-2 form from wedge product: F = x^ ^ y^
-    auto F_xy = (x.as_form() ^ y.as_form()).eval();
+    auto F_xy = (as_form(x) ^ as_form(y)).eval();
     STATIC_CHECK(decltype(F_xy)::extents_type::rank() == 2);
 
     // Test wedge product antisymmetry: (x^ ^ y^)(i,j) = x(i)*y(j) - x(j)*y(i)
@@ -223,15 +223,15 @@ TEST_CASE("test_form_product", "[storage][tensor]") {
     // Test rank-1 form * rank-2 tensor -> rank-1 tensor
     // When form_rank < tensor_rank, result is a TensorBase
     // (f * T)(j) = sum_i f(i) * T(i, j)
-    auto AB = (a.as_tensor() * b.as_tensor()).eval();
+    auto AB = (as_tensor(a) * as_tensor(b)).eval();
     STATIC_CHECK(decltype(AB)::extents_type::rank() == 2);
 
-    auto xf = x.as_form();
+    auto xf = as_form(x);
     auto xf_AB = xf * AB;
     STATIC_CHECK(std::decay_t<decltype(xf_AB)>::extents_type::rank() == 1);
 
     // (x^ * (a*b))(j) = sum_i x(i) * a(i) * b(j) = (x.a) * b(j)
-    double x_dot_a = double(x.as_form() * a);
+    double x_dot_a = double(as_form(x) * a);
     for (zipper::index_type j = 0; j < 3; ++j) {
         CHECK(double(xf_AB(j)) == Catch::Approx(x_dot_a * b(j)));
     }

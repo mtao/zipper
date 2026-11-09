@@ -220,7 +220,7 @@ TEST_CASE("quaternion equality", "[quaternion]") {
 
 TEST_CASE("quaternion as_vector", "[quaternion]") {
     Quaternion<double> q(1.0, 2.0, 3.0, 4.0);
-    auto v = q.as_vector();
+    auto v = as_vector(q);
     CHECK(v(0) == Catch::Approx(1.0));
     CHECK(v(1) == Catch::Approx(2.0));
     CHECK(v(2) == Catch::Approx(3.0));
