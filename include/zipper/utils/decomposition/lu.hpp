@@ -119,18 +119,17 @@ template <typename T, index_type N> struct PLUResult {
     auto solve(const BDerived &b) const
         -> std::expected<Vector<T, N>, solver::SolverError> {
         using ResultVec = Vector<T, N>;
-        using Result = std::expected<ResultVec, solver::SolverError>;
 
         if (auto valid = detail::validate_square(LU, "PLU solve"); !valid) {
-            return Result{std::unexpected(std::move(valid.error()))};
+            return std::unexpected(std::move(valid.error()));
         }
         if (perm.extent(0) != LU.extent(0)) {
-            return Result{std::unexpected(detail::invalid_shape(
-                "PLU solve: permutation size must match rows"))};
+            return std::unexpected(detail::invalid_shape(
+                "PLU solve: permutation size must match rows"));
         }
         if (auto valid = detail::validate_rhs(LU.extent(0), b, "PLU solve");
             !valid) {
-            return Result{std::unexpected(std::move(valid.error()))};
+            return std::unexpected(std::move(valid.error()));
         }
 
         // 1. Apply permutation: Pb(i) = b(perm(i)).
@@ -140,17 +139,17 @@ template <typename T, index_type N> struct PLUResult {
         auto y_result = L().solve(Pb);
 
         if (!y_result) {
-            return Result{std::unexpected(std::move(y_result.error()))};
+            return std::unexpected(std::move(y_result.error()));
         }
 
         // 3. Back substitution: U * x = y  (U is upper triangular).
         auto x_result = U().solve(*y_result);
 
         if (!x_result) {
-            return Result{std::unexpected(std::move(x_result.error()))};
+            return std::unexpected(std::move(x_result.error()));
         }
 
-        return Result{std::move(*x_result)};
+        return std::move(*x_result);
     }
 
     /// @brief Compute the determinant of the original matrix A.
@@ -184,10 +183,9 @@ auto plu(const Derived &A)
     using AType = std::decay_t<Derived>;
     using T = typename AType::value_type;
     constexpr index_type N = AType::extents_type::static_extent(0);
-    using Result = std::expected<PLUResult<T, N>, solver::SolverError>;
 
     if (auto valid = detail::validate_square(A, "PLU decomposition"); !valid) {
-        return Result{std::unexpected(std::move(valid.error()))};
+        return std::unexpected(std::move(valid.error()));
     }
 
     const index_type n = A.rows();
@@ -210,10 +208,10 @@ auto plu(const Derived &A)
 
         // Check for singular matrix.
         if (max_val <= std::numeric_limits<T>::epsilon()) {
-            return Result{std::unexpected(solver::SolverError{
+            return std::unexpected(solver::SolverError{
                 .kind = solver::SolverError::Kind::breakdown,
                 .message = "PLU decomposition: matrix is singular (zero pivot at column " +
-                           std::to_string(k) + ")"})};
+                           std::to_string(k) + ")"});
         }
 
         // Swap rows if necessary.
@@ -241,8 +239,8 @@ auto plu(const Derived &A)
         }
     }
 
-    return Result{PLUResult<T, N>{
-        .LU = std::move(LU), .perm = std::move(perm), .sign = sign}};
+    return PLUResult<T, N>{
+        .LU = std::move(LU), .perm = std::move(perm), .sign = sign};
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -268,17 +266,15 @@ auto plu_solve(const ADerived &A, const BDerived &b)
     using AType = std::decay_t<ADerived>;
     using T = typename AType::value_type;
     constexpr index_type N = AType::extents_type::static_extent(0);
-    using ResultVec = Vector<T, N>;
-    using Result = std::expected<ResultVec, solver::SolverError>;
 
     if (auto valid = detail::validate_rhs(A.extent(0), b, "PLU solve");
         !valid) {
-        return Result{std::unexpected(std::move(valid.error()))};
+        return std::unexpected(std::move(valid.error()));
     }
 
     auto plu_result = plu(A);
     if (!plu_result) {
-        return Result{std::unexpected(std::move(plu_result.error()))};
+        return std::unexpected(std::move(plu_result.error()));
     }
 
     return plu_result->solve(b);

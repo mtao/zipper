@@ -88,7 +88,6 @@ template <index_type N = dynamic_extent> struct UmfpackResult {
   template <concepts::Vector BDerived>
   auto solve(const BDerived &b) const
       -> std::expected<Vector<double, N>, solver::SolverError> {
-    using Result = std::expected<Vector<double, N>, solver::SolverError>;
 
     // Copy RHS into contiguous storage via zipper assignment.
     Vector<double, N> bx(nrow);
@@ -102,13 +101,13 @@ template <index_type N = dynamic_extent> struct UmfpackResult {
         &x(0), &bx(0), numeric.get(), nullptr, nullptr);
 
     if (status != UMFPACK_OK) {
-      return Result{std::unexpected(solver::SolverError{
+      return std::unexpected(solver::SolverError{
           .kind = solver::SolverError::Kind::breakdown,
           .message = "UMFPACK: solve failed (status " +
-                     std::to_string(status) + ")"})};
+                     std::to_string(status) + ")"});
     }
 
-    return Result{std::move(x)};
+    return x;
   }
 };
 
@@ -127,7 +126,6 @@ auto umfpack_factor(const CSMatrix<T, R, C, storage::layout_left> &A)
   static_assert(std::is_same_v<T, double>,
                 "UMFPACK only supports double precision");
   constexpr index_type N = R;
-  using Result = std::expected<UmfpackResult<N>, solver::SolverError>;
 
   try {
 
@@ -173,10 +171,10 @@ auto umfpack_factor(const CSMatrix<T, R, C, storage::layout_left> &A)
   detail::UmfpackSymbolicPtr symbolic(symbolic_raw);
 
   if (status != UMFPACK_OK) {
-    return Result{std::unexpected(solver::SolverError{
+    return std::unexpected(solver::SolverError{
         .kind = solver::SolverError::Kind::breakdown,
         .message = "UMFPACK: symbolic analysis failed (status " +
-                   std::to_string(status) + ")"})};
+                   std::to_string(status) + ")"});
   }
 
   // Numeric factorization.
@@ -187,25 +185,25 @@ auto umfpack_factor(const CSMatrix<T, R, C, storage::layout_left> &A)
   detail::UmfpackNumericPtr numeric(numeric_raw);
 
   if (status != UMFPACK_OK) {
-    return Result{std::unexpected(solver::SolverError{
+    return std::unexpected(solver::SolverError{
         .kind = solver::SolverError::Kind::breakdown,
         .message = "UMFPACK: numeric factorization failed (status " +
-                   std::to_string(status) + ")"})};
+                   std::to_string(status) + ")"});
   }
 
-  return Result{UmfpackResult<N>{
+  return UmfpackResult<N>{
       .numeric = std::move(numeric),
       .nrow = nrow,
       .ncol = ncol,
       .colptr = std::move(colptr),
       .rowind = std::move(rowind),
       .values = std::move(vals),
-  }};
+  };
 
   } catch (const std::overflow_error &e) {
-    return Result{std::unexpected(solver::SolverError{
+    return std::unexpected(solver::SolverError{
         .kind = solver::SolverError::Kind::breakdown,
-        .message = e.what()})};
+        .message = e.what()});
   }
 }
 

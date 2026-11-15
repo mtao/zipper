@@ -97,19 +97,18 @@ struct LDLTResult {
     auto solve(const BDerived &b) const
         -> std::expected<Vector<T, N>, solver::SolverError> {
         using ResultVec = Vector<T, N>;
-        using Result = std::expected<ResultVec, solver::SolverError>;
 
         if (auto valid = detail::validate_square(L, "LDLT solve"); !valid) {
-            return Result{std::unexpected(std::move(valid.error()))};
+            return std::unexpected(std::move(valid.error()));
         }
         if (auto valid = detail::validate_equal_extent(
                 L, 0, D, 0, "LDLT solve");
             !valid) {
-            return Result{std::unexpected(std::move(valid.error()))};
+            return std::unexpected(std::move(valid.error()));
         }
         if (auto valid = detail::validate_rhs(L.extent(0), b, "LDLT solve");
             !valid) {
-            return Result{std::unexpected(std::move(valid.error()))};
+            return std::unexpected(std::move(valid.error()));
         }
 
         const index_type n = L.extent(0);
@@ -121,17 +120,17 @@ struct LDLTResult {
         auto y_result = L_lower.solve(b);
 
         if (!y_result) {
-            return Result{std::unexpected(std::move(y_result.error()))};
+            return std::unexpected(std::move(y_result.error()));
         }
 
         // 2. Diagonal solve: D * z = y  →  z(i) = y(i) / D(i).
         for (index_type i = 0; i < n; ++i) {
             if (D(i) == T{0}) {
-                return Result{std::unexpected(solver::SolverError{
+                return std::unexpected(solver::SolverError{
                     .kind = solver::SolverError::Kind::breakdown,
                     .message = "LDLT solve: zero diagonal entry D("
                                + std::to_string(i)
-                               + ") — matrix is singular"})};
+                               + ") — matrix is singular"});
             }
         }
         ResultVec z(as_vector(as_array(*y_result) / as_array(D)));
@@ -145,10 +144,10 @@ struct LDLTResult {
         auto x_result = Lt_upper.solve(z);
 
         if (!x_result) {
-            return Result{std::unexpected(std::move(x_result.error()))};
+            return std::unexpected(std::move(x_result.error()));
         }
 
-        return Result{std::move(*x_result)};
+        return std::move(*x_result);
     }
 };
 
@@ -171,10 +170,9 @@ auto ldlt(const Derived &A) -> std::expected<
     using AType = std::decay_t<Derived>;
     using T = typename AType::value_type;
     constexpr index_type N = AType::extents_type::static_extent(0);
-    using Result = std::expected<LDLTResult<T, N>, solver::SolverError>;
 
     if (auto valid = detail::validate_square(A, "LDLT decomposition"); !valid) {
-        return Result{std::unexpected(std::move(valid.error()))};
+        return std::unexpected(std::move(valid.error()));
     }
 
     const index_type n = A.extent(0);
@@ -223,11 +221,11 @@ auto ldlt(const Derived &A) -> std::expected<
                     ? utils::maxCoeff(as_array(trailing_residual).abs())
                     : T{0};
             if (pivot < -pivot_tolerance || residual_max > pivot_tolerance) {
-                return Result{std::unexpected(solver::SolverError{
+                return std::unexpected(solver::SolverError{
                     .kind = solver::SolverError::Kind::breakdown,
                     .message = "LDLT decomposition: inconsistent nonpositive "
                                "pivot at column "
-                               + std::to_string(j)})};
+                               + std::to_string(j)});
             }
             D(j) = T{0};
             continue;
@@ -239,7 +237,7 @@ auto ldlt(const Derived &A) -> std::expected<
         }
     }
 
-    return Result{LDLTResult<T, N>{.L = std::move(L), .D = std::move(D)}};
+    return LDLTResult<T, N>{.L = std::move(L), .D = std::move(D)};
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -269,17 +267,15 @@ auto ldlt_solve(const ADerived &A, const BDerived &b)
     using AType = std::decay_t<ADerived>;
     using T = typename AType::value_type;
     constexpr index_type N = AType::extents_type::static_extent(0);
-    using ResultVec = Vector<T, N>;
-    using Result = std::expected<ResultVec, solver::SolverError>;
 
     if (auto valid = detail::validate_rhs(A.extent(0), b, "LDLT solve");
         !valid) {
-        return Result{std::unexpected(std::move(valid.error()))};
+        return std::unexpected(std::move(valid.error()));
     }
 
     auto ldlt_result = ldlt(A);
     if (!ldlt_result) {
-        return Result{std::unexpected(std::move(ldlt_result.error()))};
+        return std::unexpected(std::move(ldlt_result.error()));
     }
 
     return ldlt_result->solve(b);

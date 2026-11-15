@@ -99,15 +99,14 @@ template <index_type N = dynamic_extent> struct SpqrResult {
   template <concepts::Vector BDerived>
   auto solve(const BDerived &b) const
       -> std::expected<Vector<double, N>, solver::SolverError> {
-    using Result = std::expected<Vector<double, N>, solver::SolverError>;
     auto *cc = common->get();
 
     // Convert RHS to CHOLMOD dense.
     auto B = make_cholmod_dense_ptr(to_cholmod_dense(b, cc), cc);
     if (!B) {
-      return Result{std::unexpected(solver::SolverError{
+      return std::unexpected(solver::SolverError{
           .kind = solver::SolverError::Kind::breakdown,
-          .message = "SPQR: failed to allocate dense RHS"})};
+          .message = "SPQR: failed to allocate dense RHS"});
     }
 
     // Step 1: Y = Q' * B
@@ -115,9 +114,9 @@ template <index_type N = dynamic_extent> struct SpqrResult {
         SuiteSparseQR_qmult<double>(SPQR_QTX, factor.get(), B.get(), cc),
         cc);
     if (!Y) {
-      return Result{std::unexpected(solver::SolverError{
+      return std::unexpected(solver::SolverError{
           .kind = solver::SolverError::Kind::breakdown,
-          .message = "SPQR: Q'*b multiplication failed"})};
+          .message = "SPQR: Q'*b multiplication failed"});
     }
 
     // Step 2: X = E * (R \ Y)
@@ -126,12 +125,12 @@ template <index_type N = dynamic_extent> struct SpqrResult {
                                     Y.get(), cc),
         cc);
     if (!X) {
-      return Result{std::unexpected(solver::SolverError{
+      return std::unexpected(solver::SolverError{
           .kind = solver::SolverError::Kind::breakdown,
-          .message = "SPQR: R\\(Q'*b) solve failed"})};
+          .message = "SPQR: R\\(Q'*b) solve failed"});
     }
 
-    return Result{from_cholmod_dense<N>(X.get())};
+    return from_cholmod_dense<N>(X.get());
   }
 
   /// @brief Numerical rank estimate of the factored matrix.
@@ -183,7 +182,6 @@ auto spqr_factor(const CSMatrix<T, R, C, storage::layout_left> &A,
     -> std::expected<SpqrResult<C>, solver::SolverError> {
   static_assert(std::is_same_v<T, double>,
                 "SPQR only supports double precision");
-  using Result = std::expected<SpqrResult<C>, solver::SolverError>;
 
   try {
 
@@ -197,25 +195,25 @@ auto spqr_factor(const CSMatrix<T, R, C, storage::layout_left> &A,
   auto *qr_raw = SuiteSparseQR_factorize<double>(
       SPQR_ORDERING_DEFAULT, tol, &cs, cc);
   if (!qr_raw) {
-    return Result{std::unexpected(solver::SolverError{
+    return std::unexpected(solver::SolverError{
         .kind = solver::SolverError::Kind::breakdown,
-        .message = "SPQR: factorization failed"})};
+        .message = "SPQR: factorization failed"});
   }
 
   const index_type nrow = A.rows();
   const index_type ncol = A.cols();
 
-  return Result{SpqrResult<C>{
+  return SpqrResult<C>{
       .common = std::move(common),
       .factor = SpqrFactorizationPtr(qr_raw, SpqrFactorizationDeleter{cc}),
       .nrow = nrow,
       .ncol = ncol,
-  }};
+  };
 
   } catch (const std::overflow_error &e) {
-    return Result{std::unexpected(solver::SolverError{
+    return std::unexpected(solver::SolverError{
         .kind = solver::SolverError::Kind::breakdown,
-        .message = e.what()})};
+        .message = e.what()});
   }
 }
 
@@ -335,7 +333,6 @@ auto spqr_qr(const CSMatrix<T, R, C, storage::layout_left> &A,
     -> std::expected<SpqrQRResult<R, C>, solver::SolverError> {
   static_assert(std::is_same_v<T, double>,
                 "SPQR only supports double precision");
-  using Result = std::expected<SpqrQRResult<R, C>, solver::SolverError>;
 
   try {
 
@@ -369,9 +366,9 @@ auto spqr_qr(const CSMatrix<T, R, C, storage::layout_left> &A,
       E_raw, E_deleter);
 
   if (rnk < 0 || !Q_ptr || !R_ptr) {
-    return Result{std::unexpected(solver::SolverError{
+    return std::unexpected(solver::SolverError{
         .kind = solver::SolverError::Kind::breakdown,
-        .message = "SPQR: explicit QR decomposition failed"})};
+        .message = "SPQR: explicit QR decomposition failed"});
   }
 
   // Convert CHOLMOD sparse matrices to zipper CSMatrix.
@@ -388,19 +385,19 @@ auto spqr_qr(const CSMatrix<T, R, C, storage::layout_left> &A,
     }
   }
 
-  return Result{SpqrQRResult<R, C>{
+  return SpqrQRResult<R, C>{
       .Q = std::move(Q_mat),
       .R_factor = std::move(R_mat),
       .col_perm = std::move(perm),
       .nrow = A.rows(),
       .ncol = A.cols(),
       .rank_estimate = static_cast<index_type>(rnk),
-  }};
+  };
 
   } catch (const std::overflow_error &e) {
-    return Result{std::unexpected(solver::SolverError{
+    return std::unexpected(solver::SolverError{
         .kind = solver::SolverError::Kind::breakdown,
-        .message = e.what()})};
+        .message = e.what()});
   }
 }
 

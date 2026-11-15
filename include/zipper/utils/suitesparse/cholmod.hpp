@@ -74,27 +74,26 @@ struct CholmodResult {
     template <concepts::Vector BDerived>
     auto solve(const BDerived &b) const
         -> std::expected<Vector<double, N>, solver::SolverError> {
-        using Result = std::expected<Vector<double, N>, solver::SolverError>;
         auto *cc = common->get();
 
         // Convert RHS to CHOLMOD dense.
         auto B = make_cholmod_dense_ptr(to_cholmod_dense(b, cc), cc);
         if (!B) {
-            return Result{std::unexpected(solver::SolverError{
+            return std::unexpected(solver::SolverError{
                 .kind = solver::SolverError::Kind::breakdown,
-                .message = "CHOLMOD: failed to allocate dense RHS"})};
+                .message = "CHOLMOD: failed to allocate dense RHS"});
         }
 
         // Solve.
         auto X = make_cholmod_dense_ptr(
             cholmod_l_solve(CHOLMOD_A, factor.get(), B.get(), cc), cc);
         if (!X) {
-            return Result{std::unexpected(solver::SolverError{
+            return std::unexpected(solver::SolverError{
                 .kind = solver::SolverError::Kind::breakdown,
-                .message = "CHOLMOD: solve failed"})};
+                .message = "CHOLMOD: solve failed"});
         }
 
-        return Result{from_cholmod_dense<N>(X.get())};
+        return from_cholmod_dense<N>(X.get());
     }
 };
 
@@ -114,7 +113,6 @@ auto cholmod_factor(const CSMatrix<T, R, C, storage::layout_left> &A,
                     int stype = 1)
     -> std::expected<CholmodResult<R>, solver::SolverError> {
     constexpr index_type N = R;
-    using Result = std::expected<CholmodResult<N>, solver::SolverError>;
 
     try {
         auto common = std::make_shared<CholmodCommon>();
@@ -126,30 +124,30 @@ auto cholmod_factor(const CSMatrix<T, R, C, storage::layout_left> &A,
         // Analyze (symbolic factorization).
         ::cholmod_factor *L_raw = cholmod_l_analyze(&cs, cc);
         if (!L_raw) {
-            return Result{std::unexpected(solver::SolverError{
+            return std::unexpected(solver::SolverError{
                 .kind = solver::SolverError::Kind::breakdown,
-                .message = "CHOLMOD: symbolic analysis failed"})};
+                .message = "CHOLMOD: symbolic analysis failed"});
         }
         CholmodFactorPtr L(L_raw, CholmodFactorDeleter{cc});
 
         // Numeric factorization.
         int ok = cholmod_l_factorize(&cs, L.get(), cc);
         if (!ok || cc->status == CHOLMOD_NOT_POSDEF) {
-            return Result{std::unexpected(solver::SolverError{
+            return std::unexpected(solver::SolverError{
                 .kind = solver::SolverError::Kind::breakdown,
-                .message = "CHOLMOD: matrix is not positive definite"})};
+                .message = "CHOLMOD: matrix is not positive definite"});
         }
 
-        return Result{CholmodResult<N>{
+        return CholmodResult<N>{
             .common = std::move(common),
             .factor = std::move(L),
             .dim = static_cast<index_type>(A.rows()),
-        }};
+        };
 
     } catch (const std::overflow_error &e) {
-        return Result{std::unexpected(
+        return std::unexpected(
             solver::SolverError{.kind = solver::SolverError::Kind::breakdown,
-                                .message = e.what()})};
+                                .message = e.what()});
     }
 }
 

@@ -80,15 +80,13 @@ struct LLTResult {
         requires detail::StaticallyCompatibleRhs<decltype(L), BDerived>
     auto solve(const BDerived &b) const
         -> std::expected<Vector<T, N>, solver::SolverError> {
-        using ResultVec = Vector<T, N>;
-        using Result = std::expected<ResultVec, solver::SolverError>;
 
         if (auto valid = detail::validate_square(L, "LLT solve"); !valid) {
-            return Result{std::unexpected(std::move(valid.error()))};
+            return std::unexpected(std::move(valid.error()));
         }
         if (auto valid = detail::validate_rhs(L.extent(0), b, "LLT solve");
             !valid) {
-            return Result{std::unexpected(std::move(valid.error()))};
+            return std::unexpected(std::move(valid.error()));
         }
 
         // 1. Forward substitution: L * y = b.
@@ -97,7 +95,7 @@ struct LLTResult {
         auto y_result = L_lower.solve(b);
 
         if (!y_result) {
-            return Result{std::unexpected(std::move(y_result.error()))};
+            return std::unexpected(std::move(y_result.error()));
         }
 
         // 2. Back substitution: L^T * x = y.
@@ -108,10 +106,10 @@ struct LLTResult {
         auto x_result = Lt_upper.solve(*y_result);
 
         if (!x_result) {
-            return Result{std::unexpected(std::move(x_result.error()))};
+            return std::unexpected(std::move(x_result.error()));
         }
 
-        return Result{std::move(*x_result)};
+        return std::move(*x_result);
     }
 };
 
@@ -134,10 +132,9 @@ auto llt(const Derived &A) -> std::expected<
     using AType = std::decay_t<Derived>;
     using T = typename AType::value_type;
     constexpr index_type N = AType::extents_type::static_extent(0);
-    using Result = std::expected<LLTResult<T, N>, solver::SolverError>;
 
     if (auto valid = detail::validate_square(A, "LLT decomposition"); !valid) {
-        return Result{std::unexpected(std::move(valid.error()))};
+        return std::unexpected(std::move(valid.error()));
     }
 
     const index_type n = A.extent(0);
@@ -155,11 +152,11 @@ auto llt(const Derived &A) -> std::expected<
         T diag = A(j, j) - sum;
 
         if (diag <= T{0}) {
-            return Result{std::unexpected(solver::SolverError{
+            return std::unexpected(solver::SolverError{
                 .kind = solver::SolverError::Kind::breakdown,
                 .message = "LLT decomposition: matrix is not positive definite "
                            "(non-positive diagonal at column "
-                           + std::to_string(j) + ")"})};
+                           + std::to_string(j) + ")"});
         }
 
         L(j, j) = utils::scalar_math::square_root(diag);
@@ -182,7 +179,7 @@ auto llt(const Derived &A) -> std::expected<
         }
     }
 
-    return Result{LLTResult<T, N>{.L = std::move(L)}};
+    return LLTResult<T, N>{.L = std::move(L)};
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -211,17 +208,15 @@ auto llt_solve(const ADerived &A, const BDerived &b)
     using AType = std::decay_t<ADerived>;
     using T = typename AType::value_type;
     constexpr index_type N = AType::extents_type::static_extent(0);
-    using ResultVec = Vector<T, N>;
-    using Result = std::expected<ResultVec, solver::SolverError>;
 
     if (auto valid = detail::validate_rhs(A.extent(0), b, "LLT solve");
         !valid) {
-        return Result{std::unexpected(std::move(valid.error()))};
+        return std::unexpected(std::move(valid.error()));
     }
 
     auto llt_result = llt(A);
     if (!llt_result) {
-        return Result{std::unexpected(std::move(llt_result.error()))};
+        return std::unexpected(std::move(llt_result.error()));
     }
 
     return llt_result->solve(b);

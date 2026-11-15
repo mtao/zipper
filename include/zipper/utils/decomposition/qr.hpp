@@ -117,19 +117,18 @@ struct QRReducedResult {
     auto solve(const BDerived &b) const
         -> std::expected<Vector<T, P>, solver::SolverError> {
         using ResultVec = Vector<T, P>;
-        using Result = std::expected<ResultVec, solver::SolverError>;
 
         if (auto valid = detail::validate_square(R, "QR solve"); !valid) {
-            return Result{std::unexpected(std::move(valid.error()))};
+            return std::unexpected(std::move(valid.error()));
         }
         if (auto valid = detail::validate_equal_extent(Q, 1, R, 0,
                                                        "QR solve");
             !valid) {
-            return Result{std::unexpected(std::move(valid.error()))};
+            return std::unexpected(std::move(valid.error()));
         }
         if (auto valid = detail::validate_rhs(Q.extent(0), b, "QR solve");
             !valid) {
-            return Result{std::unexpected(std::move(valid.error()))};
+            return std::unexpected(std::move(valid.error()));
         }
 
         // 1. Compute c = Q^T * b (p-dimensional vector).
@@ -146,10 +145,10 @@ struct QRReducedResult {
         auto solve_result = R_upper.solve(c);
 
         if (!solve_result) {
-            return Result{std::unexpected(std::move(solve_result.error()))};
+            return std::unexpected(std::move(solve_result.error()));
         }
 
-        return Result{std::move(*solve_result)};
+        return std::move(*solve_result);
     }
 };
 
@@ -186,24 +185,23 @@ struct QRFullResult {
     auto solve(const BDerived &b) const
         -> std::expected<Vector<T, P>, solver::SolverError> {
         using ResultVec = Vector<T, P>;
-        using Result = std::expected<ResultVec, solver::SolverError>;
 
         if (auto valid = detail::validate_square(Q, "full QR solve"); !valid) {
-            return Result{std::unexpected(std::move(valid.error()))};
+            return std::unexpected(std::move(valid.error()));
         }
         if (auto valid = detail::validate_not_wide(R, "full QR solve");
             !valid) {
-            return Result{std::unexpected(std::move(valid.error()))};
+            return std::unexpected(std::move(valid.error()));
         }
         if (auto valid = detail::validate_equal_extent(Q, 0, R, 0,
                                                        "full QR solve");
             !valid) {
-            return Result{std::unexpected(std::move(valid.error()))};
+            return std::unexpected(std::move(valid.error()));
         }
         if (auto valid = detail::validate_rhs(Q.extent(0), b,
                                               "full QR solve");
             !valid) {
-            return Result{std::unexpected(std::move(valid.error()))};
+            return std::unexpected(std::move(valid.error()));
         }
 
         const index_type p = std::min(Q.extent(0), R.extent(1));
@@ -220,10 +218,10 @@ struct QRFullResult {
         auto solve_result = R_upper.solve(c);
 
         if (!solve_result) {
-            return Result{std::unexpected(std::move(solve_result.error()))};
+            return std::unexpected(std::move(solve_result.error()));
         }
 
-        return Result{std::move(*solve_result)};
+        return std::move(*solve_result);
     }
 };
 
@@ -406,16 +404,12 @@ auto qr_solve(const ADerived &A, const BDerived &b)
                std::decay_t<ADerived>::extents_type::static_extent(1)>,
         solver::SolverError> {
     using AType = std::decay_t<ADerived>;
-    using Result = std::expected<
-        Vector<typename AType::value_type,
-               AType::extents_type::static_extent(1)>,
-        solver::SolverError>;
     if (auto valid = detail::validate_not_wide(A, "QR solve"); !valid) {
-        return Result{std::unexpected(std::move(valid.error()))};
+        return std::unexpected(std::move(valid.error()));
     }
     if (auto valid = detail::validate_rhs(A.extent(0), b, "QR solve");
         !valid) {
-        return Result{std::unexpected(std::move(valid.error()))};
+        return std::unexpected(std::move(valid.error()));
     }
     auto result = qr(A);
     return result.solve(b);
@@ -451,16 +445,12 @@ auto qr_solve_full(const ADerived &A, const BDerived &b)
                std::decay_t<ADerived>::extents_type::static_extent(1)>,
         solver::SolverError> {
     using AType = std::decay_t<ADerived>;
-    using Result = std::expected<
-        Vector<typename AType::value_type,
-               AType::extents_type::static_extent(1)>,
-        solver::SolverError>;
     if (auto valid = detail::validate_not_wide(A, "full QR solve"); !valid) {
-        return Result{std::unexpected(std::move(valid.error()))};
+        return std::unexpected(std::move(valid.error()));
     }
     if (auto valid = detail::validate_rhs(A.extent(0), b, "full QR solve");
         !valid) {
-        return Result{std::unexpected(std::move(valid.error()))};
+        return std::unexpected(std::move(valid.error()));
     }
     auto result = qr_full(A);
     return result.solve(b);
