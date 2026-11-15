@@ -49,13 +49,13 @@ TEST_CASE("inf_norm_known", "[matrix_norm][inf_norm]") {
 
 TEST_CASE("spectral_norm_identity", "[matrix_norm][spectral]") {
     Matrix<double, 3, 3> I{{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}};
-    CHECK(utils::spectral_norm(I) == Catch::Approx(1.0).epsilon(1e-6));
+    CHECK(*utils::spectral_norm(I) == Catch::Approx(1.0).epsilon(1e-6));
 }
 
 TEST_CASE("spectral_norm_diagonal", "[matrix_norm][spectral]") {
     // diag(2, 5, 3): spectral norm = 5
     Matrix<double, 3, 3> D{{{2, 0, 0}, {0, 5, 0}, {0, 0, 3}}};
-    CHECK(utils::spectral_norm(D) == Catch::Approx(5.0).epsilon(1e-6));
+    CHECK(*utils::spectral_norm(D) == Catch::Approx(5.0).epsilon(1e-6));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -64,25 +64,25 @@ TEST_CASE("spectral_norm_diagonal", "[matrix_norm][spectral]") {
 
 TEST_CASE("condition_number_identity", "[condition_number]") {
     Matrix<double, 3, 3> I{{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}};
-    CHECK(utils::condition_number(I) == Catch::Approx(1.0).epsilon(1e-6));
+    CHECK(*utils::condition_number(I) == Catch::Approx(1.0).epsilon(1e-6));
 }
 
 TEST_CASE("condition_number_diagonal", "[condition_number]") {
     // diag(2, 5, 1): cond = 5/1 = 5
     Matrix<double, 3, 3> D{{{2, 0, 0}, {0, 5, 0}, {0, 0, 1}}};
-    CHECK(utils::condition_number(D) == Catch::Approx(5.0).epsilon(1e-6));
+    CHECK(*utils::condition_number(D) == Catch::Approx(5.0).epsilon(1e-6));
 }
 
 TEST_CASE("condition_number_singular", "[condition_number]") {
     // Singular matrix: one zero row
     Matrix<double, 2, 2> M{{{1, 0}, {0, 0}}};
-    CHECK(utils::condition_number(M) == std::numeric_limits<double>::infinity());
+    CHECK(*utils::condition_number(M) == std::numeric_limits<double>::infinity());
 }
 
 TEST_CASE("condition_number_2x2", "[condition_number]") {
     // [[2, 1], [1, 2]]: eigenvalues 1 and 3, singular values 1 and 3
     Matrix<double, 2, 2> M{{{2, 1}, {1, 2}}};
-    CHECK(utils::condition_number(M) == Catch::Approx(3.0).epsilon(1e-6));
+    CHECK(*utils::condition_number(M) == Catch::Approx(3.0).epsilon(1e-6));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -92,7 +92,9 @@ TEST_CASE("condition_number_2x2", "[condition_number]") {
 TEST_CASE("pseudoinverse_invertible", "[pseudoinverse]") {
     // For invertible matrix, pseudoinverse == inverse
     Matrix<double, 2, 2> M{{{1, 2}, {3, 4}}};
-    auto M_pinv = utils::pseudoinverse(M);
+    auto M_pinv_res = utils::pseudoinverse(M);
+    REQUIRE(M_pinv_res);
+    auto M_pinv = *M_pinv_res;
 
     // M * M+ should be close to identity
     auto product = Matrix<double, 2, 2>(M * M_pinv);
@@ -105,7 +107,9 @@ TEST_CASE("pseudoinverse_invertible", "[pseudoinverse]") {
 TEST_CASE("pseudoinverse_moore_penrose_conditions", "[pseudoinverse]") {
     // Rectangular matrix: 3x2
     Matrix<double, 3, 2> A{{{1, 0}, {0, 1}, {0, 0}}};
-    auto A_pinv = utils::pseudoinverse(A);
+    auto A_pinv_res = utils::pseudoinverse(A);
+    REQUIRE(A_pinv_res);
+    auto A_pinv = *A_pinv_res;
 
     // Condition 1: A * A+ * A = A
     auto AAA = Matrix<double, 3, 2>(
@@ -130,7 +134,9 @@ TEST_CASE("pseudoinverse_moore_penrose_conditions", "[pseudoinverse]") {
 TEST_CASE("pseudoinverse_rank_deficient", "[pseudoinverse]") {
     // Rank-1 matrix: [[1, 2], [2, 4]]
     Matrix<double, 2, 2> M{{{1, 2}, {2, 4}}};
-    auto M_pinv = utils::pseudoinverse(M);
+    auto M_pinv_res = utils::pseudoinverse(M);
+    REQUIRE(M_pinv_res);
+    auto M_pinv = *M_pinv_res;
 
     // Verify MP condition 1: M * M+ * M = M
     auto MpM = Matrix<double, 2, 2>(M_pinv * M);
@@ -147,7 +153,9 @@ TEST_CASE("pseudoinverse_rank_deficient", "[pseudoinverse]") {
 
 TEST_CASE("pseudoinverse_identity", "[pseudoinverse]") {
     Matrix<double, 3, 3> I{{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}};
-    auto I_pinv = utils::pseudoinverse(I);
+    auto I_pinv_res = utils::pseudoinverse(I);
+    REQUIRE(I_pinv_res);
+    auto I_pinv = *I_pinv_res;
     for (index_type i = 0; i < 3; ++i) {
         for (index_type j = 0; j < 3; ++j) {
             double expected = (i == j) ? 1.0 : 0.0;
@@ -254,4 +262,13 @@ TEST_CASE("schur_1x1", "[schur]") {
     REQUIRE(result.has_value());
     CHECK(result->T_mat(0, 0) == Catch::Approx(7.0).epsilon(1e-12));
     CHECK(result->U(0, 0) == Catch::Approx(1.0).epsilon(1e-12));
+}
+
+TEST_CASE("svd_dependents_report_nan_input", "[svd][expected]") {
+    Matrix<double, 2, 2> M{{std::nan(""), 0.0}, {0.0, 1.0}};
+    auto cond = utils::condition_number(M);
+    REQUIRE_FALSE(cond);
+    CHECK(cond.error().kind == utils::solver::SolverError::Kind::invalid_input);
+    CHECK_FALSE(utils::spectral_norm(M));
+    CHECK_FALSE(utils::pseudoinverse(M));
 }

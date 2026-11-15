@@ -15,7 +15,7 @@ lightweight specialised types that store only the minimal data required.
 
 | Header | Type | Description |
 |--------|------|-------------|
-| `Transform.hpp` | `Transform<T, D, Mode>` | Primary matrix-backed transform owning a (D+1)x(D+1) matrix. Provides `linear()`, `translation()`, `matrix()`, `inverse()`. Default-constructs to identity. |
+| `Transform.hpp` | `Transform<T, D, Mode>` | Primary matrix-backed transform owning a (D+1)x(D+1) matrix. Provides `linear()`, `translation()`, `matrix()`, `inverse()` (returns `std::expected`; singular transforms give a `SolverError`). Default-constructs to identity. |
 
 Convenience aliases:
 
@@ -100,7 +100,7 @@ includes `Transform.hpp`; new code should use `Transform.hpp` directly.
 | `geometric.hpp` | `refract(I, N, eta)` | Refract incident vector through a surface |
 | `geometric.hpp` | `face_forward(N, I, Nref)` | Orient normal to face the viewer |
 | `coordinate.hpp` | `project(obj, model, proj, viewport)` | Object-space to window-space (like `gluProject`) |
-| `coordinate.hpp` | `unproject(win, model, proj, viewport)` | Window-space to object-space (like `gluUnProject`) |
+| `coordinate.hpp` | `unproject(win, model, proj, viewport)` | Window-space to object-space (like `gluUnProject`); returns `std::expected` |
 | `common.hpp` | `radians(degrees)` | Degrees to radians |
 | `common.hpp` | `degrees(radians)` | Radians to degrees |
 

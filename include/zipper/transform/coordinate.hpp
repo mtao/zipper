@@ -17,6 +17,7 @@
 #include <zipper/Matrix.hpp>
 #include <zipper/Vector.hpp>
 #include <zipper/utils/inverse.hpp>
+#include <expected>
 #include "Transform.hpp"
 
 namespace zipper::transform {
@@ -74,7 +75,8 @@ auto project(const VObj& obj, const TMod& model, const TProj& proj,
 /// @param model    Model-view transform (any TransformMode, D=3).
 /// @param proj     Projection transform (any TransformMode, D=3).
 /// @param viewport Viewport parameters as (x, y, width, height) (rank-1, extent 4).
-/// @return         Object-space 3D coordinate.
+/// @return         Object-space 3D coordinate, or a `SolverError` if
+///                 proj * model is singular.
 template <zipper::concepts::Vector VWin, concepts::MatrixTransform TMod, concepts::MatrixTransform TProj,
           zipper::concepts::Vector VVp>
     requires(VWin::extents_type::static_extent(0) == 3 &&
@@ -83,12 +85,17 @@ template <zipper::concepts::Vector VWin, concepts::MatrixTransform TMod, concept
              VVp::extents_type::static_extent(0) == 4)
 auto unproject(const VWin& win, const TMod& model, const TProj& proj,
                const VVp& viewport)
-    -> Vector<typename VWin::value_type, 3> {
+    -> std::expected<Vector<typename VWin::value_type, 3>,
+                     zipper::utils::solver::SolverError> {
     using T = typename VWin::value_type;
 
     // Compute inverse of the combined proj * model matrix
     Matrix<T, 4, 4> combined = (proj * model).to_matrix();
-    Matrix<T, 4, 4> inv = zipper::utils::inverse(combined);
+    auto inv_res = zipper::utils::inverse(combined);
+    if (!inv_res) {
+        return std::unexpected(std::move(inv_res.error()));
+    }
+    const Matrix<T, 4, 4>& inv = *inv_res;
 
     // Map window coordinates to NDC [-1, 1]
     Vector<T, 4> tmp;

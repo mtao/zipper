@@ -12,7 +12,7 @@
 ///
 /// @code
 ///   auto A = Matrix<double, 3, 3>({{1, 0, 0}, {0, 2, 0}, {0, 0, 3}});
-///   double kappa = zipper::utils::condition_number(A);
+///   double kappa = *zipper::utils::condition_number(A);
 ///   // kappa == 3.0 / 1.0 == 3.0
 /// @endcode
 
@@ -20,20 +20,24 @@
 #define ZIPPER_UTILS_CONDITION_NUMBER_HPP
 
 #include <cmath>
+#include <expected>
 #include <limits>
 
 #include <zipper/concepts/Matrix.hpp>
 #include <zipper/utils/decomposition/svd.hpp>
+#include <zipper/utils/solver/error.hpp>
 
 namespace zipper::utils {
 
 /// @brief Compute the 2-norm condition number of a matrix.
 ///
 /// @param A  A matrix satisfying `concepts::Matrix`.
-/// @return   sigma_max / sigma_min.  Returns infinity if the matrix is
-///           singular (sigma_min == 0).
+/// @return   sigma_max / sigma_min (infinity if the matrix is singular), or
+///           the `SolverError` from the SVD.
 template <concepts::Matrix Derived>
-auto condition_number(const Derived &A) -> typename std::decay_t<Derived>::value_type {
+auto condition_number(const Derived &A)
+    -> std::expected<typename std::decay_t<Derived>::value_type,
+                     solver::SolverError> {
     using T = typename std::decay_t<Derived>::value_type;
     const index_type m = A.extent(0);
     const index_type n = A.extent(1);
@@ -42,7 +46,11 @@ auto condition_number(const Derived &A) -> typename std::decay_t<Derived>::value
         return T{0};
     }
 
-    auto result = decomposition::svd(A);
+    auto svd_result = decomposition::svd(A);
+    if (!svd_result) {
+        return std::unexpected(std::move(svd_result.error()));
+    }
+    auto &result = *svd_result;
     const index_type p = std::min(m, n);
 
     // Singular values are in descending order.

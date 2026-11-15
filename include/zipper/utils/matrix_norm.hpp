@@ -25,9 +25,11 @@
 
 #include <algorithm>
 #include <cmath>
+#include <expected>
 
 #include <zipper/concepts/Matrix.hpp>
 #include <zipper/utils/decomposition/svd.hpp>
+#include <zipper/utils/solver/error.hpp>
 
 namespace zipper::utils {
 
@@ -95,9 +97,12 @@ auto inf_norm(const Derived &A) -> typename std::decay_t<Derived>::value_type {
 /// Computed via SVD.  For a 1x1 matrix this is just |A(0,0)|.
 ///
 /// @param A  A matrix satisfying `concepts::Matrix`.
-/// @return   The spectral norm (largest singular value) as a scalar.
+/// @return   The spectral norm (largest singular value), or the
+///           `SolverError` from the SVD.
 template <concepts::Matrix Derived>
-auto spectral_norm(const Derived &A) -> typename std::decay_t<Derived>::value_type {
+auto spectral_norm(const Derived &A)
+    -> std::expected<typename std::decay_t<Derived>::value_type,
+                     solver::SolverError> {
     using T = typename std::decay_t<Derived>::value_type;
     const index_type m = A.extent(0);
     const index_type n = A.extent(1);
@@ -113,8 +118,11 @@ auto spectral_norm(const Derived &A) -> typename std::decay_t<Derived>::value_ty
     }
 
     auto result = decomposition::svd(A);
+    if (!result) {
+        return std::unexpected(std::move(result.error()));
+    }
     // Singular values are in descending order; the first is the largest.
-    return result.S(0);
+    return result->S(0);
 }
 
 } // namespace zipper::utils

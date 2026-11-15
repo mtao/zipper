@@ -144,7 +144,8 @@ static_assert(HasPolar<Matrix<test::FieldScalar, 2, 2>>);
 static_assert(HasProperPolar<Matrix<test::FieldScalar, 2, 2>>);
 static_assert(!HasQr<Matrix<int, 2, 2>>);
 static_assert(std::same_as<decltype(svd(std::declval<Matrix<float, 2, 2>>())),
-                           SVDResult<float, 2, 2>>);
+                           std::expected<SVDResult<float, 2, 2>,
+                                         solver::SolverError>>);
 static_assert(!HasQrSolve<Matrix<double, 2, 3>, Vector<double, 2>>);
 static_assert(!HasQrSolve<Matrix<double, 3, 2>, Vector<double, 2>>);
 static_assert(!HasRvalueL<PLUResult<double, 2>>);
@@ -159,7 +160,9 @@ TEST_CASE("orthogonal_decompositions_support_custom_field_scalars",
     Matrix<T, 2, 2> matrix{{T{3}, T{1}}, {T{0}, T{2}}};
     const auto qr_result = qr(matrix);
     const Matrix<T, 2, 2> qr_reconstructed(qr_result.Q * qr_result.R);
-    const auto polar_result = polar(matrix);
+    const auto polar_expected = polar(matrix);
+    REQUIRE(polar_expected);
+    const auto &polar_result = *polar_expected;
     const Matrix<T, 2, 2> polar_reconstructed(
         polar_result.R * polar_result.S);
 
@@ -314,6 +317,8 @@ TEST_CASE("reduced_qr_solve_rejects_malformed_dynamic_factors",
 TEST_CASE("polar_decompositions_reject_a_dynamic_nonsquare_matrix",
            "[decomposition][polar][contracts]") {
     MatrixXX<double> matrix(2, 3);
-    CHECK_THROWS_AS(polar(matrix), std::invalid_argument);
-    CHECK_THROWS_AS(proper_polar(matrix), std::invalid_argument);
+    for (const auto &result : {polar(matrix), proper_polar(matrix)}) {
+        REQUIRE_FALSE(result);
+        CHECK(result.error().kind == solver::SolverError::Kind::invalid_input);
+    }
 }

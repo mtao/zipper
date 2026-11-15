@@ -33,13 +33,15 @@
 ///   Transform<float> proj;              // 3D (4x4), col-major, Projective mode
 ///   auto lin = xform.linear();          // DxD view
 ///   auto t   = xform.translation();     // D-vector view
-///   auto inv = xform.inverse();         // mode-aware inverse
+///   auto inv = xform.inverse();         // std::expected<Transform, SolverError>
 ///   auto composed = xform * rigid;      // → AffineTransform (mode promotion)
 /// @endcode
 
 #if !defined(ZIPPER_TRANSFORM_TRANSFORM_HPP)
 #define ZIPPER_TRANSFORM_TRANSFORM_HPP
 
+#include <expected>
+#include <zipper/utils/inverse.hpp>
 #include "detail/TransformBase.hpp"
 #include <zipper/expression/nullary/MDArray.hpp>
 #include <zipper/storage/layout_types.hpp>
@@ -197,7 +199,11 @@ class Transform
     ///   - Projective: full (D+1)x(D+1) matrix inverse
     ///   - Affine: exploits affine structure [L^-1, -L^-1*t; 0 1]
     ///   - Isometry: exploits orthogonality [R^T, -R^T*t; 0 1]
-    auto inverse() const -> Transform {
+    ///
+    /// @return The inverse, or a `SolverError` (`breakdown`) if the transform
+    ///         is singular. Isometries never fail.
+    auto inverse() const
+        -> std::expected<Transform, zipper::utils::solver::SolverError> {
         if constexpr (Mode == TransformMode::Isometry) {
             return rotation_inverse_();
         } else if constexpr (Mode == TransformMode::Affine) {
@@ -209,14 +215,19 @@ class Transform
 
   private:
     /// @brief Full (D+1)x(D+1) matrix inverse.
-    auto projective_inverse_() const -> Transform {
+    auto projective_inverse_() const
+        -> std::expected<Transform, zipper::utils::solver::SolverError> {
         zipper::Matrix<T, H, H> mat;
         for (zipper::index_type r = 0; r < H; ++r) {
             for (zipper::index_type c = 0; c < H; ++c) {
                 mat(r, c) = (*this)(r, c);
             }
         }
-        zipper::Matrix<T, H, H> inv_mat = zipper::utils::inverse(mat);
+        auto inv_res = zipper::utils::inverse(mat);
+        if (!inv_res) {
+            return std::unexpected(std::move(inv_res.error()));
+        }
+        const zipper::Matrix<T, H, H>& inv_mat = *inv_res;
 
         Transform result;
         for (zipper::index_type r = 0; r < H; ++r) {
@@ -228,14 +239,19 @@ class Transform
     }
 
     /// @brief Affine inverse: [L^-1  -L^-1*t; 0 1].
-    auto affine_inverse_() const -> Transform {
+    auto affine_inverse_() const
+        -> std::expected<Transform, zipper::utils::solver::SolverError> {
         zipper::Matrix<T, D, D> lin;
         for (zipper::index_type r = 0; r < D; ++r) {
             for (zipper::index_type c = 0; c < D; ++c) {
                 lin(r, c) = (*this)(r, c);
             }
         }
-        zipper::Matrix<T, D, D> lin_inv = zipper::utils::inverse(lin);
+        auto lin_res = zipper::utils::inverse(lin);
+        if (!lin_res) {
+            return std::unexpected(std::move(lin_res.error()));
+        }
+        const zipper::Matrix<T, D, D>& lin_inv = *lin_res;
 
         zipper::Vector<T, D> t;
         for (zipper::index_type i = 0; i < D; ++i) {

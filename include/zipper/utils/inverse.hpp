@@ -34,8 +34,11 @@
 ///   auto C_inv = zipper::utils::inverse(C);
 /// @endcode
 ///
-/// @throws std::runtime_error if the matrix is singular (determinant is zero
-///         for 2x2/3x3, or R has a zero pivot for the general path).
+/// Failure is reported through `std::expected<Matrix, solver::SolverError>`
+/// (no exceptions):
+///   - `Kind::invalid_input` — the matrix is not square.
+///   - `Kind::breakdown`     — the matrix is singular (zero or non-finite
+///     determinant for 2x2/3x3, zero pivot in R for the general path).
 ///
 /// @see zipper::utils::decomposition::qr — QR factorisation used by
 ///      inverse_general.
@@ -52,7 +55,12 @@
 #include <zipper/Vector.hpp>
 #include <zipper/concepts/Matrix.hpp>
 
+#include <cmath>
+#include <expected>
+#include <string>
+
 #include "decomposition/qr.hpp"
+#include "solver/error.hpp"
 #include "detail/tuple_to_array.hpp"
 #include "zipper/utils/extents/is_compatible.hpp"
 #include "zipper/detail/extents/swizzle_extents.hpp"
@@ -61,6 +69,19 @@ namespace zipper::utils {
 
 namespace detail {
 
+/// Result of inverting `D`: the inverse has transposed static extents.
+template <zipper::concepts::Matrix D>
+using inverse_result_t = std::expected<
+    Matrix<typename D::value_type,
+           D::extents_type::static_extent(1),
+           D::extents_type::static_extent(0)>,
+    solver::SolverError>;
+
+inline auto singular_error(std::string message) -> solver::SolverError {
+    return {.kind = solver::SolverError::Kind::breakdown,
+            .message = std::move(message)};
+}
+
 /// @brief Closed-form inverse of a 2x2 matrix.
 ///
 /// Uses the cofactor formula:  A^{-1} = (1/det(A)) * adj(A), where
@@ -68,10 +89,10 @@ namespace detail {
 ///
 /// @param M  A matrix with extents compatible with 2x2.
 /// @return   The inverse matrix with transposed static extents.
-/// @throws   (via Determinant) No explicit throw, but division by zero will
-///           produce Inf/NaN if the matrix is singular.
+/// @return   The inverse, or a `breakdown` error if the determinant is zero
+///           or non-finite.
 template <zipper::concepts::Matrix D>
-auto inverse2d(const D& M) {
+auto inverse2d(const D& M) -> inverse_result_t<D> {
     zipper::utils::extents::throw_if_not_compatible<2, 2>(M.extents());
     auto extents = zipper::detail::extents::swizzle_extents<1, 0>(M.extents());
     using extents_type = std::decay_t<decltype(extents)>;
@@ -90,6 +111,11 @@ auto inverse2d(const D& M) {
     const T& c = M(1, 0);
     const T& d = M(1, 1);
     T det = zipper::expression::reductions::Determinant(M.expression())();
+    if (det == T(0) || !std::isfinite(det)) {
+        return std::unexpected(
+            singular_error("inverse: matrix is singular (determinant is "
+                           "zero or non-finite)"));
+    }
     I(0, 0) = d / det;
     I(0, 1) = -b / det;
     I(1, 0) = -c / det;
@@ -104,10 +130,10 @@ auto inverse2d(const D& M) {
 ///
 /// @param M  A matrix with extents compatible with 3x3.
 /// @return   The inverse matrix.
-/// @throws   (via Determinant) No explicit throw, but division by zero will
-///           produce Inf/NaN if the matrix is singular.
+/// @return   The inverse, or a `breakdown` error if the determinant is zero
+///           or non-finite.
 template <zipper::concepts::Matrix D>
-auto inverse3d(const D& M) {
+auto inverse3d(const D& M) -> inverse_result_t<D> {
     zipper::utils::extents::throw_if_not_compatible<3, 3>(M.extents());
     auto extents = zipper::detail::extents::swizzle_extents<1, 0>(M.extents());
     using extents_type = std::decay_t<decltype(extents)>;
@@ -122,6 +148,11 @@ auto inverse3d(const D& M) {
     // 1/det ( d -b )
     //       ( -c a )
     T det = zipper::expression::reductions::Determinant(M.expression())();
+    if (det == T(0) || !std::isfinite(det)) {
+        return std::unexpected(
+            singular_error("inverse: matrix is singular (determinant is "
+                           "zero or non-finite)"));
+    }
     auto cofactor = [](const auto& v_, index_type r, index_type c) {
         auto det2 = [](const auto& v, index_type r0, index_type c0,
                        index_type r1, index_type c1) {
@@ -144,9 +175,10 @@ auto inverse3d(const D& M) {
 /// Computes A^{-1} by factoring A = Q * R, then solving
 /// R * x_j = Q^T * e_j  for each column j of the identity.
 ///
-/// @throws std::runtime_error if A is singular (R has a zero pivot).
+/// @return The inverse, or a `breakdown` error if A is singular (R has a
+///         zero pivot).
 template <zipper::concepts::Matrix D>
-auto inverse_general(const D& M) {
+auto inverse_general(const D& M) -> inverse_result_t<D> {
     using T = typename D::value_type;
     constexpr index_type N = D::extents_type::static_extent(0);
 
@@ -178,9 +210,9 @@ auto inverse_general(const D& M) {
 
         auto solve_result = R_upper.solve(c);
         if (!solve_result) {
-            throw std::runtime_error(
+            return std::unexpected(singular_error(
                 "inverse: matrix is singular — " +
-                solve_result.error().message);
+                solve_result.error().message));
         }
 
         auto& x_j = *solve_result;
@@ -202,17 +234,23 @@ auto inverse_general(const D& M) {
 ///   - n x n (n > 3): QR decomposition + n back-substitutions (O(n^3) flops).
 ///
 /// @param d  A square matrix satisfying `concepts::Matrix`.
-/// @return   The inverse matrix (same value_type, transposed static extents).
-/// @throws   std::runtime_error if the matrix is singular.
+/// @return   `std::expected` holding the inverse matrix (same value_type,
+///           transposed static extents), or a `SolverError`
+///           (`invalid_input` if not square, `breakdown` if singular).
 ///
 /// @code
 ///   auto A = Matrix<double, 3, 3>({{2, 0, 0}, {0, 3, 0}, {0, 0, 4}});
 ///   auto A_inv = zipper::utils::inverse(A);
-///   // A_inv(0,0) == 0.5, A_inv(1,1) == 1/3, A_inv(2,2) == 0.25
+///   // (*A_inv)(0,0) == 0.5, (*A_inv)(1,1) == 1/3, (*A_inv)(2,2) == 0.25
 /// @endcode
 template <zipper::concepts::Matrix D>
-auto inverse(const D& d) {
+auto inverse(const D& d) -> detail::inverse_result_t<D> {
     const auto& extents = d.extents();
+    if (d.extent(0) != d.extent(1)) {
+        return std::unexpected(solver::SolverError{
+            .kind = solver::SolverError::Kind::invalid_input,
+            .message = "inverse: matrix must be square"});
+    }
     if (zipper::utils::extents::is_compatible<2, 2>(extents)) {
         return detail::inverse2d(d);
     } else if (zipper::utils::extents::is_compatible<3, 3>(extents)) {

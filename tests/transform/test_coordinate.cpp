@@ -19,7 +19,9 @@ TEST_CASE("project/unproject roundtrip", "[transform][coordinate]") {
 
     Vector<float, 3> obj({1.0f, 2.0f, -5.0f});
     auto win = project(obj, model, proj, viewport);
-    auto obj2 = unproject(win, model, proj, viewport);
+    auto obj2_res = unproject(win, model, proj, viewport);
+    REQUIRE(obj2_res);
+    auto obj2 = *obj2_res;
 
     CHECK(obj2(0) == Catch::Approx(obj(0)).margin(1e-4f));
     CHECK(obj2(1) == Catch::Approx(obj(1)).margin(1e-4f));

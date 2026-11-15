@@ -13,21 +13,33 @@ TEST_CASE("test_matrix_inverse", "[matrix][storage][dense]") {
     zipper::Matrix<double, 3, 3> I =
         zipper::expression::nullary::Identity<double, 3, 3>{};
 
-    auto I2 = zipper::utils::inverse(I);
+    auto I2_r = zipper::utils::inverse(I);
+
+    REQUIRE(I2_r);
+
+    auto I2 = *I2_r;
     CHECK(I == I2);
   }
   {
     zipper::Matrix<double, 2, 2> I =
         zipper::expression::nullary::Identity<double, 2, 2>{};
 
-    auto I2 = zipper::utils::inverse(I);
+    auto I2_r = zipper::utils::inverse(I);
+
+    REQUIRE(I2_r);
+
+    auto I2 = *I2_r;
     CHECK(I == I2);
   }
   {
     zipper::Matrix<double, std::dynamic_extent, std::dynamic_extent> I =
         zipper::expression::nullary::Identity<double, 2, 2>{};
 
-    auto I2 = zipper::utils::inverse(I);
+    auto I2_r = zipper::utils::inverse(I);
+
+    REQUIRE(I2_r);
+
+    auto I2 = *I2_r;
     CHECK(I == I2);
   }
   {
@@ -47,8 +59,12 @@ TEST_CASE("test_matrix_inverse", "[matrix][storage][dense]") {
       M2(0, 1) = 3;
       M2(1, 0) = 4;
       M2(1, 1) = 5;
-      auto Inv = zipper::utils::inverse(M);
-      auto Inv2 = zipper::utils::inverse(M2);
+      auto Inv_r = zipper::utils::inverse(M);
+      REQUIRE(Inv_r);
+      auto Inv = *Inv_r;
+      auto Inv2_r = zipper::utils::inverse(M2);
+      REQUIRE(Inv2_r);
+      auto Inv2 = *Inv2_r;
 
       auto myI = M * Inv;
       CHECK(as_array((I - myI)).norm() < 1e-5);
@@ -61,7 +77,9 @@ TEST_CASE("test_matrix_inverse", "[matrix][storage][dense]") {
   }
   {
     zipper::Matrix<double, 2, 2> M{{4.0, 1.0}, {2.0, 3.0}};
-    auto Inv = zipper::utils::inverse(M);
+    auto Inv_r = zipper::utils::inverse(M);
+    REQUIRE(Inv_r);
+    auto Inv = *Inv_r;
 
     zipper::MatrixBase I = zipper::expression::nullary::Identity<double, 2, 2>();
 
@@ -74,7 +92,9 @@ TEST_CASE("test_matrix_inverse", "[matrix][storage][dense]") {
   {
     zipper::Matrix<double, 3, 3> M{
         {4.0, 1.0, 0.0}, {1.0, 4.0, 1.0}, {0.0, 1.0, 4.0}};
-    auto Inv = zipper::utils::inverse(M);
+    auto Inv_r = zipper::utils::inverse(M);
+    REQUIRE(Inv_r);
+    auto Inv = *Inv_r;
 
     zipper::MatrixBase I = zipper::expression::nullary::Identity<double, 3, 3>();
 
@@ -99,7 +119,11 @@ TEST_CASE("inverse 4x4 static extents", "[matrix][inverse][general]") {
         {0.0, 0.0, 1.0, 4.0},
     };
 
-    auto Inv = zipper::utils::inverse(A);
+    auto Inv_r = zipper::utils::inverse(A);
+
+    REQUIRE(Inv_r);
+
+    auto Inv = *Inv_r;
 
     // Verify A * Inv ≈ I.
     zipper::MatrixBase I = zipper::expression::nullary::Identity<double, 4, 4>();
@@ -121,7 +145,11 @@ TEST_CASE("inverse 5x5 static extents", "[matrix][inverse][general]") {
         {0.0, 0.0, 0.0, 1.0, 10.0},
     };
 
-    auto Inv = zipper::utils::inverse(A);
+    auto Inv_r = zipper::utils::inverse(A);
+
+    REQUIRE(Inv_r);
+
+    auto Inv = *Inv_r;
 
     // Verify A * Inv ≈ I.
     zipper::MatrixBase I = zipper::expression::nullary::Identity<double, 5, 5>();
@@ -133,7 +161,11 @@ TEST_CASE("inverse 4x4 identity", "[matrix][inverse][general]") {
     zipper::Matrix<double, 4, 4> I =
         zipper::expression::nullary::Identity<double, 4, 4>{};
 
-    auto Inv = zipper::utils::inverse(I);
+    auto Inv_r = zipper::utils::inverse(I);
+
+    REQUIRE(Inv_r);
+
+    auto Inv = *Inv_r;
 
     // Inverse of identity should be identity.
     for (zipper::index_type i = 0; i < 4; ++i) {
@@ -142,4 +174,40 @@ TEST_CASE("inverse 4x4 identity", "[matrix][inverse][general]") {
             CHECK(Inv(i, j) == Catch::Approx(expected).margin(1e-12));
         }
     }
+}
+
+TEST_CASE("inverse reports singular matrices", "[matrix][inverse][expected]") {
+    using Kind = zipper::utils::solver::SolverError::Kind;
+    {
+        zipper::Matrix<double, 2, 2> M{{1.0, 2.0}, {2.0, 4.0}};
+        auto r = zipper::utils::inverse(M);
+        REQUIRE_FALSE(r);
+        CHECK(r.error().kind == Kind::breakdown);
+    }
+    {
+        zipper::Matrix<double, 3, 3> M{{1, 2, 3}, {2, 4, 6}, {0, 1, 1}};
+        auto r = zipper::utils::inverse(M);
+        REQUIRE_FALSE(r);
+        CHECK(r.error().kind == Kind::breakdown);
+    }
+    {
+        zipper::Matrix<double, 4, 4> M{
+            {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 1}};
+        auto r = zipper::utils::inverse(M);
+        REQUIRE_FALSE(r);
+        CHECK(r.error().kind == Kind::breakdown);
+    }
+    {
+        zipper::Matrix<double, 2, 2> M{{std::nan(""), 0.0}, {0.0, 1.0}};
+        auto r = zipper::utils::inverse(M);
+        REQUIRE_FALSE(r);
+    }
+}
+
+TEST_CASE("inverse rejects non-square matrices", "[matrix][inverse][expected]") {
+    zipper::Matrix<double, zipper::dynamic_extent, zipper::dynamic_extent> M(2, 3);
+    auto r = zipper::utils::inverse(M);
+    REQUIRE_FALSE(r);
+    CHECK(r.error().kind ==
+          zipper::utils::solver::SolverError::Kind::invalid_input);
 }

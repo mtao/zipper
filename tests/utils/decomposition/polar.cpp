@@ -94,7 +94,11 @@ TEST_CASE("polar_2x2_identity", "[decomposition][polar]") {
     F(1, 0) = 0.0;
     F(1, 1) = 1.0;
 
-    auto [R, S] = polar(F);
+    auto R_res = polar(F);
+
+    REQUIRE(R_res);
+
+    auto [R, S] = *R_res;
 
     check_proper_rotation(R, 2, 1e-10);
     check_symmetric(S, 2, 1e-10);
@@ -119,7 +123,11 @@ TEST_CASE("polar_2x2_pure_rotation", "[decomposition][polar]") {
     F(1, 0) = std::sin(theta);
     F(1, 1) = std::cos(theta);
 
-    auto [R, S] = polar(F);
+    auto R_res = polar(F);
+
+    REQUIRE(R_res);
+
+    auto [R, S] = *R_res;
 
     check_proper_rotation(R, 2, 1e-10);
     check_symmetric(S, 2, 1e-10);
@@ -149,7 +157,11 @@ TEST_CASE("polar_2x2_scaled_rotation", "[decomposition][polar]") {
     F(1, 0) = s * std::sin(theta);
     F(1, 1) = s * std::cos(theta);
 
-    auto [R, S] = polar(F);
+    auto R_res = polar(F);
+
+    REQUIRE(R_res);
+
+    auto [R, S] = *R_res;
 
     check_proper_rotation(R, 2, 1e-10);
     check_symmetric(S, 2, 1e-10);
@@ -175,7 +187,11 @@ TEST_CASE("polar_2x2_anisotropic_stretch", "[decomposition][polar]") {
     F(1, 0) = 0.0;
     F(1, 1) = 3.0;
 
-    auto [R, S] = polar(F);
+    auto R_res = polar(F);
+
+    REQUIRE(R_res);
+
+    auto [R, S] = *R_res;
 
     check_proper_rotation(R, 2, 1e-10);
     check_symmetric(S, 2, 1e-10);
@@ -201,7 +217,11 @@ TEST_CASE("polar_2x2_general", "[decomposition][polar]") {
     F(1, 0) = -0.7;
     F(1, 1) = 2.1;
 
-    auto [R, S] = polar(F);
+    auto R_res = polar(F);
+
+    REQUIRE(R_res);
+
+    auto [R, S] = *R_res;
 
     check_proper_rotation(R, 2, 1e-10);
     check_symmetric(S, 2, 1e-10);
@@ -215,8 +235,14 @@ TEST_CASE("polar_2x2_reflection", "[decomposition][polar]") {
     F(1, 0) = 0.0;
     F(1, 1) = 1.0;
 
-    auto [R, S] = polar(F);
-    auto [proper_R, signed_S] = proper_polar(F);
+    auto R_res = polar(F);
+
+    REQUIRE(R_res);
+
+    auto [R, S] = *R_res;
+    auto proper_R_res = proper_polar(F);
+    REQUIRE(proper_R_res);
+    auto [proper_R, signed_S] = *proper_R_res;
 
     check_orthogonal(R, 2, 1e-10);
     check_symmetric(S, 2, 1e-10);
@@ -241,7 +267,11 @@ TEST_CASE("polar_3x3_identity", "[decomposition][polar]") {
         for (index_type j = 0; j < 3; ++j) { F(i, j) = (i == j) ? 1.0 : 0.0; }
     }
 
-    auto [R, S] = polar(F);
+    auto R_res = polar(F);
+
+    REQUIRE(R_res);
+
+    auto [R, S] = *R_res;
 
     check_proper_rotation(R, 3, 1e-10);
     check_symmetric(S, 3, 1e-10);
@@ -262,8 +292,14 @@ TEST_CASE("polar_singular_reflection", "[decomposition][polar]") {
                             {0.0, 1.0, 0.0},
                             {0.0, 0.0, 0.0}};
 
-    auto [R, S] = polar(F);
-    auto [proper_R, signed_S] = proper_polar(F);
+    auto R_res = polar(F);
+
+    REQUIRE(R_res);
+
+    auto [R, S] = *R_res;
+    auto proper_R_res = proper_polar(F);
+    REQUIRE(proper_R_res);
+    auto [proper_R, signed_S] = *proper_R_res;
 
     check_orthogonal(R, 3, 1e-10);
     check_positive_semidefinite(S, 1e-10);
@@ -287,7 +323,11 @@ TEST_CASE("polar_3x3_rotation_x", "[decomposition][polar]") {
     F(2, 1) = std::sin(theta);
     F(2, 2) = std::cos(theta);
 
-    auto [R, S] = polar(F);
+    auto R_res = polar(F);
+
+    REQUIRE(R_res);
+
+    auto [R, S] = *R_res;
 
     check_proper_rotation(R, 3, 1e-10);
     check_symmetric(S, 3, 1e-10);
@@ -324,7 +364,11 @@ TEST_CASE("polar_3x3_scaled", "[decomposition][polar]") {
     F(2, 1) = s * std::sin(theta);
     F(2, 2) = s * std::cos(theta);
 
-    auto [R, S] = polar(F);
+    auto R_res = polar(F);
+
+    REQUIRE(R_res);
+
+    auto [R, S] = *R_res;
 
     check_proper_rotation(R, 3, 1e-10);
     check_symmetric(S, 3, 1e-10);
@@ -351,8 +395,14 @@ TEST_CASE("polar_3x3_general", "[decomposition][polar]") {
     F(2, 1) = 0.2;
     F(2, 2) = 3.0;
 
-    auto [R, S] = polar(F);
-    auto [proper_R, proper_S] = proper_polar(F);
+    auto R_res = polar(F);
+
+    REQUIRE(R_res);
+
+    auto [R, S] = *R_res;
+    auto proper_R_res = proper_polar(F);
+    REQUIRE(proper_R_res);
+    auto [proper_R, proper_S] = *proper_R_res;
 
     check_proper_rotation(R, 3, 1e-10);
     check_symmetric(S, 3, 1e-10);
@@ -375,7 +425,11 @@ TEST_CASE("polar_3x3_anisotropic_stretch", "[decomposition][polar]") {
     F(1, 1) = 2.0;
     F(2, 2) = 5.0;
 
-    auto [R, S] = polar(F);
+    auto R_res = polar(F);
+
+    REQUIRE(R_res);
+
+    auto [R, S] = *R_res;
 
     check_proper_rotation(R, 3, 1e-10);
     check_symmetric(S, 3, 1e-10);
@@ -403,8 +457,14 @@ TEST_CASE("polar_3x3_reflection", "[decomposition][polar]") {
     }
     F(0, 0) = -1.0;
 
-    auto [R, S] = polar(F);
-    auto [proper_R, signed_S] = proper_polar(F);
+    auto R_res = polar(F);
+
+    REQUIRE(R_res);
+
+    auto [R, S] = *R_res;
+    auto proper_R_res = proper_polar(F);
+    REQUIRE(proper_R_res);
+    auto [proper_R, signed_S] = *proper_R_res;
 
     check_orthogonal(R, 3, 1e-10);
     check_symmetric(S, 3, 1e-10);
@@ -436,8 +496,14 @@ TEST_CASE("polar_dynamic_3x3", "[decomposition][polar]") {
     F(2, 1) = -0.1;
     F(2, 2) = 1.8;
 
-    auto [R, S] = polar(F);
-    auto [proper_R, proper_S] = proper_polar(F);
+    auto R_res = polar(F);
+
+    REQUIRE(R_res);
+
+    auto [R, S] = *R_res;
+    auto proper_R_res = proper_polar(F);
+    REQUIRE(proper_R_res);
+    auto [proper_R, proper_S] = *proper_R_res;
 
     check_proper_rotation(R, 3, 1e-9);
     check_symmetric(S, 3, 1e-9);

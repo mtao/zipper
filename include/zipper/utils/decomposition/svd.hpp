@@ -20,13 +20,14 @@
 /// small matrices typical in FEM applications (2x2, 3x3 deformation
 /// gradients).
 ///
-/// SVD always succeeds (no rank requirement), so the function returns the
-/// result struct directly rather than wrapping in `std::expected`.
+/// Rank-deficient input is fine (zero singular values); the function returns
+/// `std::expected` only to report NaN input or Jacobi non-convergence.
 
 #if !defined(ZIPPER_UTILS_DECOMPOSITION_SVD_HPP)
 #define ZIPPER_UTILS_DECOMPOSITION_SVD_HPP
 
 #include <algorithm>
+#include <expected>
 #include <limits>
 #include <numeric>
 #include <type_traits>
@@ -39,6 +40,7 @@
 #include <zipper/expression/nullary/Zero.hpp>
 #include <zipper/utils/decomposition/detail/scalar_math.hpp>
 #include <zipper/utils/extents/extent_arithmetic.hpp>
+#include <zipper/utils/solver/error.hpp>
 
 namespace zipper::utils::decomposition {
 
@@ -79,17 +81,21 @@ struct SVDResult {
 /// @return   An `SVDResult` with U (m x p), S (p), Vt (p x n), where
 ///           p = min(m, n) and singular values are in descending order.
 ///
-/// SVD always succeeds, so the result is returned directly (not wrapped in
-/// `std::expected`).
+/// Failure is reported through `std::expected<SVDResult, SolverError>`:
+///   - `Kind::invalid_input` — the matrix contains NaN entries.
+///   - `Kind::diverged`      — the Jacobi iteration did not converge within
+///                             the sweep limit.
 /// The scalar type must be a field closed under square root; ordinary exact
 /// rational types therefore require a promoted or approximate square-root type.
 template <concepts::Matrix Derived>
     requires detail::orthogonal_decomposition_scalar<
         typename std::decay_t<Derived>::value_type>
 auto svd(const Derived &A)
-    -> SVDResult<typename std::decay_t<Derived>::value_type,
-                 std::decay_t<Derived>::extents_type::static_extent(0),
-                 std::decay_t<Derived>::extents_type::static_extent(1)> {
+    -> std::expected<
+        SVDResult<typename std::decay_t<Derived>::value_type,
+                  std::decay_t<Derived>::extents_type::static_extent(0),
+                  std::decay_t<Derived>::extents_type::static_extent(1)>,
+        solver::SolverError> {
     using AType = std::decay_t<Derived>;
     using T = typename AType::value_type;
     constexpr index_type M = AType::extents_type::static_extent(0);
@@ -133,6 +139,16 @@ auto svd(const Derived &A)
     // Working copy of A.
     DynMat W(A);
 
+    for (index_type row = 0; row < m; ++row) {
+        for (index_type column = 0; column < n; ++column) {
+            if (!(W(row, column) == W(row, column))) {
+                return std::unexpected(solver::SolverError{
+                    .kind = solver::SolverError::Kind::invalid_input,
+                    .message = "svd: matrix contains NaN"});
+            }
+        }
+    }
+
     // V accumulates right rotations (n x n identity initially).
     DynMat V(expression::nullary::
                  Identity<T, std::dynamic_extent, std::dynamic_extent>(n, n));
@@ -170,6 +186,7 @@ auto svd(const Derived &A)
         }
     };
 
+    bool did_converge = false;
     for (index_type sweep = 0; sweep < max_sweeps; ++sweep) {
         bool converged = true;
 
@@ -215,7 +232,15 @@ auto svd(const Derived &A)
                 apply_rotation(V, j1, j2, c, s);
             }
         }
-        if (converged) { break; }
+        if (converged) {
+            did_converge = true;
+            break;
+        }
+    }
+    if (!did_converge) {
+        return std::unexpected(solver::SolverError{
+            .kind = solver::SolverError::Kind::diverged,
+            .message = "svd: Jacobi iteration did not converge"});
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -306,8 +331,8 @@ auto svd(const Derived &A)
     Matrix<T, P, N> Vt_result(V.col_slice(perm).transpose());
 
     return SVDResult<T, M, N>{.U = std::move(U_result),
-                              .S = std::move(S_result),
-                              .Vt = std::move(Vt_result)};
+                                     .S = std::move(S_result),
+                                     .Vt = std::move(Vt_result)};
 }
 
 } // namespace zipper::utils::decomposition

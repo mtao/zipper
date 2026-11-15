@@ -29,7 +29,7 @@
 #if !defined(ZIPPER_UTILS_DECOMPOSITION_POLAR_HPP)
 #define ZIPPER_UTILS_DECOMPOSITION_POLAR_HPP
 
-#include <stdexcept>
+#include <expected>
 #include <type_traits>
 #include <utility>
 
@@ -39,6 +39,7 @@
 #include <zipper/utils/decomposition/detail/shape_validation.hpp>
 #include <zipper/utils/decomposition/svd.hpp>
 #include <zipper/utils/determinant.hpp>
+#include <zipper/utils/solver/error.hpp>
 
 namespace zipper::utils::decomposition {
 
@@ -67,19 +68,25 @@ template <bool Proper, concepts::Matrix Derived>
               orthogonal_decomposition_scalar<
                   typename std::decay_t<Derived>::value_type>
 auto polar_impl(const Derived &F)
-    -> PolarResult<typename std::decay_t<Derived>::value_type,
-                   std::decay_t<Derived>::extents_type::static_extent(0)> {
+    -> std::expected<
+        PolarResult<typename std::decay_t<Derived>::value_type,
+                    std::decay_t<Derived>::extents_type::static_extent(0)>,
+        solver::SolverError> {
     using FType = std::decay_t<Derived>;
     using T = typename FType::value_type;
     constexpr index_type M = FType::extents_type::static_extent(0);
     constexpr index_type N = FType::extents_type::static_extent(1);
 
     const index_type n = F.extent(0);
-    if (F.extent(0) != F.extent(1)) {
-        throw std::invalid_argument("polar decomposition: matrix must be square");
+    if (auto valid = validate_square(F, "polar decomposition"); !valid) {
+        return std::unexpected(std::move(valid.error()));
     }
 
-    auto [U, sigma, Vt] = svd(F);
+    auto svd_result = svd(F);
+    if (!svd_result) {
+        return std::unexpected(std::move(svd_result.error()));
+    }
+    auto &[U, sigma, Vt] = *svd_result;
     Matrix<T, M, N> R(U * Vt);
 
     if constexpr (Proper) {
@@ -106,16 +113,18 @@ auto polar_impl(const Derived &F)
 /// @return   A `PolarResult` with orthogonal R and symmetric positive
 ///           semi-definite stretch S such that F = R * S.
 ///
-/// Polar decomposition always succeeds, so the result is returned directly
-/// (not wrapped in `std::expected`) for square inputs. A dynamically sized
-/// nonsquare input throws `std::invalid_argument`.
+/// @return   `std::expected<PolarResult, SolverError>`. Errors:
+///           `invalid_input` for a dynamically sized nonsquare or NaN input,
+///           `diverged` if the underlying SVD does not converge.
 template <concepts::Matrix Derived>
     requires detail::StaticallySquare<Derived> &&
               detail::orthogonal_decomposition_scalar<
                   typename std::decay_t<Derived>::value_type>
 auto polar(const Derived &F)
-    -> PolarResult<typename std::decay_t<Derived>::value_type,
-                   std::decay_t<Derived>::extents_type::static_extent(0)> {
+    -> std::expected<
+        PolarResult<typename std::decay_t<Derived>::value_type,
+                    std::decay_t<Derived>::extents_type::static_extent(0)>,
+        solver::SolverError> {
     return detail::polar_impl<false>(F);
 }
 
@@ -123,14 +132,16 @@ auto polar(const Derived &F)
 ///
 /// @return A `PolarResult` with proper orthogonal R (det R = +1) and signed
 ///         symmetric stretch S such that F = R * S. S may be indefinite.
-/// @throws std::invalid_argument if a dynamically sized input is nonsquare.
+///         or a `SolverError` (see `polar`).
 template <concepts::Matrix Derived>
     requires detail::StaticallySquare<Derived> &&
               detail::orthogonal_decomposition_scalar<
                   typename std::decay_t<Derived>::value_type>
 auto proper_polar(const Derived &F)
-    -> PolarResult<typename std::decay_t<Derived>::value_type,
-                   std::decay_t<Derived>::extents_type::static_extent(0)> {
+    -> std::expected<
+        PolarResult<typename std::decay_t<Derived>::value_type,
+                    std::decay_t<Derived>::extents_type::static_extent(0)>,
+        solver::SolverError> {
     return detail::polar_impl<true>(F);
 }
 

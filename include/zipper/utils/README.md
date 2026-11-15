@@ -11,7 +11,7 @@ operate on Zipper types. Everything lives in the `zipper::utils` namespace
 | Header | Function(s) | Description |
 |--------|------------|-------------|
 | `determinant.hpp` | `determinant(M)` | Matrix determinant (delegates to `expression::reductions::Determinant`) |
-| `inverse.hpp` | `inverse(M)` | Matrix inverse; closed-form for 2x2/3x3, QR-based for general nxn |
+| `inverse.hpp` | `inverse(M)` | Matrix inverse returning `std::expected<Matrix, SolverError>`; closed-form for 2x2/3x3, QR-based for general nxn |
 | `format.hpp` | `zipper_format_string(M)` | `std::format` support for all Zipper types (rank-0 scalar, rank-1 vector, rank-2+ matrix/tensor) |
 | `max_coeff.hpp` | `maxCoeff(d)`, `maxCoeffIndex(d)` | Maximum coefficient value and its multi-index |
 | `min_coeff.hpp` | `minCoeff(d)`, `minCoeffIndex(d)` | Minimum coefficient value and its multi-index |

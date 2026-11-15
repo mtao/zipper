@@ -18,7 +18,7 @@
 /// @code
 ///   auto A = Matrix<double, 3, 2>({{1, 0}, {0, 1}, {0, 0}});
 ///   auto A_pinv = zipper::utils::pseudoinverse(A);
-///   // A_pinv is 2x3, A_pinv * A ≈ I_2
+///   // *A_pinv is 2x3, (*A_pinv) * A ≈ I_2
 /// @endcode
 
 #if !defined(ZIPPER_UTILS_PSEUDOINVERSE_HPP)
@@ -26,12 +26,14 @@
 
 #include <algorithm>
 #include <cmath>
+#include <expected>
 #include <limits>
 
 #include <zipper/Matrix.hpp>
 #include <zipper/concepts/Matrix.hpp>
 #include <zipper/expression/nullary/Constant.hpp>
 #include <zipper/utils/decomposition/svd.hpp>
+#include <zipper/utils/solver/error.hpp>
 
 namespace zipper::utils {
 
@@ -40,13 +42,16 @@ namespace zipper::utils {
 /// @param A    An m x n matrix satisfying `concepts::Matrix`.
 /// @param tol  Tolerance for treating singular values as zero.  If negative
 ///             (default), uses max(m,n) * eps * sigma_max.
-/// @return     The n x m pseudoinverse matrix.
+/// @return     The n x m pseudoinverse, or the `SolverError` from the SVD
+///             (`invalid_input` for NaN, `diverged` on non-convergence).
 template <concepts::Matrix Derived>
 auto pseudoinverse(const Derived &A,
                    typename std::decay_t<Derived>::value_type tol = -1)
-    -> Matrix<typename std::decay_t<Derived>::value_type,
-              std::decay_t<Derived>::extents_type::static_extent(1),
-              std::decay_t<Derived>::extents_type::static_extent(0)> {
+    -> std::expected<
+        Matrix<typename std::decay_t<Derived>::value_type,
+               std::decay_t<Derived>::extents_type::static_extent(1),
+               std::decay_t<Derived>::extents_type::static_extent(0)>,
+        solver::SolverError> {
     using AType = std::decay_t<Derived>;
     using T = typename AType::value_type;
     constexpr index_type M = AType::extents_type::static_extent(0);
@@ -64,7 +69,11 @@ auto pseudoinverse(const Derived &A,
     }
 
     // Compute SVD: A = U * diag(S) * Vt
-    auto svd_result = decomposition::svd(A);
+    auto svd_expected = decomposition::svd(A);
+    if (!svd_expected) {
+        return std::unexpected(std::move(svd_expected.error()));
+    }
+    const auto &svd_result = *svd_expected;
     const auto &U = svd_result.U;    // m x p
     const auto &S = svd_result.S;    // p
     const auto &Vt = svd_result.Vt;  // p x n

@@ -56,7 +56,9 @@ TEST_CASE("Isometry inverse uses rotation transpose", "[transform][isometry]") {
     xform(1, 3) = 4.0f;
     xform(2, 3) = 5.0f;
 
-    auto inv = xform.inverse();  // dispatches to rotation_inverse
+    auto inv_res = xform.inverse();
+    REQUIRE(inv_res);
+    auto inv = *inv_res;  // dispatches to rotation_inverse
 
     auto identity = xform * inv;
     for (index_type r = 0; r < 4; ++r) {
@@ -98,7 +100,9 @@ TEST_CASE("AffineTransform inverse uses affine_inverse", "[transform][affine]") 
     xform(0, 3) = 5.0f;
     xform(1, 3) = 7.0f;
 
-    auto inv = xform.inverse();  // dispatches to affine_inverse
+    auto inv_res = xform.inverse();
+    REQUIRE(inv_res);
+    auto inv = *inv_res;  // dispatches to affine_inverse
 
     auto identity = xform * inv;
     for (index_type r = 0; r < 4; ++r) {
@@ -122,7 +126,9 @@ TEST_CASE("ProjectiveTransform inverse uses full matrix inverse", "[transform][p
     // Build a perspective-like projective matrix
     auto proj = perspective(radians(45.0f), 16.0f / 9.0f, 0.1f, 100.0f);
 
-    auto inv = proj.inverse();  // dispatches to projective_inverse
+    auto inv_res = proj.inverse();
+    REQUIRE(inv_res);
+    auto inv = *inv_res;  // dispatches to projective_inverse
 
     // proj * inv should be close to identity
     // Use to_matrix() for the multiplication since both are projective
@@ -274,7 +280,9 @@ TEST_CASE("Isometry 2D inverse", "[transform][isometry][2d]") {
     xform(0, 2) = 3.0f;
     xform(1, 2) = 4.0f;
 
-    auto inv = xform.inverse();
+    auto inv_res = xform.inverse();
+    REQUIRE(inv_res);
+    auto inv = *inv_res;
     auto identity = xform * inv;
 
     for (index_type r = 0; r < 3; ++r) {
@@ -292,7 +300,9 @@ TEST_CASE("AffineTransform 2D inverse", "[transform][affine][2d]") {
     xform(0, 2) = 5.0f;
     xform(1, 2) = 7.0f;
 
-    auto inv = xform.inverse();
+    auto inv_res = xform.inverse();
+    REQUIRE(inv_res);
+    auto inv = *inv_res;
     auto identity = xform * inv;
 
     for (index_type r = 0; r < 3; ++r) {
@@ -385,4 +395,16 @@ TEST_CASE("concepts::Isometry matches only Isometry mode", "[transform][concepts
     STATIC_CHECK_FALSE(transform::concepts::Isometry<AffineTransform<float>>);
     STATIC_CHECK_FALSE(transform::concepts::Isometry<ProjectiveTransform<float>>);
     STATIC_CHECK(transform::concepts::Isometry<Isometry<float, 2>>);
+}
+
+TEST_CASE("singular_transform_inverse_reports_error", "[transform][inverse][expected]") {
+    Transform<double, 3, TransformMode::Affine> affine;
+    affine(1, 1) = 0.0;
+    auto a = affine.inverse();
+    REQUIRE_FALSE(a);
+    CHECK(a.error().kind == utils::solver::SolverError::Kind::breakdown);
+
+    Transform<double, 3, TransformMode::Projective> proj;
+    proj(2, 2) = 0.0;
+    CHECK_FALSE(proj.inverse());
 }

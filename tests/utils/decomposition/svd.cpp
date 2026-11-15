@@ -153,7 +153,11 @@ void check_singular_values_sorted(const SType &S, index_type p) {
 TEST_CASE("svd 2x2 identity", "[decomposition][svd]") {
     Matrix<double, 2, 2> A{{1.0, 0.0}, {0.0, 1.0}};
 
-    auto [U, S, Vt] = utils::decomposition::svd(A);
+    auto svd_r = utils::decomposition::svd(A);
+
+    REQUIRE(svd_r);
+
+    auto [U, S, Vt] = *svd_r;
 
     CHECK(S(0) == Catch::Approx(1.0).margin(1e-12));
     CHECK(S(1) == Catch::Approx(1.0).margin(1e-12));
@@ -166,7 +170,11 @@ TEST_CASE("svd 2x2 identity", "[decomposition][svd]") {
 TEST_CASE("svd 2x2 diagonal", "[decomposition][svd]") {
     Matrix<double, 2, 2> A{{3.0, 0.0}, {0.0, 5.0}};
 
-    auto [U, S, Vt] = utils::decomposition::svd(A);
+    auto svd_r = utils::decomposition::svd(A);
+
+    REQUIRE(svd_r);
+
+    auto [U, S, Vt] = *svd_r;
 
     CHECK(S(0) == Catch::Approx(5.0).margin(1e-12));
     CHECK(S(1) == Catch::Approx(3.0).margin(1e-12));
@@ -178,7 +186,11 @@ TEST_CASE("svd 2x2 diagonal", "[decomposition][svd]") {
 TEST_CASE("svd 2x2 general", "[decomposition][svd]") {
     Matrix<double, 2, 2> A{{1.0, 2.0}, {3.0, 4.0}};
 
-    auto [U, S, Vt] = utils::decomposition::svd(A);
+    auto svd_r = utils::decomposition::svd(A);
+
+    REQUIRE(svd_r);
+
+    auto [U, S, Vt] = *svd_r;
 
     check_singular_values_sorted(S, 2);
     check_orthonormal_columns(U, 2, 1e-10);
@@ -197,7 +209,11 @@ TEST_CASE("svd 2x2 general", "[decomposition][svd]") {
 TEST_CASE("svd 2x2 rank 1", "[decomposition][svd]") {
     Matrix<double, 2, 2> A{{1.0, 2.0}, {2.0, 4.0}};
 
-    auto [U, S, Vt] = utils::decomposition::svd(A);
+    auto svd_r = utils::decomposition::svd(A);
+
+    REQUIRE(svd_r);
+
+    auto [U, S, Vt] = *svd_r;
 
     check_singular_values_sorted(S, 2);
     CHECK(S(1) == Catch::Approx(0.0).margin(1e-10));
@@ -207,7 +223,11 @@ TEST_CASE("svd 2x2 rank 1", "[decomposition][svd]") {
 TEST_CASE("svd 2x2 zero matrix", "[decomposition][svd]") {
     Matrix<double, 2, 2> A{{0.0, 0.0}, {0.0, 0.0}};
 
-    auto [U, S, Vt] = utils::decomposition::svd(A);
+    auto svd_r = utils::decomposition::svd(A);
+
+    REQUIRE(svd_r);
+
+    auto [U, S, Vt] = *svd_r;
 
     CHECK(S(0) == Catch::Approx(0.0).margin(1e-12));
     CHECK(S(1) == Catch::Approx(0.0).margin(1e-12));
@@ -225,7 +245,11 @@ TEST_CASE("svd 3x3 identity", "[decomposition][svd]") {
         {0.0, 0.0, 1.0},
     };
 
-    auto [U, S, Vt] = utils::decomposition::svd(A);
+    auto svd_r = utils::decomposition::svd(A);
+
+    REQUIRE(svd_r);
+
+    auto [U, S, Vt] = *svd_r;
 
     for (index_type i = 0; i < 3; ++i) {
         CHECK(S(i) == Catch::Approx(1.0).margin(1e-12));
@@ -243,7 +267,11 @@ TEST_CASE("svd 3x3 diagonal", "[decomposition][svd]") {
         {0.0, 0.0, 1.0},
     };
 
-    auto [U, S, Vt] = utils::decomposition::svd(A);
+    auto svd_r = utils::decomposition::svd(A);
+
+    REQUIRE(svd_r);
+
+    auto [U, S, Vt] = *svd_r;
 
     CHECK(S(0) == Catch::Approx(5.0).margin(1e-12));
     CHECK(S(1) == Catch::Approx(3.0).margin(1e-12));
@@ -260,7 +288,11 @@ TEST_CASE("svd 3x3 general", "[decomposition][svd]") {
         {7.0, 8.0, 10.0}, // Changed from 9 to make full rank.
     };
 
-    auto [U, S, Vt] = utils::decomposition::svd(A);
+    auto svd_r = utils::decomposition::svd(A);
+
+    REQUIRE(svd_r);
+
+    auto [U, S, Vt] = *svd_r;
 
     check_singular_values_sorted(S, 3);
     check_orthonormal_columns(U, 3, 1e-10);
@@ -275,7 +307,11 @@ TEST_CASE("svd 3x3 symmetric positive definite", "[decomposition][svd]") {
         {1.0, 1.0, 4.0},
     };
 
-    auto [U, S, Vt] = utils::decomposition::svd(A);
+    auto svd_r = utils::decomposition::svd(A);
+
+    REQUIRE(svd_r);
+
+    auto [U, S, Vt] = *svd_r;
 
     // Eigenvalues of this SPD matrix are 6, 3, 3 — these are also the singular
     // values.
@@ -295,7 +331,11 @@ TEST_CASE("svd 3x3 rank deficient", "[decomposition][svd]") {
         {1.0, 1.0, 2.0},
     };
 
-    auto [U, S, Vt] = utils::decomposition::svd(A);
+    auto svd_r = utils::decomposition::svd(A);
+
+    REQUIRE(svd_r);
+
+    auto [U, S, Vt] = *svd_r;
 
     check_singular_values_sorted(S, 3);
     CHECK(S(2) == Catch::Approx(0.0).margin(1e-10));
@@ -309,7 +349,11 @@ TEST_CASE("svd_tall_rank_deficient_u_is_orthonormal", "[decomposition][svd]") {
                             {0.0, 0.0, 0.0},
                             {0.0, 0.0, 0.0}};
 
-    auto [U, S, Vt] = utils::decomposition::svd(A);
+    auto svd_r = utils::decomposition::svd(A);
+
+    REQUIRE(svd_r);
+
+    auto [U, S, Vt] = *svd_r;
 
     CHECK(S(1) == 0.0);
     CHECK(S(2) == 0.0);
@@ -322,7 +366,11 @@ TEST_CASE("svd_wide_rank_deficient_u_is_orthonormal", "[decomposition][svd]") {
                             {0.0, 0.0, 0.0, 0.0, 0.0},
                             {0.0, 0.0, 0.0, 0.0, 0.0}};
 
-    auto [U, S, Vt] = utils::decomposition::svd(A);
+    auto svd_r = utils::decomposition::svd(A);
+
+    REQUIRE(svd_r);
+
+    auto [U, S, Vt] = *svd_r;
 
     CHECK(S(1) == 0.0);
     CHECK(S(2) == 0.0);
@@ -336,7 +384,11 @@ TEST_CASE("svd_tall_zero_matrix_u_is_orthonormal", "[decomposition][svd]") {
                             {0.0, 0.0, 0.0},
                             {0.0, 0.0, 0.0}};
 
-    auto [U, S, Vt] = utils::decomposition::svd(A);
+    auto svd_r = utils::decomposition::svd(A);
+
+    REQUIRE(svd_r);
+
+    auto [U, S, Vt] = *svd_r;
 
     check_orthonormal_columns(U, 3, 1e-12);
     check_reconstruction(U, S, Vt, A, 4, 3, 3, 1e-12);
@@ -347,7 +399,11 @@ TEST_CASE("svd_wide_zero_matrix_u_is_orthonormal", "[decomposition][svd]") {
                             {0.0, 0.0, 0.0, 0.0},
                             {0.0, 0.0, 0.0, 0.0}};
 
-    auto [U, S, Vt] = utils::decomposition::svd(A);
+    auto svd_r = utils::decomposition::svd(A);
+
+    REQUIRE(svd_r);
+
+    auto [U, S, Vt] = *svd_r;
 
     check_orthonormal_columns(U, 3, 1e-12);
     check_reconstruction(U, S, Vt, A, 3, 4, 3, 1e-12);
@@ -365,7 +421,11 @@ TEST_CASE("svd 4x3 tall", "[decomposition][svd]") {
         {10.0, 11.0, 13.0},
     };
 
-    auto [U, S, Vt] = utils::decomposition::svd(A);
+    auto svd_r = utils::decomposition::svd(A);
+
+    REQUIRE(svd_r);
+
+    auto [U, S, Vt] = *svd_r;
 
     // p = min(4, 3) = 3
     CHECK(U.extent(0) == 4);
@@ -389,7 +449,11 @@ TEST_CASE("svd 5x2 tall", "[decomposition][svd]") {
         {9.0, 10.0},
     };
 
-    auto [U, S, Vt] = utils::decomposition::svd(A);
+    auto svd_r = utils::decomposition::svd(A);
+
+    REQUIRE(svd_r);
+
+    auto [U, S, Vt] = *svd_r;
 
     CHECK(U.extent(0) == 5);
     CHECK(U.extent(1) == 2);
@@ -413,7 +477,11 @@ TEST_CASE("svd 2x4 wide", "[decomposition][svd]") {
         {5.0, 6.0, 7.0, 8.0},
     };
 
-    auto [U, S, Vt] = utils::decomposition::svd(A);
+    auto svd_r = utils::decomposition::svd(A);
+
+    REQUIRE(svd_r);
+
+    auto [U, S, Vt] = *svd_r;
 
     // p = min(2, 4) = 2
     CHECK(U.extent(0) == 2);
@@ -435,7 +503,11 @@ TEST_CASE("svd 3x5 wide", "[decomposition][svd]") {
         {2.0, 1.0, 0.0, 1.0, 4.0},
     };
 
-    auto [U, S, Vt] = utils::decomposition::svd(A);
+    auto svd_r = utils::decomposition::svd(A);
+
+    REQUIRE(svd_r);
+
+    auto [U, S, Vt] = *svd_r;
 
     CHECK(U.extent(0) == 3);
     CHECK(U.extent(1) == 3);
@@ -456,7 +528,11 @@ TEST_CASE("svd 3x5 wide", "[decomposition][svd]") {
 TEST_CASE("svd 1x1", "[decomposition][svd]") {
     Matrix<double, 1, 1> A{{-7.0}};
 
-    auto [U, S, Vt] = utils::decomposition::svd(A);
+    auto svd_r = utils::decomposition::svd(A);
+
+    REQUIRE(svd_r);
+
+    auto [U, S, Vt] = *svd_r;
 
     CHECK(S(0) == Catch::Approx(7.0).margin(1e-12));
     check_reconstruction(U, S, Vt, A, 1, 1, 1, 1e-12);
@@ -478,7 +554,11 @@ TEST_CASE("svd dynamic 3x3", "[decomposition][svd]") {
     A(2, 1) = 8.0;
     A(2, 2) = 10.0;
 
-    auto [U, S, Vt] = utils::decomposition::svd(A);
+    auto svd_r = utils::decomposition::svd(A);
+
+    REQUIRE(svd_r);
+
+    auto [U, S, Vt] = *svd_r;
 
     check_singular_values_sorted(S, 3);
     check_orthonormal_columns(U, 3, 1e-10);
@@ -498,7 +578,11 @@ TEST_CASE("svd 3x3 rotation matrix", "[decomposition][svd]") {
         {0.0, 0.0, 1.0},
     };
 
-    auto [U, S, Vt] = utils::decomposition::svd(A);
+    auto svd_r = utils::decomposition::svd(A);
+
+    REQUIRE(svd_r);
+
+    auto [U, S, Vt] = *svd_r;
 
     for (index_type i = 0; i < 3; ++i) {
         CHECK(S(i) == Catch::Approx(1.0).margin(1e-10));
@@ -522,7 +606,11 @@ TEST_CASE("svd 2x2 scaled rotation", "[decomposition][svd]") {
         {s * sn, s * c},
     };
 
-    auto [U, S, Vt] = utils::decomposition::svd(A);
+    auto svd_r = utils::decomposition::svd(A);
+
+    REQUIRE(svd_r);
+
+    auto [U, S, Vt] = *svd_r;
 
     CHECK(S(0) == Catch::Approx(3.0).margin(1e-10));
     CHECK(S(1) == Catch::Approx(3.0).margin(1e-10));
@@ -535,7 +623,11 @@ TEST_CASE("svd_extreme_finite_scales", "[decomposition][svd]") {
         Matrix<double, 2, 2> A{{3.0 * scale, 4.0 * scale},
                                 {0.0, 5.0 * scale}};
 
-        auto [U, S, Vt] = utils::decomposition::svd(A);
+        auto svd_r = utils::decomposition::svd(A);
+
+        REQUIRE(svd_r);
+
+        auto [U, S, Vt] = *svd_r;
 
         CHECK(std::isfinite(S(0)));
         CHECK(std::isfinite(S(1)));
@@ -555,7 +647,11 @@ TEST_CASE("svd_disparate_nonzero_singular_values_keep_u_orthogonal",
     Matrix<double, 2, 2> A{{inv_sqrt_two, inv_sqrt_two},
                             {-small * inv_sqrt_two, small * inv_sqrt_two}};
 
-    auto [U, S, Vt] = utils::decomposition::svd(A);
+    auto svd_r = utils::decomposition::svd(A);
+
+    REQUIRE(svd_r);
+
+    auto [U, S, Vt] = *svd_r;
 
     CHECK(S(0) == Catch::Approx(1.0).epsilon(1e-12));
     CHECK(S(1) == Catch::Approx(small).epsilon(1e-12));
@@ -569,7 +665,11 @@ TEST_CASE("svd_preserves_representable_singular_values_across_extreme_scales",
     Matrix<double, 2, 2> A{{std::numeric_limits<double>::max(), 0.0},
                             {0.0, 1e-16}};
 
-    auto [U, S, Vt] = utils::decomposition::svd(A);
+    auto svd_r = utils::decomposition::svd(A);
+
+    REQUIRE(svd_r);
+
+    auto [U, S, Vt] = *svd_r;
 
     CHECK(S(1) == Catch::Approx(1e-16));
     check_orthonormal_columns(U, 2, 1e-12);
@@ -580,7 +680,11 @@ TEST_CASE("svd_supports_scalar_without_builtin_conversion",
     using T = test::SvdScalar;
     Matrix<T, 2, 2> A{{T{3.0L}, T{1.0L}}, {T{0.0L}, T{2.0L}}};
 
-    const auto [U, S, Vt] = utils::decomposition::svd(A);
+    auto svd_r = utils::decomposition::svd(A);
+
+    REQUIRE(svd_r);
+
+    const auto [U, S, Vt] = *svd_r;
     static_assert(std::same_as<std::remove_cvref_t<decltype(S)>, Vector<T, 2>>);
 
     for (index_type i = 0; i < 2; ++i) {
