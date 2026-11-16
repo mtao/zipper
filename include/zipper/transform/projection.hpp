@@ -2,8 +2,9 @@
 /// @brief Projection matrix construction: orthographic, perspective, frustum.
 /// @ingroup transform
 ///
-/// All functions produce right-handed projection matrices with depth mapped
-/// to [-1, 1] (OpenGL convention).
+/// Projection constructors produce right-handed matrices with depth mapped
+/// to [-1, 1] (OpenGL convention). Clip-depth conversion functions return
+/// equivalent projections using the requested depth interval.
 ///
 /// @code
 ///   using namespace zipper::transform;
@@ -21,6 +22,24 @@
 #include "Transform.hpp"
 
 namespace zipper::transform {
+
+/// Convert an [-1, 1] clip-depth projection to [0, 1], preserving x, y and w.
+template <std::floating_point T, TransformMode Mode, typename Layout>
+auto clip_depth_zero_to_one(const Transform<T, 3, Mode, Layout>& projection)
+    -> Transform<T, 3, TransformMode::Projective, Layout> {
+    Transform<T, 3, TransformMode::Projective, Layout> result(projection);
+    result.row(2) = ((result.row(2) + result.row(3)) * T(0.5)).eval();
+    return result;
+}
+
+/// Convert a [0, 1] clip-depth projection to [-1, 1], preserving x, y and w.
+template <std::floating_point T, TransformMode Mode, typename Layout>
+auto clip_depth_minus_one_to_one(const Transform<T, 3, Mode, Layout>& projection)
+    -> Transform<T, 3, TransformMode::Projective, Layout> {
+    Transform<T, 3, TransformMode::Projective, Layout> result(projection);
+    result.row(2) = (T(2) * result.row(2) - result.row(3)).eval();
+    return result;
+}
 
 /// @brief Create a 2D orthographic projection matrix (no near/far planes).
 ///

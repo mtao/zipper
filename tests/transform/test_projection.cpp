@@ -72,3 +72,34 @@ TEST_CASE("infinite_perspective", "[transform][projection]") {
     CHECK(P(2, 3) == Catch::Approx(-0.2f));
     CHECK(P(3, 2) == Catch::Approx(-1.0f));
 }
+
+TEMPLATE_TEST_CASE("clip_depth_conversion", "[transform][projection]", float, double) {
+    using T = TestType;
+    const T near = T(1);
+    const T far = T(10);
+    const auto perspective_projection = perspective(T(1), T(2), near, far);
+    const auto orthographic_projection = ortho(T(-2), T(2), T(-1), T(1), near, far);
+    const auto offcenter_projection = frustum(T(-1), T(2), T(-1), T(1), near, far);
+    const auto ndc_depth = [](const auto &projection, T z) {
+        const Vector<T, 4> clip = projection * Vector<T, 4>{T(0), T(0), z, T(1)};
+        return clip(2) / clip(3);
+    };
+
+    for (const auto &projection : {perspective_projection, orthographic_projection,
+                                    offcenter_projection}) {
+        const auto converted = clip_depth_zero_to_one(projection);
+        CHECK(ndc_depth(converted, -near) == Catch::Approx(T(0)).margin(1e-5));
+        CHECK(ndc_depth(converted, -far) == Catch::Approx(T(1)).margin(1e-5));
+        const auto restored = clip_depth_minus_one_to_one(converted);
+        for (index_type row = 0; row < 4; ++row) {
+            for (index_type col = 0; col < 4; ++col) {
+                CHECK(restored(row, col) == Catch::Approx(projection(row, col)).margin(1e-5));
+                if (row != 2) CHECK(converted(row, col) == projection(row, col));
+            }
+        }
+    }
+
+    const auto infinite = clip_depth_zero_to_one(infinite_perspective(T(1), T(1), near));
+    CHECK(ndc_depth(infinite, -near) == Catch::Approx(T(0)).margin(1e-5));
+    CHECK(ndc_depth(infinite, T(-1e6)) == Catch::Approx(T(1)).margin(1e-5));
+}
