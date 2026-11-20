@@ -55,6 +55,13 @@ public:
   using Base::expression;
   using Base::swizzle;
 
+  template <typename Source>
+    requires(detail::AdaptedAssignmentFor<Source, Expr> && !Base::is_const)
+  auto operator=(Source &&source) -> VectorBase & {
+    Base::operator=(std::forward<Source>(source));
+    return *this;
+  }
+
   auto eval() const {
     using pref = typename expression_traits::preferred_layout;
     constexpr auto N = extents_type::static_extent(0);

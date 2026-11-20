@@ -34,6 +34,12 @@ public:
   Array_(Array_ &&o) = default;
   auto operator=(const Array_ &o) -> Array_ & = default;
   auto operator=(Array_ &&o) -> Array_ & = default;
+  template <typename Source>
+    requires detail::AdaptedAssignmentFor<Source, expression_type>
+  auto operator=(Source &&source) -> Array_ & {
+    Base::operator=(std::forward<Source>(source));
+    return *this;
+  }
   template <concepts::Expression Other>
   Array_(const Other &other) : Base(other) {}
   template <concepts::Array Other>

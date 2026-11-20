@@ -67,6 +67,13 @@ public:
   auto operator=(const COOMatrix &) -> COOMatrix & = default;
   auto operator=(COOMatrix &&) -> COOMatrix & = default;
 
+  template <typename Source>
+    requires detail::AdaptedAssignmentTo<Source, expression_type>
+  auto operator=(Source &&source) -> COOMatrix & {
+    detail::assign_adapted(expression(), source);
+    return *this;
+  }
+
   /// Assign from any expression with compatible extents.
   template <concepts::Expression Other>
   auto operator=(const Other &other) -> COOMatrix &

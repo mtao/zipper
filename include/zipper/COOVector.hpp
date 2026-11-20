@@ -59,6 +59,13 @@ public:
   auto operator=(const COOVector &) -> COOVector & = default;
   auto operator=(COOVector &&) -> COOVector & = default;
 
+  template <typename Source>
+    requires detail::AdaptedAssignmentTo<Source, expression_type>
+  auto operator=(Source &&source) -> COOVector & {
+    detail::assign_adapted(expression(), source);
+    return *this;
+  }
+
   /// Assign from any expression with compatible extents.
   template <concepts::Expression Other>
   auto operator=(const Other &other) -> COOVector &

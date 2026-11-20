@@ -44,6 +44,13 @@ public:
   using Base::repeat_right;
   using Base::swizzle;
 
+  template <typename Source>
+    requires(detail::AdaptedAssignmentFor<Source, Expr> && !Base::is_const)
+  auto operator=(Source &&source) -> DataArrayBase & {
+    Base::operator=(std::forward<Source>(source));
+    return *this;
+  }
+
   // Slice methods - delegate to ZipperBase::slice_expression
   template <typename... Slices, typename Self> auto slice(this Self&& self, Slices &&...slices) {
     auto v = std::forward<Self>(self).template slice_expression<Slices...>(
