@@ -119,6 +119,13 @@ class CSMatrix
         detail::check_extents<extents_type>(rows, cols);
     }
 
+    template <typename Source>
+        requires detail::AdaptedAssignmentTo<Source, expression_type>
+    auto operator=(Source &&source) -> CSMatrix & {
+        detail::assign_adapted(expression(), source);
+        return *this;
+    }
+
     /// Assign from any expression with compatible extents.
     template <concepts::Expression Other>
     auto operator=(const Other &other) -> CSMatrix &

@@ -51,6 +51,13 @@ class MatrixBase : public ZipperBase<MatrixBase, Expr> {
     using Base::expression;
     using Base::swizzle;
 
+    template <typename Source>
+        requires(detail::AdaptedAssignmentFor<Source, Expr> && !Base::is_const)
+    auto operator=(Source &&source) -> MatrixBase & {
+        Base::operator=(std::forward<Source>(source));
+        return *this;
+    }
+
     template<typename... Args>
         requires(!(concepts::Matrix<Args> && ...))
     MatrixBase(Args &&...args)

@@ -80,3 +80,7 @@ test('noalias', test_noalias)
 
 test_uninitialized = executable('test_uninitialized', 'uninitialized.cpp', dependencies: [zipper_test_dep])
 test('uninitialized', test_uninitialized)
+
+test_adapted_assignment = executable('test_adapted_assignment',
+  'adapted_assignment.cpp', dependencies: [zipper_test_dep])
+test('adapted_assignment', test_adapted_assignment)

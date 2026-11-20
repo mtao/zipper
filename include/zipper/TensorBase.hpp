@@ -37,6 +37,13 @@ class TensorBase : public ZipperBase<TensorBase, Expr> {
     using Base::Base;
     using Base::expression;
 
+    template <typename Source>
+        requires(detail::AdaptedAssignmentFor<Source, Expr> && !Base::is_const)
+    auto operator=(Source &&source) -> TensorBase & {
+        Base::operator=(std::forward<Source>(source));
+        return *this;
+    }
+
     template <typename... Args>
         requires(!(concepts::Tensor<Args> && ...))
     TensorBase(Args &&...args)

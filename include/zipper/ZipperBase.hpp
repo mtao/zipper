@@ -4,6 +4,7 @@
 #include "concepts/Expression.hpp"
 #include "concepts/IndexArgument.hpp"
 #include "concepts/Zipper.hpp"
+#include "detail/adapted_assignment.hpp"
 #include "detail/NoAliasProxy.hpp"
 #include "detail/NonReturnable.hpp"
 #include "expression/concepts/capabilities.hpp"
@@ -263,6 +264,15 @@ class ZipperBase
                      extents_type>)
     {
         m_expression.assign(other.expression());
+        return derived();
+    }
+
+    /// Adapt an explicitly opted-in external buffer for synchronous assignment.
+    /// The adapter never escapes; normal shape/alias handling remains in assign.
+    template <typename Source>
+        requires(detail::AdaptedAssignmentFor<Source, Expression> && !is_const)
+    auto operator=(Source &&source) -> Derived & {
+        detail::assign_adapted(m_expression, source);
         return derived();
     }
 

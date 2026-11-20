@@ -230,6 +230,72 @@ auto r = row_view.unsafe();
 | `to_owned()` | Lazy expression tree (deep copy) | Fully independent | You want to snapshot a lazy expression |
 | `unsafe()` | Returnable view wrapper | References original data | You need to copy or return a view |
 
+## Adapted buffer assignment
+
+Assignment accepts a narrow, explicitly opted-in set of external buffers:
+
+```cpp
+zipper::VectorX<double> v;
+v = std::array{1, 2, 3};                  // owning destination resizes
+
+zipper::Matrix<double, 2, 3> m;
+m.row(0) = std::array{1.0, 2.0, 3.0};    // writes through the row view
+m = std::array{std::array{1, 2, 3}, std::array{4, 5, 6}};
+```
+
+The same adaptation is available to Array, Form, Tensor, DataArray, Quaternion,
+and the COO/compressed sparse wrappers. It copies coefficients through the
+destination's existing assignment implementation; it never rebinds a view.
+Existing shape checks, alias-safe evaluation, and native copy/move overloads
+are preserved. Rank and incompatible static extents are rejected by constraints.
+Dynamic extent mismatches retain the normal destination's checks.
+
+Built-in source adapters are limited to:
+
+- Rectangular `std::array` compositions with arithmetic leaves.
+- Flat arithmetic `std::vector` (including custom allocators), except
+  `vector<bool>`.
+- Default-allocator vectors of fixed-size numeric arrays.
+- Arithmetic `std::span` and positive-rank `zipper::mdspan`, including strided
+  layouts and custom accessors.
+
+Generic ranges, pointers, strings, raw C arrays, and potentially jagged
+containers are **not** automatically opted in. This policy is separate from
+any conversions already supported by existing constructor overloads.
+
+### Opting in a user-defined buffer
+
+Specialize `zipper::assignment_source_traits<T>` and provide
+`get(const T&)`, returning a zipper wrapper or raw expression **by value**:
+
+```cpp
+struct Buffer3 {
+    std::array<double, 3> values;
+};
+
+template <>
+struct zipper::assignment_source_traits<Buffer3> {
+    static auto get(const Buffer3& source) {
+        return zipper::VectorBase(std::span<const double, 3>(source.values));
+    }
+};
+
+zipper::Vector<double, 3> v;
+v = Buffer3{{1, 2, 3}};
+```
+
+The adapter is used only until synchronous assignment returns, so borrowing
+from a temporary source during that call is safe. Do not return an expression
+referencing an adapter-local temporary. Adaptation does not extend the lifetime
+of external buffers, add raw-container arithmetic, or change construction/CTAD.
+
+Initializer-list overloads are unchanged: `v = {1, 2, 3}` still uses a dedicated
+overload because a generic RHS template cannot deduce raw braces. They could
+share the assignment backend in a separate change, but have distinct deduction
+and shape-check behavior today. Likewise, constructors need different policies
+for mutable borrowing, const borrowing, and ownership of rvalues; this
+read-only assignment adapter does not replace those deduction guides.
+
 ## Uninitialized Construction
 
 Owning types (`Vector`, `Matrix`, `Array`, `Tensor`, `Form`, `DataArray`,
